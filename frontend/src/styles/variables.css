@@ -1,0 +1,48 @@
+:root {
+  --bg-color: #f8f9fa;
+  --bg-card: white;
+  --text-color: #1e293b;
+  --text-secondary: #64748b;
+  --text-hint: #94a3b8;
+  --border-color: #e2e8f0;
+  --primary-color: #e8a0bf;
+  --accent-color: #e8a0bf;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.05);
+
+  /* 孕早期 (0-12周) */
+  --stage-early-color: #FFB74D;
+  --stage-early-bg: #FFF3E0;
+
+  /* 孕中期 (13-27周) */
+  --stage-mid-color: #4FC3F7;
+  --stage-mid-bg: #E1F5FE;
+
+  /* 孕晚期 (28+周) */
+  --stage-late-color: #F06292;
+  --stage-late-bg: #FCE4EC;
+
+  /* 备孕期 */
+  --stage-preparing-color: #A0AEC0;
+  --stage-preparing-bg: #F7FAFC;
+
+  /* 育儿期 */
+  --stage-nursing-color: #66BB6A;
+  --stage-nursing-bg: #E8F5E9;
+
+  /* 食物安全 */
+  --food-safe: #52C41A;
+  --food-caution: #FAAD14;
+  --food-unsafe: #FF4D4F;
+}
+
+html.dark {
+  --bg-color: #1a1a2e;
+  --bg-card: #16213e;
+  --text-color: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-hint: #64748b;
+  --border-color: #2d3748;
+  --primary-color: #f0a6c8;
+  --accent-color: #f0a6c8;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.2);
+}

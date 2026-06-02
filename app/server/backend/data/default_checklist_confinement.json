@@ -1,0 +1,107 @@
+{
+  "name": "月子物品清单",
+  "type": "confinement",
+  "categories": [
+    {
+      "category": "月子餐食",
+      "items": [
+        {"name": "月子餐食材储备", "description": "鸡、鱼、排骨、蔬菜等", "mandatory": true},
+        {"name": "红糖", "description": "产后补血，促进恶露排出", "mandatory": true},
+        {"name": "小米", "description": "养胃易消化，月子主食", "mandatory": true},
+        {"name": "鸡蛋", "description": "优质蛋白质来源", "mandatory": true},
+        {"name": "红枣/枸杞", "description": "补气养血", "mandatory": false},
+        {"name": "鲫鱼/鲈鱼", "description": "催奶，优质蛋白", "mandatory": false},
+        {"name": "猪蹄/花生", "description": "催奶汤食材", "mandatory": false},
+        {"name": "麻油/香油", "description": "月子餐专用油", "mandatory": true}
+      ]
+    },
+    {
+      "category": "产后护理",
+      "items": [
+        {"name": "产后卫生巾(大量)", "description": "恶露期间使用，准备足量", "mandatory": true},
+        {"name": "一次性内裤30条", "description": "产后方便更换，不用洗", "mandatory": true},
+        {"name": "产褥垫/护理垫", "description": "床上铺垫，防止弄脏", "mandatory": true},
+        {"name": "私处清洗器", "description": "产后清洁护理", "mandatory": true},
+        {"name": "会阴喷雾/湿巾", "description": "缓解侧切/撕裂疼痛", "mandatory": false},
+        {"name": "收腹带/骨盆带", "description": "帮助腹部和骨盆恢复", "mandatory": true},
+        {"name": "防溢乳垫(大量)", "description": "防止乳汁弄湿衣物", "mandatory": true},
+        {"name": "乳头霜/羊脂膏", "description": "缓解哺乳乳头疼痛", "mandatory": true}
+      ]
+    },
+    {
+      "category": "哺乳用品",
+      "items": [
+        {"name": "哺乳内衣3-4件", "description": "前开扣，方便哺乳", "mandatory": true},
+        {"name": "哺乳睡衣2-3套", "description": "开襟款式，夜间哺乳方便", "mandatory": true},
+        {"name": "吸奶器(电动)", "description": "涨奶时吸出，避免堵奶", "mandatory": true},
+        {"name": "储奶袋(大量)", "description": "储存多余母乳", "mandatory": false},
+        {"name": "哺乳枕", "description": "减轻哺乳手臂负担", "mandatory": false},
+        {"name": "奶瓶2-3个", "description": "母乳不足时备用", "mandatory": true},
+        {"name": "奶瓶刷+清洗剂", "description": "清洗奶瓶", "mandatory": true},
+        {"name": "奶瓶消毒器", "description": "高温消毒奶瓶", "mandatory": true}
+      ]
+    },
+    {
+      "category": "宝宝日常",
+      "items": [
+        {"name": "纸尿裤NB+S号(大量)", "description": "月子期间消耗量大", "mandatory": true},
+        {"name": "湿巾(手口专用)", "description": "清洁宝宝皮肤", "mandatory": true},
+        {"name": "棉柔巾", "description": "干湿两用，温和清洁", "mandatory": true},
+        {"name": "婴儿护臀霜", "description": "预防红屁屁", "mandatory": true},
+        {"name": "婴儿润肤霜", "description": "保持皮肤滋润", "mandatory": false},
+        {"name": "婴儿洗衣液", "description": "专为婴儿设计", "mandatory": true},
+        {"name": "婴儿浴盆", "description": "给宝宝洗澡", "mandatory": true},
+        {"name": "婴儿指甲剪", "description": "定期修剪指甲", "mandatory": true}
+      ]
+    },
+    {
+      "category": "宝宝衣物",
+      "items": [
+        {"name": "和尚服/连体衣5-6套", "description": "纯棉A类，勤换洗", "mandatory": true},
+        {"name": "包被2-3条", "description": "根据室温选择厚薄", "mandatory": true},
+        {"name": "小帽子2-3顶", "description": "头部保暖", "mandatory": true},
+        {"name": "小袜子5双", "description": "脚部保暖", "mandatory": true},
+        {"name": "口水巾/小方巾(大量)", "description": "喂奶、擦嘴用", "mandatory": true},
+        {"name": "隔尿垫3-5条", "description": "换尿布时使用", "mandatory": true},
+        {"name": "睡袋1-2个", "description": "防止踢被着凉", "mandatory": false}
+      ]
+    },
+    {
+      "category": "家居用品",
+      "items": [
+        {"name": "月子帽/头巾", "description": "产妇头部保暖防风", "mandatory": true},
+        {"name": "软底拖鞋(带跟)", "description": "保暖防滑", "mandatory": true},
+        {"name": "保暖袜子3-5双", "description": "脚部保暖", "mandatory": true},
+        {"name": "月子服2-3套", "description": "宽松舒适，方便哺乳", "mandatory": true},
+        {"name": "毛巾(多条)", "description": "擦身、擦汗、擦手", "mandatory": true},
+        {"name": "脸盆2-3个", "description": "洗脸、洗下身分开", "mandatory": true},
+        {"name": "保温杯/吸管杯", "description": "随时喝温水", "mandatory": true},
+        {"name": "小夜灯", "description": "夜间哺乳照明", "mandatory": false}
+      ]
+    },
+    {
+      "category": "妈妈护理",
+      "items": [
+        {"name": "束腹带", "description": "帮助腹部恢复", "mandatory": true},
+        {"name": "骨盆矫正带", "description": "帮助骨盆闭合", "mandatory": false},
+        {"name": "产后恢复瑜伽垫", "description": "适度运动恢复", "mandatory": false},
+        {"name": "艾叶/姜片", "description": "泡脚驱寒", "mandatory": false},
+        {"name": "月子牙刷(软毛)", "description": "产后口腔护理", "mandatory": true},
+        {"name": "护肤品(基础)", "description": "产后基础护肤", "mandatory": false},
+        {"name": "哺乳妈妈钙片", "description": "补充钙质", "mandatory": true},
+        {"name": "DHA/复合维生素", "description": "哺乳期营养补充", "mandatory": false}
+      ]
+    },
+    {
+      "category": "其他必备",
+      "items": [
+        {"name": "手机+充电器", "description": "联系家人、查询育儿知识", "mandatory": true},
+        {"name": "吸奶器配件", "description": "备用配件", "mandatory": false},
+        {"name": "宝宝照片墙/相册", "description": "记录成长瞬间", "mandatory": false},
+        {"name": "育儿书籍/APP", "description": "学习育儿知识", "mandatory": false},
+        {"name": "月嫂/家人联系方式", "description": "紧急情况联系", "mandatory": true},
+        {"name": "医院急诊电话", "description": "以备不时之需", "mandatory": true}
+      ]
+    }
+  ]
+}

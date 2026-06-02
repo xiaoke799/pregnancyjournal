@@ -1,0 +1,51 @@
+{
+  "blood_routine": {
+    "name": "血常规",
+    "items": [
+      {"item_name": "血红蛋白", "unit": "g/L", "reference_min": 110, "reference_max": 150},
+      {"item_name": "白细胞", "unit": "×10⁹/L", "reference_min": 4.0, "reference_max": 18.0, "note": "孕晚期生理性升高可达15-18（《全国临床检验操作规程》第4版）"},
+      {"item_name": "血小板", "unit": "×10⁹/L", "reference_min": 100, "reference_max": 300},
+      {"item_name": "红细胞压积", "unit": "%", "reference_min": 31, "reference_max": 45},
+      {"item_name": "红细胞计数", "unit": "×10¹²/L", "reference_min": 3.5, "reference_max": 5.0},
+      {"item_name": "中性粒细胞", "unit": "×10⁹/L", "reference_min": 1.8, "reference_max": 7.0}
+    ]
+  },
+  "urine_routine": {
+    "name": "尿常规",
+    "items": [
+      {"item_name": "尿蛋白", "unit": "", "reference_min": 0, "reference_max": 0, "note": "应为阴性"},
+      {"item_name": "尿糖", "unit": "", "reference_min": 0, "reference_max": 0, "note": "应为阴性"},
+      {"item_name": "尿白细胞", "unit": "/HPF", "reference_min": 0, "reference_max": 5},
+      {"item_name": "尿红细胞", "unit": "/HPF", "reference_min": 0, "reference_max": 3},
+      {"item_name": "尿比重", "unit": "", "reference_min": 1.005, "reference_max": 1.030},
+      {"item_name": "尿pH值", "unit": "", "reference_min": 4.6, "reference_max": 8.0}
+    ]
+  },
+  "ultrasound": {
+    "name": "B超",
+    "ranges_by_week": [
+      {"week": 20, "items": [{"item_name": "双顶径", "unit": "cm", "reference_min": 4.43, "reference_max": 5.28}, {"item_name": "股骨长", "unit": "cm", "reference_min": 2.95, "reference_max": 3.53}, {"item_name": "羊水深度", "unit": "cm", "reference_min": 3.0, "reference_max": 8.0}]},
+      {"week": 24, "items": [{"item_name": "双顶径", "unit": "cm", "reference_min": 5.69, "reference_max": 6.49}, {"item_name": "股骨长", "unit": "cm", "reference_min": 4.03, "reference_max": 4.65}, {"item_name": "羊水深度", "unit": "cm", "reference_min": 3.0, "reference_max": 8.0}]},
+      {"week": 28, "items": [{"item_name": "双顶径", "unit": "cm", "reference_min": 6.89, "reference_max": 7.77}, {"item_name": "股骨长", "unit": "cm", "reference_min": 4.98, "reference_max": 5.70}, {"item_name": "羊水深度", "unit": "cm", "reference_min": 3.0, "reference_max": 8.0}]},
+      {"week": 32, "items": [{"item_name": "双顶径", "unit": "cm", "reference_min": 7.91, "reference_max": 8.85}, {"item_name": "股骨长", "unit": "cm", "reference_min": 5.79, "reference_max": 6.55}, {"item_name": "羊水深度", "unit": "cm", "reference_min": 3.0, "reference_max": 8.0}]},
+      {"week": 36, "items": [{"item_name": "双顶径", "unit": "cm", "reference_min": 8.62, "reference_max": 9.62}, {"item_name": "股骨长", "unit": "cm", "reference_min": 6.43, "reference_max": 7.19}, {"item_name": "羊水深度", "unit": "cm", "reference_min": 3.0, "reference_max": 8.0}]},
+      {"week": 40, "items": [{"item_name": "双顶径", "unit": "cm", "reference_min": 9.05, "reference_max": 9.87}, {"item_name": "股骨长", "unit": "cm", "reference_min": 6.81, "reference_max": 7.49}, {"item_name": "羊水深度", "unit": "cm", "reference_min": 3.0, "reference_max": 8.0}]}
+    ]
+  },
+  "hcg_progesterone": {
+    "name": "hCG/孕酮",
+    "items": [
+      {"item_name": "hCG", "unit": "mIU/mL", "reference_min": 5, "reference_max": 288000, "note": "孕早期快速升高"},
+      {"item_name": "孕酮", "unit": "ng/mL", "reference_min": 10, "reference_max": 40},
+      {"item_name": "雌二醇", "unit": "pg/mL", "reference_min": 200, "reference_max": 3000}
+    ]
+  },
+  "glucose": {
+    "name": "血糖",
+    "items": [
+      {"item_name": "空腹血糖", "unit": "mmol/L", "reference_min": 3.9, "reference_max": 5.1},
+      {"item_name": "餐后1h血糖", "unit": "mmol/L", "reference_min": 0, "reference_max": 10.0},
+      {"item_name": "餐后2h血糖", "unit": "mmol/L", "reference_min": 0, "reference_max": 8.5}
+    ]
+  }
+}

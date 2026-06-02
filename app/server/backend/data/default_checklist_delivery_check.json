@@ -1,0 +1,66 @@
+{
+  "name": "产检与入院确认清单",
+  "type": "delivery_check",
+  "categories": [
+    {
+      "category": "孕期检查确认",
+      "items": [
+        {"name": "NT检查已完成", "description": "孕11-14周，筛查唐氏综合征", "mandatory": true},
+        {"name": "唐筛/无创DNA已完成", "description": "孕15-20周，筛查染色体异常", "mandatory": true},
+        {"name": "大排畸已完成", "description": "孕22-26周，检查胎儿结构发育", "mandatory": true},
+        {"name": "糖耐量(OGTT)已完成", "description": "孕24-28周，筛查妊娠期糖尿病", "mandatory": true},
+        {"name": "B族链球菌筛查已完成", "description": "孕36周后，预防新生儿感染", "mandatory": true},
+        {"name": "胎心监护已定期做", "description": "孕32周后每周一次，监测胎儿状况", "mandatory": true},
+        {"name": "分娩预演/产前课程已参加", "description": "了解分娩过程，做好心理准备", "mandatory": false},
+        {"name": "待产医院已选定", "description": "综合考虑距离、医疗水平等", "mandatory": true},
+        {"name": "分娩计划已与医生确认", "description": "沟通分娩方式、镇痛等", "mandatory": true}
+      ]
+    },
+    {
+      "category": "入院前准备",
+      "items": [
+        {"name": "确认预产期", "description": "核实预产期日期", "mandatory": true},
+        {"name": "确认胎位", "description": "了解胎位是否正常", "mandatory": true},
+        {"name": "确认分娩方式(顺产/剖宫产)", "description": "根据身体状况和医生建议决定", "mandatory": true},
+        {"name": "确认医院路线和停车", "description": "提前规划路线，避免慌乱", "mandatory": true},
+        {"name": "确认急诊入口", "description": "了解医院急诊位置", "mandatory": true},
+        {"name": "确认陪产人并告知注意事项", "description": "安排陪产人，交代准备事项", "mandatory": true},
+        {"name": "待产包已全部装车/就位", "description": "确保随时可以出发", "mandatory": true},
+        {"name": "新生儿名字已备选", "description": "提前想好宝宝名字", "mandatory": false}
+      ]
+    },
+    {
+      "category": "临产征兆确认",
+      "items": [
+        {"name": "规律宫缩(5-1-1法则:间隔5分钟/持续1分钟/连续1小时)", "description": "出现规律宫缩需立即就医", "mandatory": true},
+        {"name": "见红(粉红/鲜红色分泌物)", "description": "通常是临产信号，可准备就医", "mandatory": true},
+        {"name": "破水(无色透明液体流出)", "description": "立即平躺，拨打120", "mandatory": true},
+        {"name": "胎动明显减少或异常增多", "description": "可能是胎儿缺氧信号，及时就医", "mandatory": true},
+        {"name": "持续性下腹痛/腰酸", "description": "可能是早产征兆，及时就医", "mandatory": true}
+      ]
+    },
+    {
+      "category": "产房物品确认",
+      "items": [
+        {"name": "产褥垫已备", "description": "产房使用，防止弄脏", "mandatory": true},
+        {"name": "吸管杯/保温杯已备", "description": "产程中补充水分", "mandatory": true},
+        {"name": "手机充满电+充电宝", "description": "保持通讯畅通", "mandatory": true},
+        {"name": "证件包已放随身位置", "description": "入院手续需要", "mandatory": true},
+        {"name": "产妇换洗衣物已备", "description": "产后更换", "mandatory": true},
+        {"name": "宝宝出产房衣物已备", "description": "宝宝出生后穿着", "mandatory": true},
+        {"name": "能量补给(巧克力/功能饮料)", "description": "产程中补充体力", "mandatory": true},
+        {"name": "相机/手机拍照已备", "description": "记录珍贵时刻", "mandatory": false}
+      ]
+    },
+    {
+      "category": "产后安排确认",
+      "items": [
+        {"name": "月子中心/月嫂已预订", "description": "提前预约，确保有床位/档期", "mandatory": false},
+        {"name": "产后餐食安排已确认", "description": "月子餐或家人准备", "mandatory": true},
+        {"name": "家属陪护排班已安排", "description": "确保有人照顾产妇和宝宝", "mandatory": true},
+        {"name": "新生儿证件办理流程已了解", "description": "出生证明、户口、医保等", "mandatory": true},
+        {"name": "产后42天复查已预约", "description": "检查子宫恢复情况", "mandatory": true}
+      ]
+    }
+  ]
+}

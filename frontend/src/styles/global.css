@@ -1,0 +1,71 @@
+@import './variables.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+/* ============ 桌面端容器 ============ */
+.page-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ============ 手机端全局适配 ============ */
+@media (max-width: 768px) {
+  html, body {
+    font-size: 15px;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+  }
+
+  .page-container {
+    padding: 12px;
+    max-width: 100%;
+  }
+
+  button, a, .n-button {
+    min-height: 40px;
+  }
+
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  ::-webkit-scrollbar { width: 0; }
+
+  .n-card, .section, .checkup-card, .health-card,
+  .meal-card, .checklist-panel, .checkup-card {
+    margin-bottom: 10px;
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "pregnancy-journal-server",
+  "version": "1.0.0",
+  "description": "孕程记 - Node.js 后端服务",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "express": "^4.21.0",
+    "sql.js": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5",
+    "uuid": "^10.0.0",
+    "mime-types": "^2.1.35"
+  }
+}

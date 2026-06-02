@@ -1,0 +1,35 @@
+{
+  "name": "pregnancy-journal-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tiptap/extension-image": "^3.23.6",
+    "@tiptap/extension-placeholder": "^3.23.6",
+    "@tiptap/starter-kit": "^3.23.6",
+    "@tiptap/vue-3": "^3.23.6",
+    "@vicons/ionicons5": "^0.12",
+    "axios": "^1.7",
+    "dayjs": "^1.11",
+    "echarts": "^5.5",
+    "naive-ui": "^2.38",
+    "pinia": "^2.1",
+    "vue": "^3.4",
+    "vue-echarts": "^7.0",
+    "vue-router": "^4.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1",
+    "autoprefixer": "^10.4",
+    "postcss": "^8.4",
+    "tailwindcss": "^3.4",
+    "typescript": "^5.5",
+    "vite": "^5.4",
+    "vue-tsc": "^2.0"
+  }
+}
