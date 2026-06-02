@@ -1,0 +1,129 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../db');
+
+router.post('/diaries', (req, res) => {
+  try {
+    const { pregnancy_id, entry_date, gestational_week, content, mood, image_urls } = req.body;
+
+    if (!pregnancy_id || !entry_date || !content) {
+      return res.json({ code: 1001, data: null, message: 'pregnancy_id、entry_date、content 为必填项' });
+    }
+
+    const id = db.generateId();
+    db.run(
+      `INSERT INTO diary_entry (id, pregnancy_id, entry_date, gestational_week, content, mood, image_urls)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, pregnancy_id, entry_date, gestational_week || 0, content, mood || null,
+       Array.isArray(image_urls) ? JSON.stringify(image_urls) : (image_urls || null)]
+    );
+
+    const diary = db.queryOne('SELECT * FROM diary_entry WHERE id = ?', [id]);
+    res.json({ code: 0, data: diary, message: 'success' });
+  } catch (e) {
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
+router.get('/diaries', (req, res) => {
+  try {
+    const { pregnancy_id, start_date, end_date, page = 1, page_size = 20 } = req.query;
+
+    if (!pregnancy_id) {
+      return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
+    }
+
+    let where = 'WHERE pregnancy_id = ?';
+    const params = [pregnancy_id];
+
+    if (start_date) {
+      where += ' AND entry_date >= ?';
+      params.push(start_date);
+    }
+    if (end_date) {
+      where += ' AND entry_date <= ?';
+      params.push(end_date);
+    }
+
+    const offset = (parseInt(page) - 1) * parseInt(page_size);
+    const limit = parseInt(page_size);
+
+    const total = db.queryOne(`SELECT COUNT(*) as count FROM diary_entry ${where}`, params);
+    const diaries = db.queryAll(
+      `SELECT * FROM diary_entry ${where} ORDER BY entry_date DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    res.json({
+      code: 0,
+      data: { list: diaries, total: total.count, page: parseInt(page), page_size: limit },
+      message: 'success'
+    });
+  } catch (e) {
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
+router.get('/diaries/:id', (req, res) => {
+  try {
+    const diary = db.queryOne('SELECT * FROM diary_entry WHERE id = ?', [req.params.id]);
+    if (!diary) {
+      return res.json({ code: 1001, data: null, message: '日记不存在' });
+    }
+    res.json({ code: 0, data: diary, message: 'success' });
+  } catch (e) {
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
+router.put('/diaries/:id', (req, res) => {
+  try {
+    const existing = db.queryOne('SELECT * FROM diary_entry WHERE id = ?', [req.params.id]);
+    if (!existing) {
+      return res.json({ code: 1001, data: null, message: '日记不存在' });
+    }
+
+    const updates = [];
+    const params = [];
+
+    const fields = ['pregnancy_id', 'entry_date', 'gestational_week', 'content', 'mood', 'image_urls'];
+
+    for (const field of fields) {
+      if (req.body[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        params.push(field === 'image_urls' && Array.isArray(req.body[field])
+          ? JSON.stringify(req.body[field]) : req.body[field]);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.json({ code: 1001, data: null, message: '没有需要更新的字段' });
+    }
+
+    updates.push("updated_at = datetime('now')");
+    params.push(req.params.id);
+
+    db.run(`UPDATE diary_entry SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    const updated = db.queryOne('SELECT * FROM diary_entry WHERE id = ?', [req.params.id]);
+    res.json({ code: 0, data: updated, message: 'success' });
+  } catch (e) {
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
+router.delete('/diaries/:id', (req, res) => {
+  try {
+    const existing = db.queryOne('SELECT * FROM diary_entry WHERE id = ?', [req.params.id]);
+    if (!existing) {
+      return res.json({ code: 1001, data: null, message: '日记不存在' });
+    }
+
+    db.run('DELETE FROM diary_entry WHERE id = ?', [req.params.id]);
+    res.json({ code: 0, data: null, message: '删除成功' });
+  } catch (e) {
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
+module.exports = router;

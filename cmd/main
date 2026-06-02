@@ -1,0 +1,141 @@
+#!/bin/bash
+
+LOG_FILE="${TRIM_PKGVAR:-/tmp}/info.log"
+PID_FILE="${TRIM_PKGVAR:-/tmp}/app.pid"
+mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
+mkdir -p "$(dirname "${PID_FILE}")" 2>/dev/null
+
+NODE_BIN="/var/apps/nodejs_v22/target/bin"
+export PATH=${NODE_BIN}:$PATH
+
+DATA_DIR="${TRIM_DATA_SHARE_PATHS%%:*}"
+APP_DIR="${TRIM_APPDEST}/server"
+NODE_DIR="${APP_DIR}/node"
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}" 2>/dev/null
+}
+
+start_process() {
+    if status; then
+        log_msg "Application already running"
+        return 0
+    fi
+
+    log_msg "Starting pregnancy-journal (Node.js) ..."
+    log_msg "Node: $(which node) $(node -v 2>/dev/null || echo 'NOT FOUND')"
+    log_msg "Port: ${TRIM_SERVICE_PORT:-21039}"
+    log_msg "AppDir: ${TRIM_APPDEST}"
+    log_msg "DataDir: ${DATA_DIR}"
+    log_msg "PkgVar: ${TRIM_PKGVAR}"
+
+    mkdir -p "${DATA_DIR}/photos" >> "${LOG_FILE}" 2>&1
+    mkdir -p "${DATA_DIR}/thumbnails" >> "${LOG_FILE}" 2>&1
+    mkdir -p "${DATA_DIR}/media" >> "${LOG_FILE}" 2>&1
+    mkdir -p "${DATA_DIR}/backups" >> "${LOG_FILE}" 2>&1
+
+    if [ ! -d "${NODE_DIR}/node_modules" ]; then
+        log_msg "node_modules not found, running npm install..."
+        cd "${NODE_DIR}" && timeout 120 npm install --production >> "${LOG_FILE}" 2>&1 || log_msg "WARNING: npm install failed or timed out"
+    fi
+
+    CMD="cd \"${NODE_DIR}\" && \
+DATABASE_PATH=${TRIM_PKGVAR}/pregnancy-journal.db \
+PHOTOS_DIR=${DATA_DIR}/photos \
+THUMBNAILS_DIR=${DATA_DIR}/thumbnails \
+MEDIA_DIR=${DATA_DIR}/media \
+BACKUPS_DIR=${DATA_DIR}/backups \
+DATA_DIR=${APP_DIR}/backend/data \
+STATIC_DIR=${TRIM_APPDEST}/ui \
+TRIM_APPDEST=${TRIM_APPDEST} \
+TRIM_PKGVAR=${TRIM_PKGVAR} \
+TRIM_DATA_SHARE_PATHS=${TRIM_DATA_SHARE_PATHS} \
+TRIM_SERVICE_PORT=${TRIM_SERVICE_PORT:-21039} \
+APP_MODE=fnos \
+node server.js"
+
+    bash -c "${CMD}" >> "${LOG_FILE}" 2>&1 &
+    printf "%s" "$!" > "${PID_FILE}"
+    log_msg "Process started (pid=$!)"
+    return 0
+}
+
+stop_process() {
+    log_msg "Stopping pregnancy-journal ..."
+
+    if [ -r "${PID_FILE}" ]; then
+        pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+        log_msg "pid=${pid}"
+
+        if ! check_process "${pid}"; then
+            rm -f "${PID_FILE}"
+            log_msg "Process not running, cleaned pid file"
+            return 0
+        fi
+
+        log_msg "Sending TERM signal to PID:${pid}..."
+        kill -TERM ${pid} >> "${LOG_FILE}" 2>&1
+
+        local count=0
+        while check_process "${pid}" && [ $count -lt 10 ]; do
+            sleep 1
+            count=$((count + 1))
+            log_msg "Waiting for process to terminate ... (${count}s/10s)"
+        done
+
+        if check_process "${pid}"; then
+            log_msg "Sending KILL signal to PID:${pid}..."
+            kill -KILL "${pid}"
+            sleep 1
+        fi
+
+        rm -f "${PID_FILE}"
+        log_msg "Process stopped"
+    else
+        log_msg "No pid file found"
+    fi
+
+    return 0
+}
+
+check_process() {
+    local pid=$1
+    if kill -0 "${pid}" 2>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+status() {
+    if [ -f "${PID_FILE}" ]; then
+        pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+        if check_process "${pid}"; then
+            return 0
+        else
+            rm -f "${PID_FILE}"
+        fi
+    fi
+    return 1
+}
+
+case $1 in
+start)
+    start_process
+    exit $?
+    ;;
+stop)
+    stop_process
+    exit $?
+    ;;
+status)
+    if status; then
+        exit 0
+    else
+        exit 3
+    fi
+    ;;
+*)
+    exit 1
+    ;;
+esac

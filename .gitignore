@@ -1,0 +1,57 @@
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+app/www/
+*.fpk
+app.tgz
+*.tar.gz
+.DS_Store
+Thumbs.db
+.workbuddy/
+
+# 部署凭据文件
+ssh_pass.py
+sftp_batch.txt
+paramiko_debug.log
+deploy_*.py
+
+# 数据库文件（运行时生成）
+*.db
+*.db-shm
+*.db-wal
+
+# 前端构建产物（vite build 输出，可重新生成）
+app/ui/assets/
+app/ui/index.html
+app/ui/favicon.png
+app/ui/images/
+
+# 模板截图
+muban.png
+
+# 测试数据 / 备份数据（含用户隐私）
+test-backup-data/
+test_data/
+backup-*/
+*.sql
+
+# IDE / 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志
+*.log
+logs/
+npm-debug.log*
+
+# 环境变量（含密钥）
+.env
+.env.*
+!.env.example
+
+# fnpack 临时文件
+.fpk-temp/

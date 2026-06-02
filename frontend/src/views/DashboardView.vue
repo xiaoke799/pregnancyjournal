@@ -1,0 +1,686 @@
+<template>
+  <div class="dashboard-view">
+    <div class="countdown-card" :class="'stage-' + stageKey">
+      <div class="countdown-top">
+        <div class="countdown-label">距离预产期</div>
+        <div class="countdown-row">
+          <span class="countdown-num">{{ daysUntilDue }}</span>
+          <span class="countdown-unit">天</span>
+        </div>
+      </div>
+      <div class="countdown-meta">
+        <span>孕 {{ gestationalAge?.weeks ?? '--' }}+{{ gestationalAge?.days ?? 0 }}</span>
+        <span class="meta-dot">·</span>
+        <span>{{ trimesterText }}</span>
+        <span class="meta-dot" v-if="dueDate">·</span>
+        <span v-if="dueDate">预产期 {{ dueDate }}</span>
+      </div>
+      <div class="quick-row">
+        <router-link to="/record" class="q-chip" :class="{ done: dashboardData?.has_today_record }">
+          {{ dashboardData?.has_today_record ? '✅ 已记录' : '📝 记录' }}
+        </router-link>
+        <router-link to="/fetal-movement-counter" class="q-chip">
+          👶 胎动
+          <span class="q-badge" v-if="dashboardData?.fetal_movement_count">{{ dashboardData.fetal_movement_count }}</span>
+        </router-link>
+        <router-link to="/contraction-timer" class="q-chip" :class="{ warn: dashboardData?.contraction_active }">
+          ⏱️ 宫缩
+        </router-link>
+        <router-link to="/diet" class="q-chip">🍎 饮食</router-link>
+        <router-link to="/checklist" class="q-chip">📋 清单</router-link>
+      </div>
+    </div>
+
+    <div class="section" v-if="fetalCurveData.length > 0">
+      <div class="section-header">
+        <h3>👶 宝宝成长曲线</h3>
+        <span class="section-hint">第 {{ gestationalAge?.weeks }} 周</span>
+      </div>
+      <div class="dev-brief" v-if="development">
+        <span class="dev-chip">{{ development.size }}</span>
+        <span class="dev-chip">{{ development.weight }}</span>
+        <span class="dev-chip" v-if="development.length_cm">{{ development.length_cm }}cm</span>
+      </div>
+      <div class="chart-wrap">
+        <v-chart :option="growthChartOption" :autoresize="true" style="height: 260px" />
+      </div>
+    </div>
+
+    <div class="section" v-if="recommendedTodos.length > 0">
+      <div class="section-header">
+        <h3>🏥 产检建议</h3>
+        <router-link to="/checkup-schedule" class="view-all">全部 →</router-link>
+      </div>
+      <div class="checkup-list">
+        <div v-for="item in recommendedTodos" :key="item.id" class="checkup-item">
+          <div class="ci-week">{{ item.week_range }}周</div>
+          <div class="ci-body">
+            <div class="ci-name">
+              {{ item.name }}
+              <n-tag v-if="item.is_mandatory" size="tiny" type="error" :bordered="false">必检</n-tag>
+              <n-tag v-else size="tiny" type="warning" :bordered="false">选检</n-tag>
+            </div>
+            <div class="ci-meta">{{ item.due_hint }}</div>
+          </div>
+          <div class="ci-status" :class="item.days_until != null && item.days_until < 0 ? 'past' : item.days_until <= 14 ? 'soon' : ''">
+            {{ formatDaysUntil(item.days_until) }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3>📌 我的计划</h3>
+        <span class="section-hint" v-if="todayTodos.length">{{ todayTodos.length }} 项</span>
+      </div>
+      <div v-if="todayTodos.length === 0" class="empty-hint">暂无计划，快添加一条吧</div>
+      <div v-else class="plan-list">
+        <div v-for="item in todayTodos" :key="item.id" class="plan-item">
+          <span class="plan-icon">{{ sourceIcon(item.source_type) }}</span>
+          <div class="plan-body">
+            <span class="plan-title">{{ item.title }}</span>
+            <span class="plan-meta" v-if="item.trigger_date">{{ formatShortDate(item.trigger_date) }}</span>
+          </div>
+          <n-button size="tiny" quaternary type="primary" @click="completeTodo(item)">完成</n-button>
+        </div>
+      </div>
+      <div class="quick-add-row">
+        <n-input
+          v-model:value="newTodoTitle"
+          placeholder="添加计划..."
+          size="small"
+          @keyup.enter="quickAddReminder"
+          :disabled="adding"
+        />
+        <n-button type="primary" size="small" :loading="adding" @click="quickAddReminder" :disabled="!newTodoTitle.trim()">添加</n-button>
+      </div>
+    </div>
+
+    <div class="section record-section">
+      <div class="section-header">
+        <h3>📊 今日记录</h3>
+        <router-link :to="{ path: '/record', query: { date: todayStr } }" class="view-all">
+          {{ dashboardData?.has_today_record ? '查看详情 →' : '去记录 →' }}
+        </router-link>
+      </div>
+      <div v-if="todayRecord" class="record-content">
+        <div class="record-primary">
+          <div class="rg-cell primary" v-if="todayRecord.weight != null">
+            <span class="rg-icon">⚖️</span>
+            <span class="rg-val">{{ todayRecord.weight }}<small>kg</small></span>
+            <span class="rg-label">体重</span>
+          </div>
+          <div class="rg-cell primary" v-if="todayRecord.mood != null">
+            <span class="rg-icon">{{ moodEmoji(todayRecord.mood) }}</span>
+            <span class="rg-val">{{ moodLabel(todayRecord.mood) }}</span>
+            <span class="rg-label">心情</span>
+          </div>
+          <div class="rg-cell primary" v-if="todayRecord.fetal_heart_rate != null">
+            <span class="rg-icon">💓</span>
+            <span class="rg-val">{{ todayRecord.fetal_heart_rate }}<small>bpm</small></span>
+            <span class="rg-label">胎心</span>
+          </div>
+          <div class="rg-cell primary" v-if="todayRecord.sleep_hours != null">
+            <span class="rg-icon">😴</span>
+            <span class="rg-val">{{ todayRecord.sleep_hours }}<small>h</small></span>
+            <span class="rg-label">睡眠</span>
+          </div>
+        </div>
+        <div class="record-secondary">
+          <div class="rs-item" v-if="todayRecord.blood_pressure_systolic">
+            <span class="rs-icon">❤️</span>
+            <span>血压 {{ todayRecord.blood_pressure_systolic }}/{{ todayRecord.blood_pressure_diastolic }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.blood_glucose_fasting">
+            <span class="rs-icon">🩸</span>
+            <span>空腹血糖 {{ todayRecord.blood_glucose_fasting }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.blood_glucose_1h">
+            <span class="rs-icon">🩸</span>
+            <span>餐后1h血糖 {{ todayRecord.blood_glucose_1h }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.blood_glucose_2h">
+            <span class="rs-icon">🩸</span>
+            <span>餐后2h血糖 {{ todayRecord.blood_glucose_2h }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.body_temperature">
+            <span class="rs-icon">🌡️</span>
+            <span>体温 {{ todayRecord.body_temperature }}°C</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.exercise_type">
+            <span class="rs-icon">🏃</span>
+            <span>运动 {{ todayRecord.exercise_type }}{{ todayRecord.exercise_duration ? ' ' + todayRecord.exercise_duration + 'min' : '' }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.water_intake">
+            <span class="rs-icon">💧</span>
+            <span>饮水 {{ todayRecord.water_intake }}ml</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.edema_level && todayRecord.edema_level !== 'none'">
+            <span class="rs-icon">🦶</span>
+            <span>水肿 {{ edemaLabel(todayRecord.edema_level) }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.fetal_movement_count">
+            <span class="rs-icon">👶</span>
+            <span>胎动 {{ todayRecord.fetal_movement_count }}次</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.contraction_count">
+            <span class="rs-icon">⏱️</span>
+            <span>宫缩 {{ todayRecord.contraction_count }}次</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.diet_note">
+            <span class="rs-icon">🍽️</span>
+            <span class="rs-note">{{ todayRecord.diet_note }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.medication">
+            <span class="rs-icon">💊</span>
+            <span class="rs-note">{{ parseJsonText(todayRecord.medication) }}</span>
+          </div>
+        </div>
+        <div class="record-symptoms" v-if="parseSymptoms(todayRecord.symptoms).length">
+          <span class="symptom-tag" v-for="s in parseSymptoms(todayRecord.symptoms)" :key="s">{{ s }}</span>
+        </div>
+        <div class="record-note" v-if="todayRecord.note">
+          <span class="note-label">📝 备注：</span>{{ todayRecord.note }}
+        </div>
+      </div>
+      <router-link v-else :to="{ path: '/record', query: { date: todayStr } }" class="empty-record">
+        <span class="empty-icon">📝</span>
+        <span>今天还没有记录</span>
+        <span class="empty-cta">点击去记录 →</span>
+      </router-link>
+    </div>
+
+    <div class="section" v-if="checklistProgress && checklistProgress.total > 0">
+      <div class="section-header">
+        <h3>📋 待产清单</h3>
+        <router-link to="/checklist" class="view-all">查看全部 →</router-link>
+      </div>
+      <div class="cl-bar-outer">
+        <div class="cl-bar-fill" :style="{ width: checklistProgress.percentage + '%' }"></div>
+      </div>
+      <div class="cl-summary">
+        已完成 {{ checklistProgress.checked }}/{{ checklistProgress.total }} 项
+        <strong>{{ checklistProgress.percentage }}%</strong>
+      </div>
+    </div>
+
+    <div class="section" v-if="lastCheckup">
+      <div class="section-header">
+        <h3>🏥 最近产检</h3>
+        <router-link to="/checkup-schedule" class="view-all">全部 →</router-link>
+      </div>
+      <div class="lc-row">
+        <div>
+          <span class="lc-type">{{ lastCheckup.checkup_type }}</span>
+          <span class="lc-date">{{ formatDate(lastCheckup.checkup_date) }}</span>
+        </div>
+        <span class="lc-week">孕{{ lastCheckup.gestational_week }}周</span>
+      </div>
+    </div>
+
+    <div style="height: 80px"></div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
+import { NInput, NButton, NTag, useMessage } from 'naive-ui'
+import { usePregnancyStore } from '@/stores/pregnancy'
+import { getDashboard } from '@/api/dashboard'
+import { reminderApi } from '@/api/reminder'
+import { calculateGestationalAge } from '@/utils/gestational'
+import dayjs from 'dayjs'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent, MarkLineComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+
+use([LineChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, CanvasRenderer])
+const pregnancyStore = usePregnancyStore()
+const message = useMessage()
+
+const dashboardData = ref<any>(null)
+const loading = ref(false)
+const newTodoTitle = ref('')
+const adding = ref(false)
+
+function toStageKey(trimester?: string): 'early' | 'mid' | 'late' {
+  if (trimester === 'early' || trimester === '孕早期') return 'early'
+  if (trimester === 'mid' || trimester === '孕中期') return 'mid'
+  return 'late'
+}
+
+function isValidAge(age: { weeks: number; days: number } | null | undefined): boolean {
+  return !!age && (age.weeks > 0 || age.days > 0)
+}
+
+const gestationalAge = computed(() => {
+  const storeAge = pregnancyStore.gestationalAge
+  if (isValidAge(storeAge)) {
+    return { weeks: storeAge!.weeks, days: storeAge!.days, trimester: storeAge!.trimester }
+  }
+  const ga = dashboardData.value?.gestational_age
+  if (isValidAge(ga)) {
+    return { weeks: ga.weeks, days: ga.days, trimester: ga.trimester }
+  }
+  const lmp = pregnancyStore.currentPregnancy?.last_period_date
+  if (lmp) {
+    const local = calculateGestationalAge(lmp)
+    return { weeks: local.weeks, days: local.days, trimester: local.trimester }
+  }
+  return null
+})
+
+const dueDate = computed(() => {
+  const p = pregnancyStore.currentPregnancy
+  return p?.due_date || p?.dueDate || null
+})
+const daysUntilDue = computed(() => {
+  if (dashboardData.value?.gestational_age?.days_until_due != null) {
+    return dashboardData.value.gestational_age.days_until_due
+  }
+  if (pregnancyStore.gestationalAge?.daysUntilDue != null) {
+    return pregnancyStore.gestationalAge.daysUntilDue
+  }
+  const lmp = pregnancyStore.currentPregnancy?.last_period_date
+  if (lmp) {
+    return calculateGestationalAge(lmp).daysUntilDue
+  }
+  return 0
+})
+
+const stageKey = computed<'early' | 'mid' | 'late'>(() => {
+  if (dashboardData.value?.gestational_age?.stage_key) {
+    return dashboardData.value.gestational_age.stage_key
+  }
+  return toStageKey(gestationalAge.value?.trimester)
+})
+
+const trimesterText = computed(() => {
+  const t = gestationalAge.value?.trimester
+  if (t === 'early' || t === '孕早期') return '孕早期'
+  if (t === 'mid' || t === '孕中期') return '孕中期'
+  if (t === 'late' || t === '孕晚期') return '孕晚期'
+  return '孕早期'
+})
+
+const todayRecord = computed(() => dashboardData.value?.today_record)
+const development = computed(() => dashboardData.value?.development)
+const lastCheckup = computed(() => dashboardData.value?.last_checkup)
+const checklistProgress = computed(() => dashboardData.value?.checklist_progress)
+
+const todayTodos = computed(() => dashboardData.value?.today_todos || [])
+const recommendedTodos = computed(() => dashboardData.value?.recommended_todos || [])
+
+const fetalCurveData = computed(() => dashboardData.value?.fetal_development_curve || [])
+const weightHistory = computed(() => dashboardData.value?.weight_history || [])
+
+const growthChartOption = computed(() => {
+  const currentWeek = gestationalAge.value?.weeks || 0
+  const curve = fetalCurveData.value as any[]
+  const weeks = curve.map((d: any) => d.week + '周')
+  const fetalWeights = curve.map((d: any) => d.weight_g)
+
+  const motherData: any[] = []
+  const wh = weightHistory.value as any[]
+  if (wh.length > 0 && lmpDate.value) {
+    const lmp = dayjs(lmpDate.value)
+    wh.forEach((r: any) => {
+      const recDate = dayjs(r.date)
+      const diffDays = recDate.diff(lmp, 'day')
+      if (diffDays >= 0) {
+        const w = Math.floor(diffDays / 7)
+        motherData.push({ week: w, weight: r.weight })
+      }
+    })
+  }
+
+  const motherWeights: (number | null)[] = weeks.map((_: string, i: number) => {
+    const wk = curve[i]?.week
+    const match = motherData.find((m: any) => m.week === wk)
+    return match ? match.weight : null
+  })
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255,255,255,0.96)',
+      borderColor: '#eee',
+      textStyle: { fontSize: 12 },
+      formatter: (params: any) => {
+        let tip = params[0]?.axisValue || ''
+        params.forEach((p: any) => {
+          if (p.value != null) {
+            const unit = p.seriesName === '宝宝体重' ? 'g' : 'kg'
+            tip += `<br/>${p.marker} ${p.seriesName}：${p.value}${unit}`
+          }
+        })
+        return tip
+      },
+    },
+    legend: {
+      bottom: 0,
+      textStyle: { fontSize: 11, color: '#888' },
+      itemWidth: 14,
+      itemHeight: 8,
+    },
+    grid: { left: 45, right: 45, top: 16, bottom: 36 },
+    xAxis: {
+      type: 'category',
+      data: weeks,
+      axisLabel: {
+        fontSize: 10,
+        color: '#999',
+        interval: (i: number) => i % 4 === 0 || curve[i]?.week === currentWeek,
+      },
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: '#e5e7eb' } },
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '宝宝(g)',
+        nameTextStyle: { fontSize: 10, color: '#AB47BC' },
+        axisLabel: { fontSize: 10, color: '#AB47BC' },
+        splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
+      },
+      {
+        type: 'value',
+        name: '妈妈(kg)',
+        nameTextStyle: { fontSize: 10, color: '#E8A0BF' },
+        axisLabel: { fontSize: 10, color: '#E8A0BF' },
+        splitLine: { show: false },
+      },
+    ],
+    series: [
+      {
+        name: '宝宝体重',
+        type: 'line',
+        yAxisIndex: 0,
+        data: fetalWeights,
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { color: '#AB47BC', width: 2 },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(171,71,188,0.2)' },
+              { offset: 1, color: 'rgba(171,71,188,0.02)' },
+            ],
+          },
+        },
+        markLine: currentWeek > 0 ? {
+          silent: true,
+          symbol: 'none',
+          lineStyle: { color: '#E8A0BF', type: 'dashed', width: 1.5 },
+          data: [{ xAxis: (currentWeek - 1) + '周' }],
+          label: { show: true, formatter: '当前', fontSize: 10, color: '#E8A0BF' },
+        } : undefined,
+      },
+      {
+        name: '妈妈体重',
+        type: 'line',
+        yAxisIndex: 1,
+        data: motherWeights,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 5,
+        lineStyle: { color: '#E8A0BF', width: 2 },
+        itemStyle: { color: '#E8A0BF' },
+      },
+    ],
+  }
+})
+
+function moodEmoji(mood: number): string {
+  const emojis = ['', '😢', '😕', '😐', '🙂', '😄']
+  return emojis[mood] || '😐'
+}
+
+function moodLabel(mood: number): string {
+  const labels = ['', '很差', '不好', '一般', '不错', '很好']
+  return labels[mood] || '--'
+}
+
+function formatDate(d: string | undefined): string {
+  if (!d) return '--'
+  return dayjs(d).format('MM-DD')
+}
+
+function formatShortDate(d: string | undefined): string {
+  if (!d) return ''
+  return dayjs(d).format('M/D')
+}
+
+function formatDaysUntil(days: number | null | undefined): string {
+  if (days == null) return ''
+  if (days < 0) return `已过${Math.abs(days)}天`
+  if (days === 0) return '今天'
+  if (days <= 7) return `${days}天后`
+  return `${Math.ceil(days / 7)}周后`
+}
+
+function sourceIcon(sourceType: string | undefined): string {
+  const icons: Record<string, string> = { manual: '📌', medication: '💊', exercise: '🏃', custom: '📌' }
+  return icons[sourceType || ''] || '⏰'
+}
+
+const todayStr = dayjs().format('YYYY-MM-DD')
+
+function parseSymptoms(raw: string | null | undefined): string[] {
+  if (!raw) return []
+  try {
+    const arr = JSON.parse(raw)
+    return Array.isArray(arr) ? arr.filter(Boolean) : []
+  } catch { return raw ? [raw] : [] }
+}
+
+function parseJsonText(raw: string | null | undefined): string {
+  if (!raw) return ''
+  try {
+    const arr = JSON.parse(raw)
+    return Array.isArray(arr) ? arr.filter(Boolean).join('、') : raw
+  } catch { return raw }
+}
+
+function edemaLabel(level: string | undefined): string {
+  const map: Record<string, string> = { mild: '轻度', moderate: '中度', severe: '重度' }
+  return map[level || ''] || level || ''
+}
+
+const lmpDate = computed(() => pregnancyStore.currentPregnancy?.last_period_date)
+
+async function completeTodo(item: any) {
+  try {
+    await reminderApi.complete(item.id)
+    await loadDashboard()
+    message.success('已完成')
+  } catch { message.error('操作失败') }
+}
+
+async function quickAddReminder() {
+  const title = newTodoTitle.value.trim()
+  if (!title || !pregnancyStore.currentPregnancy) return
+  adding.value = true
+  try {
+    const today = dayjs().format('YYYY-MM-DD')
+    await reminderApi.create({
+      pregnancy_id: pregnancyStore.currentPregnancy.id,
+      title,
+      trigger_date: today,
+      priority: 'normal',
+      source_type: 'manual',
+    })
+    newTodoTitle.value = ''
+    await loadDashboard()
+    message.success('已添加')
+  } catch { message.error('添加失败') }
+  finally { adding.value = false }
+}
+
+async function loadDashboard() {
+  if (!pregnancyStore.currentPregnancy) return
+  loading.value = true
+  try {
+    const res: any = await getDashboard(pregnancyStore.currentPregnancy.id)
+    if (res.code === 0) dashboardData.value = res.data
+  } finally { loading.value = false }
+}
+
+onMounted(async () => {
+  if (!pregnancyStore.currentPregnancy) {
+    await pregnancyStore.fetchActivePregnancy()
+  }
+  loadDashboard()
+})
+watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboard() })
+</script>
+
+<style scoped>
+.dashboard-view { max-width: 680px; margin: 0 auto; padding: 16px; }
+
+.countdown-card {
+  border-radius: 18px; padding: 28px 24px 20px; color: white; text-align: center;
+  box-shadow: 0 6px 24px rgba(0,0,0,.1);
+}
+.countdown-card.stage-early { background: linear-gradient(135deg, #43A047, #66BB6A); }
+.countdown-card.stage-mid { background: linear-gradient(135deg, #1E88E5, #42A5F5); }
+.countdown-card.stage-late { background: linear-gradient(135deg, #8E24AA, #AB47BC); }
+.countdown-top { margin-bottom: 8px; }
+.countdown-label { font-size: 13px; opacity: .85; margin-bottom: 4px; letter-spacing: 1px; }
+.countdown-row { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+.countdown-num { font-size: 64px; font-weight: 900; line-height: 1; }
+.countdown-unit { font-size: 20px; font-weight: 600; opacity: .85; }
+.countdown-meta { font-size: 13px; opacity: .85; margin-bottom: 14px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.meta-dot { opacity: .5; }
+.quick-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; justify-content: center; flex-wrap: wrap; }
+.q-chip {
+  display: inline-flex; align-items: center; gap: 3px; padding: 6px 12px; border-radius: 20px;
+  background: rgba(255,255,255,.2); color: white; font-size: 12px; font-weight: 600;
+  text-decoration: none; white-space: nowrap; transition: background .2s;
+}
+.q-chip:hover { background: rgba(255,255,255,.35); }
+.q-chip.done { background: rgba(255,255,255,.35); }
+.q-chip.warn { background: rgba(255,82,82,.6); }
+.q-badge { background: #FF5252; font-size: 10px; padding: 0 5px; border-radius: 8px; margin-left: 2px; }
+
+.section {
+  background: white; border-radius: 14px; padding: 18px; margin-top: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.section-header h3 { font-size: 15px; font-weight: 700; margin: 0; }
+.section-hint { font-size: 12px; color: var(--text-hint, #94a3b8); }
+.view-all { font-size: 13px; color: var(--primary-color, #E8A0BF); text-decoration: none; font-weight: 600; }
+.chart-wrap { margin: 0 -4px; }
+
+.dev-brief { display: flex; gap: 8px; margin-bottom: 10px; }
+.dev-chip {
+  padding: 4px 10px; border-radius: 8px; background: #f3e8ff; color: #7c3aed;
+  font-size: 12px; font-weight: 600;
+}
+
+.empty-hint { text-align: center; color: var(--text-hint, #94a3b8); font-size: 13px; padding: 16px 0; }
+
+.checkup-list { display: flex; flex-direction: column; gap: 8px; }
+.checkup-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  border-radius: 10px; background: #f0f9ff; border-left: 3px solid #3b82f6;
+}
+.ci-week {
+  font-size: 12px; font-weight: 700; color: #3b82f6; white-space: nowrap;
+  min-width: 48px; text-align: center; background: #dbeafe; padding: 4px 6px;
+  border-radius: 6px;
+}
+.ci-body { flex: 1; min-width: 0; }
+.ci-name { font-size: 13px; font-weight: 600; color: var(--text-color, #1e293b); display: flex; align-items: center; gap: 6px; }
+.ci-meta { font-size: 11px; color: var(--text-hint, #94a3b8); margin-top: 2px; }
+.ci-status { font-size: 11px; font-weight: 600; color: #94a3b8; white-space: nowrap; }
+.ci-status.soon { color: #f59e0b; }
+.ci-status.past { color: #ef4444; }
+
+.plan-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.plan-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: 10px; background: #f8fafc; transition: background .15s;
+}
+.plan-item:hover { background: #f1f5f9; }
+.plan-icon { font-size: 18px; }
+.plan-body { flex: 1; min-width: 0; }
+.plan-title { font-size: 13px; font-weight: 600; color: var(--text-color, #1e293b); display: block; }
+.plan-meta { font-size: 11px; color: var(--text-hint, #94a3b8); }
+
+.quick-add-row { display: flex; gap: 8px; margin-top: 4px; }
+
+.record-content { display: flex; flex-direction: column; gap: 10px; }
+.record-primary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.rg-cell {
+  display: flex; flex-direction: column; align-items: center; padding: 12px 8px;
+  border-radius: 10px; background: #f8fafc; gap: 4px;
+}
+.rg-cell.primary { background: #fdf4ff; }
+.rg-icon { font-size: 20px; }
+.rg-val { font-size: 16px; font-weight: 700; color: var(--text-color, #1e293b); }
+.rg-val small { font-size: 11px; font-weight: 500; color: var(--text-hint, #94a3b8); margin-left: 1px; }
+.rg-label { font-size: 11px; color: var(--text-hint, #94a3b8); }
+
+.record-secondary { display: flex; flex-wrap: wrap; gap: 6px; }
+.rs-item {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px;
+  border-radius: 8px; background: #f1f5f9; font-size: 12px; color: var(--text-color, #1e293b);
+}
+.rs-icon { font-size: 13px; }
+.rs-note { font-size: 12px; color: var(--text-secondary, #64748b); }
+
+.record-symptoms { display: flex; flex-wrap: wrap; gap: 5px; }
+.symptom-tag {
+  padding: 3px 8px; border-radius: 6px; background: #fef3c7; color: #92400e;
+  font-size: 11px; font-weight: 500;
+}
+
+.record-note {
+  font-size: 12px; color: var(--text-secondary, #64748b); padding: 8px 10px;
+  background: #f8fafc; border-radius: 8px; line-height: 1.5;
+}
+.note-label { font-weight: 600; color: var(--text-color, #1e293b); }
+
+.empty-record {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 24px; color: var(--text-hint, #94a3b8); font-size: 13px;
+  text-decoration: none; border-radius: 10px; transition: background .15s;
+}
+.empty-record:hover { background: #f8fafc; }
+.empty-icon { font-size: 28px; }
+.empty-cta { color: var(--primary-color, #E8A0BF); font-weight: 600; font-size: 13px; }
+
+.cl-bar-outer { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.cl-bar-fill { height: 100%; background: linear-gradient(90deg, #66BB6A, #42A5F5); border-radius: 4px; transition: width .4s; }
+.cl-summary { text-align: center; font-size: 13px; color: var(--text-secondary, #64748b); }
+.cl-summary strong { color: var(--primary-color, #E8A0BF); font-size: 15px; margin-left: 4px; }
+
+.lc-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border-radius: 10px; }
+.lc-type { font-size: 14px; font-weight: 600; margin-right: 8px; }
+.lc-date { font-size: 12px; color: var(--text-hint); }
+.lc-week { font-size: 13px; font-weight: 600; color: var(--primary-color, #E8A0BF); }
+
+@media (max-width: 768px) {
+  .dashboard-view { padding: 10px; }
+  .countdown-card { padding: 22px 16px 16px; border-radius: 14px; }
+  .countdown-num { font-size: 52px; }
+  .quick-row { gap: 5px; }
+  .q-chip { padding: 5px 10px; font-size: 11px; }
+  .section { padding: 14px; border-radius: 12px; }
+  .record-primary { grid-template-columns: repeat(2, 1fr); }
+  .quick-add-row { flex-direction: column; }
+}
+@media (max-width: 480px) {
+  .countdown-num { font-size: 44px; }
+  .countdown-unit { font-size: 16px; }
+  .record-primary { grid-template-columns: repeat(2, 1fr); }
+  .dev-brief { flex-wrap: wrap; }
+  .ci-week { min-width: 40px; font-size: 11px; }
+}
+</style>
