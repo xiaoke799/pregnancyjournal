@@ -25,11 +25,7 @@
     </aside>
 
     <main class="main-content" :class="{ 'has-tabbar': isMobile }">
-      <router-view v-slot="{ Component, route }">
-        <KeepAlive :include="['DashboardView', 'RecordView', 'AlbumView', 'CheckupScheduleView', 'DietView', 'ChecklistView']">
-          <component :is="Component" :key="route.path" />
-        </KeepAlive>
-      </router-view>
+      <router-view />
     </main>
 
     <nav v-if="isMobile" class="tabbar">
@@ -57,6 +53,7 @@ const { isMobile } = useResize()
 const navItems = [
   { path: '/', icon: '🏠', label: '首页' },
   { path: '/record', icon: '📝', label: '记录' },
+  { path: '/diary', icon: '📖', label: '日记' },
   { path: '/album', icon: '📷', label: '相册' },
   { path: '/checkup-schedule', icon: '🏥', label: '产检' },
   { path: '/diet', icon: '🍎', label: '饮食' },

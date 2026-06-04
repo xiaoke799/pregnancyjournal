@@ -1,13 +1,14 @@
 /** 孕程记 - Axios 实例（统一请求/响应拦截）。
  *
- * 飞牛网关模式下，前端通过 /app/pregnancy-journal/api/v1 访问后端。
- * 使用 Vite BASE_URL 自动适配开发和生产环境。
+ * 飞牛 CGI 模式下，前端通过 /cgi/ThirdParty/pregnancyjournal/index.cgi/api/v1 访问后端。
+ * 开发环境通过 Vite 代理，生产环境通过 CGI 代理。
+ * 使用相对路径，自动适配开发和生产环境。
  */
 
 import axios from 'axios'
 
 const client = axios.create({
-  baseURL: import.meta.env.BASE_URL + 'api/v1',
+  baseURL: './api/v1',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

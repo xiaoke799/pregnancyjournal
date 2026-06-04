@@ -6,6 +6,7 @@
       "type": "iframe",
       "protocol": "http",
       "port": "3867",
+      "url": "/cgi/ThirdParty/pregnancyjournal/index.cgi/",
       "allUsers": true
     }
   }

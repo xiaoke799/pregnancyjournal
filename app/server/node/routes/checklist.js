@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('../db');
 const config = require('../config');
+const logger = require('../logger');
 
 const DEFAULT_CHECKLISTS = [
   { type: 'delivery_bag', name: '待产包清单', file: 'default_checklist_delivery.json' },
@@ -34,22 +35,28 @@ function _loadDefaultItems(filePath) {
 }
 
 function _ensureDefaultChecklists(pregnancyId) {
-  const existing = db.queryOne(
-    'SELECT COUNT(*) as count FROM checklist WHERE pregnancy_id = ?',
+  const existing = db.queryAll(
+    'SELECT id, type FROM checklist WHERE pregnancy_id = ?',
     [pregnancyId]
   );
 
-  if (existing.count > 0) return;
+  const existingTypes = new Set(existing.map(cl => cl.type));
+  let createdCount = 0;
 
   for (const cl of DEFAULT_CHECKLISTS) {
+    if (existingTypes.has(cl.type)) continue;
+
     const filePath = path.join(config.DATA_DIR, cl.file);
-    if (!fs.existsSync(filePath)) continue;
+    if (!fs.existsSync(filePath)) {
+      logger.warn('checklist', `_ensureDefaultChecklists - file not found: ${cl.file}`);
+      continue;
+    }
 
     let items;
     try {
       items = _loadDefaultItems(filePath);
     } catch (e) {
-      console.warn(`Failed to load ${cl.file}:`, e.message);
+      logger.warn('checklist', `Failed to load ${cl.file}: ${e.message}`);
       continue;
     }
 
@@ -67,6 +74,13 @@ function _ensureDefaultChecklists(pregnancyId) {
         [itemId, checklistId, item.name, item.description, item.category, item.is_mandatory, item.sort_order]
       );
     });
+
+    logger.info('checklist', `_ensureDefaultChecklists - created "${cl.name}" with ${items.length} items for pregnancy_id=${pregnancyId}`);
+    createdCount++;
+  }
+
+  if (createdCount > 0) {
+    logger.info('checklist', `_ensureDefaultChecklists - created ${createdCount} default checklists for pregnancy_id=${pregnancyId}`);
   }
 }
 
@@ -74,8 +88,10 @@ router.get('/checklists/progress', (req, res) => {
   try {
     const { pregnancy_id } = req.query;
     if (!pregnancy_id) {
+      logger.warn('checklist', 'GET /checklists/progress - missing pregnancy_id');
       return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
     }
+    logger.info('checklist', `GET /checklists/progress - pregnancy_id=${pregnancy_id}`);
 
     _ensureDefaultChecklists(pregnancy_id);
 
@@ -108,6 +124,7 @@ router.get('/checklists/progress', (req, res) => {
       });
     }
 
+    logger.info('checklist', `GET /checklists/progress - ${list.length} checklists, total=${totalItems}, checked=${checkedItems}`);
     res.json({
       code: 0,
       data: {
@@ -119,6 +136,7 @@ router.get('/checklists/progress', (req, res) => {
       message: 'success'
     });
   } catch (e) {
+    logger.error('checklist', `GET /checklists/progress error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
@@ -127,8 +145,10 @@ router.get('/checklists', (req, res) => {
   try {
     const { pregnancy_id } = req.query;
     if (!pregnancy_id) {
+      logger.warn('checklist', 'GET /checklists - missing pregnancy_id');
       return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
     }
+    logger.info('checklist', `GET /checklists - pregnancy_id=${pregnancy_id}`);
 
     _ensureDefaultChecklists(pregnancy_id);
 
@@ -144,16 +164,20 @@ router.get('/checklists', (req, res) => {
       );
     }
 
+    logger.info('checklist', `GET /checklists - ${checklists.length} checklists with items`);
     res.json({ code: 0, data: checklists, message: 'success' });
   } catch (e) {
+    logger.error('checklist', `GET /checklists error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.get('/checklists/:id', (req, res) => {
   try {
+    logger.info('checklist', `GET /checklists/${req.params.id}`);
     const checklist = db.queryOne('SELECT * FROM checklist WHERE id = ?', [req.params.id]);
     if (!checklist) {
+      logger.warn('checklist', `GET /checklists/${req.params.id} - not found`);
       return res.json({ code: 1001, data: null, message: '清单不存在' });
     }
 
@@ -162,16 +186,20 @@ router.get('/checklists/:id', (req, res) => {
       [req.params.id]
     );
 
+    logger.info('checklist', `GET /checklists/${req.params.id} - found, ${items.length} items`);
     res.json({ code: 0, data: { ...checklist, items }, message: 'success' });
   } catch (e) {
+    logger.error('checklist', `GET /checklists/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.put('/checklists/:id', (req, res) => {
   try {
+    logger.info('checklist', `PUT /checklists/${req.params.id} - name=${req.body.name}`);
     const existing = db.queryOne('SELECT * FROM checklist WHERE id = ?', [req.params.id]);
     if (!existing) {
+      logger.warn('checklist', `PUT /checklists/${req.params.id} - not found`);
       return res.json({ code: 1001, data: null, message: '清单不存在' });
     }
 
@@ -183,16 +211,20 @@ router.put('/checklists/:id', (req, res) => {
     db.run("UPDATE checklist SET name = ? WHERE id = ?", [name, req.params.id]);
 
     const updated = db.queryOne('SELECT * FROM checklist WHERE id = ?', [req.params.id]);
+    logger.info('checklist', `PUT /checklists/${req.params.id} - updated`);
     res.json({ code: 0, data: updated, message: 'success' });
   } catch (e) {
+    logger.error('checklist', `PUT /checklists/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.post('/checklists/:id/items', (req, res) => {
   try {
+    logger.info('checklist', `POST /checklists/${req.params.id}/items - name=${req.body.name}`);
     const existing = db.queryOne('SELECT * FROM checklist WHERE id = ?', [req.params.id]);
     if (!existing) {
+      logger.warn('checklist', `POST /checklists/${req.params.id}/items - checklist not found`);
       return res.json({ code: 1001, data: null, message: '清单不存在' });
     }
 
@@ -214,16 +246,20 @@ router.post('/checklists/:id/items', (req, res) => {
     );
 
     const item = db.queryOne('SELECT * FROM checklist_item WHERE id = ?', [itemId]);
+    logger.info('checklist', `POST /checklists/${req.params.id}/items - item created (id=${itemId})`);
     res.json({ code: 0, data: item, message: 'success' });
   } catch (e) {
+    logger.error('checklist', `POST /checklists/:id/items error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.put('/checklists/items/:item_id', (req, res) => {
   try {
+    logger.info('checklist', `PUT /checklists/items/${req.params.item_id} - fields=${Object.keys(req.body).join(',')}`);
     const existing = db.queryOne('SELECT * FROM checklist_item WHERE id = ?', [req.params.item_id]);
     if (!existing) {
+      logger.warn('checklist', `PUT /checklists/items/${req.params.item_id} - not found`);
       return res.json({ code: 1001, data: null, message: '条目不存在' });
     }
 
@@ -263,33 +299,41 @@ router.put('/checklists/items/:item_id', (req, res) => {
     db.run(`UPDATE checklist_item SET ${updates.join(', ')} WHERE id = ?`, params);
 
     const updated = db.queryOne('SELECT * FROM checklist_item WHERE id = ?', [req.params.item_id]);
+    logger.info('checklist', `PUT /checklists/items/${req.params.item_id} - updated`);
     res.json({ code: 0, data: updated, message: 'success' });
   } catch (e) {
+    logger.error('checklist', `PUT /checklists/items/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.delete('/checklists/items/:item_id', (req, res) => {
   try {
+    logger.info('checklist', `DELETE /checklists/items/${req.params.item_id}`);
     const existing = db.queryOne('SELECT * FROM checklist_item WHERE id = ?', [req.params.item_id]);
     if (!existing) {
+      logger.warn('checklist', `DELETE /checklists/items/${req.params.item_id} - not found`);
       return res.json({ code: 1001, data: null, message: '条目不存在' });
     }
 
     db.run('DELETE FROM checklist_item WHERE id = ?', [req.params.item_id]);
+    logger.info('checklist', `DELETE /checklists/items/${req.params.item_id} - deleted`);
     res.json({ code: 0, data: null, message: '删除成功' });
   } catch (e) {
+    logger.error('checklist', `DELETE /checklists/items/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.post('/checklists/:id/init-default', (req, res) => {
   try {
+    logger.info('checklist', `POST /checklists/${req.params.id}/init-default`);
     const checklist = db.queryOne(
       'SELECT * FROM checklist WHERE id = ?',
       [req.params.id]
     );
     if (!checklist) {
+      logger.warn('checklist', `POST /checklists/${req.params.id}/init-default - not found`);
       return res.json({ code: 1001, data: null, message: '清单不存在' });
     }
 
@@ -297,11 +341,13 @@ router.post('/checklists/:id/init-default', (req, res) => {
 
     const defaultCl = DEFAULT_CHECKLISTS.find(c => c.type === checklist.type);
     if (!defaultCl) {
+      logger.warn('checklist', `POST /checklists/${req.params.id}/init-default - no default config for type=${checklist.type}`);
       return res.json({ code: 1001, data: null, message: '未找到对应的默认配置' });
     }
 
     const filePath = path.join(config.DATA_DIR, defaultCl.file);
     if (!fs.existsSync(filePath)) {
+      logger.warn('checklist', `POST /checklists/${req.params.id}/init-default - file not found: ${defaultCl.file}`);
       return res.json({ code: 1001, data: null, message: '默认配置文件不存在' });
     }
 
@@ -309,6 +355,7 @@ router.post('/checklists/:id/init-default', (req, res) => {
     try {
       items = _loadDefaultItems(filePath);
     } catch (e) {
+      logger.error('checklist', `POST /checklists/${req.params.id}/init-default - failed to load config: ${e.message}`);
       return res.json({ code: 1001, data: null, message: '读取默认配置失败: ' + e.message });
     }
 
@@ -327,8 +374,10 @@ router.post('/checklists/:id/init-default', (req, res) => {
     );
 
     const updatedChecklist = db.queryOne('SELECT * FROM checklist WHERE id = ?', [req.params.id]);
+    logger.info('checklist', `POST /checklists/${req.params.id}/init-default - restored ${refreshed.length} items`);
     res.json({ code: 0, data: { ...updatedChecklist, items: refreshed }, message: 'success' });
   } catch (e) {
+    logger.error('checklist', `POST /checklists/:id/init-default error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });

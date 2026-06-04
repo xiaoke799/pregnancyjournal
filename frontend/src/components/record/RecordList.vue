@@ -7,7 +7,7 @@
         class="category-item"
         :class="{ 'has-data': cat.hasData }"
       >
-        <div class="category-row" @click="emitEdit(cat)">
+        <div class="category-row" @click="onCategoryClick(cat)">
           <div class="row-left">
             <span
               class="row-icon"
@@ -81,8 +81,14 @@ const record = computed(() => {
 
 type DisplayCategory = CategoryDef & { hasData: boolean }
 
-function emitEdit(cat: DisplayCategory) {
-  emit('edit', { type: cat.type, record: cat.hasData ? record.value : null })
+function onCategoryClick(cat: DisplayCategory) {
+  if (cat.hasData) {
+    // 有数据 → 编辑（使用大弹窗）
+    emit('edit', { type: cat.type, record: record.value })
+  } else if (cat.addable) {
+    // 无数据 + 可添加 → 打开对应类型的快捷小弹窗
+    emit('add-type', cat.type)
+  }
 }
 
 interface CategoryDef {
@@ -155,7 +161,7 @@ function hasDataForType(type: string): boolean {
     case 'progesterone': return !!r.uric_acid
     case 'habit': return false
     case 'supplement': return !!r.supplement_record
-    case 'intimacy': return !!r.intimacy_note
+    case 'intimacy': return !!r.intimacy_record
     case 'plan': return !!r.plan_text
     default: return false
   }
@@ -223,7 +229,7 @@ function getPreview(type: string): string {
     case 'supplement':
       return getSupplementPreview()
     case 'intimacy':
-      return r.intimacy_note ? r.intimacy_note.slice(0, 20) : ''
+      return getIntimacyPreview()
     case 'plan':
       return r.plan_text ? r.plan_text.slice(0, 30) + (r.plan_text.length > 30 ? '…' : '') : ''
     default:
@@ -359,6 +365,82 @@ function renderDetail(type: string) {
             : h('div', { class: 'diary-text' }, r.note),
         ]) : null,
       ])
+    case 'water':
+      return h('div', { class: 'detail-row water-main' }, [
+        h('span', { class: 'water-icon' }, '💧'),
+        h('div', { class: 'detail-value-large' }, [
+          r.water_intake,
+          h('span', { class: 'detail-unit' }, ' ml'),
+        ]),
+      ])
+    case 'temperature':
+      return h('div', { class: 'detail-row temp-main' }, [
+        h('span', { class: 'temp-icon' }, '🌡️'),
+        h('div', { class: ['detail-value-large', getTempClass()] }, [
+          r.body_temperature,
+          h('span', { class: 'detail-unit' }, ' ℃'),
+        ]),
+        h('div', { class: 'detail-meta' }, [
+          h('span', { class: ['status-tag', getTempStatusClass()] }, getTempStatusLabel()),
+          h('span', { class: 'meta-hint' }, '正常范围 36.0-37.3℃'),
+        ]),
+      ])
+    case 'stool': {
+      const stool = getStoolData()
+      return h('div', {}, [
+        h('div', { class: 'detail-row' }, [
+          h('span', { class: 'stool-count' }, (stool.count || '?') + '次'),
+          h('span', { class: ['status-tag', getStoolConsistencyClass(stool.consistency)] }, getStoolConsistencyLabel(stool.consistency)),
+        ]),
+      ])
+    }
+    case 'supplement':
+      return h('div', { class: 'tag-chips' }, getSupplementList().map((s: string, i: number) =>
+        h('span', { key: i, class: 'tag-chip supplement-chip' }, s)
+      ))
+    case 'plan':
+      return h('div', { class: 'detail-text' }, r.plan_text)
+    case 'intimacy': {
+      const data = getIntimacyData()
+      const chips: any[] = []
+      if (data.count != null) chips.push(h('span', { class: 'intimacy-badge' }, data.count + '次'))
+      if (data.has_protection === 'yes') {
+        const typeMap: Record<string, string> = { condom: '避孕套', pill: '口服避孕药', other: '其他' }
+        chips.push(h('span', { class: 'intimacy-badge protected' }, '有措施 · ' + (typeMap[data.protection_type] || data.protection_type || '')))
+      } else {
+        chips.push(h('span', { class: 'intimacy-badge unprotected' }, '无措施'))
+      }
+      return h('div', {}, [
+        h('div', { class: 'intimacy-detail' }, chips),
+        r.note ? h('div', { class: 'detail-meta' }, [h('span', { class: 'meta-hint' }, r.note)]) : null,
+      ])
+    }
+    case 'contraction':
+      return h('div', { class: 'detail-row contr-main' }, [
+        h('span', { class: 'contr-icon' }, '⏱️'),
+        h('div', {}, [
+          r.contraction_count ? h('span', { class: 'contr-value' }, r.contraction_count + '次') : null,
+          r.contraction_interval ? h('span', { class: 'contr-interval' }, '间隔 ' + r.contraction_interval + 'min') : null,
+        ]),
+      ])
+    case 'fetal_movement':
+      return h('div', { class: 'detail-row fm-main' }, [
+        h('span', { class: 'fm-icon' }, '🦶'),
+        h('div', {}, [
+          r.fetal_movement_count ? h('span', { class: 'fm-value' }, r.fetal_movement_count + '次') : null,
+          r.fetal_movement_duration ? h('span', { class: 'fm-duration' }, r.fetal_movement_duration + 'min') : null,
+        ]),
+      ])
+    case 'hcg':
+      return h('div', { class: 'detail-row hcg-main' }, [
+        h('span', { class: 'hcg-icon' }, '🧬'),
+        h('div', { class: 'detail-value-large' }, [r.hcg_value, h('span', { class: 'detail-unit' }, ' mIU/mL')]),
+      ])
+    case 'uric_acid':
+      return h('div', { class: 'detail-row ua-main' }, [
+        h('span', { class: 'ua-icon' }, '🧪'),
+        h('div', { class: 'detail-value-large' }, [r.uric_acid, h('span', { class: 'detail-unit' }, ' μmol/L')]),
+      ])
     default:
       return h('div', {})
   }
@@ -423,6 +505,78 @@ function getSupplementPreview(): string {
     const s = JSON.parse(r.supplement_record)
     return s.map((x: any) => x.name).join('、')
   } catch { return r.supplement_record }
+}
+
+function getIntimacyPreview(): string {
+  const r = record.value
+  if (!r.intimacy_record) return ''
+  try {
+    const s = JSON.parse(r.intimacy_record)
+    const parts: string[] = []
+    if (s.count != null) parts.push(s.count + '次')
+    if (s.has_protection === 'yes') {
+      const typeMap: Record<string, string> = { condom: '避孕套', pill: '口服避孕药', other: '其他' }
+      parts.push('有措施' + (s.protection_type ? '(' + (typeMap[s.protection_type] || s.protection_type) + ')' : ''))
+    } else {
+      parts.push('无措施')
+    }
+    return parts.join(' · ')
+  } catch { return r.intimacy_record }
+}
+
+function getStoolData(): any {
+  try {
+    return JSON.parse(record.value.stool_record || '{}')
+  } catch { return {} }
+}
+
+function getSupplementList(): string[] {
+  try {
+    const arr = JSON.parse(record.value.supplement_record || '[]')
+    return Array.isArray(arr) ? arr.map((x: any) => x.name || x) : []
+  } catch { return [] }
+}
+
+function getIntimacyData(): any {
+  try {
+    return JSON.parse(record.value.intimacy_record || '{}')
+  } catch { return {} }
+}
+
+function getTempClass(): string {
+  const v = record.value.body_temperature
+  if (!v) return 'value-neutral'
+  if (v >= 36.0 && v <= 37.3) return 'value-normal'
+  if (v > 37.3 && v <= 38.0) return 'value-warning'
+  return 'value-alert'
+}
+
+function getTempStatusClass(): string {
+  return getTempClass() === 'value-normal' ? 'tag-normal'
+    : getTempClass() === 'value-warning' ? 'tag-warning'
+    : 'value-alert' === getTempClass() ? 'tag-alert'
+    : 'tag-neutral'
+}
+
+function getTempStatusLabel(): string {
+  const v = record.value.body_temperature
+  if (!v) return '--'
+  if (v >= 36.0 && v <= 37.3) return '正常'
+  if (v < 36.0) return '偏低'
+  return '偏高'
+}
+
+const stoolConsistencyMap: Record<string, string> = { hard: '干硬', normal: '正常', soft: '偏软', diarrhea: '腹泻' }
+
+function getStoolConsistencyClass(c?: string): string {
+  if (!c) return 'tag-neutral'
+  if (c === 'normal') return 'tag-normal'
+  if (c === 'hard' || c === 'diarrhea') return 'tag-alert'
+  return 'tag-warning'
+}
+
+function getStoolConsistencyLabel(c?: string): string {
+  return stoolConsistencyMap[c || ''] || c || ''
 }
 
 function getSystolicClass(): string {
@@ -1223,6 +1377,106 @@ function getSleepQualityWidth(): string {
   gap: 16px;
 }
 
+/* ====== 饮水 ====== */
+.water-main {
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 0 8px;
+}
+.water-icon { font-size: 32px; }
+
+/* ====== 体温 ====== */
+.temp-main {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 0 8px;
+}
+.temp-icon { font-size: 28px; }
+
+/* ====== 便便 ====== */
+.stool-count {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-color, #1e293b);
+}
+
+/* ====== 营养补充 ====== */
+.supplement-chip {
+  background: var(--stage-mid-bg, #E0F2FE);
+  color: var(--stage-mid-color, #0369A1);
+}
+
+/* ====== 爱爱 ====== */
+.intimacy-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+.intimacy-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #fef3c7;
+  color: #92400e;
+}
+.intimacy-badge.protected {
+  background: #dcfce7;
+  color: #166534;
+}
+.intimacy-badge.unprotected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* ====== 宫缩 ====== */
+.contr-main {
+  gap: 16px;
+  padding: 10px 0 6px;
+}
+.contr-icon { font-size: 26px; }
+.contr-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-color, #1e293b);
+}
+.contr-interval {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  margin-top: 2px;
+}
+
+/* ====== 胎动 ====== */
+.fm-main {
+  gap: 16px;
+  padding: 10px 0 6px;
+}
+.fm-icon { font-size: 26px; }
+.fm-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-color, #1e293b);
+}
+.fm-duration {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  margin-top: 2px;
+}
+
+/* ====== hCG / 尿酸 ====== */
+.hcg-main, .ua-main {
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 0 8px;
+}
+.hcg-icon, .ua-icon { font-size: 28px; }
+
 /* ============ 电脑端适配 ============ */
 @media (min-width: 769px) {
   .record-list {
@@ -1231,9 +1485,9 @@ function getSleepQualityWidth(): string {
   }
 
   .category-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     background: transparent;
     border-radius: 0;
     border: none;

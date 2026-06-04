@@ -1,0 +1,55 @@
+{
+  "categories": [
+    {
+      "category": "证件资料",
+      "items": [
+        { "name": "身份证", "mandatory": true },
+        { "name": "医保卡", "mandatory": true },
+        { "name": "产检病历", "mandatory": true },
+        { "name": "准生证", "mandatory": true }
+      ]
+    },
+    {
+      "category": "妈妈衣物",
+      "items": [
+        { "name": "睡衣", "mandatory": false },
+        { "name": "哺乳内衣", "mandatory": false },
+        { "name": "一次性内裤", "mandatory": false },
+        { "name": "袜子", "mandatory": false }
+      ]
+    },
+    {
+      "category": "宝宝衣物",
+      "items": [
+        { "name": "新生儿衣服", "mandatory": false },
+        { "name": "包被", "mandatory": false },
+        { "name": "帽子", "mandatory": false },
+        { "name": "袜子", "mandatory": false }
+      ]
+    },
+    {
+      "category": "卫生用品",
+      "items": [
+        { "name": "产褥垫", "mandatory": false },
+        { "name": "卫生巾", "mandatory": false },
+        { "name": "一次性马桶垫", "mandatory": false }
+      ]
+    },
+    {
+      "category": "喂养用品",
+      "items": [
+        { "name": "奶瓶", "mandatory": false },
+        { "name": "奶粉", "mandatory": false },
+        { "name": "吸奶器", "mandatory": false }
+      ]
+    },
+    {
+      "category": "洗护用品",
+      "items": [
+        { "name": "毛巾", "mandatory": false },
+        { "name": "牙刷", "mandatory": false },
+        { "name": "脸盆", "mandatory": false }
+      ]
+    }
+  ]
+}

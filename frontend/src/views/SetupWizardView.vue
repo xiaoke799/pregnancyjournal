@@ -113,7 +113,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NButton, NInput, NRadioGroup, NRadio, useMessage } from 'naive-ui'
 import { setupWizard } from '@/api/app-config'
-import { resetSetupCheck } from '@/router'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import dayjs from 'dayjs'
 
@@ -217,7 +216,6 @@ async function submitSetup() {
 
     if (res.code === 0) {
       message.success('设置完成！')
-      resetSetupCheck()
       await pregnancyStore.fetchActivePregnancy()
       router.push('/')
     } else {

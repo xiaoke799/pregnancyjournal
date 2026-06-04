@@ -1,0 +1,39 @@
+{
+  "categories": [
+    {
+      "category": "妈妈衣物",
+      "items": [
+        { "name": "月子服", "mandatory": false },
+        { "name": "月子帽", "mandatory": false },
+        { "name": "月子鞋", "mandatory": false },
+        { "name": "哺乳文胸", "mandatory": false }
+      ]
+    },
+    {
+      "category": "护理用品",
+      "items": [
+        { "name": "产褥垫", "mandatory": false },
+        { "name": "卫生巾", "mandatory": false },
+        { "name": "会阴冲洗器", "mandatory": false }
+      ]
+    },
+    {
+      "category": "喂养用品",
+      "items": [
+        { "name": "吸奶器", "mandatory": false },
+        { "name": "防溢乳垫", "mandatory": false },
+        { "name": "乳头膏", "mandatory": false },
+        { "name": "储奶袋", "mandatory": false }
+      ]
+    },
+    {
+      "category": "营养补品",
+      "items": [
+        { "name": "红枣", "mandatory": false },
+        { "name": "桂圆", "mandatory": false },
+        { "name": "黑芝麻", "mandatory": false },
+        { "name": "猪蹄", "mandatory": false }
+      ]
+    }
+  ]
+}

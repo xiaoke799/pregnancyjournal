@@ -1,6 +1,6 @@
 #!/bin/bash
 # 孕程记 - 安装后回调
-LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancy-journal-install.log}"
+LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancyjournal-install.log}"
 
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}" 2>/dev/null
@@ -8,7 +8,7 @@ log_msg() {
 
 log_msg "Installation callback started"
 
-NODE_BIN="/var/apps/nodejs_v22/target/bin"
+NODE_BIN="/var/apps/nodejs_v24/target/bin"
 export PATH=${NODE_BIN}:$PATH
 
 NODE_DIR="${TRIM_APPDEST}/server/node"

@@ -1,1 +1,0 @@
-{"_comment": "企业微信群机器人 Webhook 配置", "_usage": "在企业微信群中添加群机器人，复制 Webhook URL 填入下方", "webhook_url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=your_key_here"}

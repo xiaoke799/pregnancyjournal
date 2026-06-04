@@ -287,7 +287,8 @@ async function loadChecklists() {
   try {
     const res: any = await checklistApi.list(pregnancyStore.currentPregnancy.id)
     if (res.code === 0) {
-      checklists.value = res.data || []
+      const data = res.data
+      checklists.value = Array.isArray(data) ? data : []
       for (const cl of checklists.value) {
         expandedLists.value.add(cl.id)
         if (!expandedGroups.value[cl.id]) {

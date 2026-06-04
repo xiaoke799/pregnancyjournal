@@ -35,13 +35,11 @@
 
           <div class="form-group">
             <label class="form-label">{{ dueDateMode === 'lmp' ? '末次月经日期' : '预产期' }}</label>
-            <n-date-picker
-              v-model:formatted-value="primaryDate"
+            <input
               type="date"
-              value-format="YYYY-MM-DD"
+              v-model="primaryDate"
+              class="date-input"
               :placeholder="dueDateMode === 'lmp' ? '请选择末次月经日期' : '请选择预产期'"
-              style="width: 100%"
-              size="large"
             />
           </div>
 
@@ -79,55 +77,35 @@
         </div>
       </div>
 
-      <!-- 提醒管理 -->
-      <ReminderSetting v-if="pregnancyStore.isActive" />
-
       <!-- 数据备份 -->
       <div class="section">
         <h3>💾 数据备份与恢复</h3>
 
-        <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
-          <label>备份目录路径</label>
-          <div style="display: flex; gap: 8px;">
-            <n-input v-model:value="backupDir" placeholder="点击选择按钮浏览目录" style="flex: 1" clearable />
-            <n-button @click="toggleDirBrowser('backup')" :type="showDirBrowser && browsingFor === 'backup' ? 'error' : 'default'">
-              {{ showDirBrowser && browsingFor === 'backup' ? '✕ 关闭' : '📁 选择' }}
-            </n-button>
-            <n-button type="primary" @click="handleBackup" :loading="backingUp" :disabled="backingUp || !backupDir.trim()">备份</n-button>
+        <div class="backup-info-box">
+          <div class="backup-info-icon">📂</div>
+          <div class="backup-info-text">
+            <div class="backup-info-label">存储位置</div>
+            <div class="backup-info-path">共享区域（默认备份路径）</div>
+            <div class="backup-info-desc">备份文件将保存在应用共享目录中，可通过飞牛文件管理器访问</div>
           </div>
-
-          <div v-if="showDirBrowser && browsingFor === 'backup'" class="dir-browser-inline">
-            <div class="db-roots">
-              <button
-                v-for="r in dirRoots" :key="r.path"
-                class="db-root-btn"
-                :class="{ active: currentBrowsePath === r.path, readonly: !r.canRW }"
-                @click="navigateTo(r.path)"
-              >{{ r.name }}<span v-if="!r.canRW" class="db-ro-tag">只读</span></button>
-              <span v-if="dirRoots.length === 0 && !dirLoading" class="db-hint">未检测到存储卷，请先在应用设置中添加文件夹权限</span>
-            </div>
-            <div class="db-path">📂 {{ currentBrowsePath }} <span v-if="currentCanRW !== null" :class="currentCanRW ? 'db-rw-ok' : 'db-rw-no'">{{ currentCanRW ? '✅ 可读写' : '⚠️ 只读' }}</span></div>
-            <div v-if="dirLoading" class="db-loading">加载中...</div>
-            <div v-else-if="dirItems.length === 0" class="db-empty">此目录为空</div>
-            <div v-else class="db-list">
-              <div
-                v-for="item in dirItems" :key="item.path"
-                class="db-item"
-                :class="{ ro: !item.canRW }"
-                @click="selectDir(item.path)"
-                @dblclick="navigateTo(item.path)"
-              >📁 {{ item.name }}<span v-if="!item.canRW" class="db-ro-tag">只读</span></div>
-            </div>
-            <div class="db-bar">
-              <button class="db-nav-btn" @click="navigateUp" :disabled="!canNavigateUp">⬆️ 上级</button>
-              <button class="db-confirm-btn" @click="confirmDirSelect" :disabled="!selectedDirPath">确定选择此目录</button>
-            </div>
-          </div>
-
-          <div class="setting-hint">全量备份所有数据（记录、相册、产检、清单、提醒等）+ 照片原图到指定目录</div>
         </div>
 
-        <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 8px; margin-top: 16px;">
+        <div class="backup-actions">
+          <n-button type="primary" size="large" @click="handleBackup" :loading="backingUp" :disabled="backingUp" block>
+            💾 立即备份
+          </n-button>
+        </div>
+
+        <div v-if="backupResult" class="setting-hint" :style="{ color: backupResult.success ? '#18a058' : '#d03050' }">
+          {{ backupResult.message }}
+        </div>
+      </div>
+
+      <!-- 数据恢复 -->
+      <div class="section">
+        <h3>📥 数据恢复</h3>
+
+        <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
           <label>恢复目录路径</label>
           <div style="display: flex; gap: 8px;">
             <n-input v-model:value="restoreDir" placeholder="点击选择按钮浏览目录" style="flex: 1" clearable />
@@ -138,6 +116,22 @@
           </div>
 
           <div v-if="showDirBrowser && browsingFor === 'restore'" class="dir-browser-inline">
+            <!-- 快捷目录选择区 -->
+            <div class="db-quick-select" v-if="quickDirs.length > 0">
+              <div class="db-quick-label">快捷选择</div>
+              <div class="db-quick-list">
+                <button
+                  v-for="q in quickDirs" :key="q.path"
+                  class="db-quick-btn"
+                  :class="[q.type, { active: restoreDir === q.path, ro: !q.canRW }]"
+                  @click="selectQuickDir(q.path)"
+                >
+                  <span class="db-quick-icon">{{ q.type === 'accessible' ? '🔑' : q.type === 'share' ? '📂' : '💾' }}</span>
+                  <span class="db-quick-name">{{ q.name.replace(/^(授权-|共享-)/, '') }}</span>
+                  <span class="db-quick-desc">{{ q.desc || '' }}</span>
+                </button>
+              </div>
+            </div>
             <div class="db-roots">
               <button
                 v-for="r in dirRoots" :key="r.path"
@@ -164,9 +158,6 @@
           </div>
 
           <div class="setting-hint">从指定目录恢复全量数据（会覆盖当前数据）</div>
-        </div>
-        <div v-if="backupResult" class="setting-hint" :style="{ color: backupResult.success ? '#18a058' : '#d03050' }">
-          {{ backupResult.message }}
         </div>
       </div>
 
@@ -210,18 +201,6 @@
         </div>
       </div>
 
-      <!-- 外观 -->
-      <div class="section">
-        <h3>🎨 外观</h3>
-        <div class="setting-item">
-          <label>深色模式</label>
-          <n-switch :value="isDarkMode" @update:value="toggleDarkMode">
-            <template #checked>🌙</template>
-            <template #unchecked>☀️</template>
-          </n-switch>
-        </div>
-      </div>
-
       <!-- 软件日志 -->
       <div class="section">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -245,15 +224,11 @@
         <h3>ℹ️ 关于</h3>
         <div class="setting-item">
           <label>应用</label>
-          <span>孕程记 v0.0.8</span>
+          <span>孕程记 (Pregnancy Journal)</span>
         </div>
         <div class="setting-item">
           <label>理念</label>
           <span>数据私有 · NAS 本地 · 零上云</span>
-        </div>
-        <div class="setting-item">
-          <label>技术</label>
-          <span>Vue 3 + Express + SQLite</span>
         </div>
       </div>
     </div>
@@ -262,15 +237,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { NInput, NButton, NDatePicker, NRadioGroup, NRadioButton, NSwitch, NTag, useMessage } from 'naive-ui'
+import { NInput, NButton, NRadioGroup, NRadioButton, NTag, useMessage } from 'naive-ui'
 import dayjs from 'dayjs'
 import { usePregnancyStore } from '@/stores/pregnancy'
-import { useAppStore } from '@/stores/app'
 import { pregnancyApi } from '@/api/pregnancy'
 import { exportApi } from '@/api/export'
 import client from '@/api/client'
 import { wecomApi } from '@/api/wecom'
-import ReminderSetting from '@/components/settings/ReminderSetting.vue'
 
 const logText = ref('')
 const logInfo = ref<any>(null)
@@ -300,8 +273,10 @@ function formatUptime(sec: number) {
 }
 
 const pregnancyStore = usePregnancyStore()
-const appStore = useAppStore()
-const message = useMessage()
+
+// 安全获取 message（防止在特殊上下文中失败导致整个组件崩溃）
+let message: any = { success: () => {}, error: () => {}, warning: () => {}, info: () => {} }
+try { message = useMessage() } catch {}
 
 const dueDateMode = ref<'lmp' | 'direct'>('lmp')
 const primaryDate = ref('')
@@ -339,8 +314,6 @@ const calculatedDueDate = computed(() => {
   return dayjs(primaryDate.value).add(280, 'day').format('YYYY-MM-DD')
 })
 
-const isDarkMode = computed(() => appStore.currentTheme === 'dark')
-
 const trimesterTagType = computed(() => {
   const t = pregnancyStore.gestationalAge?.trimester
   if (t === '孕早期') return 'warning'
@@ -349,12 +322,8 @@ const trimesterTagType = computed(() => {
   return 'default'
 })
 
-watch(isDarkMode, (dark) => {
-  document.documentElement.classList.toggle('dark', dark)
-}, { immediate: true })
-
 watch(dueDateMode, () => {
-  loadDateForMode()
+  try { loadDateForMode() } catch {}
 })
 
 function loadDateForMode() {
@@ -370,20 +339,19 @@ function loadDateForMode() {
   }
 }
 
-onMounted(async () => {
-  await pregnancyStore.fetchActivePregnancy()
-  if (pregnancyStore.currentPregnancy) {
-    if (pregnancyStore.currentPregnancy.last_period_date) {
-      dueDateMode.value = 'lmp'
-    } else if (pregnancyStore.currentPregnancy.due_date) {
-      dueDateMode.value = 'direct'
+onMounted(() => {
+  // 非阻塞加载：不await，让页面先渲染出来
+  pregnancyStore.fetchActivePregnancy().then(() => {
+    const p = pregnancyStore.currentPregnancy
+    if (p) {
+      if (p.last_period_date) { dueDateMode.value = 'lmp'; primaryDate.value = p.last_period_date }
+      else if (p.due_date) { dueDateMode.value = 'direct'; primaryDate.value = p.due_date }
+      babyName.value = p.baby_name || ''
     }
-    loadDateForMode()
-    babyName.value = pregnancyStore.currentPregnancy.baby_name || ''
-  }
-  await loadAllPregnancies()
-  await loadWecomStatus()
-  await loadLogs()
+  }).catch(() => {})
+  loadAllPregnancies()
+  loadWecomStatus()
+  loadLogs()
 })
 
 async function loadAllPregnancies() {
@@ -456,6 +424,11 @@ async function savePregnancy() {
 // ========== 目录浏览器 ==========
 const canNavigateUp = computed(() => currentBrowsePath.value !== '/' && currentBrowsePath.value.length > 1)
 
+// 快捷目录：从 dirRoots 中筛选出授权目录和共享目录
+const quickDirs = computed(() => {
+  return dirRoots.value.filter((r: any) => r.type === 'accessible' || r.type === 'share')
+})
+
 function toggleDirBrowser(forWhat: 'backup' | 'restore') {
   if (showDirBrowser.value && browsingFor.value === forWhat) {
     showDirBrowser.value = false
@@ -524,16 +497,23 @@ function confirmDirSelect() {
   showDirBrowser.value = false
 }
 
+function selectQuickDir(dirPath: string) {
+  if (browsingFor.value === 'backup') backupDir.value = dirPath
+  else restoreDir.value = dirPath
+  // 可选：选择后自动关闭浏览器
+  // showDirBrowser.value = false
+}
+
 // ========== 数据管理 ==========
 async function handleBackup() {
-  if (!backupDir.value.trim()) { message.warning('请输入备份目录路径'); return }
   backingUp.value = true
   backupResult.value = null
   try {
-    const res: any = await exportApi.backup(backupDir.value.trim())
+    // 直接保存到共享区域，不再需要选择目录
+    const res: any = await exportApi.backup('')
     if (res.code === 0) {
-      backupResult.value = { success: true, message: res.message || '备份成功' }
-      message.success('备份成功')
+      backupResult.value = { success: true, message: res.message || '备份成功，文件已保存到共享区域' }
+      message.success('备份成功，文件已保存到共享区域')
     } else {
       backupResult.value = { success: false, message: res.message || '备份失败' }
       message.error('备份失败: ' + (res.message || ''))
@@ -621,7 +601,7 @@ async function handleGeneratePdf() {
     const res: any = await exportApi.generatePdf(pregnancyStore.currentPregnancy.id)
     if (res.code === 0 && res.data?.task_id) {
       message.success('PDF 生成成功，开始下载...')
-      window.open(`${(client as any).defaults.baseURL}/pdf/download/${res.data.task_id}`, '_blank')
+      try { window.open(`${(client as any).defaults.baseURL}/pdf/download/${res.data.task_id}`, '_blank') } catch {}
     } else {
       message.error('生成失败' + (res.message ? ': ' + res.message : ''))
     }
@@ -690,11 +670,6 @@ async function clearWecomConfig() {
   }
 }
 
-// ========== 外观 ==========
-function toggleDarkMode(dark: boolean) {
-  appStore.currentTheme = dark ? 'dark' : 'light'
-  document.documentElement.classList.toggle('dark', dark)
-}
 </script>
 
 <style scoped>
@@ -724,6 +699,14 @@ function toggleDarkMode(dark: boolean) {
 .pregnancy-form { display: flex; flex-direction: column; gap: 16px; }
 .form-group { display: flex; flex-direction: column; gap: 8px; }
 .form-label { font-size: 14px; font-weight: 600; color: var(--text-secondary, #64748b); }
+.date-input {
+  width: 100%; height: 40px; padding: 0 12px;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+  font-size: 15px; color: var(--text-color, #1e293b);
+  background: white; outline: none; transition: border-color 0.2s; box-sizing: border-box;
+}
+.date-input:focus { border-color: #e8a0bf; box-shadow: 0 0 0 2px rgba(232,160,191,.15); }
+.date-input::-webkit-calendar-picker-indicator { cursor: pointer; }
 .form-actions { padding-top: 8px; }
 
 .pregnancy-item {
@@ -803,4 +786,49 @@ function toggleDarkMode(dark: boolean) {
 }
 .db-confirm-btn:hover:not(:disabled) { background: #1d4ed8; }
 .db-confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 快捷目录选择区 */
+.db-quick-select {
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #f0f9ff, #faf5ff);
+  border-bottom: 1px solid #e2e8f0;
+}
+.db-quick-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6366f1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.db-quick-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.db-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  position: relative;
+}
+.db-quick-btn:hover { border-color: #818cf8; background: #eef2ff; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(99,102,241,0.15); }
+.db-quick-btn.accessible { border-color: #a5b4fc; }
+.db-quick-btn.accessible:hover, .db-quick-btn.accessible.active { border-color: #6366f1; background: #ede9fe; }
+.db-quick-btn.share { border-color: #93c5fd; }
+.db-quick-btn.share:hover, .db-quick-btn.share.active { border-color: #3b82f6; background: #dbeafe; }
+.db-quick-btn.volume { border-color: #86efac; }
+.db-quick-btn.volume:hover, .db-quick-btn.volume.active { border-color: #22c55e; background: #dcfce7; }
+.db-quick-btn.active { font-weight: 600; box-shadow: 0 0 0 2px rgba(99,102,241,0.3); }
+.db-quick-btn.ro { opacity: 0.5; cursor: not-allowed; }
+.db-quick-icon { font-size: 16px; }
+.db-quick-name { font-weight: 500; color: #334155; }
+.db-quick-desc { font-size: 10px; color: #94a3b8; }
 </style>

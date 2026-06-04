@@ -6,6 +6,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const logger = require('../logger');
 
 const upload = multer({ dest: 'uploads/', limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
 const CHECKUP_BASE = path.join(config.PHOTOS_DIR, 'checkups');
@@ -45,19 +46,23 @@ function _isNasPathSafe(p) {
 
 router.post('/checkups', async (req, res) => {
   try {
-    const { pregnancy_id, checkup_date, gestational_week, gestational_day, hospital, checkup_type, weight, blood_pressure, fetal_heart_rate, fundal_height, abdominal_circumference, notes, is_completed, is_recommended } = req.body;
+    const { pregnancy_id, checkup_date, gestational_week, checkup_type } = req.body;
+    logger.info('checkup', `POST /checkups - pregnancy_id=${pregnancy_id}, date=${checkup_date}, week=${gestational_week}, type=${checkup_type}`);
     if (!pregnancy_id || !checkup_date || !gestational_week) {
+      logger.warn('checkup', 'POST /checkups - missing required fields');
       return res.json({ code: 1001, data: null, message: '缺少必填字段' });
     }
     const id = db.generateId();
     await db.run(
       `INSERT INTO prenatal_checkup (id, pregnancy_id, checkup_date, gestational_week, gestational_day, hospital, checkup_type, weight, blood_pressure, fetal_heart_rate, fundal_height, abdominal_circumference, notes, is_completed, is_recommended, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-      [id, pregnancy_id, checkup_date, gestational_week, gestational_day || 0, hospital || null, checkup_type || 'standard', weight || null, blood_pressure || null, fetal_heart_rate || null, fundal_height || null, abdominal_circumference || null, notes || null, is_completed || 0, is_recommended || 0]
+      [id, pregnancy_id, checkup_date, gestational_week, req.body.gestational_day || 0, req.body.hospital || null, checkup_type || 'standard', req.body.weight || null, req.body.blood_pressure || null, req.body.fetal_heart_rate || null, req.body.fundal_height || null, req.body.abdominal_circumference || null, req.body.notes || null, req.body.is_completed || 0, req.body.is_recommended || 0]
     );
     const row = await db.queryOne('SELECT * FROM prenatal_checkup WHERE id = ?', [id]);
+    logger.info('checkup', `POST /checkups - checkup created (id=${id})`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `POST /checkups error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
@@ -65,30 +70,37 @@ router.post('/checkups', async (req, res) => {
 router.get('/checkups', async (req, res) => {
   try {
     const { pregnancy_id, page = 1, page_size = 20 } = req.query;
+    logger.info('checkup', `GET /checkups - pregnancy_id=${pregnancy_id}, page=${page}, size=${page_size}`);
     const offset = (parseInt(page) - 1) * parseInt(page_size);
     let where = 'WHERE 1=1';
     const params = [];
     if (pregnancy_id) { where += ' AND pregnancy_id = ?'; params.push(pregnancy_id); }
     const total = await db.queryOne(`SELECT COUNT(*) as count FROM prenatal_checkup ${where}`, params);
     const rows = await db.queryAll(`SELECT * FROM prenatal_checkup ${where} ORDER BY checkup_date DESC LIMIT ? OFFSET ?`, [...params, parseInt(page_size), offset]);
-    res.json({ code: 0, data: { list: rows, total: total.count, page: parseInt(page), page_size: parseInt(page_size) }, message: 'success' });
+    logger.info('checkup', `GET /checkups - found ${rows.length} records, total=${total.count}`);
+    res.json({ code: 0, data: { list: rows, items: rows, total: total.count, page: parseInt(page), page_size: parseInt(page_size) }, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `GET /checkups error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.get('/checkups/:id', async (req, res) => {
   try {
+    logger.info('checkup', `GET /checkups/${req.params.id}`);
     const row = await db.queryOne('SELECT * FROM prenatal_checkup WHERE id = ?', [req.params.id]);
     if (!row) return res.json({ code: 1001, data: null, message: '记录不存在' });
+    logger.info('checkup', `GET /checkups/${req.params.id} - found`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `GET /checkups/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.put('/checkups/:id', async (req, res) => {
   try {
+    logger.info('checkup', `PUT /checkups/${req.params.id} - fields=${Object.keys(req.body).join(',')}`);
     const existing = await db.queryOne('SELECT id FROM prenatal_checkup WHERE id = ?', [req.params.id]);
     if (!existing) return res.json({ code: 1001, data: null, message: '记录不存在' });
     const fields = ['pregnancy_id', 'checkup_date', 'gestational_week', 'gestational_day', 'hospital', 'checkup_type', 'weight', 'blood_pressure', 'fetal_heart_rate', 'fundal_height', 'abdominal_circumference', 'notes', 'is_completed', 'is_recommended'];
@@ -104,14 +116,17 @@ router.put('/checkups/:id', async (req, res) => {
     params.push(req.params.id);
     await db.run(`UPDATE prenatal_checkup SET ${sets.join(', ')} WHERE id = ?`, params);
     const row = await db.queryOne('SELECT * FROM prenatal_checkup WHERE id = ?', [req.params.id]);
+    logger.info('checkup', `PUT /checkups/${req.params.id} - updated successfully`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `PUT /checkups/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.delete('/checkups/:id', async (req, res) => {
   try {
+    logger.info('checkup', `DELETE /checkups/${req.params.id}`);
     const existing = await db.queryOne('SELECT id FROM prenatal_checkup WHERE id = ?', [req.params.id]);
     if (!existing) return res.json({ code: 1001, data: null, message: '记录不存在' });
     const photos = await db.queryAll('SELECT file_path FROM checkup_photo WHERE checkup_id = ?', [req.params.id]);
@@ -122,18 +137,21 @@ router.delete('/checkups/:id', async (req, res) => {
     await db.run('DELETE FROM checkup_report WHERE checkup_id = ?', [req.params.id]);
     await db.run('DELETE FROM lab_result WHERE checkup_id = ?', [req.params.id]);
     await db.run('DELETE FROM prenatal_checkup WHERE id = ?', [req.params.id]);
+    logger.info('checkup', `DELETE /checkups/${req.params.id} - deleted with ${photos.length} photos, ${reports.length} reports`);
     res.json({ code: 0, data: null, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `DELETE /checkups/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.post('/checkups/:id/photos', upload.single('file'), async (req, res) => {
   try {
+    logger.info('checkup', `POST /checkups/${req.params.id}/photos - file=${req.file?.originalname}`);
     if (!req.file) return res.json({ code: 1001, data: null, message: '请上传文件' });
     const ext = path.extname(req.file.originalname);
     const filename = uuidv4() + ext;
-    const checkupDir = path.join(CHECKUP_BASE, checkupId, 'photos');
+    const checkupDir = path.join(CHECKUP_BASE, req.params.id, 'photos');
     if (!fs.existsSync(checkupDir)) fs.mkdirSync(checkupDir, { recursive: true });
     const destPath = path.join(checkupDir, filename);
     _ensureDir(config.PHOTOS_DIR);
@@ -145,49 +163,61 @@ router.post('/checkups/:id/photos', upload.single('file'), async (req, res) => {
       [id, req.params.id, destPath, req.body.note || null]
     );
     const row = await db.queryOne('SELECT * FROM checkup_photo WHERE id = ?', [id]);
+    logger.info('checkup', `POST /checkups/${req.params.id}/photos - photo saved (id=${id})`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `POST /checkups/:id/photos error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.get('/checkups/:id/photos', async (req, res) => {
   try {
+    logger.info('checkup', `GET /checkups/${req.params.id}/photos`);
     const rows = await db.queryAll('SELECT * FROM checkup_photo WHERE checkup_id = ? ORDER BY created_at DESC', [req.params.id]);
+    logger.info('checkup', `GET /checkups/${req.params.id}/photos - ${rows.length} photos`);
     res.json({ code: 0, data: rows, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `GET /checkups/:id/photos error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.delete('/checkups/photos/:photo_id', async (req, res) => {
   try {
+    logger.info('checkup', `DELETE /checkups/photos/${req.params.photo_id}`);
     const photo = await db.queryOne('SELECT * FROM checkup_photo WHERE id = ?', [req.params.photo_id]);
     if (!photo) return res.json({ code: 1001, data: null, message: '照片不存在' });
     _deleteReportFile(photo.file_path);
     await db.run('DELETE FROM checkup_photo WHERE id = ?', [req.params.photo_id]);
+    logger.info('checkup', `DELETE /checkups/photos/${req.params.photo_id} - deleted`);
     res.json({ code: 0, data: null, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `DELETE /checkups/photos/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.post('/checkups/custom', async (req, res) => {
   try {
-    const { pregnancy_id, name, items, checkup_date, notes } = req.body;
+    const { pregnancy_id, name } = req.body;
+    logger.info('checkup', `POST /checkups/custom - pregnancy_id=${pregnancy_id}, name=${name}`);
     if (!pregnancy_id || !name) {
+      logger.warn('checkup', 'POST /checkups/custom - missing required fields');
       return res.json({ code: 1001, data: null, message: '缺少必填字段' });
     }
     const id = db.generateId();
-    const itemsJson = Array.isArray(items) ? JSON.stringify(items) : null;
+    const itemsJson = Array.isArray(req.body.items) ? JSON.stringify(req.body.items) : null;
     await db.run(
       `INSERT INTO custom_checkup (id, pregnancy_id, name, items, checkup_date, notes, is_completed, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))`,
-      [id, pregnancy_id, name, itemsJson, checkup_date || null, notes || null]
+      [id, pregnancy_id, name, itemsJson, req.body.checkup_date || null, req.body.notes || null]
     );
     const row = await db.queryOne('SELECT * FROM custom_checkup WHERE id = ?', [id]);
+    logger.info('checkup', `POST /checkups/custom - custom checkup created (id=${id})`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `POST /checkups/custom error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
@@ -195,18 +225,22 @@ router.post('/checkups/custom', async (req, res) => {
 router.get('/checkups/custom', async (req, res) => {
   try {
     const { pregnancy_id } = req.query;
+    logger.info('checkup', `GET /checkups/custom - pregnancy_id=${pregnancy_id}`);
     let where = 'WHERE 1=1';
     const params = [];
     if (pregnancy_id) { where += ' AND pregnancy_id = ?'; params.push(pregnancy_id); }
     const rows = await db.queryAll(`SELECT * FROM custom_checkup ${where} ORDER BY created_at DESC`, params);
+    logger.info('checkup', `GET /checkups/custom - ${rows.length} records`);
     res.json({ code: 0, data: rows, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `GET /checkups/custom error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.put('/checkups/custom/:id', async (req, res) => {
   try {
+    logger.info('checkup', `PUT /checkups/custom/${req.params.id} - fields=${Object.keys(req.body).join(',')}`);
     const existing = await db.queryOne('SELECT id FROM custom_checkup WHERE id = ?', [req.params.id]);
     if (!existing) return res.json({ code: 1001, data: null, message: '记录不存在' });
     const fields = ['pregnancy_id', 'name', 'checkup_date', 'notes', 'is_completed'];
@@ -223,36 +257,46 @@ router.put('/checkups/custom/:id', async (req, res) => {
     params.push(req.params.id);
     await db.run(`UPDATE custom_checkup SET ${sets.join(', ')} WHERE id = ?`, params);
     const row = await db.queryOne('SELECT * FROM custom_checkup WHERE id = ?', [req.params.id]);
+    logger.info('checkup', `PUT /checkups/custom/${req.params.id} - updated successfully`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `PUT /checkups/custom/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.delete('/checkups/custom/:id', async (req, res) => {
   try {
+    logger.info('checkup', `DELETE /checkups/custom/${req.params.id}`);
     const existing = await db.queryOne('SELECT id FROM custom_checkup WHERE id = ?', [req.params.id]);
     if (!existing) return res.json({ code: 1001, data: null, message: '记录不存在' });
     await db.run('DELETE FROM custom_checkup WHERE id = ?', [req.params.id]);
+    logger.info('checkup', `DELETE /checkups/custom/${req.params.id} - deleted`);
     res.json({ code: 0, data: null, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `DELETE /checkups/custom/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.put('/checkups/custom/:id/complete', async (req, res) => {
   try {
+    logger.info('checkup', `PUT /checkups/custom/${req.params.id}/complete`);
     const existing = await db.queryOne('SELECT id FROM custom_checkup WHERE id = ?', [req.params.id]);
     if (!existing) return res.json({ code: 1001, data: null, message: '记录不存在' });
     await db.run('UPDATE custom_checkup SET is_completed = 1, updated_at = datetime(\'now\') WHERE id = ?', [req.params.id]);
     const row = await db.queryOne('SELECT * FROM custom_checkup WHERE id = ?', [req.params.id]);
+    logger.info('checkup', `PUT /checkups/custom/${req.params.id}/complete - marked as completed`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    logger.error('checkup', `PUT /checkups/custom/:id/complete error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 const ALLOWED_REPORT_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
+
+const REPORTS_DIR = path.join(CHECKUP_BASE, 'reports');
 
 router.post('/checkups/:id/reports', upload.single('file'), async (req, res) => {
   try {
@@ -268,7 +312,7 @@ router.post('/checkups/:id/reports', upload.single('file'), async (req, res) => 
     }
     const ext = path.extname(req.file.originalname);
     const filename = uuidv4() + ext;
-    const reportDir = path.join(CHECKUP_BASE, checkupId, 'reports');
+    const reportDir = path.join(CHECKUP_BASE, req.params.id, 'reports');
     if (!fs.existsSync(reportDir)) fs.mkdirSync(reportDir, { recursive: true });
     const destPath = path.join(reportDir, filename);
     fs.renameSync(req.file.path, destPath);
