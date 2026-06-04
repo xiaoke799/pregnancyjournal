@@ -11,7 +11,14 @@
             </n-button>
           </div>
 
-          <div v-if="hasMeals" class="meals-result">
+          <div v-if="recipesLoading" class="loading-hint">
+            <n-spin size="small" />
+            <span>食谱数据加载中...</span>
+          </div>
+          <div v-else-if="!hasMeals" class="no-meals-hint">
+            点击按钮推荐今日三餐
+          </div>
+          <div v-else class="meals-result">
             <div v-for="m in mealList" :key="m.key" class="meal-card">
               <div class="meal-label">{{ m.label }}</div>
               <div class="meal-combo">
@@ -33,6 +40,11 @@
 
       <n-tab-pane name="safety" tab="🔍 能不能吃">
         <div class="safety-section">
+          <div v-if="safetyLoading" class="loading-hint-center">
+            <n-spin size="large" />
+            <p>食物安全数据加载中...</p>
+          </div>
+          <template v-else>
           <n-input
             v-model:value="searchKeyword"
             placeholder="搜索 1000+ 种食物（如：螃蟹、咖啡、山楂）"
@@ -81,6 +93,7 @@
           <div v-else class="empty-state">
             <div class="empty-text">请选择分类或搜索食物</div>
           </div>
+          </template>
         </div>
       </n-tab-pane>
     </n-tabs>
@@ -89,7 +102,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { NTabs, NTabPane, NButton, NInput, NTag, useMessage } from 'naive-ui'
+import { NTabs, NTabPane, NButton, NInput, NTag, NSpin, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { getAllRecipes, getFoodSafety, searchFood } from '@/api/diet'
 import FoodSafetyCard from '@/components/FoodSafetyCard.vue'
@@ -127,6 +140,7 @@ interface MealCombo {
 }
 
 const allRecipes = ref<Recipe[]>([])
+const recipesLoading = ref(false)
 const meals = ref<{ breakfast: MealCombo; lunch: MealCombo; dinner: MealCombo }>({
   breakfast: { staple: null, meat: null, veggie: null, soup: null, drink: null, dessert: null },
   lunch:     { staple: null, meat: null, veggie: null, soup: null, drink: null, dessert: null },
@@ -162,7 +176,7 @@ const currentWeek = computed(() => pregnancyStore.gestationalAge?.weeks ?? 20)
 const currentStage = computed(() => {
   const week = currentWeek.value
   if (week <= 0) return 'preparing'
-  if (week <= 12) return 'early'
+  if (week <= 13) return 'early'
   if (week <= 27) return 'mid'
   if (week <= 42) return 'late'
   return 'nursing'
@@ -262,6 +276,7 @@ interface FoodSafetyCategory {
 }
 
 const categoryList = ref<FoodSafetyCategory[]>([])
+const safetyLoading = ref(false)
 const activeCategory = ref('')
 const searchKeyword = ref('')
 const searchResults = ref<FoodSafetyItem[]>([])
@@ -294,20 +309,31 @@ function clearSearch() {
 }
 
 async function loadAllRecipes() {
+  recipesLoading.value = true
   try {
     const res: any = await getAllRecipes()
     allRecipes.value = res?.data || []
-  } catch { /* ignore */ }
+  } catch (e) {
+    console.error('Failed to load recipes:', e)
+  } finally {
+    recipesLoading.value = false
+  }
 }
 
 async function loadFoodSafety() {
+  safetyLoading.value = true
   try {
     const res: any = await getFoodSafety()
     categoryList.value = res?.data || []
     if (categoryList.value.length > 0) {
       activeCategory.value = categoryList.value[0].name
     }
-  } catch { /* ignore */ }
+  } catch (e) {
+    console.error('Failed to load food safety:', e)
+    message.error('食物安全数据加载失败')
+  } finally {
+    safetyLoading.value = false
+  }
 }
 
 onMounted(() => {
@@ -401,6 +427,10 @@ onMounted(() => {
 .food-list-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-color, #1e293b); }
 .empty-state { padding: 40px 20px; text-align: center; }
 .empty-text { font-size: 14px; color: var(--text-hint, #94a3b8); }
+.loading-hint { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 20px; color: var(--text-hint, #94a3b8); font-size: 14px; }
+.loading-hint-center { padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--text-hint, #94a3b8); }
+.loading-hint-center p { margin: 0; font-size: 14px; }
+.no-meals-hint { text-align: center; padding: 24px; color: var(--text-hint, #94a3b8); font-size: 14px; background: white; border-radius: 12px; margin-top: 16px; }
 
 @media (max-width: 600px) {
   .diet-view { padding: 12px; }

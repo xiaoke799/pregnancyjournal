@@ -856,8 +856,10 @@ async function saveRecord() {
       if (res.code !== 0) {
         message.error(res.message || '保存失败，请刷新页面确认')
       }
-    }).catch(() => {
-      message.error('网络异常，记录可能未保存')
+    }).catch((err: any) => {
+      const errMsg = err?.message || err?.response?.data?.message || '网络异常，记录可能未保存'
+      console.error('保存记录失败:', err)
+      message.error(errMsg)
     })
   } catch (err: any) {
     message.error(err?.message || '保存失败')

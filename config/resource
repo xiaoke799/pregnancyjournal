@@ -1,1 +1,1 @@
-{"data-share": {"shares": [{"name": "pregnancy-journal", "permission": {"rw": ["pregnancy_journal"]}}]}}
+{"data-share": {"shares": [{"name": "pregnancyjournal", "permission": {"rw": ["pregnancyjournal"]}}]}}

@@ -6,6 +6,12 @@ const fs = require('fs');
 const path = require('path');
 const log = require('../logger');
 
+// 简单认证中间件（fnOS CGI已通过header传递用户信息）
+function verifyAuth(req, res, next) {
+  // 在fnOS环境中，CGI代理已处理认证，这里直接放行
+  next();
+}
+
 const ALL_TABLES = [
   'pregnancy', 'prenatal_checkup', 'custom_checkup', 'checkup_photo',
   'checkup_report', 'lab_result', 'daily_record', 'contraction_session',
@@ -91,7 +97,7 @@ router.post('/export/full', async (req, res) => {
     exportData.photos = photos.filter(p => p.file_path && fs.existsSync(p.file_path)).map(p => p.file_path);
     log.api('导出', `全量导出完成`, { tables: Object.keys(exportData.stats).length, totalRows: Object.values(exportData.stats).reduce((a, b) => a + b, 0) });
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="pregnancy-journal-backup-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="pregnancyjournal-backup-${new Date().toISOString().slice(0, 10)}.json"`);
     res.json({ code: 0, data: exportData, message: 'success' });
   } catch (error) {
     log.error('导出', '全量导出失败', { error: error.message });
@@ -390,9 +396,7 @@ router.get('/export/backups', async (req, res) => {
 router.post('/backup', async (req, res) => {
   try {
     const { dir } = req.body || {};
-    if (!dir) return res.json({ code: 1001, data: null, message: '请指定备份目录路径' });
-
-    const backupDir = path.resolve(dir);
+    const backupDir = dir ? path.resolve(dir) : path.join(config.DATA_DIR || '.', 'backups', `backup_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`);
     fs.mkdirSync(backupDir, { recursive: true });
 
     log.api('备份', '全量备份开始', { dir: backupDir });
@@ -400,7 +404,7 @@ router.post('/backup', async (req, res) => {
     const exportData = {
       version: '2.0.0',
       exported_at: new Date().toISOString(),
-      app_name: 'pregnancy-journal',
+      app_name: 'pregnancyjournal',
       tables: {},
       file_manifest: { total: 0, by_type: {} }
     };
@@ -696,18 +700,79 @@ router.get('/browse-dir', (req, res) => {
     if (dirPath === '/') dirPath = '/';
 
     const roots = [];
+
+    // 飞牛系统：检测用户授权目录 (TRIM_DATA_ACCESSIBLE_PATHS, V1.1.8+)
+    const accessiblePaths = process.env.TRIM_DATA_ACCESSIBLE_PATHS || '';
+    if (accessiblePaths) {
+      const accPaths = accessiblePaths.split(':').filter(p => p.trim());
+      for (const p of accPaths) {
+        try {
+          if (fs.existsSync(p) && fs.statSync(p).isDirectory()) {
+            let canRW = false;
+            try { fs.accessSync(p, fs.constants.R_OK | fs.constants.W_OK); canRW = true; } catch {}
+            const dirName = p.split('/').filter(Boolean).pop() || p;
+            roots.push({
+              name: `授权-${dirName}`,
+              path: p,
+              isRoot: true,
+              canRW,
+              type: 'accessible',
+              desc: '用户授权目录',
+            });
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    // 飞牛系统：检测应用共享目录 (TRIM_DATA_SHARE_PATHS / data-share)
+    const sharePaths = process.env.TRIM_DATA_SHARE_PATHS || '';
+    if (sharePaths) {
+      const shPaths = sharePaths.split(':').filter(p => p.trim());
+      for (const p of shPaths) {
+        try {
+          if (fs.existsSync(p) && fs.statSync(p).isDirectory()) {
+            let canRW = false;
+            try { fs.accessSync(p, fs.constants.R_OK | fs.constants.W_OK); canRW = true; } catch {}
+            const dirName = p.split('/').filter(Boolean).pop() || p;
+            roots.push({
+              name: `共享-${dirName}`,
+              path: p,
+              isRoot: true,
+              canRW,
+              type: 'share',
+              desc: '应用共享目录',
+            });
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    // 兼容旧逻辑：扫描存储卷 /vol1 ~ /vol10
     for (let i = 1; i <= 10; i++) {
       const vol = `/vol${i}`;
       try {
         if (fs.existsSync(vol) && fs.statSync(vol).isDirectory()) {
           try {
             fs.accessSync(vol, fs.constants.R_OK | fs.constants.W_OK);
-            roots.push({ name: `存储${i} (${vol})`, path: vol, isRoot: true, canRW: true });
+            roots.push({ name: `存储${i} (${vol})`, path: vol, isRoot: true, canRW: true, type: 'volume' });
           } catch {
-            roots.push({ name: `存储${i}-只读 (${vol})`, path: vol, isRoot: true, canRW: false });
+            roots.push({ name: `存储${i}-只读 (${vol})`, path: vol, isRoot: true, canRW: false, type: 'volume' });
           }
         }
       } catch { /* skip */ }
+    }
+
+    // 开发模式：如果没有找到任何根目录，使用当前工作目录
+    if (roots.length === 0) {
+      const cwd = process.cwd();
+      roots.push({
+        name: `工作目录 (${cwd})`,
+        path: cwd,
+        isRoot: true,
+        canRW: true,
+        type: 'dev',
+        desc: '开发模式默认目录',
+      });
     }
 
     if (!fs.existsSync(dirPath)) {

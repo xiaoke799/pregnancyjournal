@@ -1,6 +1,6 @@
 #!/bin/bash
 # 孕程记 - 卸载时根据用户选择处理数据
-LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancy-journal-uninstall.log}"
+LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancyjournal-uninstall.log}"
 mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
 
 log_msg() {
@@ -16,7 +16,6 @@ case "${wizard_data_action}" in
         log_msg "User chose to keep data, cleaning runtime only"
         rm -f "${TRIM_PKGVAR}/app.pid" 2>/dev/null
         rm -f "${TRIM_PKGVAR}/info.log" 2>/dev/null
-        rm -rf "${TRIM_PKGVAR}/.venv" 2>/dev/null
         ;;
     *)
         log_msg "Unknown action: ${wizard_data_action}, defaulting to keep"

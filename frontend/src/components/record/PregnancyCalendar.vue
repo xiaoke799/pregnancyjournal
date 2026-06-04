@@ -23,6 +23,7 @@
           'is-today': cell.isToday,
           'has-record': cell.hasRecord,
           'has-checkup': cell.hasCheckup,
+          'is-due-date': isDueDate(cell.date),
         }"
         @click="cell.inMonth && $emit('select-date', cell.date)"
       >
@@ -100,17 +101,48 @@ const currentMonthLabel = computed(() => {
   return currentMonth.value.format('YYYY年 M月')
 })
 
-/** 获取日期对应孕周的阶段颜色 */
+/** 获取日期对应孕周的阶段颜色（优先使用预产期） */
 function getDateColor(cell: CalendarCell): string {
-  if (!props.pregnancy?.last_period_date) return ''
-  const lmp = dayjs(props.pregnancy.last_period_date)
+  const p = props.pregnancy
+  if (!p) return ''
+  const dueDate = p.due_date || p.dueDate || null
+  const lmp = p.last_period_date
+
+  // 有预产期时优先用预产期倒推 LMP
+  if (dueDate) {
+    const due = dayjs(dueDate)
+    const dateObj = dayjs(cell.date)
+    // 预产日特殊高亮
+    if (dateObj.format('YYYY-MM-DD') === due.format('YYYY-MM-DD')) {
+      return 'var(--primary-color)'
+    }
+    const totalDays = dateObj.diff(due.subtract(280, 'day'), 'day')
+    if (totalDays < 0) return 'var(--stage-preparing-color)'
+    const weeks = Math.floor(totalDays / 7)
+    if (weeks < 13) return 'var(--stage-early-color)'
+    if (weeks < 28) return 'var(--stage-mid-color)'
+    return 'var(--stage-late-color)'
+  }
+
+  // fallback：使用 LMP
+  if (!lmp) return ''
+  const lmpDayjs = dayjs(lmp)
   const dateObj = dayjs(cell.date)
-  const totalDays = dateObj.diff(lmp, 'day')
+  const totalDays = dateObj.diff(lmpDayjs, 'day')
   if (totalDays < 0) return 'var(--stage-preparing-color)'
   const weeks = Math.floor(totalDays / 7)
   if (weeks < 13) return 'var(--stage-early-color)'
   if (weeks < 28) return 'var(--stage-mid-color)'
   return 'var(--stage-late-color)'
+}
+
+/** 判断是否为预产日 */
+function isDueDate(date: string): boolean {
+  const p = props.pregnancy
+  if (!p) return false
+  const dueDate = p.due_date || p.dueDate || null
+  if (!dueDate) return false
+  return date === dayjs(dueDate).format('YYYY-MM-DD')
 }
 
 interface CalendarCell {
@@ -270,6 +302,16 @@ function nextMonth() {
 
 .date-cell.other-month .date-text {
   color: var(--text-hint, #c4c9d4) !important;
+}
+
+/* 预产日特殊高亮 */
+.date-cell.is-due-date {
+  background: linear-gradient(135deg, #E8A0BF, #F06292);
+  border-radius: var(--radius-sm, 6px);
+}
+.date-cell.is-due-date .date-text {
+  color: white !important;
+  font-weight: 700;
 }
 
 .date-text {

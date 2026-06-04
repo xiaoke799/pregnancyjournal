@@ -1,0 +1,30 @@
+{
+  "categories": [
+    {
+      "category": "重要证件",
+      "items": [
+        { "name": "身份证", "mandatory": true },
+        { "name": "医保卡", "mandatory": true },
+        { "name": "产检病历", "mandatory": true }
+      ]
+    },
+    {
+      "category": "妈妈用品",
+      "items": [
+        { "name": "产褥垫", "mandatory": false },
+        { "name": "吸管杯", "mandatory": false },
+        { "name": "巧克力", "mandatory": false },
+        { "name": "毛巾", "mandatory": false }
+      ]
+    },
+    {
+      "category": "宝宝用品",
+      "items": [
+        { "name": "包被", "mandatory": false },
+        { "name": "帽子", "mandatory": false },
+        { "name": "纸尿裤", "mandatory": false },
+        { "name": "湿巾", "mandatory": false }
+      ]
+    }
+  ]
+}

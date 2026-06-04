@@ -1,80 +1,30 @@
 <template>
   <div class="dashboard-view">
-    <div class="countdown-card" :class="'stage-' + stageKey">
+    <!-- ===== 信息看板（基于预产期实时修正） ===== -->
+    <div class="countdown-card" :class="'stage-' + realtimeStageKey">
       <div class="countdown-top">
-        <div class="countdown-label">距离预产期</div>
+        <div class="countdown-label">{{ countdownLabel }}</div>
         <div class="countdown-row">
-          <span class="countdown-num">{{ daysUntilDue }}</span>
+          <span class="countdown-num">{{ realtimeDaysUntilDue }}</span>
           <span class="countdown-unit">天</span>
         </div>
       </div>
       <div class="countdown-meta">
-        <span>孕 {{ gestationalAge?.weeks ?? '--' }}+{{ gestationalAge?.days ?? 0 }}</span>
+        <span>{{ realtimeAgeDisplay }}</span>
         <span class="meta-dot">·</span>
-        <span>{{ trimesterText }}</span>
-        <span class="meta-dot" v-if="dueDate">·</span>
-        <span v-if="dueDate">预产期 {{ dueDate }}</span>
-      </div>
-      <div class="quick-row">
-        <router-link to="/record" class="q-chip" :class="{ done: dashboardData?.has_today_record }">
-          {{ dashboardData?.has_today_record ? '✅ 已记录' : '📝 记录' }}
-        </router-link>
-        <router-link to="/fetal-movement-counter" class="q-chip">
-          👶 胎动
-          <span class="q-badge" v-if="dashboardData?.fetal_movement_count">{{ dashboardData.fetal_movement_count }}</span>
-        </router-link>
-        <router-link to="/contraction-timer" class="q-chip" :class="{ warn: dashboardData?.contraction_active }">
-          ⏱️ 宫缩
-        </router-link>
-        <router-link to="/diet" class="q-chip">🍎 饮食</router-link>
-        <router-link to="/checklist" class="q-chip">📋 清单</router-link>
+        <span>{{ realtimeTrimesterText }}</span>
+        <span class="meta-dot" v-if="realtimeDueDate">·</span>
+        <span v-if="realtimeDueDate">预产期 {{ realtimeDueDate }}</span>
       </div>
     </div>
 
-    <div class="section" v-if="fetalCurveData.length > 0">
+    <!-- ===== 提醒看板 ===== -->
+    <div class="section reminder-board">
       <div class="section-header">
-        <h3>👶 宝宝成长曲线</h3>
-        <span class="section-hint">第 {{ gestationalAge?.weeks }} 周</span>
-      </div>
-      <div class="dev-brief" v-if="development">
-        <span class="dev-chip">{{ development.size }}</span>
-        <span class="dev-chip">{{ development.weight }}</span>
-        <span class="dev-chip" v-if="development.length_cm">{{ development.length_cm }}cm</span>
-      </div>
-      <div class="chart-wrap">
-        <v-chart :option="growthChartOption" :autoresize="true" style="height: 260px" />
-      </div>
-    </div>
-
-    <div class="section" v-if="recommendedTodos.length > 0">
-      <div class="section-header">
-        <h3>🏥 产检建议</h3>
-        <router-link to="/checkup-schedule" class="view-all">全部 →</router-link>
-      </div>
-      <div class="checkup-list">
-        <div v-for="item in recommendedTodos" :key="item.id" class="checkup-item">
-          <div class="ci-week">{{ item.week_range }}周</div>
-          <div class="ci-body">
-            <div class="ci-name">
-              {{ item.name }}
-              <n-tag v-if="item.is_mandatory" size="tiny" type="error" :bordered="false">必检</n-tag>
-              <n-tag v-else size="tiny" type="warning" :bordered="false">选检</n-tag>
-            </div>
-            <div class="ci-meta">{{ item.due_hint }}</div>
-          </div>
-          <div class="ci-status" :class="item.days_until != null && item.days_until < 0 ? 'past' : item.days_until <= 14 ? 'soon' : ''">
-            {{ formatDaysUntil(item.days_until) }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-header">
-        <h3>📌 我的计划</h3>
+        <h3>📌 提醒看板</h3>
         <span class="section-hint" v-if="todayTodos.length">{{ todayTodos.length }} 项</span>
       </div>
-      <div v-if="todayTodos.length === 0" class="empty-hint">暂无计划，快添加一条吧</div>
+      <div v-if="todayTodos.length === 0" class="empty-hint">暂无提醒，快添加一条吧</div>
       <div v-else class="plan-list">
         <div v-for="item in todayTodos" :key="item.id" class="plan-item">
           <span class="plan-icon">{{ sourceIcon(item.source_type) }}</span>
@@ -88,7 +38,7 @@
       <div class="quick-add-row">
         <n-input
           v-model:value="newTodoTitle"
-          placeholder="添加计划..."
+          placeholder="添加提醒..."
           size="small"
           @keyup.enter="quickAddReminder"
           :disabled="adding"
@@ -97,6 +47,7 @@
       </div>
     </div>
 
+    <!-- ===== 今日记录 ===== -->
     <div class="section record-section">
       <div class="section-header">
         <h3>📊 今日记录</h3>
@@ -104,7 +55,7 @@
           {{ dashboardData?.has_today_record ? '查看详情 →' : '去记录 →' }}
         </router-link>
       </div>
-      <div v-if="todayRecord" class="record-content">
+      <div v-if="todayRecord && Object.keys(todayRecord).length > 1" class="record-content">
         <div class="record-primary">
           <div class="rg-cell primary" v-if="todayRecord.weight != null">
             <span class="rg-icon">⚖️</span>
@@ -191,6 +142,47 @@
       </router-link>
     </div>
 
+    <!-- ===== 宝宝成长曲线 ===== -->
+    <div class="section" v-if="fetalCurveData.length > 0">
+      <div class="section-header">
+        <h3>👶 宝宝成长曲线</h3>
+        <span class="section-hint">第 {{ gestationalAge?.weeks }} 周</span>
+      </div>
+      <div class="dev-brief" v-if="development">
+        <span class="dev-chip">{{ development.size }}</span>
+        <span class="dev-chip">{{ development.weight }}</span>
+        <span class="dev-chip" v-if="development.length_cm">{{ development.length_cm }}cm</span>
+      </div>
+      <div class="chart-wrap">
+        <v-chart :option="growthChartOption" :autoresize="true" style="height: 260px" />
+      </div>
+    </div>
+
+    <!-- ===== 产检建议 ===== -->
+    <div class="section" v-if="recommendedTodos.length > 0">
+      <div class="section-header">
+        <h3>🏥 产检建议</h3>
+        <router-link to="/checkup-schedule" class="view-all">全部 →</router-link>
+      </div>
+      <div class="checkup-list">
+        <div v-for="item in recommendedTodos" :key="item.id" class="checkup-item">
+          <div class="ci-week">{{ item.week_range }}周</div>
+          <div class="ci-body">
+            <div class="ci-name">
+              {{ item.name }}
+              <n-tag v-if="item.is_mandatory" size="tiny" type="error" :bordered="false">必检</n-tag>
+              <n-tag v-else size="tiny" type="warning" :bordered="false">选检</n-tag>
+            </div>
+            <div class="ci-meta">{{ item.due_hint }}</div>
+          </div>
+          <div class="ci-status" :class="item.days_until != null && item.days_until < 0 ? 'past' : item.days_until <= 14 ? 'soon' : ''">
+            {{ formatDaysUntil(item.days_until) }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 待产清单 ===== -->
     <div class="section" v-if="checklistProgress && checklistProgress.total > 0">
       <div class="section-header">
         <h3>📋 待产清单</h3>
@@ -205,6 +197,7 @@
       </div>
     </div>
 
+    <!-- ===== 最近产检 ===== -->
     <div class="section" v-if="lastCheckup">
       <div class="section-header">
         <h3>🏥 最近产检</h3>
@@ -219,6 +212,42 @@
       </div>
     </div>
 
+    <!-- ===== 核心功能入口（底部） ===== -->
+    <div class="section core-features">
+      <div class="section-header">
+        <h3>🎯 核心功能</h3>
+      </div>
+      <div class="core-grid">
+        <router-link to="/record" class="core-card core-record">
+          <span class="core-icon">📝</span>
+          <span class="core-label">记录</span>
+          <span class="core-desc" v-if="dashboardData?.has_today_record">今日已记录</span>
+          <span class="core-desc" v-else>今日未记录</span>
+        </router-link>
+        <router-link to="/diet" class="core-card core-diet">
+          <span class="core-icon">🍎</span>
+          <span class="core-label">饮食</span>
+          <span class="core-desc">今日吃什么</span>
+        </router-link>
+        <router-link to="/diary" class="core-card core-diary">
+          <span class="core-icon">📖</span>
+          <span class="core-label">日记</span>
+          <span class="core-desc">记录孕期点滴</span>
+        </router-link>
+        <router-link to="/checkup-schedule" class="core-card core-checkup">
+          <span class="core-icon">🏥</span>
+          <span class="core-label">产检</span>
+          <span class="core-desc" v-if="upcomingCheckupCount">{{ upcomingCheckupCount }}项待完成</span>
+          <span class="core-desc" v-else>查看产检计划</span>
+        </router-link>
+        <router-link to="/settings" class="core-card core-settings">
+          <span class="core-icon">⚙️</span>
+          <span class="core-label">设置</span>
+          <span class="core-desc">数据与管理</span>
+        </router-link>
+      </div>
+    </div>
+
     <div style="height: 80px"></div>
   </div>
 </template>
@@ -227,6 +256,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { NInput, NButton, NTag, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
+import { useGestationalAge } from '@/composables/useGestationalAge'
 import { getDashboard } from '@/api/dashboard'
 import { reminderApi } from '@/api/reminder'
 import { calculateGestationalAge } from '@/utils/gestational'
@@ -240,6 +270,38 @@ import { CanvasRenderer } from 'echarts/renderers'
 use([LineChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, CanvasRenderer])
 const pregnancyStore = usePregnancyStore()
 const message = useMessage()
+
+// ====== 实时孕周数据（基于预产期自动修正） ======
+const {
+  age: realtimeAge,
+  daysUntilDue: realtimeDaysUntilDue,
+  dueDate: realtimeDueDate,
+  trimesterText: realtimeTrimesterText,
+  stageKey: realtimeStageKey,
+} = useGestationalAge()
+
+/** 倒计时标签文字（根据状态动态变化）。 */
+const countdownLabel = computed(() => {
+  if (!realtimeAge.value) return '距离预产期'
+  if (realtimeAge.value.isPrePregnancy) return '距预产期'
+  if (realtimeAge.value.isOverdue) return '已过预产期'
+  return '距离预产期'
+})
+
+/** 孕周显示文字（处理负数/边界情况）。 */
+const realtimeAgeDisplay = computed(() => {
+  if (!realtimeAge.value) return '--周--天'
+  const a = realtimeAge.value
+  if (a.isPrePregnancy) {
+    // 备孕期：显示距离末次月经天数
+    const absDays = Math.abs(a.totalDays)
+    return `备孕期 · 距末次月经约${absDays}天`
+  }
+  if (a.isOverdue) {
+    return `已过预产期 ${Math.abs(a.daysUntilDue)} 天`
+  }
+  return `${a.weeks}周${a.days}天`
+})
 
 const dashboardData = ref<any>(null)
 const loading = ref(false)
@@ -313,6 +375,7 @@ const checklistProgress = computed(() => dashboardData.value?.checklist_progress
 
 const todayTodos = computed(() => dashboardData.value?.today_todos || [])
 const recommendedTodos = computed(() => dashboardData.value?.recommended_todos || [])
+const upcomingCheckupCount = computed(() => recommendedTodos.value.filter((t: any) => t.days_until == null || t.days_until >= 0).length)
 
 const fetalCurveData = computed(() => dashboardData.value?.fetal_development_curve || [])
 const weightHistory = computed(() => dashboardData.value?.weight_history || [])
@@ -549,6 +612,8 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .countdown-card.stage-early { background: linear-gradient(135deg, #43A047, #66BB6A); }
 .countdown-card.stage-mid { background: linear-gradient(135deg, #1E88E5, #42A5F5); }
 .countdown-card.stage-late { background: linear-gradient(135deg, #8E24AA, #AB47BC); }
+.countdown-card.stage-preparing { background: linear-gradient(135deg, #FF7043, #FFA726); }
+.countdown-card.stage-nursing { background: linear-gradient(135deg, #5C6BC0, #7986CB); }
 .countdown-top { margin-bottom: 8px; }
 .countdown-label { font-size: 13px; opacity: .85; margin-bottom: 4px; letter-spacing: 1px; }
 .countdown-row { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
@@ -556,16 +621,6 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .countdown-unit { font-size: 20px; font-weight: 600; opacity: .85; }
 .countdown-meta { font-size: 13px; opacity: .85; margin-bottom: 14px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .meta-dot { opacity: .5; }
-.quick-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; justify-content: center; flex-wrap: wrap; }
-.q-chip {
-  display: inline-flex; align-items: center; gap: 3px; padding: 6px 12px; border-radius: 20px;
-  background: rgba(255,255,255,.2); color: white; font-size: 12px; font-weight: 600;
-  text-decoration: none; white-space: nowrap; transition: background .2s;
-}
-.q-chip:hover { background: rgba(255,255,255,.35); }
-.q-chip.done { background: rgba(255,255,255,.35); }
-.q-chip.warn { background: rgba(255,82,82,.6); }
-.q-badge { background: #FF5252; font-size: 10px; padding: 0 5px; border-radius: 8px; margin-left: 2px; }
 
 .section {
   background: white; border-radius: 14px; padding: 18px; margin-top: 14px;
@@ -576,6 +631,47 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .section-hint { font-size: 12px; color: var(--text-hint, #94a3b8); }
 .view-all { font-size: 13px; color: var(--primary-color, #E8A0BF); text-decoration: none; font-weight: 600; }
 .chart-wrap { margin: 0 -4px; }
+
+/* 核心功能网格 */
+.core-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.core-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 8px 14px;
+  border-radius: 14px;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+.core-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.1);
+}
+.core-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+.core-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-color, #1e293b);
+}
+.core-desc {
+  font-size: 11px;
+  color: var(--text-hint, #94a3b8);
+  text-align: center;
+}
+.core-record { background: linear-gradient(135deg, #fce4ec, #f8bbd0); }
+.core-diet { background: linear-gradient(135deg, #fff3e0, #ffe0b2); }
+.core-diary { background: linear-gradient(135deg, #e8eaf6, #c5cae9); }
+.core-checkup { background: linear-gradient(135deg, #e0f2f1, #b2dfdb); }
+.core-settings { background: linear-gradient(135deg, #f3e5f5, #e1bee7); }
 
 .dev-brief { display: flex; gap: 8px; margin-bottom: 10px; }
 .dev-chip {
@@ -670,11 +766,17 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   .dashboard-view { padding: 10px; }
   .countdown-card { padding: 22px 16px 16px; border-radius: 14px; }
   .countdown-num { font-size: 52px; }
-  .quick-row { gap: 5px; }
-  .q-chip { padding: 5px 10px; font-size: 11px; }
   .section { padding: 14px; border-radius: 12px; }
   .record-primary { grid-template-columns: repeat(2, 1fr); }
   .quick-add-row { flex-direction: column; }
+  .core-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .core-card { padding: 14px 4px 10px; }
+  .core-icon { font-size: 24px; }
+  .core-label { font-size: 12px; }
+  .core-desc { font-size: 9px; }
 }
 @media (max-width: 480px) {
   .countdown-num { font-size: 44px; }
@@ -682,5 +784,12 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   .record-primary { grid-template-columns: repeat(2, 1fr); }
   .dev-brief { flex-wrap: wrap; }
   .ci-week { min-width: 40px; font-size: 11px; }
+  .core-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .core-card:nth-child(4),
+  .core-card:nth-child(5) {
+    grid-column: auto;
+  }
 }
 </style>

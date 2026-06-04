@@ -4,6 +4,7 @@ const db = require('../db');
 const config = require('../config');
 const fs = require('fs');
 const path = require('path');
+const logger = require('../logger');
 
 let _recipesCache = null;
 let _foodSafetyCache = null;
@@ -28,10 +29,13 @@ function _convertSafetyToByStage(safety) {
 function loadRecipes() {
   if (_recipesCache) return _recipesCache;
   const filePath = path.join(config.DATA_DIR, 'recipes.json');
+  logger.info('diet', `loadRecipes - loading from ${filePath}`);
   if (fs.existsSync(filePath)) {
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     _recipesCache = Array.isArray(raw) ? raw : (raw.recipes || []);
+    logger.info('diet', `loadRecipes - loaded ${_recipesCache.length} recipes`);
   } else {
+    logger.warn('diet', `loadRecipes - file not found at ${filePath}`);
     _recipesCache = [];
   }
   return _recipesCache;
@@ -40,9 +44,54 @@ function loadRecipes() {
 function loadFoodSafety() {
   if (_foodSafetyCache) return _foodSafetyCache;
   const filePath = path.join(config.DATA_DIR, 'food_safety_v3.json');
+  logger.info('diet', `loadFoodSafety - loading from ${filePath}`);
   if (fs.existsSync(filePath)) {
-    _foodSafetyCache = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    // Normalize malformed categories data: some categories have {name, icon, items: [...]}
+    // while others are flattened as {name, safety, note, safety_by_stage} directly in the array
+    const rawCategories = raw.categories || [];
+    logger.info('diet', `loadFoodSafety - raw categories count: ${rawCategories.length}`);
+    const normalized = [];
+    let currentCategory = null;
+
+    for (const entry of rawCategories) {
+      // If it has "items" array or has "icon", it's a proper category header
+      if (entry.icon || (entry.items && Array.isArray(entry.items))) {
+        if (currentCategory) normalized.push(currentCategory);
+        currentCategory = {
+          name: entry.name,
+          icon: entry.icon || '🍽️',
+          items: entry.items || [],
+        };
+      } else if (entry.name) {
+        // Flattened item - belongs to current category
+        if (!currentCategory) {
+          currentCategory = { name: '其他', icon: '🍽️', items: [] };
+        }
+        currentCategory.items.push({
+          name: entry.name,
+          safety: entry.safety || 'caution',
+          note: entry.note || '',
+          safety_by_stage: entry.safety_by_stage || null,
+        });
+      }
+    }
+    if (currentCategory) normalized.push(currentCategory);
+
+    // Also ensure each item has safety_by_stage
+    for (const cat of normalized) {
+      for (const item of cat.items) {
+        if (!item.safety_by_stage && item.safety) {
+          item.safety_by_stage = _convertSafetyToByStage(item.safety);
+        }
+      }
+    }
+
+    const totalItems = normalized.reduce((sum, cat) => sum + cat.items.length, 0);
+    logger.info('diet', `loadFoodSafety - normalized: ${normalized.length} categories, ${totalItems} total items`);
+    _foodSafetyCache = { categories: normalized };
   } else {
+    logger.warn('diet', `loadFoodSafety - file not found at ${filePath}`);
     _foodSafetyCache = { categories: [] };
   }
   return _foodSafetyCache;
@@ -54,11 +103,13 @@ router.get('/diet/recipes', (req, res) => {
     const allParam = req.query.all === 'true' || req.query.all === '1';
 
     if (allParam) {
+      logger.info('diet', `GET /recipes - returning all ${recipesData.length} recipes`);
       return res.json({ code: 0, data: recipesData, message: 'success' });
     }
 
     const week = parseInt(req.query.week) || 0;
     const stage = _weekToStage(week);
+    logger.info('diet', `GET /recipes - week=${week}, stage=${stage}, total recipes=${recipesData.length}`);
 
     const filteredRecipes = recipesData.filter(recipe => {
       const suitableWeeks = recipe.suitable_weeks || [0, 42];
@@ -70,8 +121,10 @@ router.get('/diet/recipes', (req, res) => {
       return true;
     });
 
+    logger.info('diet', `GET /recipes - filtered to ${filteredRecipes.length} recipes for stage=${stage}`);
     res.json({ code: 0, data: filteredRecipes, message: 'success' });
   } catch (error) {
+    logger.error('diet', `GET /recipes error: ${error.message}`);
     res.json({ code: 1001, data: null, message: error.message });
   }
 });
@@ -82,6 +135,7 @@ router.post('/diet/spin', (req, res) => {
     const week = parseInt(req.query.week) || parseInt(body.week) || 0;
     const stage = _weekToStage(week);
     const recipesData = loadRecipes();
+    logger.info('diet', `POST /spin - week=${week}, stage=${stage}`);
 
     const candidates = recipesData.filter(recipe => {
       const suitableWeeks = recipe.suitable_weeks || [0, 42];
@@ -94,12 +148,15 @@ router.post('/diet/spin', (req, res) => {
     });
 
     if (candidates.length === 0) {
+      logger.warn('diet', `POST /spin - no matching recipes for week=${week}, stage=${stage}`);
       return res.json({ code: 1001, data: null, message: '没有匹配的食谱' });
     }
 
     const randomIndex = Math.floor(Math.random() * candidates.length);
+    logger.info('diet', `POST /spin - selected recipe "${candidates[randomIndex].name}" from ${candidates.length} candidates`);
     res.json({ code: 0, data: candidates[randomIndex], message: 'success' });
   } catch (error) {
+    logger.error('diet', `POST /spin error: ${error.message}`);
     res.json({ code: 1001, data: null, message: error.message });
   }
 });

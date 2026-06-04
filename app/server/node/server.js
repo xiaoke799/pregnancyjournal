@@ -18,8 +18,24 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 if (config.APP_MODE === 'dev') {
-  app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+  app.use(cors({ origin: true, credentials: true }));
 }
+
+// CGI 路径剥离中间件：网关直接转发模式会携带完整 CGI 路径前缀
+// 将 /cgi/ThirdParty/pregnancyjournal/index.cgi/api/v1/... → /api/v1/...
+// 将 /cgi/ThirdParty/pregnancyjournal/index.cgi/assets/... → /assets/...
+// 将 /cgi/ThirdParty/pregnancyjournal/index.cgi/ → /
+app.use((req, res, next) => {
+  const CGI_PREFIX = '/cgi/ThirdParty/pregnancyjournal/index.cgi';
+  if (req.url.startsWith(CGI_PREFIX)) {
+    const stripped = req.url.slice(CGI_PREFIX.length);
+    const url = stripped || '/';
+    req.url = url;
+    req.originalUrl = url;
+    req.path = url.split('?')[0];
+  }
+  next();
+});
 
 app.use(authMiddleware);
 
@@ -118,9 +134,11 @@ async function start() {
   await initDb();
   log.startup('数据库初始化完成');
 
-  app.listen(config.PORT, '0.0.0.0', () => {
-    log.startup('服务启动成功', {
-      port: config.PORT,
+  const port = parseInt(config.TRIM_SERVICE_PORT) || 3867;
+
+  app.listen(port, '0.0.0.0', () => {
+    log.startup('服务启动成功 (TCP)', {
+      port: port,
       mode: config.APP_MODE,
       database: config.DATABASE_PATH,
       static: staticDir,

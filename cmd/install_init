@@ -1,6 +1,6 @@
 #!/bin/bash
 # 孕程记 - 安装初始化
-LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancy-journal-install-init.log}"
+LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancyjournal-install-init.log}"
 mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
 echo "$(date '+%Y-%m-%d %H:%M:%S') - Installation init completed. Data dirs created at runtime." >> "${LOG_FILE}" 2>/dev/null
 exit 0

@@ -1,7 +1,7 @@
 #!/bin/bash
 # 孕程记 - 升级后回调：运行数据库迁移 + 安装依赖
 
-LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancy-journal-upgrade.log}"
+LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancyjournal-upgrade.log}"
 mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
 
 log_msg() {
@@ -10,7 +10,7 @@ log_msg() {
 
 log_msg "Upgrade callback started"
 
-NODE_BIN="/var/apps/nodejs_v22/target/bin"
+NODE_BIN="/var/apps/nodejs_v24/target/bin"
 export PATH=${NODE_BIN}:$PATH
 
 NODE_DIR="${TRIM_APPDEST}/server/node"
@@ -24,15 +24,7 @@ fi
 APP_DIR="${TRIM_APPDEST}/server/backend"
 
 if [ -d "${APP_DIR}" ]; then
-    cd "${APP_DIR}" || { log_msg "WARNING: cannot cd to ${APP_DIR}"; exit 0; }
-
-    if command -v alembic >/dev/null 2>&1; then
-        alembic upgrade head >> "${LOG_FILE}" 2>&1 && log_msg "Migration completed" || log_msg "WARNING: migration failed or skipped"
-    else
-        log_msg "INFO: alembic not found, skipping migration"
-    fi
-else
-    log_msg "WARNING: backend directory not found at ${APP_DIR}"
+    log_msg "INFO: Python backend directory exists but is deprecated, skipping"
 fi
 
 log_msg "Upgrade callback completed"
