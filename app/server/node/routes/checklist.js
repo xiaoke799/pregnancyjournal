@@ -7,45 +7,101 @@ const config = require('../config');
 const logger = require('../logger');
 
 const DEFAULT_CHECKLISTS = [
-  { type: 'delivery_bag', name: '待产包清单', file: 'default_checklist_delivery.json' },
-  { type: 'newborn_prep', name: '新生儿准备清单', file: 'default_checklist_newborn.json' },
-  { type: 'delivery_check', name: '产房待检清单', file: 'default_checklist_delivery_check.json' },
-  { type: 'confinement', name: '月子物品清单', file: 'default_checklist_confinement.json' }
+  { type: 'delivery_room', name: '产房清单', file: 'default_checklist_delivery_room.json' },
+  { type: 'hospital', name: '住院清单', file: 'default_checklist_hospital.json' },
+  { type: 'confinement', name: '月子清单', file: 'default_checklist_confinement.json' }
 ];
+
+const DEFAULT_TYPE_SET = new Set(DEFAULT_CHECKLISTS.map(c => c.type));
 
 function _loadDefaultItems(filePath) {
   const raw = fs.readFileSync(filePath, 'utf-8');
   const data = JSON.parse(raw);
   const items = [];
   let sortOrder = 0;
-  const categories = data.categories || [];
-  for (const cat of categories) {
-    const categoryName = cat.category || '';
-    for (const itemData of (cat.items || [])) {
-      items.push({
-        name: itemData.name || '',
-        description: itemData.description || null,
-        category: categoryName,
-        is_mandatory: itemData.mandatory ? 1 : 0,
-        sort_order: sortOrder++
-      });
+
+  if (Array.isArray(data.groups)) {
+    for (const group of data.groups) {
+      const prefix = group.label || (group.target === 'baby' ? '👶 宝宝' : '👩 妈妈');
+      for (const cat of (group.categories || [])) {
+        const categoryName = cat.category ? `${prefix}·${cat.category}` : prefix;
+        for (const itemData of (cat.items || [])) {
+          items.push({
+            name: itemData.name || '',
+            description: itemData.description || null,
+            category: categoryName,
+            is_mandatory: itemData.mandatory ? 1 : 0,
+            sort_order: sortOrder++
+          });
+        }
+      }
+    }
+  } else {
+    const categories = data.categories || [];
+    for (const cat of categories) {
+      const categoryName = cat.category || '';
+      for (const itemData of (cat.items || [])) {
+        items.push({
+          name: itemData.name || '',
+          description: itemData.description || null,
+          category: categoryName,
+          is_mandatory: itemData.mandatory ? 1 : 0,
+          sort_order: sortOrder++
+        });
+      }
     }
   }
   return items;
 }
 
+function _syncMandatoryFlags(checklistId, defaultItems) {
+  const existingItems = db.queryAll(
+    'SELECT id, name, is_mandatory FROM checklist_item WHERE checklist_id = ? AND is_custom = 0',
+    [checklistId]
+  );
+  const mandatoryByName = new Map(defaultItems.map(i => [i.name, i.is_mandatory]));
+  let updated = 0;
+  for (const item of existingItems) {
+    const shouldBe = mandatoryByName.has(item.name) ? mandatoryByName.get(item.name) : 0;
+    if ((item.is_mandatory || 0) !== shouldBe) {
+      db.run('UPDATE checklist_item SET is_mandatory = ? WHERE id = ?', [shouldBe, item.id]);
+      updated++;
+    }
+  }
+  return updated;
+}
+
 function _ensureDefaultChecklists(pregnancyId) {
   const existing = db.queryAll(
-    'SELECT id, type FROM checklist WHERE pregnancy_id = ?',
+    'SELECT c.id, c.type, (SELECT COUNT(*) FROM checklist_item WHERE checklist_id = c.id) as item_count FROM checklist c WHERE c.pregnancy_id = ?',
     [pregnancyId]
   );
 
-  const existingTypes = new Set(existing.map(cl => cl.type));
+  const keptExisting = [];
+  for (const cl of existing) {
+    if (DEFAULT_TYPE_SET.has(cl.type)) {
+      keptExisting.push(cl);
+      continue;
+    }
+    const hasCustom = db.queryOne(
+      'SELECT COUNT(*) as cnt FROM checklist_item WHERE checklist_id = ? AND is_custom = 1',
+      [cl.id]
+    );
+    if (hasCustom && hasCustom.cnt > 0) {
+      logger.info('checklist', `_ensureDefaultChecklists - keeping stale checklist ${cl.id} (has custom items)`);
+      keptExisting.push(cl);
+    } else {
+      db.run('DELETE FROM checklist WHERE id = ?', [cl.id]);
+      logger.info('checklist', `_ensureDefaultChecklists - removed stale checklist ${cl.id}`);
+    }
+  }
+
+  const existingByType = new Map(keptExisting.map(cl => [cl.type, cl]));
   let createdCount = 0;
+  let reseededCount = 0;
+  let syncedCount = 0;
 
   for (const cl of DEFAULT_CHECKLISTS) {
-    if (existingTypes.has(cl.type)) continue;
-
     const filePath = path.join(config.DATA_DIR, cl.file);
     if (!fs.existsSync(filePath)) {
       logger.warn('checklist', `_ensureDefaultChecklists - file not found: ${cl.file}`);
@@ -57,6 +113,29 @@ function _ensureDefaultChecklists(pregnancyId) {
       items = _loadDefaultItems(filePath);
     } catch (e) {
       logger.warn('checklist', `Failed to load ${cl.file}: ${e.message}`);
+      continue;
+    }
+
+    const existed = existingByType.get(cl.type);
+    if (existed) {
+      if ((existed.item_count || 0) > 0) {
+        const updated = _syncMandatoryFlags(existed.id, items);
+        if (updated > 0) {
+          logger.info('checklist', `_ensureDefaultChecklists - synced ${updated} mandatory flags for "${cl.name}"`);
+          syncedCount += updated;
+        }
+        continue;
+      }
+      items.forEach((item) => {
+        const itemId = db.generateId();
+        db.run(
+          `INSERT INTO checklist_item (id, checklist_id, name, description, category, is_checked, is_custom, is_mandatory, sort_order)
+           VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?)`,
+          [itemId, existed.id, item.name, item.description, item.category, item.is_mandatory, item.sort_order]
+        );
+      });
+      logger.info('checklist', `_ensureDefaultChecklists - reseeded "${cl.name}" with ${items.length} items for pregnancy_id=${pregnancyId}`);
+      reseededCount++;
       continue;
     }
 
@@ -79,8 +158,8 @@ function _ensureDefaultChecklists(pregnancyId) {
     createdCount++;
   }
 
-  if (createdCount > 0) {
-    logger.info('checklist', `_ensureDefaultChecklists - created ${createdCount} default checklists for pregnancy_id=${pregnancyId}`);
+  if (createdCount > 0 || reseededCount > 0 || syncedCount > 0) {
+    logger.info('checklist', `_ensureDefaultChecklists - created ${createdCount}, reseeded ${reseededCount}, synced ${syncedCount} mandatory flags for pregnancy_id=${pregnancyId}`);
   }
 }
 
@@ -98,7 +177,9 @@ router.get('/checklists/progress', (req, res) => {
     const checklists = db.queryAll(
       `SELECT c.id, c.name, c.type,
               (SELECT COUNT(*) FROM checklist_item WHERE checklist_id = c.id) as total,
-              (SELECT COUNT(*) FROM checklist_item WHERE checklist_id = c.id AND is_checked = 1) as checked
+              (SELECT COUNT(*) FROM checklist_item WHERE checklist_id = c.id AND is_checked = 1) as checked,
+              (SELECT COUNT(*) FROM checklist_item WHERE checklist_id = c.id AND is_mandatory = 1) as mandatory_total,
+              (SELECT COUNT(*) FROM checklist_item WHERE checklist_id = c.id AND is_mandatory = 1 AND is_checked = 1) as mandatory_checked
        FROM checklist c
        WHERE c.pregnancy_id = ?
        ORDER BY c.created_at`,
@@ -107,30 +188,42 @@ router.get('/checklists/progress', (req, res) => {
 
     let totalItems = 0;
     let checkedItems = 0;
+    let mandatoryTotal = 0;
+    let mandatoryChecked = 0;
     const list = [];
 
     for (const cl of checklists) {
       const t = cl.total || 0;
       const ck = cl.checked || 0;
+      const mt = cl.mandatory_total || 0;
+      const mc = cl.mandatory_checked || 0;
       totalItems += t;
       checkedItems += ck;
+      mandatoryTotal += mt;
+      mandatoryChecked += mc;
       list.push({
         id: cl.id,
         name: cl.name,
         type: cl.type,
         total: t,
         checked: ck,
-        percentage: t > 0 ? Math.round((ck / t) * 100) : 0
+        mandatory_total: mt,
+        mandatory_checked: mc,
+        percentage: t > 0 ? Math.round((ck / t) * 100) : 0,
+        mandatory_percentage: mt > 0 ? Math.round((mc / mt) * 100) : 0
       });
     }
 
-    logger.info('checklist', `GET /checklists/progress - ${list.length} checklists, total=${totalItems}, checked=${checkedItems}`);
+    logger.info('checklist', `GET /checklists/progress - ${list.length} checklists, mandatory=${mandatoryChecked}/${mandatoryTotal}, total=${checkedItems}/${totalItems}`);
     res.json({
       code: 0,
       data: {
         total: totalItems,
         checked: checkedItems,
         percentage: totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0,
+        mandatory_total: mandatoryTotal,
+        mandatory_checked: mandatoryChecked,
+        mandatory_percentage: mandatoryTotal > 0 ? Math.round((mandatoryChecked / mandatoryTotal) * 100) : 0,
         checklists: list
       },
       message: 'success'

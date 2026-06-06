@@ -2,6 +2,9 @@
   <div class="dashboard-view">
     <!-- ===== 信息看板（基于预产期实时修正） ===== -->
     <div class="countdown-card" :class="'stage-' + realtimeStageKey">
+      <span class="orb orb-1"></span>
+      <span class="orb orb-2"></span>
+      <span class="orb orb-3"></span>
       <div class="countdown-top">
         <div class="countdown-label">{{ countdownLabel }}</div>
         <div class="countdown-row">
@@ -30,7 +33,9 @@
           <span class="plan-icon">{{ sourceIcon(item.source_type) }}</span>
           <div class="plan-body">
             <span class="plan-title">{{ item.title }}</span>
-            <span class="plan-meta" v-if="item.trigger_date">{{ formatShortDate(item.trigger_date) }}</span>
+            <span class="plan-meta" v-if="item.trigger_date">
+              {{ formatCountdown(item.trigger_date) }}
+            </span>
           </div>
           <n-button size="tiny" quaternary type="primary" @click="completeTodo(item)">完成</n-button>
         </div>
@@ -182,18 +187,19 @@
       </div>
     </div>
 
-    <!-- ===== 待产清单 ===== -->
+    <!-- ===== 准备清单 ===== -->
     <div class="section" v-if="checklistProgress && checklistProgress.total > 0">
       <div class="section-header">
-        <h3>📋 待产清单</h3>
+        <h3>📋 准备清单</h3>
         <router-link to="/checklist" class="view-all">查看全部 →</router-link>
       </div>
-      <div class="cl-bar-outer">
-        <div class="cl-bar-fill" :style="{ width: checklistProgress.percentage + '%' }"></div>
+      <div class="cl-bar-outer mandatory">
+        <div class="cl-bar-fill" :style="{ width: (checklistProgress.mandatory_percentage || 0) + '%' }"></div>
       </div>
       <div class="cl-summary">
-        已完成 {{ checklistProgress.checked }}/{{ checklistProgress.total }} 项
-        <strong>{{ checklistProgress.percentage }}%</strong>
+        🔥 必备 {{ checklistProgress.mandatory_checked || 0 }}/{{ checklistProgress.mandatory_total || 0 }}
+        <strong>{{ checklistProgress.mandatory_percentage || 0 }}%</strong>
+        <span class="cl-sub"> · 全部 {{ checklistProgress.checked }}/{{ checklistProgress.total }}</span>
       </div>
     </div>
 
@@ -518,6 +524,20 @@ function formatShortDate(d: string | undefined): string {
   return dayjs(d).format('M/D')
 }
 
+/** 倒计时格式化：还有X天 / 今天 / 已过X天 */
+function formatCountdown(dateStr: string | undefined): string {
+  if (!dateStr) return ''
+  const d = dayjs(dateStr)
+  const today = dayjs().startOf('day')
+  const diff = d.diff(today, 'day')
+  if (diff === 0) return '📍 今天'
+  if (diff === 1) return '⏰ 明天'
+  if (diff > 1 && diff <= 7) return `还有 ${diff} 天`
+  if (diff > 7) return d.format('MM/DD') + ` (还有${diff}天)`
+  if (diff < 0) return `已过 ${Math.abs(diff)} 天`
+  return d.format('MM/DD')
+}
+
 function formatDaysUntil(days: number | null | undefined): string {
   if (days == null) return ''
   if (days < 0) return `已过${Math.abs(days)}天`
@@ -606,30 +626,135 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .dashboard-view { max-width: 680px; margin: 0 auto; padding: 16px; }
 
 .countdown-card {
-  border-radius: 18px; padding: 28px 24px 20px; color: white; text-align: center;
-  box-shadow: 0 6px 24px rgba(0,0,0,.1);
+  position: relative;
+  border-radius: var(--radius-2xl, 28px);
+  padding: 32px 26px 24px;
+  color: white;
+  text-align: center;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 10px 30px rgba(31, 23, 48, 0.14);
 }
-.countdown-card.stage-early { background: linear-gradient(135deg, #43A047, #66BB6A); }
-.countdown-card.stage-mid { background: linear-gradient(135deg, #1E88E5, #42A5F5); }
-.countdown-card.stage-late { background: linear-gradient(135deg, #8E24AA, #AB47BC); }
-.countdown-card.stage-preparing { background: linear-gradient(135deg, #FF7043, #FFA726); }
-.countdown-card.stage-nursing { background: linear-gradient(135deg, #5C6BC0, #7986CB); }
-.countdown-top { margin-bottom: 8px; }
-.countdown-label { font-size: 13px; opacity: .85; margin-bottom: 4px; letter-spacing: 1px; }
+.countdown-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(255, 255, 255, 0.22) 0%, transparent 42%),
+    radial-gradient(circle at 82% 78%, rgba(255, 255, 255, 0.14) 0%, transparent 48%);
+  pointer-events: none;
+  z-index: 0;
+}
+.countdown-card > * {
+  position: relative;
+  z-index: 1;
+}
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+.orb-1 {
+  width: 140px; height: 140px;
+  top: -50px; right: -40px;
+  background: rgba(255, 255, 255, 0.2);
+  filter: blur(2px);
+  animation: drift 9s ease-in-out infinite;
+}
+.orb-2 {
+  width: 90px; height: 90px;
+  bottom: -28px; left: -16px;
+  background: rgba(255, 255, 255, 0.14);
+  filter: blur(2px);
+  animation: drift 11s ease-in-out infinite reverse;
+}
+.orb-3 {
+  width: 28px; height: 28px;
+  top: 22%; left: 12%;
+  background: rgba(255, 255, 255, 0.32);
+  animation: drift 6s ease-in-out infinite;
+  animation-delay: -3s;
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(8px, -10px); }
+}
+
+.countdown-card.stage-early {
+  background: linear-gradient(135deg, #ffc784 0%, #ff9a52 100%);
+  box-shadow: 0 12px 32px rgba(255, 154, 82, 0.32);
+}
+.countdown-card.stage-mid {
+  background: linear-gradient(135deg, #7dd0f4 0%, #2196d4 100%);
+  box-shadow: 0 12px 32px rgba(33, 150, 212, 0.3);
+}
+.countdown-card.stage-late {
+  background: linear-gradient(135deg, #ff9ec0 0%, #c44680 100%);
+  box-shadow: 0 12px 32px rgba(196, 70, 128, 0.3);
+}
+.countdown-card.stage-preparing {
+  background: linear-gradient(135deg, #cbb8e0 0%, #8a7bb3 100%);
+  box-shadow: 0 12px 32px rgba(138, 123, 179, 0.3);
+}
+.countdown-card.stage-nursing {
+  background: linear-gradient(135deg, #97e3a8 0%, #5bbe70 100%);
+  box-shadow: 0 12px 32px rgba(91, 190, 112, 0.3);
+}
+.countdown-top { margin-bottom: 10px; }
+.countdown-label {
+  font-size: 12.5px;
+  opacity: 0.88;
+  margin-bottom: 6px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
 .countdown-row { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
-.countdown-num { font-size: 64px; font-weight: 900; line-height: 1; }
-.countdown-unit { font-size: 20px; font-weight: 600; opacity: .85; }
-.countdown-meta { font-size: 13px; opacity: .85; margin-bottom: 14px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
-.meta-dot { opacity: .5; }
+.countdown-num {
+  font-size: 68px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.14);
+  font-variant-numeric: tabular-nums;
+}
+.countdown-unit { font-size: 22px; font-weight: 600; opacity: 0.9; }
+.countdown-meta {
+  font-size: 13px;
+  opacity: 0.92;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  letter-spacing: 0.2px;
+}
+.meta-dot { opacity: 0.5; }
 
 .section {
-  background: white; border-radius: 14px; padding: 18px; margin-top: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  background: var(--bg-card, white);
+  border-radius: var(--radius-lg, 16px);
+  padding: 20px;
+  margin-top: 14px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color-soft);
+  transition: box-shadow var(--transition-base);
 }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.section-header h3 { font-size: 15px; font-weight: 700; margin: 0; }
+.section:hover {
+  box-shadow: var(--shadow-md);
+}
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.section-header h3 { font-size: 15.5px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
 .section-hint { font-size: 12px; color: var(--text-hint, #94a3b8); }
-.view-all { font-size: 13px; color: var(--primary-color, #E8A0BF); text-decoration: none; font-weight: 600; }
+.view-all {
+  font-size: 13px;
+  color: var(--primary-color, #c44680);
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity var(--transition-fast);
+}
+.view-all:hover { opacity: 0.75; }
 .chart-wrap { margin: 0 -4px; }
 
 /* 核心功能网格 */
@@ -639,39 +764,64 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   gap: 10px;
 }
 .core-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 18px 8px 14px;
-  border-radius: 14px;
+  gap: 8px;
+  padding: 20px 8px 16px;
+  border-radius: var(--radius-lg, 16px);
   text-decoration: none;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
   cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.core-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+.core-card > * {
+  position: relative;
+  z-index: 1;
 }
 .core-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(0,0,0,.1);
+  box-shadow: var(--shadow-lg);
+}
+.core-card:active {
+  transform: translateY(-1px) scale(0.98);
 }
 .core-icon {
   font-size: 32px;
   line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.08));
+  transition: transform var(--transition-base);
+}
+.core-card:hover .core-icon {
+  transform: scale(1.12) rotate(-4deg);
 }
 .core-label {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-color, #1e293b);
+  letter-spacing: -0.01em;
 }
 .core-desc {
   font-size: 11px;
   color: var(--text-hint, #94a3b8);
   text-align: center;
 }
-.core-record { background: linear-gradient(135deg, #fce4ec, #f8bbd0); }
-.core-diet { background: linear-gradient(135deg, #fff3e0, #ffe0b2); }
-.core-diary { background: linear-gradient(135deg, #e8eaf6, #c5cae9); }
-.core-checkup { background: linear-gradient(135deg, #e0f2f1, #b2dfdb); }
-.core-settings { background: linear-gradient(135deg, #f3e5f5, #e1bee7); }
+.core-record { background: linear-gradient(135deg, #ffe8f0 0%, #ffc4d8 100%); }
+.core-diet { background: linear-gradient(135deg, #fff3e0 0%, #ffd9a6 100%); }
+.core-diary { background: linear-gradient(135deg, #ece7ff 0%, #c8c0f0 100%); }
+.core-checkup { background: linear-gradient(135deg, #e0f5f1 0%, #a8e0d0 100%); }
+.core-settings { background: linear-gradient(135deg, #f5e8ff 0%, #dcc0f0 100%); }
 
 .dev-brief { display: flex; gap: 8px; margin-bottom: 10px; }
 .dev-chip {
@@ -750,17 +900,20 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 }
 .empty-record:hover { background: #f8fafc; }
 .empty-icon { font-size: 28px; }
-.empty-cta { color: var(--primary-color, #E8A0BF); font-weight: 600; font-size: 13px; }
+.empty-cta { color: var(--primary-color, #c44680); font-weight: 600; font-size: 13px; }
 
 .cl-bar-outer { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.cl-bar-outer.mandatory { background: #fecaca; }
 .cl-bar-fill { height: 100%; background: linear-gradient(90deg, #66BB6A, #42A5F5); border-radius: 4px; transition: width .4s; }
+.cl-bar-outer.mandatory .cl-bar-fill { background: linear-gradient(90deg, #ef4444, #f97316); }
 .cl-summary { text-align: center; font-size: 13px; color: var(--text-secondary, #64748b); }
-.cl-summary strong { color: var(--primary-color, #E8A0BF); font-size: 15px; margin-left: 4px; }
+.cl-summary strong { color: var(--primary-color, #c44680); font-size: 15px; margin-left: 4px; }
+.cl-sub { color: #94a3b8; font-size: 12px; margin-left: 4px; }
 
 .lc-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border-radius: 10px; }
 .lc-type { font-size: 14px; font-weight: 600; margin-right: 8px; }
 .lc-date { font-size: 12px; color: var(--text-hint); }
-.lc-week { font-size: 13px; font-weight: 600; color: var(--primary-color, #E8A0BF); }
+.lc-week { font-size: 13px; font-weight: 600; color: var(--primary-color, #c44680); }
 
 @media (max-width: 768px) {
   .dashboard-view { padding: 10px; }

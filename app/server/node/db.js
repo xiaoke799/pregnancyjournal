@@ -215,9 +215,11 @@ CREATE TABLE IF NOT EXISTS checklist_item (
   id TEXT PRIMARY KEY,
   checklist_id TEXT NOT NULL,
   name TEXT NOT NULL,
+  description TEXT,
   category TEXT DEFAULT '',
   is_checked INTEGER DEFAULT 0,
   is_custom INTEGER DEFAULT 0,
+  is_mandatory INTEGER DEFAULT 0,
   sort_order INTEGER DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (checklist_id) REFERENCES checklist(id) ON DELETE CASCADE
@@ -395,10 +397,14 @@ function migrateDb() {
             }
             migrated++;
             log.migrate(`添加列 ${col} → ${table}`);
-          } catch (e) {}
+          } catch (e) {
+            log.error(`迁移失败 ${table}.${col}: ${e.message}`);
+          }
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      log.error(`迁移检查表 ${table} 失败: ${e.message}`);
+    }
   }
   try {
     const now = new Date().toISOString().replace('T', ' ').substring(0, 19);

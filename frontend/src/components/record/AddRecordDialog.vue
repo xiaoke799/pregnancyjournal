@@ -945,13 +945,13 @@ onBeforeUnmount(() => {
 }
 
 .type-tag:hover {
-  border-color: var(--primary-color, #e8a0bf);
+  border-color: var(--primary-color, #c44680);
 }
 
 .type-tag.selected {
-  background: var(--primary-color, #e8a0bf);
+  background: var(--primary-color, #c44680);
   color: white;
-  border-color: var(--primary-color, #e8a0bf);
+  border-color: var(--primary-color, #c44680);
 }
 
 .type-icon {
@@ -1126,9 +1126,9 @@ onBeforeUnmount(() => {
   transition: all .15s;
 }
 .supp-tag.selected {
-  background: var(--primary-color, #e8a0bf);
+  background: var(--primary-color, #c44680);
   color: white;
-  border-color: var(--primary-color, #e8a0bf);
+  border-color: var(--primary-color, #c44680);
 }
 .form-hint { font-size: 12px; color: var(--text-hint, #94a3b8); margin-top: 6px; padding: 6px 10px; background: #f0f9ff; border-radius: 6px; }
 

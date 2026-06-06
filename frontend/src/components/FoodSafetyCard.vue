@@ -305,7 +305,7 @@ function eatingTips(level: string): string[] {
   border: 1px solid transparent; transition: border-color .2s;
 }
 .detail-stage-cell.is-current {
-  background: white; border-color: var(--primary-color, #e8a0bf);
+  background: white; border-color: var(--primary-color, #c44680);
   box-shadow: 0 1px 4px rgba(232,160,191,.15);
 }
 .cell-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }

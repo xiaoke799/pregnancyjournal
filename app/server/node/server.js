@@ -71,6 +71,7 @@ const routes = [
   './routes/app-config',
   './routes/diet',
   './routes/checkup-schedule',
+  './routes/wecom',
   './routes/logs',
 ];
 
@@ -158,7 +159,91 @@ process.on('unhandledRejection', (reason) => {
   log.error('进程', 'unhandledRejection', { reason: String(reason) });
 });
 
-start().catch(err => {
+// ========== 企业微信每日定时推送 ==========
+const WECOM_CONFIG_FILE = path.join(__dirname, 'data', 'wecom.json');
+const DAILY_PUSH_STATE_FILE = path.join(__dirname, 'data', 'daily_push_state.json');
+
+/** 每日推送调度器：每晚21:00推送次日待办 */
+function startDailyPushScheduler() {
+  // 每30分钟检查一次是否到推送时间
+  const CHECK_INTERVAL = 30 * 60 * 1000;
+  const PUSH_HOUR = 21; // 晚上9点推送次日预览
+
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      // 检查是否在推送时间窗口内（PUSH_HOUR点 到 PUSH_HOUR+1点）
+      if (now.getHours() !== PUSH_HOUR) return;
+
+      // 读取状态，避免同一天重复推送
+      let state = { lastPushDate: null };
+      try {
+        if (fs.existsSync(DAILY_PUSH_STATE_FILE)) {
+          state = JSON.parse(fs.readFileSync(DAILY_PUSH_STATE_FILE, 'utf-8'));
+        }
+      } catch { /* ignore */ }
+
+      const todayStr = now.toISOString().slice(0, 10);
+      if (state.lastPushDate === todayStr) return; // 今天已推过
+
+      // 检查企业微信是否配置
+      let wecomConfig = null;
+      try {
+        if (fs.existsSync(WECOM_CONFIG_FILE)) {
+          wecomConfig = JSON.parse(fs.readFileSync(WECOM_CONFIG_FILE, 'utf-8'));
+        }
+      } catch { /* ignore */ }
+
+      if (!wecomConfig || !wecomConfig.webhook_url || !wecomConfig.configured) return;
+
+      // 获取所有活跃孕期
+      const db = require('./db');
+      const pregnancies = await db.queryAll("SELECT id FROM pregnancy WHERE status = 'active' LIMIT 10");
+      if (!pregnancies || pregnancies.length === 0) return;
+
+      // 对每个孕期发送每日看板
+      for (const p of pregnancies) {
+        try {
+          // 内部调用 daily-push 接口（模拟请求）
+          const http = require('http');
+          const postData = JSON.stringify({ pregnancy_id: p.id });
+          const req = http.request({
+            hostname: '127.0.0.1',
+            port: parseInt(process.env.TRIM_SERVICE_PORT) || 3867,
+            path: '/api/v1/wecom/daily-push',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
+          }, (res) => {
+            let body = '';
+            res.on('data', c => body += c);
+            res.on('end', () => {
+              log.info('企业微信', `每日推送完成: pregnancy=${p.id}, result=${body.slice(0, 100)}`);
+            });
+          });
+          req.on('error', (e) => log.error('企业微信', `推送失败: ${e.message}`));
+          req.write(postData);
+          req.end();
+        } catch (e) {
+          log.error('企业微信', `推送异常: ${e.message}`);
+        }
+      }
+
+      // 记录已推送
+      state.lastPushDate = todayStr;
+      fs.writeFileSync(DAILY_PUSH_STATE_FILE, JSON.stringify(state), 'utf-8');
+      log.info('企业微信', `每日看板推送触发成功, 共${pregnancies.length}个孕期`);
+
+    } catch (e) {
+      log.error('企业微信', `调度器异常: ${e.message}`);
+    }
+  }, CHECK_INTERVAL);
+
+  log.info('企业微信', `每日推送调度器已启动 (每天 ${PUSH_HOUR}:00 触发)`);
+}
+
+start().then(() => {
+  startDailyPushScheduler(); // 启动后开始调度
+}).catch(err => {
   log.error('进程', '启动失败', { error: err.message });
   process.exit(1);
 });

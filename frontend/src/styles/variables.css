@@ -1,48 +1,178 @@
 :root {
-  --bg-color: #f8f9fa;
-  --bg-card: white;
-  --text-color: #1e293b;
-  --text-secondary: #64748b;
-  --text-hint: #94a3b8;
-  --border-color: #e2e8f0;
-  --primary-color: #e8a0bf;
-  --accent-color: #e8a0bf;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.05);
+  /* ============ 基础颜色 ============ */
+  --bg-color: #fdfaf7;
+  --bg-color-2: #f6f1ee;
+  --bg-card: #ffffff;
+  --bg-elev: #fffafd;
+  --bg-tint-pink: #fff5fa;
+  --bg-tint-blue: #f4f8ff;
+  --bg-tint-mint: #f1faf4;
+  --bg-tint-cream: #fff9ec;
 
-  /* 孕早期 (0-12周) */
-  --stage-early-color: #FFB74D;
-  --stage-early-bg: #FFF3E0;
+  --text-color: #1f1730;
+  --text-secondary: #5c5275;
+  --text-hint: #6b6480;
+  --text-disabled: #b7b0c4;
+  --text-inverse: #ffffff;
 
-  /* 孕中期 (13-27周) */
-  --stage-mid-color: #4FC3F7;
-  --stage-mid-bg: #E1F5FE;
+  --border-color: #efe7ef;
+  --border-color-strong: #e1d5e3;
+  --border-color-soft: #f6f0f6;
+  --divider-color: #f1ebf2;
 
-  /* 孕晚期 (28+周) */
-  --stage-late-color: #F06292;
-  --stage-late-bg: #FCE4EC;
+  /* ============ 品牌色（柔粉玫瑰） ============ */
+  --primary-color: #c44680;
+  --primary-color-hover: #b13a72;
+  --primary-color-pressed: #9c3164;
+  --primary-color-suppl: #d2649a;
+  --primary-soft: #e8a0bf;
+  --primary-50: #fff0f7;
+  --primary-100: #ffe1ee;
+  --primary-200: #ffc3dd;
+  --primary-300: #ffa0c8;
+  --primary-400: #f37aae;
+  --primary-500: #c44680;
+  --primary-600: #a83468;
+  --primary-700: #862952;
+  --accent-color: #c44680;
+  --accent-warm: #f48cb0;
+  --accent-mint: #6ec9b2;
+  --accent-lilac: #b08fd6;
+  --accent-peach: #f4a896;
 
-  /* 备孕期 */
-  --stage-preparing-color: #A0AEC0;
-  --stage-preparing-bg: #F7FAFC;
+  /* ============ 渐变 ============ */
+  --gradient-primary: linear-gradient(135deg, #ffb6cf 0%, #f48cb0 50%, #c44680 100%);
+  --gradient-soft: linear-gradient(135deg, #ffeaf2 0%, #ffd9e7 100%);
+  --gradient-dawn: linear-gradient(135deg, #ffd1dc 0%, #ffeae0 50%, #d4f0ff 100%);
+  --gradient-aurora: linear-gradient(135deg, #f8d2e3 0%, #d6c5f0 50%, #b8e2f2 100%);
+  --gradient-cream: linear-gradient(135deg, #fff5e6 0%, #ffe6f0 100%);
+  --gradient-mint: linear-gradient(135deg, #d5f5e3 0%, #aedff0 100%);
 
-  /* 育儿期 */
-  --stage-nursing-color: #66BB6A;
-  --stage-nursing-bg: #E8F5E9;
+  /* ============ 阶段色 ============ */
+  --stage-early-color: #f29e51;
+  --stage-early-bg: #fff5e8;
+  --stage-early-gradient: linear-gradient(135deg, #ffc784 0%, #ff9a52 100%);
 
-  /* 食物安全 */
-  --food-safe: #52C41A;
-  --food-caution: #FAAD14;
-  --food-unsafe: #FF4D4F;
+  --stage-mid-color: #4fb6e8;
+  --stage-mid-bg: #e8f5fc;
+  --stage-mid-gradient: linear-gradient(135deg, #7dd0f4 0%, #2196d4 100%);
+
+  --stage-late-color: #ec5d8a;
+  --stage-late-bg: #fde7ed;
+  --stage-late-gradient: linear-gradient(135deg, #ff9ec0 0%, #c44680 100%);
+
+  --stage-preparing-color: #8c9bb0;
+  --stage-preparing-bg: #f4f6fa;
+  --stage-preparing-gradient: linear-gradient(135deg, #cbb8e0 0%, #8a7bb3 100%);
+
+  --stage-nursing-color: #5bbe70;
+  --stage-nursing-bg: #ebf7ed;
+  --stage-nursing-gradient: linear-gradient(135deg, #97e3a8 0%, #5bbe70 100%);
+
+  /* ============ 食物安全色 ============ */
+  --food-safe: #4ea750;
+  --food-caution: #f0a020;
+  --food-unsafe: #e64646;
+
+  /* ============ 语义色 ============ */
+  --success-color: #4ea750;
+  --warning-color: #f0a020;
+  --error-color: #e64646;
+  --info-color: #4fb6e8;
+
+  /* ============ 圆角 ============ */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-3xl: 36px;
+  --radius-full: 9999px;
+
+  /* ============ 阴影 ============ */
+  --shadow-xs: 0 1px 2px rgba(31, 23, 48, 0.04);
+  --shadow-sm: 0 1px 3px rgba(31, 23, 48, 0.06), 0 1px 2px rgba(31, 23, 48, 0.04);
+  --shadow-md: 0 4px 12px rgba(31, 23, 48, 0.06), 0 2px 4px rgba(31, 23, 48, 0.04);
+  --shadow-lg: 0 8px 24px rgba(31, 23, 48, 0.08), 0 4px 8px rgba(31, 23, 48, 0.04);
+  --shadow-xl: 0 16px 48px rgba(31, 23, 48, 0.1), 0 8px 16px rgba(31, 23, 48, 0.04);
+  --shadow-2xl: 0 24px 64px rgba(31, 23, 48, 0.12);
+  --shadow-inner: inset 0 1px 2px rgba(31, 23, 48, 0.05);
+
+  --glow-pink: 0 6px 20px rgba(196, 70, 128, 0.18), 0 2px 6px rgba(196, 70, 128, 0.12);
+  --glow-pink-strong: 0 10px 30px rgba(196, 70, 128, 0.28), 0 4px 10px rgba(196, 70, 128, 0.16);
+  --glow-mint: 0 6px 20px rgba(110, 201, 178, 0.22);
+  --glow-lilac: 0 6px 20px rgba(176, 143, 214, 0.22);
+
+  /* ============ 间距 ============ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ============ 动画 ============ */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --transition-fast: 0.15s var(--ease-out-quart);
+  --transition-base: 0.25s var(--ease-out-quart);
+  --transition-slow: 0.4s var(--ease-out-expo);
+
+  /* ============ 字体 ============ */
+  --font-sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "SF Mono", "Consolas", monospace;
+  --font-display: "PingFang SC", "Noto Serif SC", "Songti SC", serif;
+
+  /* ============ 安全区 ============ */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* ============ 布局 ============ */
+  --layout-max-width: 920px;
+  --layout-content-padding: 24px;
+  --sidebar-width: 224px;
+  --sidebar-width-collapsed: 64px;
+  --tabbar-height: 60px;
 }
 
 html.dark {
-  --bg-color: #1a1a2e;
-  --bg-card: #16213e;
-  --text-color: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-hint: #64748b;
-  --border-color: #2d3748;
+  --bg-color: #0f0d1a;
+  --bg-color-2: #161324;
+  --bg-card: #1a1730;
+  --bg-elev: #221d3b;
+  --bg-tint-pink: #2a1e2d;
+  --bg-tint-blue: #1c2238;
+  --bg-tint-mint: #1c2b27;
+  --bg-tint-cream: #2a241a;
+
+  --text-color: #ece9f3;
+  --text-secondary: #b6afc7;
+  --text-hint: #8a83a0;
+  --text-disabled: #5e5874;
+  --text-inverse: #1f1730;
+
+  --border-color: #2c2640;
+  --border-color-strong: #3a3354;
+  --border-color-soft: #211c36;
+  --divider-color: #251f3a;
+
   --primary-color: #f0a6c8;
+  --primary-color-hover: #f7b9d4;
+  --primary-color-pressed: #d8849c;
   --accent-color: #f0a6c8;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.2);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --glow-pink: 0 6px 20px rgba(240, 166, 200, 0.25);
+  --glow-pink-strong: 0 10px 30px rgba(240, 166, 200, 0.35);
 }

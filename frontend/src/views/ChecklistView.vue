@@ -1,15 +1,18 @@
 <template>
   <div class="checklist-view">
-    <!-- 顶部进度总览 -->
+    <!-- 顶部进度总览（挂钩必备项） -->
     <div class="progress-overview" v-if="checklists.length > 0">
       <div class="overview-stats">
-        <div class="stat-num">{{ totalChecked }}/{{ totalItems }}</div>
-        <div class="stat-label">已完成</div>
+        <div class="stat-num">{{ mandatoryChecked }}/{{ mandatoryTotal }}</div>
+        <div class="stat-label">🔥 必备已准备</div>
       </div>
       <div class="overview-bar">
-        <div class="bar-fill" :style="{ width: totalPercent + '%' }"></div>
+        <div class="bar-fill" :style="{ width: mandatoryPercent + '%' }"></div>
       </div>
-      <span class="overview-pct">{{ totalPercent }}%</span>
+      <span class="overview-pct">{{ mandatoryPercent }}%</span>
+    </div>
+    <div class="progress-sub" v-if="checklists.length > 0">
+      <span>全部 {{ totalChecked }}/{{ totalItems }} · {{ totalPercent }}%</span>
     </div>
 
     <!-- 刷新默认清单按钮 -->
@@ -27,13 +30,18 @@
           <span class="expand-icon" :class="{ 'expanded': expandedLists.has(cl.id) }">▶</span>
           <span class="card-icon">{{ getChecklistIcon(cl.type) }}</span>
           <h3 class="card-title">{{ cl.name }}</h3>
-          <n-tag size="tiny" type="info" :bordered="false" v-if="clProgress(cl)">{{ clProgress(cl).checked }}/{{ clProgress(cl).total }}</n-tag>
+          <n-tag size="tiny" type="error" :bordered="false" v-if="clProgress(cl) && clProgress(cl).mandatory_total > 0">🔥 {{ clProgress(cl).mandatory_checked }}/{{ clProgress(cl).mandatory_total }}</n-tag>
         </div>
+        <!-- 始终可见的快捷操作栏 -->
+        <div class="card-quick-actions">
+          <button class="quick-add-btn" @click.stop="showAddItemFor(cl)" title="添加自定义物品">+ 添加物品</button>
+        </div>
+        <div class="card-desc" v-if="getChecklistDesc(cl.type)">{{ getChecklistDesc(cl.type) }}</div>
         <div class="card-progress" v-if="clProgress(cl) && clProgress(cl).total > 0">
           <div class="card-bar-wrap">
-            <div class="card-bar-fill" :style="{ width: clProgress(cl).percentage + '%' }"></div>
+            <div class="card-bar-fill" :style="{ width: clProgress(cl).mandatory_percentage + '%' }"></div>
           </div>
-          <span class="progress-text">{{ clProgress(cl).percentage }}%</span>
+          <span class="progress-text">🔥 {{ clProgress(cl).mandatory_percentage }}%</span>
         </div>
       </div>
 
@@ -109,18 +117,29 @@
           <button v-if="searchQuery" class="clear-search" @click="searchQuery = ''">✕</button>
         </div>
 
-        <div class="add-item-row">
+        <div class="add-item-row" :class="{ 'active': activeAddChecklistId === cl.id }">
           <input
             v-model="newItemNames[cl.id]"
-            placeholder="添加自定义条目..."
+            placeholder="输入物品名称，回车或点击+添加..."
             class="add-input"
+            :class="{ 'active': activeAddChecklistId === cl.id }"
             @keyup.enter="addCustomItem(cl)"
+            @focus="showAddItemFor(cl)"
           />
-          <select v-model="newItemCats[cl.id]" class="add-cat-select">
+          <select v-model="newItemCats[cl.id]" class="add-cat-select" v-if="!newItemCats[cl.id]?.startsWith('__new__:')">
             <option value="">选择分类</option>
             <option v-for="cat in getCategories(cl)" :key="cat" :value="cat">{{ cat }}</option>
-            <option value="_custom_">新分类</option>
+            <option value="__new__:👩 妈妈">👩 新分类</option>
+            <option value="__new__:_none_">不分类</option>
           </select>
+          <input
+            v-else
+            :value="newItemCats[cl.id].split(':',2)[1] === '_none_' ? '' : (newItemCustomCat[cl.id] || '')"
+            @input="(e: any) => { newItemCustomCat[cl.id] = e.target.value; newItemCats[cl.id] = e.target.value ? `__custom__:${newItemCats[cl.id].split(':')[1]}${e.target.value}` : newItemCats[cl.id] }"
+            placeholder="新分类名"
+            class="add-cat-input"
+            @keyup.enter="addCustomItem(cl)"
+          />
           <button class="add-btn" @click="addCustomItem(cl)" :disabled="!newItemNames[cl.id]?.trim()">+</button>
         </div>
       </div>
@@ -135,7 +154,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { NTag, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { checklistApi } from '@/api/checklist'
@@ -150,6 +169,8 @@ const expandedLists = ref<Set<string>>(new Set())
 const expandedGroups = ref<Record<string, Set<string>>>({})
 const newItemNames = reactive<Record<string, string>>({})
 const newItemCats = reactive<Record<string, string>>({})
+const newItemCustomCat = reactive<Record<string, string>>({})
+const activeAddChecklistId = ref<string | null>(null)
 const searchQuery = ref('')
 const filterStatus = ref<'all' | 'checked' | 'unchecked' | 'mandatory'>('all')
 
@@ -161,19 +182,36 @@ interface ItemGroup {
 
 function getChecklistIcon(type: string): string {
   const map: Record<string, string> = {
-    delivery_bag: '🎒',
-    newborn_prep: '👶',
-    delivery_check: '🏥',
+    delivery_room: '🛏️',
+    hospital: '🏥',
     confinement: '🤱',
   }
   return map[type] || '📋'
+}
+
+function getChecklistDesc(type: string): string {
+  const map: Record<string, string> = {
+    delivery_room: '生产时产房用品',
+    hospital: '待产用品、及生产完住院用品',
+    confinement: '坐月子用品',
+  }
+  return map[type] || ''
 }
 
 function clProgress(cl: any): any {
   if (!cl.items || !Array.isArray(cl.items)) return null
   const total = cl.items.length
   const checked = cl.items.filter((i: any) => i.is_checked === 1).length
-  return { total, checked, percentage: total > 0 ? Math.round(checked / total * 100) : 0 }
+  const mandatoryTotal = cl.items.filter((i: any) => i.is_mandatory === 1).length
+  const mandatoryChecked = cl.items.filter((i: any) => i.is_mandatory === 1 && i.is_checked === 1).length
+  return {
+    total,
+    checked,
+    percentage: total > 0 ? Math.round(checked / total * 100) : 0,
+    mandatory_total: mandatoryTotal,
+    mandatory_checked: mandatoryChecked,
+    mandatory_percentage: mandatoryTotal > 0 ? Math.round(mandatoryChecked / mandatoryTotal * 100) : 0
+  }
 }
 
 const totalItems = computed(() =>
@@ -187,6 +225,20 @@ const totalChecked = computed(() =>
 
 const totalPercent = computed(() =>
   totalItems.value > 0 ? Math.round(totalChecked.value / totalItems.value * 100) : 0
+)
+
+const mandatoryTotal = computed(() =>
+  checklists.value.reduce((sum, cl) =>
+    sum + (cl.items?.filter((i: any) => i.is_mandatory === 1).length || 0), 0)
+)
+
+const mandatoryChecked = computed(() =>
+  checklists.value.reduce((sum, cl) =>
+    sum + (cl.items?.filter((i: any) => i.is_mandatory === 1 && i.is_checked === 1).length || 0), 0)
+)
+
+const mandatoryPercent = computed(() =>
+  mandatoryTotal.value > 0 ? Math.round(mandatoryChecked.value / mandatoryTotal.value * 100) : 0
 )
 
 function groupedItems(checklistId: string): Record<string, ItemGroup> {
@@ -263,14 +315,35 @@ async function addCustomItem(cl: any) {
   const name = newItemNames[cl.id]?.trim()
   if (!name) return
   let cat = newItemCats[cl.id] || ''
-  if (cat === '_custom_') cat = ''
+  if (cat.startsWith('__new__:')) {
+    cat = ''
+  } else if (cat.startsWith('__custom__:')) {
+    cat = cat.substring('__custom__:'.length)
+  }
   try {
     await checklistApi.addItem(cl.id, { name, category: cat || undefined, is_custom: 1 })
     newItemNames[cl.id] = ''
     newItemCats[cl.id] = ''
+    newItemCustomCat[cl.id] = ''
+    activeAddChecklistId.value = null
     message.success('已添加')
     await loadChecklists()
   } catch { message.error('添加失败') }
+}
+
+function showAddItemFor(cl: any) {
+  // 如果已经激活了这个清单，关闭它
+  if (activeAddChecklistId.value === cl.id) {
+    activeAddChecklistId.value = null
+    return
+  }
+  // 激活添加模式
+  activeAddChecklistId.value = cl.id
+  // 自动展开卡片
+  if (!expandedLists.value.has(cl.id)) {
+    expandedLists.value.add(cl.id)
+    expandedLists.value = new Set(expandedLists.value)
+  }
 }
 
 async function deleteItem(item: any) {
@@ -320,6 +393,10 @@ async function refreshAllDefaults() {
 onMounted(() => {
   loadChecklists()
 })
+
+watch(() => pregnancyStore.currentPregnancy?.id, (pid) => {
+  if (pid) loadChecklists()
+})
 </script>
 
 <style scoped>
@@ -328,16 +405,20 @@ onMounted(() => {
 /* 总览 */
 .progress-overview {
   display: flex; align-items: center; gap: 14px;
-  background: linear-gradient(135deg, #66BB6A, #43A047);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white; border-radius: 14px; padding: 18px 20px;
-  margin-bottom: 18px; box-shadow: 0 3px 12px rgba(76,175,80,.25);
+  margin-bottom: 6px; box-shadow: 0 3px 12px rgba(239,68,68,.25);
 }
-.overview-stats { text-align: center; min-width: 52px; }
+.overview-stats { text-align: center; min-width: 76px; }
 .stat-num { font-size: 26px; font-weight: 800; line-height: 1; }
-.stat-label { font-size: 11px; opacity: .85; margin-top: 2px; }
+.stat-label { font-size: 11px; opacity: .95; margin-top: 2px; }
 .overview-bar { flex: 1; height: 10px; background: rgba(255,255,255,.35); border-radius: 5px; overflow: hidden; }
 .bar-fill { height: 100%; background: white; border-radius: 5px; transition: width .4s; }
 .overview-pct { font-size: 20px; font-weight: 800; min-width: 48px; text-align: right; }
+.progress-sub {
+  text-align: right; font-size: 12px; color: #64748b;
+  padding: 0 4px 16px 4px;
+}
 
 /* 清单卡片 */
 .checklist-card {
@@ -358,6 +439,7 @@ onMounted(() => {
 .expand-icon.expanded { transform: rotate(90deg); }
 .card-title { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; margin: 0; flex-wrap: wrap; flex: 1; }
 .card-icon { font-size: 22px; }
+.card-desc { font-size: 12px; color: #94a3b8; margin-top: 4px; padding-left: 24px; }
 
 .card-progress { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .card-bar-wrap { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
@@ -423,12 +505,34 @@ onMounted(() => {
 }
 
 /* 添加条目 */
-.add-item-row { display: flex; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; }
+.add-item-row {
+  display: flex; gap: 6px; margin-top: 12px; padding-top: 12px;
+  border-top: 1px dashed #e2e8f0;
+  transition: all .25s ease;
+}
+.add-item-row.active {
+  border: 1.5px solid var(--primary-color, #43A047);
+  background: #f0fdf4; padding: 10px; border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(67,160,71,.15);
+}
 .add-input { flex: 1; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; }
 .add-input:focus { border-color: var(--primary-color); }
-.add-cat-select { padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; max-width: 120px; }
-.add-btn { width: 36px; height: 36px; border-radius: 8px; border: none; background: var(--primary-color); color: white; font-size: 18px; font-weight: 700; cursor: pointer; }
+.add-input.active { border-color: var(--primary-color, #43A047); font-weight: 500; }
+.add-cat-select { padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; max-width: 140px; }
+.add-cat-input { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; max-width: 140px; }
+.add-btn { width: 36px; height: 36px; border-radius: 8px; border: none; background: var(--primary-color); color: white; font-size: 18px; font-weight: 700; cursor: pointer; transition: transform .15s; }
 .add-btn:disabled { opacity: .4; cursor: not-allowed; }
+.add-btn:not(:disabled):hover { transform: scale(1.1); }
+
+/* 快捷添加按钮（卡片标题栏） */
+.card-quick-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+.quick-add-btn {
+  padding: 4px 14px; border: 1.5px dashed #94a3b8; border-radius: 20px;
+  background: transparent; color: #64748b; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+}
+.quick-add-btn:hover { border-color: #43A047; color: #43A047; background: #f0fdf4; }
+.card-header:hover .quick-add-btn { opacity: 1; }
 
 /* 空状态 */
 .empty-state { text-align: center; padding: 60px 20px; }

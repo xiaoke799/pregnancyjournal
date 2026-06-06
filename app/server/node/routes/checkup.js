@@ -346,10 +346,14 @@ router.get('/checkups/reports/:id/download', async (req, res) => {
   try {
     const report = await db.queryOne('SELECT * FROM checkup_report WHERE id = ?', [req.params.id]);
     if (!report || !report.file_path) return res.status(404).json({ code: 1001, data: null, message: '报告不存在' });
-    if (!fs.existsSync(report.file_path)) return res.status(404).json({ code: 1001, data: null, message: '文件不存在' });
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(report.filename)}"`);
+    const resolvedPath = path.resolve(report.file_path);
+    if (!fs.existsSync(resolvedPath)) return res.status(404).json({ code: 1001, data: null, message: '文件不存在' });
+    // 图片类型用 inline（浏览器可直接显示），其他用 attachment（下载）
+    const isImage = /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(report.filename || '');
+    res.setHeader('Content-Disposition', `${isImage ? 'inline' : 'attachment'}; filename="${encodeURIComponent(report.filename)}"`);
     res.setHeader('Content-Type', report.mime_type || 'application/octet-stream');
-    res.sendFile(path.resolve(report.file_path));
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(resolvedPath);
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
   }
@@ -378,6 +382,7 @@ router.get('/files/browse', async (req, res) => {
     if (!fs.existsSync(normalized) || !fs.statSync(normalized).isDirectory()) {
       return res.json({ code: 1001, data: null, message: '目录不存在' });
     }
+    const parentPath = path.dirname(normalized);
     const entries = fs.readdirSync(normalized, { withFileTypes: true })
       .filter(dirent => !dirent.name.startsWith('.'))
       .filter(dirent => {
@@ -389,10 +394,11 @@ router.get('/files/browse', async (req, res) => {
       .map(dirent => ({
         name: dirent.name,
         path: path.join(normalized, dirent.name).replace(/\\/g, '/'),
-        is_directory: dirent.isDirectory(),
-        size: dirent.isDirectory() ? null : fs.statSync(path.join(normalized, dirent.name)).size
+        type: dirent.isDirectory() ? 'dir' : 'file',
+        size: dirent.isDirectory() ? null : fs.statSync(path.join(normalized, dirent.name)).size,
+        mtime: fs.statSync(path.join(normalized, dirent.name)).mtime.getTime(),
       }));
-    res.json({ code: 0, data: { path: normalized, entries }, message: 'success' });
+    res.json({ code: 0, data: { path: normalized, parent: normalized === '/' ? null : parentPath, entries }, message: 'success' });
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
   }
