@@ -11,9 +11,10 @@ let _foodSafetyCache = null;
 
 function _weekToStage(week) {
   if (week <= 0) return 'preparing';
-  if (week <= 12) return 'early';
+  if (week <= 13) return 'early';
   if (week <= 27) return 'mid';
-  return 'late';
+  if (week <= 42) return 'late';
+  return 'nursing';
 }
 
 function _convertSafetyToByStage(safety) {

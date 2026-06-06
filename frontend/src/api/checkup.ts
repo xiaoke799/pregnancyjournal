@@ -54,8 +54,11 @@ export const checkupApi = {
   },
   listReports: (checkupId: string, checkupType: string = 'standard') =>
     client.get(`/checkups/${checkupId}/reports`, { params: { checkup_type: checkupType } }),
-  getReportDownloadUrl: (reportId: string) =>
-    `${client.defaults.baseURL}/checkups/reports/${reportId}/download`,
+  getReportDownloadUrl: (reportId: string) => {
+    // 使用当前页面origin确保在fnOS CGI环境下正确解析
+    const base = typeof window !== 'undefined' ? window.location.origin : ''
+    return `${base}/api/v1/checkups/reports/${reportId}/download`
+  },
   deleteReport: (reportId: string) => client.delete(`/checkups/reports/${reportId}`),
 
   // NAS 文件浏览
@@ -63,13 +66,17 @@ export const checkupApi = {
     client.get('/files/browse', { params: { path } }),
 
   // 产检日期
+  /** 获取已完成的产检周数列表 */
+  getCompletedWeeks: (pregnancyId: string) =>
+    client.get('/checkup-schedule/completed-weeks', { params: { pregnancy_id: pregnancyId } }),
+  /** 设置产检实际完成日期 */
+  setScheduleDate: (pregnancyId: string, scheduleId: string, dateStr: string) =>
+    client.post('/checkup-schedule/schedule-date', {
+      pregnancy_id: pregnancyId,
+      schedule_id: scheduleId,
+      date: dateStr,
+    }),
+  /** 获取所有已设置的产检日期 */
   getScheduleDates: (pregnancyId: string) =>
-    client.get(`/checkup-schedule/${pregnancyId}/dates`),
-  setScheduleDate: (pregnancyId: string, scheduleId: string, dateStr: string) => {
-    const formData = new FormData()
-    formData.append('date_str', dateStr)
-    return client.put(`/checkup-schedule/${pregnancyId}/dates/${scheduleId}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-  },
+    client.get('/checkup-schedule/dates', { params: { pregnancy_id: pregnancyId } }),
 }

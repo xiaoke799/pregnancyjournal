@@ -114,9 +114,7 @@ const allCategories: CategoryDef[] = [
   { type: 'stool', icon: '💩', label: '便便', color: '#a3e635', addable: true, actionType: 'add' },
   { type: 'symptoms', icon: '📋', label: '症状', color: '#34d399', addable: true, actionType: 'add' },
   { type: 'mood', icon: '😊', label: '心情', color: '#f87171', addable: true, actionType: 'add' },
-  { type: 'note', icon: '📝', label: '孕期日记', color: '#f59e0b', addable: true, actionType: 'camera' },
   { type: 'fetal_heart_rate', icon: '❤️', label: '测胎心', color: '#f472b6', addable: true, actionType: 'link', linkTo: 'fetal_heart_rate' },
-  { type: 'photo', icon: '📷', label: '大肚照', color: '#f43f5e', addable: true, actionType: 'camera' },
   { type: 'intimacy', icon: '💑', label: '爱爱', color: '#f43f5e', addable: true, actionType: 'add' },
   { type: 'temperature', icon: '🌡️', label: '体温', color: '#ef4444', addable: true, actionType: 'add' },
   { type: 'plan', icon: '📌', label: '计划', color: '#14b8a6', addable: true, actionType: 'add' },
@@ -149,9 +147,8 @@ function hasDataForType(type: string): boolean {
         return Array.isArray(m) && m.length > 0
       } catch { return false }
     }
-    case 'note': return !!r.note
-    case 'fetal_heart_rate': return !!r.fetal_heart_rate
     case 'mood': return !!r.mood
+    case 'fetal_heart_rate': return !!r.fetal_heart_rate
     case 'water': return !!r.water_intake
     case 'stool': return !!r.stool_record
     case 'contraction': return !!(r.contraction_count || r.contraction_interval)
@@ -206,8 +203,6 @@ function getPreview(type: string): string {
     }
     case 'mood':
       return getMoodEmoji() + (r.mood_note ? ' ' + r.mood_note.slice(0, 10) : '')
-    case 'note':
-      return getNotePreview()
     case 'water':
       return r.water_intake ? r.water_intake + ' ml' : ''
     case 'stool':
@@ -355,14 +350,6 @@ function renderDetail(type: string) {
         ]),
         r.mood_note ? h('div', { class: 'detail-meta' }, [
           h('span', { class: 'mood-note' }, r.mood_note),
-        ]) : null,
-      ])
-    case 'note':
-      return h('div', {}, [
-        r.note ? h('div', { class: 'diary-content' }, [
-          isNoteHtml.value
-            ? h('div', { class: 'diary-html', innerHTML: r.note })
-            : h('div', { class: 'diary-text' }, r.note),
         ]) : null,
       ])
     case 'water':

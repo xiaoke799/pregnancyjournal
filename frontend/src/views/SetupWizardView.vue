@@ -268,7 +268,7 @@ async function submitSetup() {
 }
 
 .step-dot.active .step-num {
-  background: var(--primary-color, #e8a0bf);
+  background: var(--primary-color, #c44680);
   color: white;
 }
 
@@ -283,7 +283,7 @@ async function submitSetup() {
 }
 
 .step-dot.active .step-label {
-  color: var(--primary-color, #e8a0bf);
+  color: var(--primary-color, #c44680);
   font-weight: 600;
 }
 

@@ -212,48 +212,62 @@ function doPick() {
   }
 
   const stageRecipes = filterByStage(allRecipes.value, currentStage.value)
-  const pool = stageRecipes.length >= 10 ? stageRecipes : allRecipes.value
-
-  const byCat = (cat: string) => pool.filter(r => r.category === cat)
-  const breakfastStaples = pool.filter(r =>
-    r.category === '早餐' ||
-    (r.category === '主食' && /粥|面|糊|饭|饺|饼|玉米|红薯/.test(r.name))
-  )
-  const breakfastDrinks = pool.filter(r =>
-    r.category === '饮品' || r.category === '早餐' && /豆浆|奶|汁|茶/.test(r.name)
-  )
-  const breakfastDesserts = pool.filter(r =>
-    r.category === '甜品' && /羹|汤圆|奶|糕/.test(r.name)
-  )
+  const pool = stageRecipes.length >= 6 ? stageRecipes : allRecipes.value
 
   const usedIds = new Set<string>()
+  const byCat = (cat: string) => pool.filter(r => r.category === cat)
 
-  const addUsed = (r: Recipe | null) => { if (r) usedIds.add(r.id) }
-  const pick = (candidates: Recipe[]) => {
-    const avail = candidates.filter(r => !usedIds.has(r.id))
-    if (avail.length === 0) return null
-    const r = avail[Math.floor(Math.random() * avail.length)]
-    usedIds.add(r.id)
-    return r
+  const pickFrom = (...candidatesLists: Recipe[][]) => {
+    for (const list of candidatesLists) {
+      const avail = list.filter(r => r && !usedIds.has(r.id))
+      if (avail.length > 0) {
+        const r = avail[Math.floor(Math.random() * avail.length)]
+        usedIds.add(r.id)
+        return r
+      }
+    }
+    return null
   }
 
-  const breakfastStaple = pick(breakfastStaples)
-  const breakfastDrink = pick(breakfastDrinks)
-  const breakfastDessert = Math.random() > 0.5 ? pick(breakfastDesserts) : null
+  const stapleCat = byCat('主食')
+  const breakfastCat = byCat('早餐')
+  const meatCat = byCat('荤菜')
+  const veggieCat = byCat('素菜')
+  const soupCat = byCat('汤品')
+  const drinkCat = byCat('饮品')
+  const dessertCat = byCat('甜品')
 
-  const lunchStaple = pick(pool.filter(r =>
-    r.category === '主食' || r.category === '早餐' && /饭|面|饺|饼/.test(r.name)
-  ))
-  const lunchMeat = pick(byCat('荤菜'))
-  const lunchVeggie = pick(byCat('素菜'))
-  const lunchSoup = pick(byCat('汤品'))
+  const breakfastStaple = pickFrom(
+    breakfastCat,
+    stapleCat.filter(r => /粥|面|糊|饭|饺|饼|玉米|红薯|包/.test(r.name)),
+    stapleCat
+  )
+  const breakfastDrink = pickFrom(
+    drinkCat,
+    breakfastCat.filter(r => /豆浆|奶|汁|茶/.test(r.name))
+  )
+  const breakfastDessert = pickFrom(
+    dessertCat.filter(r => /羹|汤圆|奶|糕/.test(r.name)),
+    dessertCat
+  )
 
-  const dinnerStaple = pick(pool.filter(r =>
-    r.category === '主食' || r.category === '早餐' && /粥|面|饭/.test(r.name)
-  ))
-  const dinnerMeat = Math.random() > 0.3 ? pick(byCat('荤菜')) : null
-  const dinnerVeggie = pick(byCat('素菜'))
-  const dinnerSoup = pick(byCat('汤品'))
+  const lunchStaple = pickFrom(
+    stapleCat.filter(r => /饭|面|饺|饼|馒|包/.test(r.name)),
+    stapleCat,
+    breakfastCat
+  )
+  const lunchMeat = pickFrom(meatCat)
+  const lunchVeggie = pickFrom(veggieCat)
+  const lunchSoup = pickFrom(soupCat)
+
+  const dinnerStaple = pickFrom(
+    stapleCat.filter(r => /粥|面|饭|糊/.test(r.name)),
+    stapleCat,
+    breakfastCat
+  )
+  const dinnerMeat = pickFrom(meatCat)
+  const dinnerVeggie = pickFrom(veggieCat, meatCat)
+  const dinnerSoup = pickFrom(soupCat)
 
   meals.value = {
     breakfast: { staple: breakfastStaple, meat: null, veggie: null, soup: null, drink: breakfastDrink, dessert: breakfastDessert },
@@ -366,12 +380,12 @@ onMounted(() => {
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,.05);
-  border-left: 4px solid #e8a0bf;
+  border-left: 4px solid var(--primary-color, #c44680);
 }
 .meal-label {
   font-size: 15px;
   font-weight: 700;
-  color: #e8a0bf;
+  color: var(--primary-color, #c44680);
   margin-bottom: 10px;
   padding-bottom: 6px;
   border-bottom: 1px dashed #f3e8f0;

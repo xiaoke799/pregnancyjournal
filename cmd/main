@@ -5,7 +5,7 @@ PID_FILE="${TRIM_PKGVAR:-/tmp}/app.pid"
 mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
 mkdir -p "$(dirname "${PID_FILE}")" 2>/dev/null
 
-NODE_BIN="/var/apps/nodejs_v24/target/bin"
+NODE_BIN="/var/apps/nodejs_v22/target/bin"
 export PATH=${NODE_BIN}:$PATH
 
 DATA_DIR="${TRIM_DATA_SHARE_PATHS%%:*}"
@@ -45,7 +45,7 @@ PHOTOS_DIR=${DATA_DIR}/photos \
 THUMBNAILS_DIR=${DATA_DIR}/thumbnails \
 MEDIA_DIR=${DATA_DIR}/media \
 BACKUPS_DIR=${DATA_DIR}/backups \
-DATA_DIR=${APP_DIR}/backend/data \
+DATA_DIR=${NODE_DIR}/data \
 STATIC_DIR=${TRIM_APPDEST}/ui \
 TRIM_APPDEST=${TRIM_APPDEST} \
 TRIM_PKGVAR=${TRIM_PKGVAR} \

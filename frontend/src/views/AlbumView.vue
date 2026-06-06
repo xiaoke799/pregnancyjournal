@@ -348,8 +348,8 @@ onMounted(async () => {
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 .album-tab.active {
-  background: var(--primary-color, #e8a0bf);
-  border-color: var(--primary-color, #e8a0bf);
+  background: var(--primary-color, #c44680);
+  border-color: var(--primary-color, #c44680);
   color: white;
 }
 
@@ -367,8 +367,8 @@ onMounted(async () => {
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 .pt-option.selected {
-  background: var(--primary-color, #e8a0bf);
-  border-color: var(--primary-color, #e8a0bf);
+  background: var(--primary-color, #c44680);
+  border-color: var(--primary-color, #c44680);
   color: white;
 }
 
@@ -445,9 +445,9 @@ onMounted(async () => {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--primary-color, #e8a0bf);
+  background: var(--primary-color, #c44680);
   border: 2px solid white;
-  box-shadow: 0 0 0 2px var(--primary-color, #e8a0bf);
+  box-shadow: 0 0 0 2px var(--primary-color, #c44680);
   margin-top: 24px;
   flex-shrink: 0;
 }

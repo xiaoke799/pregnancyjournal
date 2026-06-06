@@ -481,8 +481,8 @@
       <template #action><n-button @click="showIntimacyModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveIntimacy">保存</n-button></template>
     </n-modal>
 
-    <!-- 编辑模式仍用原有大弹窗（完整字段回填） -->
-    <AddRecordDialog v-if="false" :show="showAddDialog" :date="selectedDate" :pregnancy-id="pregnancyStore.currentPregnancy?.id" :default-type="addDialogType" :edit-record="addDialogRecord" @update:show="showAddDialog = $event" @saved="onRecordSaved" />
+    <!-- 编辑/添加通用大弹窗（hcg/uric_acid/photo等无独立小弹窗的类型走这里） -->
+    <AddRecordDialog :show="showAddDialog" :date="selectedDate" :pregnancy-id="pregnancyStore.currentPregnancy?.id" :default-type="addDialogType" :edit-record="addDialogRecord" @update:show="showAddDialog = $event" @saved="onRecordSaved" />
   </div>
 </template>
 
@@ -598,7 +598,6 @@ const quickTypes = [
   { value: 'fetal_heart_rate', icon: '❤️', label: '胎心' },
   { value: 'stool', icon: '💩', label: '便便' },
   { value: 'mood', icon: '😊', label: '心情' },
-  { value: 'note', icon: '📝', label: '日记' },
   { value: 'symptoms', icon: '📋', label: '症状' },
   { value: 'supplement', icon: '💊', label: '补充剂' },
   { value: 'habit', icon: '✅', label: '好习惯' },
@@ -703,7 +702,6 @@ function openQuickAdd(type: string) {
     case 'fetal_heart_rate': resetFhrForm(); fhrForm.value.date = d; showFhrModal.value = true; break
     case 'stool': resetStoolForm(); stoolForm.value.date = d; showStoolModal.value = true; break
     case 'mood': resetMoodForm(); moodForm.value.date = d; showMoodModal.value = true; break
-    case 'note': resetNoteForm(); noteForm.value.date = d; showNoteModal.value = true; break
     case 'symptoms': resetSymptomForm(); symptomForm.value.date = d; showSymptomModal.value = true; break
     case 'supplement': resetSupplementForm(); supplementForm.value.date = d; showSupplementModal.value = true; break
     case 'habit': resetHabitForm(); habitForm.value.date = d; showHabitModal.value = true; break
@@ -716,7 +714,11 @@ function openQuickAdd(type: string) {
     case 'contraction': resetContrForm(); contrForm.value.date = d; showContrModal.value = true; break
     case 'plan': resetPlanForm(); planForm.value.date = d; showPlanModal.value = true; break
     case 'intimacy': resetIntimacyForm(); intimacyForm.value.date = d; showIntimacyModal.value = true; break
-    default: message.warning('未知类型: ' + type)
+  // 以下类型无独立小弹窗，走通用大弹窗（AddRecordDialog）
+  case 'hcg':
+  case 'uric_acid':
+    addDialogType.value = type; addDialogRecord.value = undefined; showAddDialog.value = true; break
+  default: message.warning('未知类型: ' + type)
   }
 }
 
@@ -1029,7 +1031,7 @@ function toggleSuppItem(s: string) {
 .preview-value {
   font-size: 14px;
   font-weight: 700;
-  color: var(--preview-color, var(--primary-color, #e8a0bf));
+  color: var(--preview-color, var(--primary-color, #c44680));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1150,13 +1152,13 @@ function toggleSuppItem(s: string) {
 }
 
 .mood-pick-btn:hover {
-  border-color: var(--primary-color, #e8a0bf);
+  border-color: var(--primary-color, #c44680);
 }
 
 .mood-pick-btn.active {
-  background: var(--primary-color, #e8a0bf);
+  background: var(--primary-color, #c44680);
   color: #fff;
-  border-color: var(--primary-color, #e8a0bf);
+  border-color: var(--primary-color, #c44680);
 }
 
 /* 症状标签网格 */

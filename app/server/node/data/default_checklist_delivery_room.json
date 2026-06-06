@@ -1,0 +1,56 @@
+{
+  "groups": [
+    {
+      "target": "mother",
+      "label": "👩 妈妈",
+      "categories": [
+        {
+          "category": "证件资料",
+          "items": [
+            { "name": "身份证", "mandatory": true },
+            { "name": "医保卡", "mandatory": true },
+            { "name": "产检病历", "mandatory": true },
+            { "name": "准生证", "mandatory": true }
+          ]
+        },
+        {
+          "category": "能量补给",
+          "items": [
+            { "name": "巧克力", "mandatory": true, "description": "产程中快速补充能量" },
+            { "name": "红牛/功能饮料", "mandatory": true },
+            { "name": "吸管杯", "mandatory": true, "description": "躺着也能喝水" }
+          ]
+        },
+        {
+          "category": "妈妈用品",
+          "items": [
+            { "name": "产褥垫", "mandatory": true },
+            { "name": "卫生纸", "mandatory": true },
+            { "name": "胎心监护带" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "baby",
+      "label": "👶 宝宝",
+      "categories": [
+        {
+          "category": "宝宝用品",
+          "items": [
+            { "name": "包被", "mandatory": true },
+            { "name": "帽子", "mandatory": true },
+            { "name": "新生儿衣服", "mandatory": true }
+          ]
+        },
+        {
+          "category": "喂养用品",
+          "items": [
+            { "name": "纸尿裤", "mandatory": true },
+            { "name": "婴儿湿巾" }
+          ]
+        }
+      ]
+    }
+  ]
+}

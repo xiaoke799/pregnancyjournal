@@ -680,7 +680,7 @@ async function clearWecomConfig() {
 .setting-item:last-child { border-bottom: none; }
 .setting-item label { min-width: 72px; color: var(--text-secondary, #64748b); font-size: 14px; flex-shrink: 0; }
 .setting-hint { font-size: 12px; color: var(--text-hint, #94a3b8); padding: 4px 0 0 84px; margin-top: 4px; }
-.due-date-value { color: var(--primary-color, #e8a0bf); font-weight: 600; }
+.due-date-value { color: var(--primary-color, #c44680); font-weight: 600; }
 .due-date-value.calculated { font-size: 16px; }
 .gestational-info { font-weight: 600; }
 .mode-switcher { flex-direction: column; align-items: stretch; gap: 8px; }
@@ -705,7 +705,7 @@ async function clearWecomConfig() {
   font-size: 15px; color: var(--text-color, #1e293b);
   background: white; outline: none; transition: border-color 0.2s; box-sizing: border-box;
 }
-.date-input:focus { border-color: #e8a0bf; box-shadow: 0 0 0 2px rgba(232,160,191,.15); }
+.date-input:focus { border-color: var(--primary-color, #c44680); box-shadow: 0 0 0 2px rgba(196,70,128,.15); }
 .date-input::-webkit-calendar-picker-indicator { cursor: pointer; }
 .form-actions { padding-top: 8px; }
 
@@ -715,7 +715,7 @@ async function clearWecomConfig() {
   border: 2px solid transparent; margin-bottom: 4px;
 }
 .pregnancy-item:hover { background: rgba(232,160,191,0.05); }
-.pregnancy-item.active { border-color: var(--primary-color, #e8a0bf); background: rgba(232,160,191,0.1); }
+.pregnancy-item.active { border-color: var(--primary-color, #c44680); background: rgba(232,160,191,0.1); }
 .log-box {
   background: #1e1e2e;
   color: #a6e3a1;

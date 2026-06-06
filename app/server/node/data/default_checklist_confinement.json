@@ -1,38 +1,105 @@
 {
-  "categories": [
+  "groups": [
     {
-      "category": "妈妈衣物",
-      "items": [
-        { "name": "月子服", "mandatory": false },
-        { "name": "月子帽", "mandatory": false },
-        { "name": "月子鞋", "mandatory": false },
-        { "name": "哺乳文胸", "mandatory": false }
+      "target": "mother",
+      "label": "👩 妈妈",
+      "categories": [
+        {
+          "category": "妈妈衣物",
+          "items": [
+            { "name": "月子服", "mandatory": true },
+            { "name": "月子帽", "mandatory": true },
+            { "name": "月子鞋", "mandatory": true },
+            { "name": "哺乳文胸", "mandatory": true },
+            { "name": "家居服" }
+          ]
+        },
+        {
+          "category": "卫生用品",
+          "items": [
+            { "name": "产褥垫", "mandatory": true },
+            { "name": "卫生巾", "mandatory": true },
+            { "name": "会阴冲洗器", "mandatory": true }
+          ]
+        },
+        {
+          "category": "喂养用品",
+          "items": [
+            { "name": "吸奶器", "mandatory": true },
+            { "name": "防溢乳垫", "mandatory": true },
+            { "name": "乳头膏", "mandatory": true },
+            { "name": "储奶袋" }
+          ]
+        },
+        {
+          "category": "营养补品",
+          "items": [
+            { "name": "红枣" },
+            { "name": "桂圆" },
+            { "name": "黑芝麻" },
+            { "name": "猪蹄" }
+          ]
+        },
+        {
+          "category": "生活用品",
+          "items": [
+            { "name": "收腹带" },
+            { "name": "牙刷", "mandatory": true },
+            { "name": "毛巾", "mandatory": true }
+          ]
+        }
       ]
     },
     {
-      "category": "护理用品",
-      "items": [
-        { "name": "产褥垫", "mandatory": false },
-        { "name": "卫生巾", "mandatory": false },
-        { "name": "会阴冲洗器", "mandatory": false }
-      ]
-    },
-    {
-      "category": "喂养用品",
-      "items": [
-        { "name": "吸奶器", "mandatory": false },
-        { "name": "防溢乳垫", "mandatory": false },
-        { "name": "乳头膏", "mandatory": false },
-        { "name": "储奶袋", "mandatory": false }
-      ]
-    },
-    {
-      "category": "营养补品",
-      "items": [
-        { "name": "红枣", "mandatory": false },
-        { "name": "桂圆", "mandatory": false },
-        { "name": "黑芝麻", "mandatory": false },
-        { "name": "猪蹄", "mandatory": false }
+      "target": "baby",
+      "label": "👶 宝宝",
+      "categories": [
+        {
+          "category": "宝宝衣物",
+          "items": [
+            { "name": "连体衣", "mandatory": true },
+            { "name": "蝴蝶衣" },
+            { "name": "帽子", "mandatory": true },
+            { "name": "袜子", "mandatory": true },
+            { "name": "手套" }
+          ]
+        },
+        {
+          "category": "喂养用品",
+          "items": [
+            { "name": "奶瓶", "mandatory": true },
+            { "name": "奶嘴" },
+            { "name": "奶粉", "mandatory": true },
+            { "name": "奶瓶刷" }
+          ]
+        },
+        {
+          "category": "护理用品",
+          "items": [
+            { "name": "纸尿裤", "mandatory": true },
+            { "name": "湿巾", "mandatory": true },
+            { "name": "护臀膏" },
+            { "name": "棉柔巾", "mandatory": true }
+          ]
+        },
+        {
+          "category": "洗护用品",
+          "items": [
+            { "name": "浴盆", "mandatory": true },
+            { "name": "沐浴露", "mandatory": true },
+            { "name": "浴巾", "mandatory": true },
+            { "name": "抚触油" }
+          ]
+        },
+        {
+          "category": "睡眠用品",
+          "items": [
+            { "name": "婴儿床", "mandatory": true },
+            { "name": "床垫", "mandatory": true },
+            { "name": "睡袋" },
+            { "name": "隔尿垫", "mandatory": true }
+          ]
+        }
       ]
     }
   ]

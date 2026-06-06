@@ -354,7 +354,7 @@ onMounted(async () => {
 
 .week-text {
   font-size: 12px;
-  color: var(--primary-color, #E8A0BF);
+  color: var(--primary-color, #c44680);
   font-weight: 600;
   background: #fdf4ff;
   padding: 2px 8px;
@@ -424,13 +424,13 @@ onMounted(async () => {
 }
 
 .mood-btn:hover {
-  border-color: var(--primary-color, #e8a0bf);
+  border-color: var(--primary-color, #c44680);
 }
 
 .mood-btn.active {
-  background: var(--primary-color, #e8a0bf);
+  background: var(--primary-color, #c44680);
   color: #fff;
-  border-color: var(--primary-color, #e8a0bf);
+  border-color: var(--primary-color, #c44680);
 }
 
 @media (max-width: 768px) {

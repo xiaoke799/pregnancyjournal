@@ -244,13 +244,23 @@ router.get('/dashboard', async function(req, res) {
       [pregnancy_id]
     );
     var checklists = await db.queryAll(
-      'SELECT type, COUNT(*) as total, SUM(CASE WHEN is_checked = 1 THEN 1 ELSE 0 END) as checked FROM checklist WHERE pregnancy_id = ? GROUP BY type',
+      `SELECT c.type,
+              COUNT(ci.id) as total,
+              SUM(CASE WHEN ci.is_checked = 1 THEN 1 ELSE 0 END) as checked,
+              SUM(CASE WHEN ci.is_mandatory = 1 THEN 1 ELSE 0 END) as mandatory_total,
+              SUM(CASE WHEN ci.is_mandatory = 1 AND ci.is_checked = 1 THEN 1 ELSE 0 END) as mandatory_checked
+       FROM checklist c
+       LEFT JOIN checklist_item ci ON ci.checklist_id = c.id
+       WHERE c.pregnancy_id = ?
+       GROUP BY c.type`,
       [pregnancy_id]
     );
-    var totalItems = 0, checkedItems = 0;
+    var totalItems = 0, checkedItems = 0, mandatoryTotal = 0, mandatoryChecked = 0;
     for (var ci = 0; ci < checklists.length; ci++) {
-      totalItems += checklists[ci].total;
+      totalItems += checklists[ci].total || 0;
       checkedItems += (checklists[ci].checked || 0);
+      mandatoryTotal += checklists[ci].mandatory_total || 0;
+      mandatoryChecked += checklists[ci].mandatory_checked || 0;
     }
     var todayTodos = await db.queryAll(
       'SELECT * FROM reminder WHERE pregnancy_id = ? AND trigger_date = ? AND is_enabled = 1 AND (is_completed IS NULL OR is_completed = 0)',
@@ -315,10 +325,21 @@ router.get('/dashboard', async function(req, res) {
           total: totalItems,
           checked: checkedItems,
           percentage: totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0,
+          mandatory_total: mandatoryTotal,
+          mandatory_checked: mandatoryChecked,
+          mandatory_percentage: mandatoryTotal > 0 ? Math.round((mandatoryChecked / mandatoryTotal) * 100) : 0,
           checklists: checklists.map(function(c) {
             var ct = c.total || 0;
             var cc = c.checked || 0;
-            return { id: c.type, name: c.type, type: c.type, total: ct, checked: cc, percentage: ct > 0 ? Math.round((cc / ct) * 100) : 0 };
+            var mt = c.mandatory_total || 0;
+            var mc = c.mandatory_checked || 0;
+            return {
+              id: c.type, name: c.type, type: c.type,
+              total: ct, checked: cc,
+              percentage: ct > 0 ? Math.round((cc / ct) * 100) : 0,
+              mandatory_total: mt, mandatory_checked: mc,
+              mandatory_percentage: mt > 0 ? Math.round((mc / mt) * 100) : 0
+            };
           })
         },
         today_todos: todayTodos,

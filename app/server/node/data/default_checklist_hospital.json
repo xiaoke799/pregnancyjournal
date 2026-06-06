@@ -1,0 +1,95 @@
+{
+  "groups": [
+    {
+      "target": "mother",
+      "label": "👩 妈妈",
+      "categories": [
+        {
+          "category": "证件资料",
+          "items": [
+            { "name": "身份证", "mandatory": true },
+            { "name": "医保卡", "mandatory": true },
+            { "name": "准生证", "mandatory": true },
+            { "name": "结婚证" }
+          ]
+        },
+        {
+          "category": "妈妈衣物",
+          "items": [
+            { "name": "睡衣", "mandatory": true },
+            { "name": "哺乳内衣", "mandatory": true },
+            { "name": "一次性内裤", "mandatory": true },
+            { "name": "哺乳家居服" },
+            { "name": "出院衣服", "mandatory": true }
+          ]
+        },
+        {
+          "category": "卫生用品",
+          "items": [
+            { "name": "产褥垫", "mandatory": true },
+            { "name": "卫生巾", "mandatory": true },
+            { "name": "一次性马桶垫", "mandatory": true },
+            { "name": "卫生纸", "mandatory": true }
+          ]
+        },
+        {
+          "category": "洗护用品",
+          "items": [
+            { "name": "毛巾", "mandatory": true },
+            { "name": "牙刷", "mandatory": true },
+            { "name": "脸盆", "mandatory": true },
+            { "name": "漱口水" }
+          ]
+        },
+        {
+          "category": "喂养用品",
+          "items": [
+            { "name": "吸奶器", "mandatory": true },
+            { "name": "储奶袋" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "baby",
+      "label": "👶 宝宝",
+      "categories": [
+        {
+          "category": "宝宝衣物",
+          "items": [
+            { "name": "新生儿衣服", "mandatory": true },
+            { "name": "包被", "mandatory": true },
+            { "name": "帽子", "mandatory": true },
+            { "name": "袜子", "mandatory": true },
+            { "name": "手套" }
+          ]
+        },
+        {
+          "category": "喂养用品",
+          "items": [
+            { "name": "奶瓶", "mandatory": true },
+            { "name": "奶粉", "mandatory": true, "description": "小罐备用即可" },
+            { "name": "奶瓶刷" },
+            { "name": "奶嘴" }
+          ]
+        },
+        {
+          "category": "护理用品",
+          "items": [
+            { "name": "纸尿裤", "mandatory": true },
+            { "name": "湿巾", "mandatory": true },
+            { "name": "护臀膏" },
+            { "name": "棉柔巾", "mandatory": true }
+          ]
+        },
+        {
+          "category": "洗护用品",
+          "items": [
+            { "name": "浴巾", "mandatory": true },
+            { "name": "婴儿浴盆" }
+          ]
+        }
+      ]
+    }
+  ]
+}
