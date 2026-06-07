@@ -151,12 +151,12 @@ function hasDataForType(type: string): boolean {
     case 'fetal_heart_rate': return !!r.fetal_heart_rate
     case 'water': return !!r.water_intake
     case 'stool': return !!r.stool_record
-    case 'contraction': return !!(r.contraction_count || r.contraction_interval)
+    case 'contraction': return !!(r.contraction_duration || r.contraction_interval)
     case 'fetal_movement': return !!(r.fetal_movement_count || r.fetal_movement_duration)
     case 'temperature': return !!r.body_temperature
     case 'hcg': return !!r.hcg_value
-    case 'progesterone': return !!r.uric_acid
-    case 'habit': return false
+    case 'uric_acid': return !!r.uric_acid
+    case 'habit': return !!r.habit_text
     case 'supplement': return !!r.supplement_record
     case 'intimacy': return !!r.intimacy_record
     case 'plan': return !!r.plan_text
@@ -208,19 +208,17 @@ function getPreview(type: string): string {
     case 'stool':
       return getStoolPreview()
     case 'contraction':
-      return r.contraction_count ? r.contraction_count + '次 · ' + (r.contraction_interval ? r.contraction_interval + 'min' : '') : ''
+      return r.contraction_duration ? r.contraction_duration + 's' + (r.contraction_interval ? ' · ' + r.contraction_interval + 'min间隔' : '') : ''
     case 'fetal_movement':
       return r.fetal_movement_count ? r.fetal_movement_count + '次 · ' + (r.fetal_movement_duration ? r.fetal_movement_duration + 'min' : '') : ''
     case 'temperature':
       return r.body_temperature ? r.body_temperature + '℃' : ''
     case 'hcg':
-      return r.hcg_value ? 'HCG: ' + r.hcg_value : ''
-    case 'progesterone':
-      return r.uric_acid ? r.uric_acid + ' μmol/L' : ''
-    case 'habit':
-      return ''
+      return r.hcg_value ? `${r.hcg_value} mIU/mL${r.hcg_weeks ? ' · 孕'+r.hcg_weeks+'周' : ''}` : ''
     case 'uric_acid':
-      return r.uric_acid ? r.uric_acid + ' μmol/L' : ''
+      return r.uric_acid ? `${r.uric_acid} μmol/L${r.uric_acid_period ? '('+r.uric_acid_period+')' : ''}` : ''
+    case 'habit':
+      return r.habit_text ? String(r.habit_text).slice(0, 30) : ''
     case 'supplement':
       return getSupplementPreview()
     case 'intimacy':
@@ -385,6 +383,8 @@ function renderDetail(type: string) {
       return h('div', { class: 'tag-chips' }, getSupplementList().map((s: string, i: number) =>
         h('span', { key: i, class: 'tag-chip supplement-chip' }, s)
       ))
+    case 'habit':
+      return h('div', { class: 'detail-text' }, r.habit_text || '')
     case 'plan':
       return h('div', { class: 'detail-text' }, r.plan_text)
     case 'intimacy': {
@@ -406,8 +406,9 @@ function renderDetail(type: string) {
       return h('div', { class: 'detail-row contr-main' }, [
         h('span', { class: 'contr-icon' }, '⏱️'),
         h('div', {}, [
-          r.contraction_count ? h('span', { class: 'contr-value' }, r.contraction_count + '次') : null,
+          r.contraction_duration ? h('span', { class: 'contr-value' }, r.contraction_duration + 's') : null,
           r.contraction_interval ? h('span', { class: 'contr-interval' }, '间隔 ' + r.contraction_interval + 'min') : null,
+          r.contraction_pain ? h('span', { class: 'contr-interval' }, r.contraction_pain) : null,
         ]),
       ])
     case 'fetal_movement':
@@ -419,15 +420,17 @@ function renderDetail(type: string) {
         ]),
       ])
     case 'hcg':
-      return h('div', { class: 'detail-row hcg-main' }, [
-        h('span', { class: 'hcg-icon' }, '🧬'),
-        h('div', { class: 'detail-value-large' }, [r.hcg_value, h('span', { class: 'detail-unit' }, ' mIU/mL')]),
-      ])
+      return h('div', {}, [
+        h('div', { class: 'detail-main' }, `${r.hcg_value} mIU/mL`),
+        r.hcg_weeks ? h('div', { class: 'detail-sub' }, `孕${r.hcg_weeks}周`) : null,
+        r.note ? h('div', { class: 'detail-note' }, r.note) : null,
+      ].filter(Boolean))
     case 'uric_acid':
-      return h('div', { class: 'detail-row ua-main' }, [
-        h('span', { class: 'ua-icon' }, '🧪'),
-        h('div', { class: 'detail-value-large' }, [r.uric_acid, h('span', { class: 'detail-unit' }, ' μmol/L')]),
-      ])
+      return h('div', {}, [
+        h('div', { class: 'detail-main' }, `${r.uric_acid} μmol/L`),
+        r.uric_acid_period ? h('div', { class: 'detail-sub' }, r.uric_acid_period) : null,
+        r.note ? h('div', { class: 'detail-note' }, r.note) : null,
+      ].filter(Boolean))
     default:
       return h('div', {})
   }

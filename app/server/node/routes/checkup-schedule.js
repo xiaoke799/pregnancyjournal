@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const logger = require('../logger');
 
 // 产检时间表（内嵌数据，不依赖外部文件）
 const DEFAULT_SCHEDULE = [
@@ -123,19 +124,23 @@ function getSchedule() { return DEFAULT_SCHEDULE; }
 router.get('/checkup-schedule/completed-weeks', async (req, res) => {
   try {
     const { pregnancy_id } = req.query;
+    logger.info('checkup-schedule', `GET /completed-weeks - pregnancy_id=${pregnancy_id}`);
     if (!pregnancy_id) {
+      logger.warn('checkup-schedule', 'GET /completed-weeks - missing pregnancy_id');
       return res.json({ code: 1001, data: null, message: '缺少pregnancy_id参数' });
     }
     const completedCheckups = await db.queryAll(
       'SELECT gestational_week FROM prenatal_checkup WHERE pregnancy_id = ? AND is_completed = 1',
       [pregnancy_id]
     );
+    logger.info('checkup-schedule', `GET /completed-weeks - found ${completedCheckups.length} completed weeks`);
     res.json({
       code: 0,
       data: completedCheckups.map(c => c.gestational_week),
       message: 'success'
     });
   } catch (error) {
+    logger.error('checkup-schedule', 'GET /completed-weeks error', error);
     res.json({ code: 1001, data: null, message: error.message });
   }
 });
@@ -143,7 +148,9 @@ router.get('/checkup-schedule/completed-weeks', async (req, res) => {
 router.get('/checkup-schedule', async (req, res) => {
   try {
     const { pregnancy_id } = req.query;
+    logger.info('checkup-schedule', `GET /checkup-schedule - pregnancy_id=${pregnancy_id}`);
     if (!pregnancy_id) {
+      logger.warn('checkup-schedule', 'GET /checkup-schedule - missing pregnancy_id');
       return res.json({ code: 1001, data: null, message: '缺少pregnancy_id参数' });
     }
 
@@ -166,8 +173,10 @@ router.get('/checkup-schedule', async (req, res) => {
       };
     });
 
+    logger.info('checkup-schedule', `GET /checkup-schedule - returned ${itemsWithStatus.length} items`);
     res.json({ code: 0, data: itemsWithStatus, message: 'success' });
   } catch (error) {
+    logger.error('checkup-schedule', 'GET /checkup-schedule error', error);
     res.json({ code: 1001, data: null, message: error.message });
   }
 });
@@ -176,64 +185,98 @@ router.put('/checkup-schedule/:item_id/complete', async (req, res) => {
   try {
     const { item_id } = req.params;
     const { pregnancy_id } = req.query;
+    logger.info('checkup-schedule', `PUT /:item_id/complete - pregnancy_id=${pregnancy_id}, item_id=${item_id}`);
 
     if (!pregnancy_id) {
+      logger.warn('checkup-schedule', 'PUT /:item_id/complete - missing pregnancy_id');
       return res.json({ code: 1001, data: null, message: '缺少pregnancy_id参数' });
     }
 
-    // 检查是否已经标记过（防止重复）
-    const existing = await db.queryOne(
-      'SELECT id, is_completed FROM prenatal_checkup WHERE pregnancy_id = ? AND notes LIKE ? LIMIT 1',
-      [pregnancy_id, `%从产检时间表标记完成%${item_id}%`]
-    );
+    // 检查是否已经标记过
+    var existing = null;
+    try {
+      existing = db.queryOne(
+        'SELECT id, is_completed FROM prenatal_checkup WHERE pregnancy_id = ? AND notes LIKE ? LIMIT 1',
+        [pregnancy_id, '%从产检时间表标记完成%' + item_id + '%']
+      );
+    } catch (queryErr) {
+      logger.error('checkup-schedule', 'PUT /:item_id/complete queryOne error', queryErr);
+    }
 
     if (existing && existing.is_completed === 1) {
+      logger.info('checkup-schedule', `PUT /:item_id/complete - already marked complete (id=${existing.id})`);
       return res.json({
         code: 0,
-        data: { checkup_id: existing.id, item_id, is_completed: true, already_marked: true },
+        data: { checkup_id: existing.id, item_id: item_id, is_completed: true, already_marked: true },
         message: '已标记完成'
       });
     }
 
-    const schedule = getSchedule();
-    const item = schedule.find(i => i.id === item_id);
+    var schedule = getSchedule();
+    var item = null;
+    for (var si = 0; si < schedule.length; si++) {
+      if (schedule[si].id === item_id) { item = schedule[si]; break; }
+    }
     if (!item) {
-      return res.json({ code: 1001, data: null, message: '产检项目不存在' });
+      logger.warn('checkup-schedule', `PUT /:item_id/complete - item not found: ${item_id}`);
+      return res.json({ code: 1001, data: null, message: '产检项目不存在: ' + item_id });
     }
 
-    const weekStart = item.week_start || 0;
-    const itemNames = (item.items || []).map(i => typeof i === 'string' ? i : i.name).filter(Boolean).join(', ');
-    const checkupId = existing ? existing.id : db.generateId();
+    var weekStart = item.week_start || 0;
+    var itemNames = [];
+    var itemsArr = item.items || [];
+    for (var ii = 0; ii < itemsArr.length; ii++) {
+      var iname = typeof itemsArr[ii] === 'string' ? itemsArr[ii] : (itemsArr[ii].name || '');
+      if (iname) itemNames.push(iname);
+    }
+    var itemNamesStr = itemNames.join(', ');
+    var checkupId = existing ? existing.id : db.generateId();
+    var nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
     if (existing) {
-      // 已有记录但未完成，更新为已完成
-      await db.run(
-        'UPDATE prenatal_checkup SET is_completed = 1, updated_at = datetime(\'now\') WHERE id = ?',
-        [checkupId]
-      );
+      // 更新已有记录
+      try {
+        db.run(
+          'UPDATE prenatal_checkup SET is_completed = 1, updated_at = ? WHERE id = ?',
+          [nowStr, checkupId]
+        );
+        logger.info('checkup-schedule', `PUT /:item_id/complete - updated existing record (id=${checkupId})`);
+      } catch (updateErr) {
+        logger.error('checkup-schedule', 'PUT /:item_id/complete update error', updateErr);
+        return res.status(500).json({ code: 1001, data: null, message: '更新失败: ' + updateErr.message });
+      }
     } else {
-      // 新建记录
-      await db.run(
-        `INSERT INTO prenatal_checkup (id, pregnancy_id, checkup_date, gestational_week, gestational_day, checkup_type, notes, is_completed, is_recommended, created_at, updated_at)
-         VALUES (?, ?, ?, ?, 0, ?, ?, 1, 1, datetime('now'), datetime('now'))`,
-        [
-          checkupId,
-          pregnancy_id,
-          new Date().toISOString().split('T')[0],
-          weekStart,
-          item.name || item.title || '',
-          `从产检时间表标记完成: ${itemNames} [${item_id}]`,
-        ]
-      );
+      // 新建记录 - 使用JS计算的日期避免sql.js兼容问题
+      try {
+        db.run(
+          "INSERT INTO prenatal_checkup (id, pregnancy_id, checkup_date, gestational_week, gestational_day, checkup_type, notes, is_completed, is_recommended, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?, 1, 1, ?, ?)",
+          [
+            checkupId,
+            pregnancy_id,
+            new Date().toISOString().split('T')[0],
+            weekStart,
+            item.name || item.title || '',
+            '从产检时间表标记完成: ' + itemNamesStr + [' + item_id + ']',
+            nowStr,
+            nowStr
+          ]
+        );
+        logger.info('checkup-schedule', `PUT /:item_id/complete - inserted new record (id=${checkupId})`);
+      } catch (insertErr) {
+        logger.error('checkup-schedule', 'PUT /:item_id/complete insert error', insertErr);
+        return res.status(500).json({ code: 1001, data: null, message: '插入失败: ' + insertErr.message });
+      }
     }
 
+    logger.info('checkup-schedule', `PUT /:item_id/complete - success, checkup_id=${checkupId}, item_id=${item_id}`);
     res.json({
       code: 0,
-      data: { checkup_id: checkupId, item_id, is_completed: true },
+      data: { checkup_id: checkupId, item_id: item_id, is_completed: true },
       message: '标记完成成功'
     });
   } catch (error) {
-    res.json({ code: 1001, data: null, message: error.message });
+    logger.error('checkup-schedule', 'PUT /:item_id/complete unexpected error', error);
+    res.status(500).json({ code: 1001, data: null, message: error.message || '服务器内部错误' });
   }
 });
 
@@ -241,7 +284,9 @@ router.put('/checkup-schedule/:item_id/complete', async (req, res) => {
 router.post('/checkup-schedule/schedule-date', async (req, res) => {
   try {
     const { pregnancy_id, schedule_id, date } = req.body;
+    logger.info('checkup-schedule', `POST /schedule-date - pregnancy_id=${pregnancy_id}, schedule_id=${schedule_id}, date=${date}`);
     if (!pregnancy_id || !schedule_id || !date) {
+      logger.warn('checkup-schedule', 'POST /schedule-date - missing required params');
       return res.json({ code: 1001, data: null, message: '参数缺失' });
     }
 
@@ -265,8 +310,10 @@ router.post('/checkup-schedule/schedule-date', async (req, res) => {
       [pregnancy_id, schedule_id, date]
     );
 
+    logger.info('checkup-schedule', `POST /schedule-date - success, schedule_id=${schedule_id}, date=${date}`);
     res.json({ code: 0, data: { schedule_id, date }, message: '设置成功' });
   } catch (error) {
+    logger.error('checkup-schedule', 'POST /schedule-date error', error);
     res.json({ code: 1002, data: null, message: error.message });
   }
 });
@@ -275,7 +322,9 @@ router.post('/checkup-schedule/schedule-date', async (req, res) => {
 router.get('/checkup-schedule/dates', async (req, res) => {
   try {
     const { pregnancy_id } = req.query;
+    logger.info('checkup-schedule', `GET /dates - pregnancy_id=${pregnancy_id}`);
     if (!pregnancy_id) {
+      logger.warn('checkup-schedule', 'GET /dates - missing pregnancy_id');
       return res.json({ code: 1001, data: null, message: '缺少pregnancy_id' });
     }
 
@@ -289,8 +338,10 @@ router.get('/checkup-schedule/dates', async (req, res) => {
       dates[row.schedule_id] = row.checkup_date;
     }
 
+    logger.info('checkup-schedule', `GET /dates - returned ${rows.length} dates`);
     res.json({ code: 0, data: dates });
   } catch (error) {
+    logger.error('checkup-schedule', 'GET /dates error', error);
     res.json({ code: 1002, data: null, message: error.message });
   }
 });

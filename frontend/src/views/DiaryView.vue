@@ -1,7 +1,12 @@
 <template>
   <div class="diary-view">
     <div class="diary-header">
-      <h2>📖 孕期日记</h2>
+      <div class="diary-header-left">
+        <h2>📖 孕期日记</h2>
+        <span v-if="pregnancyStore.currentPregnancy" class="diary-pregnancy-info">
+          孕{{ gestationalWeeks }}周+{{ gestationalDays }}天 | {{ daysUntilDue }}天后预产期
+        </span>
+      </div>
       <n-button type="primary" round @click="openNewDiary">
         <template #icon>✏️</template>
         写日记
@@ -23,11 +28,11 @@
     <div v-else class="diary-list">
       <div v-for="diary in diaries" :key="diary.id" class="diary-card" @click="viewDiary(diary)">
         <div class="diary-date-header">
-          <span class="date-text">{{ formatFullDate(diary.record_date) }}</span>
-          <span class="week-text">孕{{ getWeekInfo(diary.record_date) }}周</span>
+          <span class="date-text">{{ formatFullDate(diary.entry_date || diary.record_date) }}</span>
+          <span class="week-text">孕{{ getWeekInfo(diary.entry_date || diary.record_date) }}周</span>
         </div>
         <div class="diary-content-preview">
-          {{ diary.note || '无内容' }}
+          {{ (diary.content || diary.note) || '无内容' }}
         </div>
         <div class="diary-footer">
           <span class="diary-time">{{ formatTime(diary.created_at) }}</span>
@@ -51,11 +56,11 @@
       <div class="diary-form">
         <div class="form-group">
           <label>日期</label>
-          <n-date-picker
-            v-model:formatted-value="diaryForm.record_date"
+          <input
             type="date"
-            value-format="YYYY-MM-DD"
-            style="width: 100%"
+            class="diary-date-input"
+            :value="diaryForm.record_date"
+            @input="(e: Event) => diaryForm.record_date = (e.target as HTMLInputElement).value"
           />
         </div>
         <div class="form-group">
@@ -103,7 +108,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { NButton, NModal, NInput, NDatePicker, NSpin, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
-import { dailyRecordApi } from '@/api/daily-record'
+import { diaryApi } from '@/api/diary'
 import dayjs from 'dayjs'
 import { calculateGestationalAge } from '@/utils/gestational'
 
@@ -124,6 +129,17 @@ const moodOptions = [
   { value: 5, emoji: '😄', label: '很好' },
 ]
 
+const gestationalAge = computed(() => {
+  if (!pregnancyStore.currentPregnancy?.last_period_date) return { weeks: 0, days: 0 }
+  return calculateGestationalAge(new Date().toISOString().split('T')[0])
+})
+const gestationalWeeks = computed(() => gestationalAge.value.weeks)
+const gestationalDays = computed(() => gestationalAge.value.days)
+const daysUntilDue = computed(() => {
+  if (!pregnancyStore.currentPregnancy?.due_date) return '--'
+  return Math.max(0, dayjs(pregnancyStore.currentPregnancy.due_date).diff(dayjs(), 'day'))
+})
+
 const diaryForm = ref({
   record_date: dayjs().format('YYYY-MM-DD'),
   title: '',
@@ -135,17 +151,18 @@ async function loadDiaries() {
   if (!pregnancyStore.currentPregnancy?.id) return
   loading.value = true
   try {
-    const res: any = await dailyRecordApi.list(
+    // 使用独立的日记 API（diary_entry 表），不是 daily-record
+    const res: any = await diaryApi.list(
       pregnancyStore.currentPregnancy.id,
       { page: 1, page_size: 100 }
     )
+    console.log('[Diary] loadDiaries:', res)
     if (res.code === 0) {
       diaries.value = (res.data?.items || res.data?.list || res.data || [])
-        .filter((r: any) => r.note)
-        .sort((a: any, b: any) => dayjs(b.record_date).valueOf() - dayjs(a.record_date).valueOf())
+        .sort((a: any, b: any) => dayjs(b.entry_date || b.record_date).valueOf() - dayjs(a.entry_date || a.record_date).valueOf())
     }
   } catch (e) {
-    console.error('Failed to load diaries:', e)
+    console.error('[Diary] load error:', e)
     message.error('加载日记失败')
   } finally {
     loading.value = false
@@ -166,9 +183,9 @@ function openNewDiary() {
 function editDiary(diary: any) {
   editingDiary.value = diary
   diaryForm.value = {
-    record_date: diary.record_date,
+    record_date: diary.entry_date || diary.record_date || dayjs().format('YYYY-MM-DD'),
     title: diary.title || '',
-    note: diary.note || '',
+    note: diary.content || diary.note || '',
     mood: diary.mood || 3,
   }
   showDiaryModal.value = true
@@ -183,29 +200,30 @@ async function saveDiary() {
     message.warning('请先创建孕期档案')
     return
   }
-  
+
   saving.value = true
   try {
+    // 日记使用 diary_entry 表，字段名：entry_date / content（不是 record_date / note）
     const data = {
       pregnancy_id: pregnancyStore.currentPregnancy.id,
-      record_date: diaryForm.value.record_date,
-      note: diaryForm.value.note,
+      entry_date: diaryForm.value.record_date,
+      content: diaryForm.value.note,
       mood: String(diaryForm.value.mood),
     }
-    
+
     if (editingDiary.value) {
-      await dailyRecordApi.update(editingDiary.value.id, data)
+      await diaryApi.update(editingDiary.value.id, data)
       message.success('日记已更新')
     } else {
-      await dailyRecordApi.create(data)
+      await diaryApi.create(data)
       message.success('日记已保存')
     }
-    
+
     showDiaryModal.value = false
     await loadDiaries()
-  } catch (e) {
-    console.error('Failed to save diary:', e)
-    message.error('保存失败，请重试')
+  } catch (e: any) {
+    console.error('[Diary] save error:', e?.message || e)
+    message.error(e?.message || '保存失败，请重试')
   } finally {
     saving.value = false
   }
@@ -214,7 +232,7 @@ async function saveDiary() {
 async function deleteDiary(diary: any) {
   if (!confirm('确定要删除这篇日记吗？')) return
   try {
-    await dailyRecordApi.delete(diary.id)
+    await diaryApi.delete(diary.id)
     message.success('日记已删除')
     await loadDiaries()
   } catch (e) {
@@ -273,6 +291,18 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+}
+
+.diary-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diary-pregnancy-info {
+  font-size: 13px;
+  color: var(--primary-color, #c44680);
+  font-weight: 500;
 }
 
 .diary-header h2 {
@@ -392,6 +422,20 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.diary-date-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.diary-date-input:focus {
+  border-color: var(--primary-color, #c44680);
 }
 
 .form-group {

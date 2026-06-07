@@ -30,11 +30,11 @@
       <div v-if="todayTodos.length === 0" class="empty-hint">暂无提醒，快添加一条吧</div>
       <div v-else class="plan-list">
         <div v-for="item in todayTodos" :key="item.id" class="plan-item">
-          <span class="plan-icon">{{ sourceIcon(item.source_type) }}</span>
+          <span class="plan-icon">{{ todoIcon(item) }}</span>
           <div class="plan-body">
-            <span class="plan-title">{{ item.title }}</span>
-            <span class="plan-meta" v-if="item.trigger_date">
-              {{ formatCountdown(item.trigger_date) }}
+            <span class="plan-title">{{ item.name || item.title || '提醒' }}</span>
+            <span class="plan-meta" v-if="item.trigger_date || item.days_until != null">
+              {{ item.days_until != null ? formatDaysUntil(item.days_until) : formatCountdown(item.trigger_date) }}
             </span>
           </div>
           <n-button size="tiny" quaternary type="primary" @click="completeTodo(item)">完成</n-button>
@@ -120,13 +120,33 @@
             <span class="rs-icon">👶</span>
             <span>胎动 {{ todayRecord.fetal_movement_count }}次</span>
           </div>
-          <div class="rs-item" v-if="todayRecord.contraction_count">
+          <div class="rs-item" v-if="todayRecord.contraction_duration">
             <span class="rs-icon">⏱️</span>
-            <span>宫缩 {{ todayRecord.contraction_count }}次</span>
+            <span>宫缩 {{ todayRecord.contraction_duration }}s{{ todayRecord.contraction_interval ? ' ·间隔' + todayRecord.contraction_interval + 'min' : '' }}{{ todayRecord.contraction_pain ? ' ·' + todayRecord.contraction_pain : '' }}</span>
           </div>
           <div class="rs-item" v-if="todayRecord.diet_note">
             <span class="rs-icon">🍽️</span>
             <span class="rs-note">{{ todayRecord.diet_note }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.uric_acid != null">
+            <span class="rs-icon">🧪</span>
+            <span>尿酸 {{ todayRecord.uric_acid }} μmol/L{{ todayRecord.uric_acid_period ? '(' + todayRecord.uric_acid_period + ')' : '' }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.hcg_value != null">
+            <span class="rs-icon">🧬</span>
+            <span>HCG {{ todayRecord.hcg_value }}{{ todayRecord.hcg_weeks ? ' ·孕' + todayRecord.hcg_weeks + '周' : '' }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.plan_text">
+            <span class="rs-icon">📌</span>
+            <span class="rs-note">{{ todayRecord.plan_text }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.habit_text">
+            <span class="rs-icon">✅</span>
+            <span>好习惯: {{ todayRecord.habit_text }}</span>
+          </div>
+          <div class="rs-item" v-if="todayRecord.sleep_quality && todayRecord.sleep_quality !== 'fair'">
+            <span class="rs-icon">😴</span>
+            <span>睡眠质量 {{ todayRecord.sleep_quality === 'good' ? '好' : todayRecord.sleep_quality === 'poor' ? '差' : '一般' }}</span>
           </div>
           <div class="rs-item" v-if="todayRecord.medication">
             <span class="rs-icon">💊</span>
@@ -546,9 +566,12 @@ function formatDaysUntil(days: number | null | undefined): string {
   return `${Math.ceil(days / 7)}周后`
 }
 
-function sourceIcon(sourceType: string | undefined): string {
+function todoIcon(item: any): string {
+  const t = item.type || item.source_type || ''
+  if (t === 'checkup_reminder') return '🏥'
+  if (t === 'plan' || item.id === 'plan_today') return '📋'
   const icons: Record<string, string> = { manual: '📌', medication: '💊', exercise: '🏃', custom: '📌' }
-  return icons[sourceType || ''] || '⏰'
+  return icons[t] || '⏰'
 }
 
 const todayStr = dayjs().format('YYYY-MM-DD')
@@ -578,6 +601,15 @@ const lmpDate = computed(() => pregnancyStore.currentPregnancy?.last_period_date
 
 async function completeTodo(item: any) {
   try {
+    // 产检提醒和计划项不支持通过此按钮完成
+    if (item.type === 'checkup_reminder') {
+      message.info('请前往产检页面标记完成')
+      return
+    }
+    if (item.type === 'plan' || item.id === 'plan_today') {
+      message.info('请在记录页完成计划')
+      return
+    }
     await reminderApi.complete(item.id)
     await loadDashboard()
     message.success('已完成')

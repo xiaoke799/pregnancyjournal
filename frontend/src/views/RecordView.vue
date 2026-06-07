@@ -481,7 +481,33 @@
       <template #action><n-button @click="showIntimacyModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveIntimacy">保存</n-button></template>
     </n-modal>
 
-    <!-- 编辑/添加通用大弹窗（hcg/uric_acid/photo等无独立小弹窗的类型走这里） -->
+    <!-- HCG 专业记录弹窗 -->
+    <n-modal v-model:show="showHcgModal" preset="card" title="🧬 HCG 记录" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetHcgForm">
+      <div class="quick-form">
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="hcgForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>HCG 值 (mIU/mL)</label><n-input-number v-model:value="hcgForm.value" :min="0" :max="1000000" :step="100" placeholder="如：50000" style="width:100%" /></div>
+        <div class="qf-group"><label>孕周（可选，用于参考范围）</label><n-input-number v-model:value="hcgForm.weeks" :min="3" :max="15" :step="1" placeholder="如：6" style="width:100%" /></div>
+        <div class="form-hint-text">💡 孕3-4周: 50-500 | 孕4-5周: 100-5000 | 孕5-6周: 1000-50000 | 孕6-8周达峰值后逐渐下降</div>
+        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="hcgForm.note" placeholder="如：翻倍情况、医生建议等" /></div>
+      </div>
+      <template #action><n-button @click="showHcgModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveHcg">保存</n-button></template>
+    </n-modal>
+
+    <!-- 尿酸专业记录弹窗 -->
+    <n-modal v-model:show="showUaModal" preset="card" title="🧪 尿酸记录" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetUaForm">
+      <div class="quick-form">
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="uaForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-row">
+          <div class="qf-group flex1"><label>尿酸值 (μmol/L)</label><n-input-number v-model:value="uaForm.value" :min="100" :max="800" :step="10" placeholder="如：350" style="width:100%" /></div>
+          <div class="qf-group flex1"><label>测量时段</label><n-select v-model:value="uaForm.period" :options="uaPeriodOptions" placeholder="选择" style="width:100%" /></div>
+        </div>
+        <div class="form-hint-text">💡 正常参考值：非孕期 150-360 μmol/L；孕期可能略高，>420需关注</div>
+        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="uaForm.note" placeholder="如：是否空腹、医生建议等" /></div>
+      </div>
+      <template #action><n-button @click="showUaModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveUa">保存</n-button></template>
+    </n-modal>
+
+    <!-- 编辑/添加通用大弹窗（photo等无独立小弹窗的类型走这里） -->
     <AddRecordDialog :show="showAddDialog" :date="selectedDate" :pregnancy-id="pregnancyStore.currentPregnancy?.id" :default-type="addDialogType" :edit-record="addDialogRecord" @update:show="showAddDialog = $event" @saved="onRecordSaved" />
   </div>
 </template>
@@ -534,6 +560,8 @@ const showFmModal = ref(false)
 const showContrModal = ref(false)
 const showPlanModal = ref(false)
 const showIntimacyModal = ref(false)
+const showHcgModal = ref(false)
+const showUaModal = ref(false)
 
 // ====== 表单数据 ======
 const defaultDate = () => selectedDate.value || dayjs().format('YYYY-MM-DD')
@@ -589,6 +617,14 @@ const contrForm = ref({ date: '', duration: null as number | null, interval: nul
 const planForm = ref({ date: '', text: '' })
 // 爱爱
 const intimacyForm = ref({ date: '', count: null as number | null, hasProtection: 'no' as 'yes' | 'no', protectionType: '' as string, note: '' })
+// HCG
+const hcgForm = ref({ date: '', value: null as number | null, weeks: null as number | null, note: '' })
+// 尿酸
+const uaPeriodOptions = [
+  { label: '空腹', value: '空腹' }, { label: '餐后', value: '餐后' },
+  { label: '随机', value: '随机' },
+]
+const uaForm = ref({ date: '', value: null as number | null, period: '空腹', note: '' })
 
 // ====== 类型菜单定义 ======
 const quickTypes = [
@@ -714,10 +750,8 @@ function openQuickAdd(type: string) {
     case 'contraction': resetContrForm(); contrForm.value.date = d; showContrModal.value = true; break
     case 'plan': resetPlanForm(); planForm.value.date = d; showPlanModal.value = true; break
     case 'intimacy': resetIntimacyForm(); intimacyForm.value.date = d; showIntimacyModal.value = true; break
-  // 以下类型无独立小弹窗，走通用大弹窗（AddRecordDialog）
-  case 'hcg':
-  case 'uric_acid':
-    addDialogType.value = type; addDialogRecord.value = undefined; showAddDialog.value = true; break
+    case 'hcg': resetHcgForm(); hcgForm.value.date = d; showHcgModal.value = true; break
+    case 'uric_acid': resetUaForm(); uaForm.value.date = d; showUaModal.value = true; break
   default: message.warning('未知类型: ' + type)
   }
 }
@@ -728,11 +762,14 @@ async function doUpsert(data: any) {
     message.error('缺少孕期信息')
     return false
   }
+  const fields = Object.keys(data).filter(k => !['pregnancy_id', 'record_date'].includes(k))
+  console.log('[Record] doUpsert:', { date: data.record_date, fields })
   saving.value = true
   try {
     data.pregnancy_id = pregnancyStore.currentPregnancy.id
     data.record_date = data.record_date || dayjs().format('YYYY-MM-DD')
     const res: any = await dailyRecordApi.upsert(data)
+    console.log('[Record] doUpsert 响应:', res.code, res.message || 'OK')
     if (res.code === 0) {
       message.success('已保存')
       onRecordSaved()
@@ -742,7 +779,7 @@ async function doUpsert(data: any) {
       return false
     }
   } catch (e: any) {
-    console.error('保存失败:', e)
+    console.error('[Record] doUpsert 失败:', e)
     // 显示具体错误信息
     const errMsg = e?.message || e?.response?.data?.message || '网络异常，请检查网络连接'
     message.error(errMsg)
@@ -847,9 +884,10 @@ async function saveSupplement() {
 
 async function saveHabit() {
   if (!habitForm.value.text.trim()) { message.warning('请输入内容'); return }
+  console.log('[Record] saveHabit:', habitForm.value.text.slice(0, 30))
   const ok = await doUpsert({
     record_date: habitForm.value.date,
-    plan_text: '[好习惯] ' + habitForm.value.text,
+    habit_text: habitForm.value.text,
   })
   if (ok) showHabitModal.value = false
 }
@@ -878,14 +916,24 @@ function resetIntimacyForm() { intimacyForm.value = { date: '', count: null, has
 // ====== 新增类型保存函数 ======
 async function saveTemp() {
   if (!tempForm.value.value) { message.warning('请输入体温'); return }
-  const ok = await doUpsert({ record_date: tempForm.value.date, temperature: tempForm.value.value, note: tempForm.value.note || undefined })
+  const ok = await doUpsert({ record_date: tempForm.value.date, body_temperature: tempForm.value.value, note: tempForm.value.note || undefined })
   if (ok) showTempModal.value = false
 }
 
 async function saveSleep() {
+  let hours: number | undefined = undefined
+  if (sleepForm.value.bedtime && sleepForm.value.waketime) {
+    const [bh, bm] = sleepForm.value.bedtime.split(':').map(Number)
+    const [wh, wm] = sleepForm.value.waketime.split(':').map(Number)
+    let diff = (wh * 60 + wm) - (bh * 60 + bm)
+    if (diff < 0) diff += 24 * 60 // 跨天
+    hours = Math.round((diff / 60) * 10) / 10 // 保留一位小数
+  }
+  console.log('[Record] saveSleep:', { bedtime: sleepForm.value.bedtime, waketime: sleepForm.value.waketime, hours, quality: sleepForm.value.quality })
   const ok = await doUpsert({
     record_date: sleepForm.value.date,
-    sleep_record: JSON.stringify({ bedtime: sleepForm.value.bedtime || undefined, waketime: sleepForm.value.waketime || undefined, quality: sleepForm.value.quality }),
+    sleep_hours: hours,
+    sleep_quality: sleepForm.value.quality || undefined,
     note: sleepForm.value.note || undefined,
   })
   if (ok) showSleepModal.value = false
@@ -899,15 +947,18 @@ async function saveWater() {
 
 async function saveDiet() {
   if (!dietForm.value.content.trim()) { message.warning('请输入饮食内容'); return }
-  const ok = await doUpsert({ record_date: dietForm.value.date, diet_record: JSON.stringify({ meal: dietForm.value.meal, content: dietForm.value.content }) })
+  console.log('[Record] saveDiet:', { meal: dietForm.value.meal, content: dietForm.value.content.slice(0, 30) })
+  const ok = await doUpsert({ record_date: dietForm.value.date, diet_note: dietForm.value.content })
   if (ok) showDietModal.value = false
 }
 
 async function saveExercise() {
   if (!exerciseForm.value.duration) { message.warning('请输入运动时长'); return }
+  console.log('[Record] saveExercise:', { type: exerciseForm.value.type, duration: exerciseForm.value.duration })
   const ok = await doUpsert({
     record_date: exerciseForm.value.date,
-    exercise_record: JSON.stringify({ type: exerciseForm.value.type, duration: exerciseForm.value.duration, intensity: exerciseForm.value.intensity }),
+    exercise_type: exerciseForm.value.type,
+    exercise_duration: exerciseForm.value.duration,
     note: exerciseForm.value.note || undefined,
   })
   if (ok) showExerciseModal.value = false
@@ -915,18 +966,23 @@ async function saveExercise() {
 
 async function saveFm() {
   if (!fmForm.value.count) { message.warning('请输入胎动次数'); return }
+  console.log('[Record] saveFetalMovement:', { count: fmForm.value.count, duration: fmForm.value.duration })
   const ok = await doUpsert({
     record_date: fmForm.value.date,
-    fetal_movement_record: JSON.stringify({ count: fmForm.value.count, duration: fmForm.value.duration }),
+    fetal_movement_count: fmForm.value.count,
+    fetal_movement_duration: fmForm.value.duration || undefined,
     note: fmForm.value.note || undefined,
   })
   if (ok) showFmModal.value = false
 }
 
 async function saveContr() {
+  console.log('[Record] saveContraction:', { duration: contrForm.value.duration, interval: contrForm.value.interval, pain: contrForm.value.pain })
   const ok = await doUpsert({
     record_date: contrForm.value.date,
-    contraction_record: JSON.stringify({ duration: contrForm.value.duration, interval: contrForm.value.interval, pain: contrForm.value.pain }),
+    contraction_duration: contrForm.value.duration || undefined,  // 持续时间(秒)
+    contraction_interval: contrForm.value.interval || undefined,   // 间隔时间(分钟)
+    contraction_pain: contrForm.value.pain || undefined,           // 疼痛程度
     note: contrForm.value.note || undefined,
   })
   if (ok) showContrModal.value = false
@@ -934,6 +990,7 @@ async function saveContr() {
 
 async function savePlan() {
   if (!planForm.value.text.trim()) { message.warning('请输入计划内容'); return }
+  console.log('[Record] savePlan:', planForm.value.text.slice(0, 30))
   const ok = await doUpsert({ record_date: planForm.value.date, plan_text: planForm.value.text })
   if (ok) showPlanModal.value = false
 }
@@ -945,6 +1002,34 @@ async function saveIntimacy() {
     note: intimacyForm.value.note || undefined,
   })
   if (ok) showIntimacyModal.value = false
+}
+
+// ====== HCG & 尿酸 ======
+function resetHcgForm() { hcgForm.value = { date: '', value: null, weeks: null, note: '' } }
+function resetUaForm() { uaForm.value = { date: '', value: null, period: '空腹', note: '' } }
+
+async function saveHcg() {
+  if (!hcgForm.value.value) { message.warning('请输入HCG值'); return }
+  console.log('[Record] saveHCG:', { value: hcgForm.value.value, weeks: hcgForm.value.weeks })
+  const ok = await doUpsert({
+    record_date: hcgForm.value.date,
+    hcg_value: hcgForm.value.value,
+    hcg_weeks: hcgForm.value.weeks || undefined,
+    note: hcgForm.value.note || undefined,
+  })
+  if (ok) showHcgModal.value = false
+}
+
+async function saveUa() {
+  if (!uaForm.value.value) { message.warning('请输入尿酸值'); return }
+  console.log('[Record] saveUricAcid:', { value: uaForm.value.value, period: uaForm.value.period })
+  const ok = await doUpsert({
+    record_date: uaForm.value.date,
+    uric_acid: uaForm.value.value,
+    uric_acid_period: uaForm.value.period || undefined,
+    note: uaForm.value.note || undefined,
+  })
+  if (ok) showUaModal.value = false
 }
 
 // ====== 多选切换辅助 ======

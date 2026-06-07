@@ -47,6 +47,33 @@
 
       <!-- 条目列表（按分类分组） -->
       <div class="items-body" v-show="expandedLists.has(cl.id)">
+        <!-- 添加物品输入行（置顶显示） -->
+        <div class="add-item-row" :class="{ 'active': activeAddChecklistId === cl.id }" ref="addInputRefs">
+          <input
+            v-model="newItemNames[cl.id]"
+            placeholder="输入物品名称，回车或点击+添加..."
+            class="add-input"
+            :class="{ 'active': activeAddChecklistId === cl.id }"
+            @keyup.enter="addCustomItem(cl)"
+            @focus="showAddItemFor(cl)"
+          />
+          <select v-model="newItemCats[cl.id]" class="add-cat-select" v-if="!newItemCats[cl.id]?.startsWith('__new__:')">
+            <option value="">选择分类</option>
+            <option v-for="cat in getCategories(cl)" :key="cat" :value="cat">{{ cat }}</option>
+            <option value="__new__:👩 妈妈">👩 新分类</option>
+            <option value="__new__:_none_">不分类</option>
+          </select>
+          <input
+            v-else
+            :value="newItemCats[cl.id].split(':',2)[1] === '_none_' ? '' : (newItemCustomCat[cl.id] || '')"
+            @input="(e: any) => { newItemCustomCat[cl.id] = e.target.value; newItemCats[cl.id] = e.target.value ? `__custom__:${newItemCats[cl.id].split(':')[1]}${e.target.value}` : newItemCats[cl.id] }"
+            placeholder="新分类名"
+            class="add-cat-input"
+            @keyup.enter="addCustomItem(cl)"
+          />
+          <button class="add-btn" @click="addCustomItem(cl)" :disabled="!newItemNames[cl.id]?.trim()">+</button>
+        </div>
+
         <template v-if="Object.keys(groupedItems(cl.id)).length > 0">
           <div v-for="(group, catName) in groupedItems(cl.id)" :key="catName" class="item-group">
             <div class="group-header" @click="toggleGroup(cl.id, catName)">
@@ -117,31 +144,6 @@
           <button v-if="searchQuery" class="clear-search" @click="searchQuery = ''">✕</button>
         </div>
 
-        <div class="add-item-row" :class="{ 'active': activeAddChecklistId === cl.id }">
-          <input
-            v-model="newItemNames[cl.id]"
-            placeholder="输入物品名称，回车或点击+添加..."
-            class="add-input"
-            :class="{ 'active': activeAddChecklistId === cl.id }"
-            @keyup.enter="addCustomItem(cl)"
-            @focus="showAddItemFor(cl)"
-          />
-          <select v-model="newItemCats[cl.id]" class="add-cat-select" v-if="!newItemCats[cl.id]?.startsWith('__new__:')">
-            <option value="">选择分类</option>
-            <option v-for="cat in getCategories(cl)" :key="cat" :value="cat">{{ cat }}</option>
-            <option value="__new__:👩 妈妈">👩 新分类</option>
-            <option value="__new__:_none_">不分类</option>
-          </select>
-          <input
-            v-else
-            :value="newItemCats[cl.id].split(':',2)[1] === '_none_' ? '' : (newItemCustomCat[cl.id] || '')"
-            @input="(e: any) => { newItemCustomCat[cl.id] = e.target.value; newItemCats[cl.id] = e.target.value ? `__custom__:${newItemCats[cl.id].split(':')[1]}${e.target.value}` : newItemCats[cl.id] }"
-            placeholder="新分类名"
-            class="add-cat-input"
-            @keyup.enter="addCustomItem(cl)"
-          />
-          <button class="add-btn" @click="addCustomItem(cl)" :disabled="!newItemNames[cl.id]?.trim()">+</button>
-        </div>
       </div>
     </div>
 
@@ -154,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { NTag, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { checklistApi } from '@/api/checklist'
@@ -332,6 +334,7 @@ async function addCustomItem(cl: any) {
 }
 
 function showAddItemFor(cl: any) {
+  console.log('[Checklist] showAddItemFor:', cl.id, cl.name)
   // 如果已经激活了这个清单，关闭它
   if (activeAddChecklistId.value === cl.id) {
     activeAddChecklistId.value = null
@@ -344,6 +347,14 @@ function showAddItemFor(cl: any) {
     expandedLists.value.add(cl.id)
     expandedLists.value = new Set(expandedLists.value)
   }
+  // 等待DOM更新后滚动到输入框并聚焦
+  nextTick(() => {
+    const input = document.querySelector('.add-item-row.active .add-input') as HTMLInputElement
+    if (input) {
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => input.focus(), 300)
+    }
+  })
 }
 
 async function deleteItem(item: any) {

@@ -14,7 +14,7 @@ export function getAllRecipes() {
 
 /** 随机推荐一道食谱（转盘功能） */
 export function spinRecipe(week: number) {
-  return client.post('/diet/spin', null, { params: { week } })
+  return client.post('/diet/spin', undefined, { params: { week } })
 }
 
 /** 获取食物安全数据 */

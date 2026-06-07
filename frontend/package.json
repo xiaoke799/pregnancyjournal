@@ -16,11 +16,11 @@
     "@vicons/ionicons5": "^0.12",
     "axios": "^1.7",
     "dayjs": "^1.11",
-    "echarts": "^5.5",
+    "echarts": "^5.6.0",
     "naive-ui": "^2.38",
     "pinia": "^2.1",
     "vue": "^3.4",
-    "vue-echarts": "^7.0",
+    "vue-echarts": "^7.0.3",
     "vue-router": "^4.3"
   },
   "devDependencies": {
