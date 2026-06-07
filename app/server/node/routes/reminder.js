@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const logger = require('../logger');
 
 router.post('/reminders', (req, res) => {
   try {
     const { pregnancy_id, title, trigger_date, trigger_time, reminder_type,
             source_type, source_id, is_enabled, notes } = req.body;
+    logger.info('reminder', `POST /reminders - title=${title}, trigger_date=${trigger_date}, pregnancy_id=${pregnancy_id}`);
 
     if (!pregnancy_id || !title) {
+      logger.warn('reminder', 'POST /reminders - missing required fields: pregnancy_id or title');
       return res.json({ code: 1001, data: null, message: 'pregnancy_id 和 title 为必填项' });
     }
 
@@ -22,8 +25,10 @@ router.post('/reminders', (req, res) => {
     );
 
     const reminder = db.queryOne('SELECT * FROM reminder WHERE id = ?', [id]);
+    logger.info('reminder', `POST /reminders - created id=${id}, title=${title}`);
     res.json({ code: 0, data: reminder, message: 'success' });
   } catch (e) {
+    logger.error('reminder', 'POST /reminders error', e);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
@@ -89,8 +94,11 @@ router.get('/reminders/:id', (req, res) => {
 
 router.put('/reminders/:id', (req, res) => {
   try {
-    const existing = db.queryOne('SELECT * FROM reminder WHERE id = ?', [req.params.id]);
+    const id = req.params.id;
+    logger.info('reminder', `PUT /reminders/${id} - fields=${Object.keys(req.body).join(',')}`);
+    const existing = db.queryOne('SELECT * FROM reminder WHERE id = ?', [id]);
     if (!existing) {
+      logger.warn('reminder', `PUT /reminders/${id} - reminder not found`);
       return res.json({ code: 1001, data: null, message: '提醒不存在' });
     }
 
@@ -118,27 +126,34 @@ router.put('/reminders/:id', (req, res) => {
     }
 
     updates.push("updated_at = datetime('now')");
-    params.push(req.params.id);
+    params.push(id);
 
     db.run(`UPDATE reminder SET ${updates.join(', ')} WHERE id = ?`, params);
 
-    const updated = db.queryOne('SELECT * FROM reminder WHERE id = ?', [req.params.id]);
+    const updated = db.queryOne('SELECT * FROM reminder WHERE id = ?', [id]);
+    logger.info('reminder', `PUT /reminders/${id} - updated ${updates.length} fields, is_completed=${updated?.is_completed}`);
     res.json({ code: 0, data: updated, message: 'success' });
   } catch (e) {
+    logger.error('reminder', `PUT /reminders/${req.params.id} error`, e);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.delete('/reminders/:id', (req, res) => {
   try {
-    const existing = db.queryOne('SELECT * FROM reminder WHERE id = ?', [req.params.id]);
+    const id = req.params.id;
+    logger.info('reminder', `DELETE /reminders/${id}`);
+    const existing = db.queryOne('SELECT * FROM reminder WHERE id = ?', [id]);
     if (!existing) {
+      logger.warn('reminder', `DELETE /reminders/${id} - reminder not found`);
       return res.json({ code: 1001, data: null, message: '提醒不存在' });
     }
 
-    db.run('DELETE FROM reminder WHERE id = ?', [req.params.id]);
+    db.run('DELETE FROM reminder WHERE id = ?', [id]);
+    logger.info('reminder', `DELETE /reminders/${id} - deleted successfully, title=${existing.title}`);
     res.json({ code: 0, data: null, message: '删除成功' });
   } catch (e) {
+    logger.error('reminder', `DELETE /reminders/${req.params.id} error`, e);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });

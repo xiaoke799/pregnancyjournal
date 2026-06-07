@@ -127,14 +127,19 @@ CREATE TABLE IF NOT EXISTS daily_record (
   skin_condition TEXT,
   urination_frequency TEXT,
   hcg_value REAL,
+  hcg_weeks INTEGER,
   uric_acid REAL,
+  uric_acid_period TEXT,
   supplement_record TEXT,
   intimacy_note TEXT,
   plan_text TEXT,
   plan_date TEXT,
   water_intake INTEGER,
+  habit_text TEXT,
   contraction_count INTEGER,
   contraction_interval INTEGER,
+  contraction_duration REAL,
+  contraction_pain TEXT,
   contraction_record TEXT,
   fetal_movement_count INTEGER,
   fetal_movement_duration INTEGER,
@@ -349,8 +354,13 @@ function migrateDb() {
       plan_date: null,
       water_intake: null,
       stool_record: null,
+      habit_text: null,
+      hcg_weeks: null,
+      uric_acid_period: null,
       contraction_count: null,
       contraction_interval: null,
+      contraction_duration: null,
+      contraction_pain: null,
       fetal_movement_count: null,
       fetal_movement_duration: null,
       sleep_record: null,
@@ -487,9 +497,20 @@ function queryAll(sql, params = []) {
 }
 
 function run(sql, params = []) {
-  const d = getDb();
-  d.run(sql, params);
-  return { lastInsertRowid: d.exec("SELECT last_insert_rowid()")[0]?.values[0][0] };
+  try {
+    const d = getDb();
+    d.run(sql, params);
+    try {
+      const result = d.exec("SELECT last_insert_rowid()");
+      const rowid = result?.[0]?.values?.[0]?.[0];
+      return { lastInsertRowid: rowid != null ? rowid : -1 };
+    } catch {
+      return { lastInsertRowid: -1 };
+    }
+  } catch (e) {
+    console.error('[db.run] SQL execution error:', e.message);
+    throw e; // 重新抛出让调用方catch处理
+  }
 }
 
 function generateId() {

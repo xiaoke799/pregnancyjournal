@@ -66,6 +66,7 @@ const { isMobile } = useResize()
 const navItems = [
   { path: '/', icon: '🏠', label: '首页' },
   { path: '/record', icon: '📝', label: '记录' },
+  { path: '/stats', icon: '📊', label: '统计' },
   { path: '/diary', icon: '📖', label: '日记' },
   { path: '/album', icon: '📷', label: '相册' },
   { path: '/checkup-schedule', icon: '🏥', label: '产检' },

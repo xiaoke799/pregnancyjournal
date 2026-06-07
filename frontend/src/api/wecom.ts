@@ -17,7 +17,7 @@ export const wecomApi = {
 
   /** 手动发送产检提醒 */
   sendCheckupReminder: (checkupName: string, week: number, date: string, items?: string) =>
-    client.post('/wecom/send-checkup-reminder', null, {
+    client.post('/wecom/send-checkup-reminder', undefined, {
       params: {
         checkup_name: checkupName,
         gestational_week: week,

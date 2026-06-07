@@ -109,9 +109,9 @@ router.post('/daily-records', (req, res) => {
                       'sleep_hours', 'sleep_quality', 'sleep_record', 'symptoms', 'exercise_type',
                       'exercise_duration', 'exercise_record', 'diet_note', 'diet_record', 'medication',
                       'edema_level', 'vaginal_discharge', 'skin_condition', 'urination_frequency',
-                      'hcg_value', 'uric_acid', 'supplement_record', 'intimacy_note', 'intimacy_record',
-                      'plan_text', 'plan_date', 'water_intake',
-                      'contraction_count', 'contraction_interval', 'contraction_record',
+                      'hcg_value', 'hcg_weeks', 'uric_acid', 'uric_acid_period', 'supplement_record', 'intimacy_note', 'intimacy_record',
+                      'plan_text', 'plan_date', 'water_intake', 'habit_text',
+                      'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain', 'contraction_record',
                       'fetal_movement_count', 'fetal_movement_duration', 'fetal_movement_record'];
  
       for (const field of fields) {
@@ -147,9 +147,9 @@ router.post('/daily-records', (req, res) => {
        blood_pressure_systolic, blood_pressure_diastolic,
        sleep_hours, sleep_quality, sleep_record, symptoms, exercise_type, exercise_duration, exercise_record,
        diet_note, diet_record, medication, edema_level, vaginal_discharge, skin_condition,
-       urination_frequency, hcg_value, uric_acid, supplement_record,
-       intimacy_note, intimacy_record, plan_text, plan_date, water_intake,
-       contraction_count, contraction_interval, contraction_record,
+       urination_frequency, hcg_value, hcg_weeks, uric_acid, uric_acid_period, supplement_record,
+       intimacy_note, intimacy_record, plan_text, plan_date, water_intake, habit_text,
+       contraction_count, contraction_interval, contraction_duration, contraction_pain, contraction_record,
        fetal_movement_count, fetal_movement_duration, fetal_movement_record)
        VALUES (?, ?, ?,
         ?, ?, ?,
@@ -157,11 +157,9 @@ router.post('/daily-records', (req, res) => {
         ?, ?, ?, ?, ?,
         ?, ?,
         ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?, ?,
-        ?, ?, ?)`,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?)`,
       [id, pregnancy_id, record_date,
        req.body.weight ?? null, req.body.fetal_heart_rate ?? null, req.body.body_temperature ?? null,
        req.body.blood_glucose_fasting ?? null, req.body.blood_glucose_1h ?? null, req.body.blood_glucose_2h ?? null,
@@ -169,9 +167,9 @@ router.post('/daily-records', (req, res) => {
        req.body.blood_pressure_systolic ?? null, req.body.blood_pressure_diastolic ?? null,
        req.body.sleep_hours ?? null, req.body.sleep_quality ?? null, req.body.sleep_record || null, req.body.symptoms || null, req.body.exercise_type || null, req.body.exercise_duration ?? null, req.body.exercise_record || null,
        req.body.diet_note || null, req.body.diet_record || null, req.body.medication || null, req.body.edema_level || null, req.body.vaginal_discharge || null, req.body.skin_condition || null,
-       req.body.urination_frequency ?? null, req.body.hcg_value ?? null, req.body.uric_acid ?? null, req.body.supplement_record || null,
-       req.body.intimacy_note || null, req.body.intimacy_record || null, req.body.plan_text || null, req.body.plan_date || null, req.body.water_intake ?? null,
-       req.body.contraction_count ?? null, req.body.contraction_interval ?? null, req.body.contraction_record || null,
+       req.body.urination_frequency ?? null, req.body.hcg_value ?? null, req.body.hcg_weeks ?? null, req.body.uric_acid ?? null, req.body.uric_acid_period || null, req.body.supplement_record || null,
+       req.body.intimacy_note || null, req.body.intimacy_record || null, req.body.plan_text || null, req.body.plan_date || null, req.body.water_intake ?? null, req.body.habit_text || null,
+       req.body.contraction_count ?? null, req.body.contraction_interval ?? null, req.body.contraction_duration ?? null, req.body.contraction_pain || null, req.body.contraction_record || null,
        req.body.fetal_movement_count ?? null, req.body.fetal_movement_duration ?? null, req.body.fetal_movement_record || null]
     );
 
@@ -276,8 +274,11 @@ router.get('/daily-records/:record_date', (req, res) => {
 
 router.put('/daily-records/:record_id', (req, res) => {
   try {
-    const existing = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [req.params.record_id]);
+    const recordId = req.params.record_id;
+    logger.info('daily-record', `PUT /daily-records/${recordId} - fields=${Object.keys(req.body).join(',')}`);
+    const existing = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [recordId]);
     if (!existing) {
+      logger.warn('daily-record', `PUT /daily-records/${recordId} - record not found`);
       return res.json({ code: 1001, data: null, message: '记录不存在' });
     }
 
@@ -291,9 +292,9 @@ router.put('/daily-records/:record_id', (req, res) => {
                     'sleep_hours', 'sleep_quality', 'sleep_record', 'symptoms', 'exercise_type',
                     'exercise_duration', 'exercise_record', 'diet_note', 'diet_record', 'medication',
                     'edema_level', 'vaginal_discharge', 'skin_condition', 'urination_frequency',
-                    'hcg_value', 'uric_acid', 'supplement_record', 'intimacy_note', 'intimacy_record',
-                    'plan_text', 'plan_date', 'water_intake',
-                    'contraction_count', 'contraction_interval', 'contraction_record',
+                    'hcg_value', 'hcg_weeks', 'uric_acid', 'uric_acid_period', 'supplement_record', 'intimacy_note', 'intimacy_record',
+                    'plan_text', 'plan_date', 'water_intake', 'habit_text',
+                    'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain', 'contraction_record',
                     'fetal_movement_count', 'fetal_movement_duration', 'fetal_movement_record'];
 
     for (const field of fields) {
@@ -304,31 +305,39 @@ router.put('/daily-records/:record_id', (req, res) => {
     }
 
     if (updates.length === 0) {
+      logger.info('daily-record', `PUT /daily-records/${recordId} - no fields to update`);
       return res.json({ code: 1001, data: null, message: '没有需要更新的字段' });
     }
 
     updates.push("updated_at = datetime('now')");
-    params.push(req.params.record_id);
+    params.push(recordId);
 
     db.run(`UPDATE daily_record SET ${updates.join(', ')} WHERE id = ?`, params);
 
-    const updated = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [req.params.record_id]);
+    const updated = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [recordId]);
+    logger.info('daily-record', `PUT /daily-records/${recordId} - updated ${updates.length} fields successfully`);
     res.json({ code: 0, data: updated, message: 'success' });
   } catch (e) {
+    logger.error('daily-record', `PUT /daily-records/${req.params.record_id} error`, e);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.delete('/daily-records/:record_id', (req, res) => {
   try {
-    const existing = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [req.params.record_id]);
+    const recordId = req.params.record_id;
+    logger.info('daily-record', `DELETE /daily-records/${recordId}`);
+    const existing = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [recordId]);
     if (!existing) {
+      logger.warn('daily-record', `DELETE /daily-records/${recordId} - record not found`);
       return res.json({ code: 1001, data: null, message: '记录不存在' });
     }
 
-    db.run('DELETE FROM daily_record WHERE id = ?', [req.params.record_id]);
+    db.run('DELETE FROM daily_record WHERE id = ?', [recordId]);
+    logger.info('daily-record', `DELETE /daily-records/${recordId} - deleted successfully`);
     res.json({ code: 0, data: null, message: '删除成功' });
   } catch (e) {
+    logger.error('daily-record', `DELETE /daily-records/${req.params.record_id} error`, e);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });

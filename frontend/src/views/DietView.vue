@@ -147,6 +147,15 @@ const meals = ref<{ breakfast: MealCombo; lunch: MealCombo; dinner: MealCombo }>
   dinner:    { staple: null, meat: null, veggie: null, soup: null, drink: null, dessert: null },
 })
 
+// 最近使用的菜谱ID（避免连续重复）
+const recentUsedIds = ref<Set<string>>(new Set())
+const MAX_RECENT = 12
+
+// 清空最近使用记录
+function clearRecentUsed() {
+  recentUsedIds.value.clear()
+}
+
 const hasMeals = computed(() => {
   const b = meals.value.breakfast
   const l = meals.value.lunch
@@ -211,13 +220,37 @@ function doPick() {
     return
   }
 
-  const stageRecipes = filterByStage(allRecipes.value, currentStage.value)
-  const pool = stageRecipes.length >= 6 ? stageRecipes : allRecipes.value
+  // 阶段过滤，如果过滤后太少则扩大范围
+  let pool = filterByStage(allRecipes.value, currentStage.value)
+  if (pool.length < 15) {
+    // 扩大：包含相邻阶段
+    const stages = ['preparing', 'early', 'mid', 'late', 'nursing']
+    const idx = stages.indexOf(currentStage.value)
+    const extraStages: string[] = []
+    if (idx > 0) extraStages.push(stages[idx - 1])
+    if (idx < stages.length - 1) extraStages.push(stages[idx + 1])
+    const expanded = allRecipes.value.filter(r =>
+      (r.suitable_stage || []).includes(currentStage.value) ||
+      (r.suitable_stage || []).includes(extraStages[0]) ||
+      (r.suitable_stage || []).includes(extraStages[1])
+    )
+    if (expanded.length > pool.length) pool = expanded
+  }
+  // 如果还是太少就用全部
+  if (pool.length < 10) pool = [...allRecipes.value]
+
+  // 排除最近使用过的
+  const availablePool = pool.filter(r => !recentUsedIds.value.has(r.id))
+  const finalPool = availablePool.length >= 10 ? availablePool : pool
+
+  // 打乱池子
+  const shuffled = shuffle(finalPool)
 
   const usedIds = new Set<string>()
-  const byCat = (cat: string) => pool.filter(r => r.category === cat)
+  const byCat = (cat: string) => shuffled.filter(r => r.category === cat)
 
   const pickFrom = (...candidatesLists: Recipe[][]) => {
+    // 也打乱候选列表
     for (const list of candidatesLists) {
       const avail = list.filter(r => r && !usedIds.has(r.id))
       if (avail.length > 0) {
@@ -239,16 +272,17 @@ function doPick() {
 
   const breakfastStaple = pickFrom(
     breakfastCat,
-    stapleCat.filter(r => /粥|面|糊|饭|饺|饼|玉米|红薯|包/.test(r.name)),
+    stapleCat.filter(r => /粥|面|糊|饭|饺|饼|玉米|红薯|包|麦/.test(r.name)),
     stapleCat
   )
   const breakfastDrink = pickFrom(
     drinkCat,
-    breakfastCat.filter(r => /豆浆|奶|汁|茶/.test(r.name))
+    breakfastCat.filter(r => /豆浆|奶|汁|茶|水/.test(r.name))
   )
   const breakfastDessert = pickFrom(
-    dessertCat.filter(r => /羹|汤圆|奶|糕/.test(r.name)),
-    dessertCat
+    dessertCat.filter(r => /羹|汤圆|奶|糕|沙/.test(r.name)),
+    dessertCat,
+    stapleCat.filter(r => /糊|粥/.test(r.name))
   )
 
   const lunchStaple = pickFrom(
@@ -265,9 +299,20 @@ function doPick() {
     stapleCat,
     breakfastCat
   )
-  const dinnerMeat = pickFrom(meatCat)
-  const dinnerVeggie = pickFrom(veggieCat, meatCat)
-  const dinnerSoup = pickFrom(soupCat)
+  const dinnerMeat = pickFrom(meatCat.filter(r => r.id !== lunchMeat?.id), meatCat)
+  const dinnerVeggie = pickFrom(veggieCat.filter(r => r.id !== lunchVeggie?.id), veggieCat, meatCat)
+  const dinnerSoup = pickFrom(soupCat.filter(r => r.id !== lunchSoup?.id), soupCat)
+
+  // 记录本次使用的ID
+  const newMeals = [breakfastStaple, breakfastDrink, breakfastDessert, lunchStaple, lunchMeat, lunchVeggie, lunchSoup, dinnerStaple, dinnerMeat, dinnerVeggie, dinnerSoup].filter(Boolean)
+  newMeals.forEach(r => {
+    recentUsedIds.value.add(r!.id)
+  })
+  // 限制历史大小
+  if (recentUsedIds.value.size > MAX_RECENT) {
+    const arr = Array.from(recentUsedIds.value)
+    recentUsedIds.value = new Set(arr.slice(arr.length - MAX_RECENT))
+  }
 
   meals.value = {
     breakfast: { staple: breakfastStaple, meat: null, veggie: null, soup: null, drink: breakfastDrink, dessert: breakfastDessert },
@@ -395,8 +440,9 @@ onMounted(() => {
 
 .combo-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
+  min-width: 0;  /* 关键：允许子元素收缩 */
 }
 .combo-tag {
   flex-shrink: 0;
@@ -415,11 +461,12 @@ onMounted(() => {
   color: #1e293b;
 }
 .combo-desc {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
-  margin-left: auto;
-  flex-shrink: 0;
-  max-width: 120px;
+  margin-left: 8px;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 180px;
   text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;

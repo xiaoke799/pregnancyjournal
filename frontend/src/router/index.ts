@@ -16,6 +16,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'checkup-schedule', name: 'checkup-schedule', component: () => import('@/views/CheckupScheduleView.vue'), meta: { title: '产检' } },
       { path: 'diet', name: 'diet', component: () => import('@/views/DietView.vue'), meta: { title: '饮食' } },
       { path: 'checklist', name: 'checklist', component: () => import('@/views/ChecklistView.vue'), meta: { title: '清单' } },
+      { path: 'stats', name: 'stats', component: () => import('@/views/StatsView.vue'), meta: { title: '统计' } },
       { path: 'reference', redirect: '/diet' },
       { path: 'settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { title: '设置' } },
     ],

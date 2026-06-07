@@ -9,7 +9,7 @@ export function getCheckupSchedule(pregnancyId?: string) {
 
 /** 标记产检项目已完成 */
 export function markCheckupCompleted(itemId: string, pregnancyId: string) {
-  return client.put(`/checkup-schedule/${itemId}/complete`, null, {
+  return client.put(`/checkup-schedule/${itemId}/complete`, undefined, {
     params: { pregnancy_id: pregnancyId },
   })
 }

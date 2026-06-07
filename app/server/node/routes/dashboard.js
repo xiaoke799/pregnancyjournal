@@ -266,6 +266,62 @@ router.get('/dashboard', async function(req, res) {
       'SELECT * FROM reminder WHERE pregnancy_id = ? AND trigger_date = ? AND is_enabled = 1 AND (is_completed IS NULL OR is_completed = 0)',
       [pregnancy_id, todayStr]
     );
+
+    // 合并产检提醒：今天或未来7天内应该做的产检
+    var checkupReminders = [];
+    if (scheduleItems.length > 0 && gestationalAge.weeks > 0) {
+      var lmpForCheckup = pregnancy.last_period_date ? new Date(pregnancy.last_period_date) : null;
+      // 获取已完成产检周数
+      var completedWeeksResult = await db.queryAll(
+        'SELECT DISTINCT gestational_week FROM prenatal_checkup WHERE pregnancy_id = ? AND is_completed = 1',
+        [pregnancy_id]
+      );
+      var completedWeeksSet = {};
+      for (var cw = 0; cw < completedWeeksResult.length; cw++) {
+        completedWeeksSet[completedWeeksResult[cw].gestational_week] = true;
+      }
+      for (var ci = 0; ci < scheduleItems.length; ci++) {
+        var citem = scheduleItems[ci];
+        var cws = citem.week_start || 0;
+        // 跳过已完成的
+        if (completedWeeksSet[cws]) continue;
+        // 只显示当前孕周前后4周内的
+        if (cws < gestationalAge.weeks - 2 || cws > gestationalAge.weeks + 6) continue;
+        var cEstDate = lmpForCheckup ? new Date(lmpForCheckup.getTime() + cws * 7 * 24 * 60 * 60 * 1000) : null;
+        var cDaysUntil = cEstDate ? Math.ceil((cEstDate - new Date(todayStr)) / (24 * 60 * 60 * 1000)) : null;
+        checkupReminders.push({
+          id: 'cu_' + citem.id,
+          name: (citem.name || citem.title || '产检') + (cDaysUntil !== null && cDaysUntil >= 0 ? ' (还有' + cDaysUntil + '天)' : ''),
+          type: 'checkup_reminder',
+          trigger_date: cEstDate ? formatDate(cEstDate) : todayStr,
+          is_enabled: 1,
+          is_completed: 0,
+          days_until: cDaysUntil,
+          week_start: cws
+        });
+      }
+      checkupReminders.sort(function(a, b) { return (a.days_until || 999) - (b.days_until || 999); });
+    }
+
+    // 合并今日计划记录
+    var planReminder = null;
+    if (todayRecord && todayRecord.plan_text) {
+      planReminder = {
+        id: 'plan_today',
+        name: todayRecord.plan_text,
+        type: 'plan',
+        trigger_date: todayStr,
+        is_enabled: 1,
+        is_completed: todayRecord.is_plan_done ? 1 : 0
+      };
+    }
+
+    // 合并所有提醒
+    var allTodos = [].concat(todayTodos || []);
+    if (planReminder) allTodos.push(planReminder);
+    allTodos = allTodos.concat(checkupReminders.slice(0, 3)); // 最多3条产检提醒
+    logger.info('dashboard', `GET /dashboard - today_todos merged: ${allTodos.length} total (${todayTodos.length} reminders + ${planReminder ? 1 : 0} plan + ${checkupReminders.slice(0, 3).length} checkups)`);
+
     var recommendedTodos = [];
     if (gestationalAge.weeks > 0 && scheduleItems.length > 0) {
       var minWeek = Math.max(0, gestationalAge.weeks - 2);
@@ -342,12 +398,13 @@ router.get('/dashboard', async function(req, res) {
             };
           })
         },
-        today_todos: todayTodos,
+        today_todos: allTodos,
         recommended_todos: recommendedTodos
       },
       message: 'success'
     });
   } catch (error) {
+    logger.error('dashboard', 'GET /dashboard error', error);
     res.json({ code: 1001, data: null, message: error.message });
   }
 });

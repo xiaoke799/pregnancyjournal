@@ -6,6 +6,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const logger = require('../logger');
 
 const upload = multer({ dest: 'uploads/', limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
 
@@ -52,7 +53,9 @@ router.post('/photos', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.json({ code: 1001, data: null, message: '请上传文件' });
     const { pregnancy_id, photo_type, gestational_week, gestational_day, milestone_type, checkup_id, note, media_type: reqMedia } = req.body;
+    logger.info('photo', `POST /photos - file=${req.file.originalname}, size=${req.file.size}, type=${photo_type}, pregnancy_id=${pregnancy_id}`);
     if (!pregnancy_id || !photo_type) {
+      logger.warn('photo', 'POST /photos - missing required fields');
       try { fs.unlinkSync(req.file.path); } catch (e) {}
       return res.json({ code: 1001, data: null, message: '缺少必填字段: pregnancy_id, photo_type' });
     }
@@ -78,8 +81,10 @@ router.post('/photos', upload.single('file'), async (req, res) => {
       [id, pregnancy_id, photo_type, destPath, thumbnail_path, gestational_week || null, gestational_day || null, milestone_type || null, checkup_id || null, note || null, finalMediaType]
     );
     const row = await db.queryOne('SELECT * FROM pregnancy_photo WHERE id = ?', [id]);
+    logger.info('photo', `POST /photos - uploaded id=${id}, media_type=${finalMediaType}, path=${destPath}`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    logger.error('photo', 'POST /photos error', e);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
@@ -87,14 +92,17 @@ router.post('/photos', upload.single('file'), async (req, res) => {
 router.get('/photos', async (req, res) => {
   try {
     const { pregnancy_id, photo_type, gestational_week } = req.query;
+    logger.info('photo', `GET /photos - pregnancy_id=${pregnancy_id}, photo_type=${photo_type}, week=${gestational_week}`);
     let where = 'WHERE 1=1';
     const params = [];
     if (pregnancy_id) { where += ' AND pregnancy_id = ?'; params.push(pregnancy_id); }
     if (photo_type) { where += ' AND photo_type = ?'; params.push(photo_type); }
     if (gestational_week) { where += ' AND gestational_week = ?'; params.push(gestational_week); }
     const rows = await db.queryAll(`SELECT * FROM pregnancy_photo ${where} ORDER BY created_at DESC`, params);
+    logger.info('photo', `GET /photos - returned ${rows.length} photos`);
     res.json({ code: 0, data: rows, message: 'success' });
   } catch (e) {
+    logger.error('photo', 'GET /photos error', e);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
@@ -131,13 +139,20 @@ router.put('/photos/:id', async (req, res) => {
 
 router.delete('/photos/:id', async (req, res) => {
   try {
-    const photo = await db.queryOne('SELECT * FROM pregnancy_photo WHERE id = ?', [req.params.id]);
-    if (!photo) return res.json({ code: 1001, data: null, message: '照片不存在' });
+    const id = req.params.id;
+    logger.info('photo', `DELETE /photos/${id}`);
+    const photo = await db.queryOne('SELECT * FROM pregnancy_photo WHERE id = ?', [id]);
+    if (!photo) {
+      logger.warn('photo', `DELETE /photos/${id} - photo not found`);
+      return res.json({ code: 1001, data: null, message: '照片不存在' });
+    }
     if (photo.file_path && fs.existsSync(photo.file_path)) { try { fs.unlinkSync(photo.file_path); } catch (e) {} }
     if (photo.thumbnail_path && photo.thumbnail_path !== photo.file_path && fs.existsSync(photo.thumbnail_path)) { try { fs.unlinkSync(photo.thumbnail_path); } catch (e) {} }
-    await db.run('DELETE FROM pregnancy_photo WHERE id = ?', [req.params.id]);
+    await db.run('DELETE FROM pregnancy_photo WHERE id = ?', [id]);
+    logger.info('photo', `DELETE /photos/${id} - deleted successfully, file=${photo.file_path}`);
     res.json({ code: 0, data: null, message: 'success' });
   } catch (e) {
+    logger.error('photo', `DELETE /photos/${req.params.id} error`, e);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });

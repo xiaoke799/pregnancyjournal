@@ -253,14 +253,13 @@
             <div class="custom-items-hint">添加后每个子项可独立上传分类报告</div>
           </div>
         </n-form-item>
-        <n-form-item label="计划日期">
-          <n-date-picker
-            v-model:formatted-value="customForm.checkup_date"
+        <n-form-item label="计划日期" :show-feedback="false">
+          <input
             type="date"
-            value-format="YYYY-MM-DD"
+            class="custom-date-input"
+            :value="customForm.checkup_date"
+            @input="(e: Event) => customForm.checkup_date = (e.target as HTMLInputElement).value"
             placeholder="请选择或输入日期"
-            style="width: 100%"
-            clearable
           />
         </n-form-item>
         <n-form-item label="备注">
@@ -944,16 +943,23 @@ async function handleAddCustom() {
   savingCustom.value = true
   try {
     const filteredItems = customForm.value.items.filter(i => i.trim())
-    await checkupApi.createCustom({
+    console.log('[handleAddCustom] sending:', { name, itemsCount: filteredItems.length, date: customForm.value.checkup_date })
+    const res: any = await checkupApi.createCustom({
       pregnancy_id: pregnancyStore.currentPregnancy.id,
       name,
       items: filteredItems.length ? filteredItems : undefined,
       checkup_date: customForm.value.checkup_date,
       notes: customForm.value.notes || undefined,
     })
+    console.log('[handleAddCustom] response:', res)
     message.success('添加成功'); showAddDialog.value = false
-    customForm.value = { name: '', items: [], checkup_date: '', notes: '' }; await loadAll()
-  } catch (e: any) { message.error(e.message || '添加失败，请重试') } finally { savingCustom.value = false }
+    customForm.value = { name: '', items: [], checkup_date: '', notes: '' }
+    await loadAll()
+    console.log('[handleAddCustom] loadAll done, customCheckups count:', customCheckups.value.length)
+  } catch (e: any) {
+    console.error('[handleAddCustom] error:', e)
+    message.error(e.message || '添加失败，请重试')
+  } finally { savingCustom.value = false }
 }
 
 async function deleteCustom(id: string) {
@@ -1060,6 +1066,13 @@ async function loadAll() {
     }
     await Promise.all(reportPromises)
     reportMap.value = newReportMap
+
+    // 默认收起所有检查内容
+    mergedList.value.forEach(item => {
+      if (item.items?.length) {
+        subItemsCollapsed.value[item._key] = true
+      }
+    })
   } finally { loading.value = false }
 }
 
@@ -1124,6 +1137,18 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
   color: var(--text-color, #1e293b);
   width: 130px;
 }
+.custom-date-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  font-size: 14px;
+  background: white;
+  color: var(--text-color, #1e293b);
+  outline: none;
+  transition: border-color .2s;
+}
+.custom-date-input:focus { border-color: var(--primary-color); }
 
 .card-body { margin-bottom: 12px; }
 .checkup-items { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
