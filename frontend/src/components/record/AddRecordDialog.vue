@@ -535,8 +535,11 @@ watch(() => props.show, (val) => {
 
     if (props.editRecord) {
       const r = props.editRecord
+      // 优先使用记录中的 record_type，否则回退到父组件传入的 defaultType
       if (r.record_type) {
         selectedType.value = r.record_type
+      } else if (props.defaultType) {
+        selectedType.value = props.defaultType
       }
       if (r.record_date) {
         formData.value.recordDate = r.record_date
