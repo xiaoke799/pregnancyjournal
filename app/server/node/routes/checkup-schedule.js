@@ -256,7 +256,7 @@ router.put('/checkup-schedule/:item_id/complete', async (req, res) => {
             new Date().toISOString().split('T')[0],
             weekStart,
             item.name || item.title || '',
-            '从产检时间表标记完成: ' + itemNamesStr + [' + item_id + ']',
+            '从产检时间表标记完成: ' + itemNamesStr + ' [' + item_id + ']',
             nowStr,
             nowStr
           ]

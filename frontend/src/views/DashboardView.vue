@@ -21,20 +21,27 @@
       </div>
     </div>
 
-    <!-- ===== 提醒看板 ===== -->
+    <!-- ===== 提醒看板（未来一个月） ===== -->
     <div class="section reminder-board">
       <div class="section-header">
         <h3>📌 提醒看板</h3>
-        <span class="section-hint" v-if="todayTodos.length">{{ todayTodos.length }} 项</span>
+        <div class="header-actions">
+          <span class="section-hint" v-if="todayTodos.length">未来30天 · {{ todayTodos.length }} 项</span>
+          <n-button size="tiny" :loading="pushing" @click="pushToWecom" v-if="todayTodos.length">推送微信</n-button>
+        </div>
       </div>
       <div v-if="todayTodos.length === 0" class="empty-hint">暂无提醒，快添加一条吧</div>
       <div v-else class="plan-list">
-        <div v-for="item in todayTodos" :key="item.id" class="plan-item">
+        <div v-for="item in todayTodos" :key="item.id" class="plan-item" :class="{ 'is-today': item.days_until === 0, 'is-past': (item.days_until || 0) < 0 }">
           <span class="plan-icon">{{ todoIcon(item) }}</span>
           <div class="plan-body">
             <span class="plan-title">{{ item.name || item.title || '提醒' }}</span>
             <span class="plan-meta" v-if="item.trigger_date || item.days_until != null">
-              {{ item.days_until != null ? formatDaysUntil(item.days_until) : formatCountdown(item.trigger_date) }}
+              <template v-if="item.days_until != null">
+                {{ formatDaysUntil(item.days_until) }}
+              </template>
+              <template v-else>{{ formatCountdown(item.trigger_date) }}</template>
+              <template v-if="item.trigger_date && item.days_until !== 0"> · {{ item.trigger_date.slice(5) }}</template>
             </span>
           </div>
           <n-button size="tiny" quaternary type="primary" @click="completeTodo(item)">完成</n-button>
@@ -285,6 +292,7 @@ import { usePregnancyStore } from '@/stores/pregnancy'
 import { useGestationalAge } from '@/composables/useGestationalAge'
 import { getDashboard } from '@/api/dashboard'
 import { reminderApi } from '@/api/reminder'
+import { wecomApi } from '@/api/wecom'
 import { calculateGestationalAge } from '@/utils/gestational'
 import dayjs from 'dayjs'
 import VChart from 'vue-echarts'
@@ -333,6 +341,7 @@ const dashboardData = ref<any>(null)
 const loading = ref(false)
 const newTodoTitle = ref('')
 const adding = ref(false)
+const pushing = ref(false)
 
 function toStageKey(trimester?: string): 'early' | 'mid' | 'late' {
   if (trimester === 'early' || trimester === '孕早期') return 'early'
@@ -636,6 +645,21 @@ async function quickAddReminder() {
   finally { adding.value = false }
 }
 
+async function pushToWecom() {
+  if (!pregnancyStore.currentPregnancy) return
+  pushing.value = true
+  try {
+    const res: any = await wecomApi.sendTest()
+    if (res.code === 0) {
+      message.success('推送成功')
+    } else {
+      message.warning(res.message || '推送完成，请检查微信')
+    }
+  } catch (e: any) {
+    message.error(e?.message || '推送失败，请检查企业微信配置')
+  } finally { pushing.value = false }
+}
+
 async function loadDashboard() {
   if (!pregnancyStore.currentPregnancy) return
   loading.value = true
@@ -886,10 +910,13 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   border-radius: 10px; background: #f8fafc; transition: background .15s;
 }
 .plan-item:hover { background: #f1f5f9; }
+.plan-item.is-today { background: #fef3c7; border-left: 3px solid #f59e0b; }
+.plan-item.is-past { opacity: 0.6; }
 .plan-icon { font-size: 18px; }
 .plan-body { flex: 1; min-width: 0; }
 .plan-title { font-size: 13px; font-weight: 600; color: var(--text-color, #1e293b); display: block; }
 .plan-meta { font-size: 11px; color: var(--text-hint, #94a3b8); }
+.header-actions { display: flex; align-items: center; gap: 8px; }
 
 .quick-add-row { display: flex; gap: 8px; margin-top: 4px; }
 

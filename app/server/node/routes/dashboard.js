@@ -154,6 +154,9 @@ router.get('/dashboard', async function(req, res) {
     }
     logger.info('dashboard', `GET /dashboard - pregnancy_id=${pregnancy_id}`);
     var todayStr = formatDate(new Date());
+    var monthLater = new Date();
+    monthLater.setDate(monthLater.getDate() + 30);
+    var monthLaterStr = formatDate(monthLater);
     var weekLater = new Date();
     weekLater.setDate(weekLater.getDate() + 7);
     var weekLaterStr = formatDate(weekLater);
@@ -263,11 +266,11 @@ router.get('/dashboard', async function(req, res) {
       mandatoryChecked += checklists[ci].mandatory_checked || 0;
     }
     var todayTodos = await db.queryAll(
-      'SELECT * FROM reminder WHERE pregnancy_id = ? AND trigger_date = ? AND is_enabled = 1 AND (is_completed IS NULL OR is_completed = 0)',
-      [pregnancy_id, todayStr]
+      'SELECT * FROM reminder WHERE pregnancy_id = ? AND trigger_date BETWEEN ? AND ? AND is_enabled = 1 AND (is_completed IS NULL OR is_completed = 0) ORDER BY trigger_date ASC LIMIT 20',
+      [pregnancy_id, todayStr, monthLaterStr]
     );
 
-    // 合并产检提醒：今天或未来7天内应该做的产检
+    // 合并产检提醒：未来一个月内应该做的产检
     var checkupReminders = [];
     if (scheduleItems.length > 0 && gestationalAge.weeks > 0) {
       var lmpForCheckup = pregnancy.last_period_date ? new Date(pregnancy.last_period_date) : null;
@@ -285,7 +288,7 @@ router.get('/dashboard', async function(req, res) {
         var cws = citem.week_start || 0;
         // 跳过已完成的
         if (completedWeeksSet[cws]) continue;
-        // 只显示当前孕周前后4周内的
+        // 显示当前孕周前后4周内（覆盖约一个月）
         if (cws < gestationalAge.weeks - 2 || cws > gestationalAge.weeks + 6) continue;
         var cEstDate = lmpForCheckup ? new Date(lmpForCheckup.getTime() + cws * 7 * 24 * 60 * 60 * 1000) : null;
         var cDaysUntil = cEstDate ? Math.ceil((cEstDate - new Date(todayStr)) / (24 * 60 * 60 * 1000)) : null;
@@ -303,7 +306,27 @@ router.get('/dashboard', async function(req, res) {
       checkupReminders.sort(function(a, b) { return (a.days_until || 999) - (b.days_until || 999); });
     }
 
-    // 合并今日计划记录
+    // 合并计划记录：未来一个月内有计划的记录
+    var planRecords = await db.queryAll(
+      "SELECT id, record_date, plan_text FROM daily_record WHERE pregnancy_id = ? AND plan_text IS NOT NULL AND plan_text != '' AND record_date BETWEEN ? AND ? ORDER BY record_date ASC LIMIT 10",
+      [pregnancy_id, todayStr, monthLaterStr]
+    );
+    var planReminders = [];
+    for (var pr = 0; pr < planRecords.length; pr++) {
+      var prec = planRecords[pr];
+      var isToday = prec.record_date === todayStr;
+      planReminders.push({
+        id: 'plan_' + prec.id,
+        name: prec.plan_text,
+        type: 'plan',
+        trigger_date: prec.record_date,
+        is_enabled: 1,
+        is_completed: isToday && todayRecord && todayRecord.is_plan_done ? 1 : 0,
+        days_until: isToday ? 0 : Math.ceil((new Date(prec.record_date) - new Date(todayStr)) / (24 * 60 * 60 * 1000))
+      });
+    }
+
+    // 今日计划（单独处理，优先显示）
     var planReminder = null;
     if (todayRecord && todayRecord.plan_text) {
       planReminder = {
@@ -312,15 +335,20 @@ router.get('/dashboard', async function(req, res) {
         type: 'plan',
         trigger_date: todayStr,
         is_enabled: 1,
-        is_completed: todayRecord.is_plan_done ? 1 : 0
+        is_completed: todayRecord.is_plan_done ? 1 : 0,
+        days_until: 0
       };
     }
 
-    // 合并所有提醒
+    // 合并所有提醒（未来一个月）
     var allTodos = [].concat(todayTodos || []);
     if (planReminder) allTodos.push(planReminder);
-    allTodos = allTodos.concat(checkupReminders.slice(0, 3)); // 最多3条产检提醒
-    logger.info('dashboard', `GET /dashboard - today_todos merged: ${allTodos.length} total (${todayTodos.length} reminders + ${planReminder ? 1 : 0} plan + ${checkupReminders.slice(0, 3).length} checkups)`);
+    // 添加其他日期的计划（排除已添加的今日计划）
+    for (var pri = 0; pri < planReminders.length; pri++) {
+      if (planReminders[pri].id !== 'plan_today') allTodos.push(planReminders[pri]);
+    }
+    allTodos = allTodos.concat(checkupReminders.slice(0, 8)); // 最多8条产检提醒
+    logger.info('dashboard', `GET /dashboard - today_todos merged: ${allTodos.length} total (${todayTodos.length} reminders + ${planReminders.length} plans + ${Math.min(checkupReminders.length, 8)} checkups)`);
 
     var recommendedTodos = [];
     if (gestationalAge.weeks > 0 && scheduleItems.length > 0) {
