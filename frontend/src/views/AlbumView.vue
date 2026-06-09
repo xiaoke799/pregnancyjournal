@@ -44,7 +44,6 @@
 
           <!-- 右侧内容卡片 -->
           <div class="timeline-card">
-            <div class="card-date">{{ formatDate(item.created_at) }} · 孕{{ item.gestational_week || '?' }}周</div>
             <div class="card-media" @click="previewItem(item)">
               <!-- 照片 -->
               <img
@@ -69,7 +68,10 @@
                 </div>
               </div>
             </div>
-            <div v-if="item.note" class="card-note">{{ item.note }}</div>
+            <div class="card-text">
+              <div class="card-date">{{ formatDate(item.created_at) }} · 孕{{ item.gestational_week || '?' }}周</div>
+              <div v-if="item.note" class="card-note">{{ item.note }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -466,6 +468,9 @@ onMounted(async () => {
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
   transition: transform 0.2s;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
 }
 
 .timeline-card:hover {
@@ -476,14 +481,20 @@ onMounted(async () => {
 .card-date {
   font-size: 12px;
   color: var(--text-hint, #94a3b8);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+}
+
+.card-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .card-media {
   cursor: pointer;
   border-radius: 8px;
   overflow: hidden;
-  max-width: 300px;
+  flex-shrink: 0;
+  width: 140px;
 }
 
 .media-thumb {
@@ -554,8 +565,10 @@ onMounted(async () => {
   .album-title { font-size: 17px; }
   .album-tabs { gap: 4px; }
   .album-tab { padding: 5px 10px; font-size: 12px; }
-  .card-media { max-width: 100%; }
-  .media-thumb { max-height: 160px; }
+  /* 手机端：卡片上下布局（图片在上，文字在下） */
+  .timeline-card { flex-direction: column; gap: 10px; }
+  .card-media { width: 100%; max-width: none; }
+  .media-thumb { max-height: 200px; width: 100%; object-fit: cover; }
   .timeline-item { gap: 8px; }
   .month-header { font-size: 14px; }
   .card-date { font-size: 12px; }

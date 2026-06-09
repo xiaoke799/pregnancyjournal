@@ -5,6 +5,7 @@ const config = require('../config');
 const fs = require('fs');
 const path = require('path');
 const log = require('../logger');
+const PDFDocument = require('pdfkit');
 
 // 简单认证中间件（fnOS CGI已通过header传递用户信息）
 function verifyAuth(req, res, next) {
@@ -80,6 +81,17 @@ function copyDirContentsRecursive(srcBase, destBase) {
     }
   } catch {}
   return count;
+}
+
+function prepareInsertStatement(table, sampleRow) {
+  if (!sampleRow) return { sql: '', params: () => [] };
+  const keys = Object.keys(sampleRow);
+  const placeholders = keys.map(() => '?').join(',');
+  const sql = `INSERT OR REPLACE INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`;
+  return {
+    sql,
+    params: (row) => keys.map(k => row[k]),
+  };
 }
 
 router.post('/export/full', async (req, res) => {
@@ -652,6 +664,27 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// ========== PDF 字体查找 ==========
+function findChineseFont() {
+  const candidates = [
+    '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+    '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+    '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf',
+    '/System/Library/Fonts/PingFang.ttc',
+    '/System/Library/Fonts/STHeiti Light.ttc',
+    'C:/Windows/Fonts/msyh.ttc',
+    'C:/Windows/Fonts/simhei.ttf',
+    'C:/Windows/Fonts/simsun.ttc',
+  ];
+  for (const fp of candidates) {
+    try { if (fs.existsSync(fp)) return fp; } catch {}
+  }
+  return null;
+}
+
+// ========== 日记 PDF 导出（真正 PDF） ==========
 router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
   try {
     const pregnancyId = req.query.pregnancy_id;
@@ -675,51 +708,261 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
       return res.json({ code: 1001, data: null, message: '没有可导出的日记内容' });
     }
 
-    const moodMap = { '1': '😢 很差', '2': '😔 不好', '3': '😐 一般', '4': '😊 不错', '5': '😄 很好' };
+    const fontPath = findChineseFont();
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 50, bottom: 50, left: 55, right: 55 }, bufferPages: true });
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
 
-    let html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<title>孕程记 - 日记</title>
-<style>
-  @page { size: A4; margin: 20mm; }
-  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; color: #333; line-height: 1.8; padding: 40px; max-width: 700px; margin: 0 auto; }
-  h1 { text-align: center; color: #e91e63; font-size: 28px; border-bottom: 3px solid #fce4ec; padding-bottom: 12px; margin-bottom: 30px; }
-  .meta { text-align: center; color: #999; font-size: 13px; margin-bottom: 35px; }
-  .entry { margin-bottom: 32px; page-break-inside: avoid; }
-  .entry-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-  .entry-date { background: linear-gradient(135deg, #e91e63, #f06292); color: #fff; padding: 4px 14px; border-radius: 16px; font-size: 14px; font-weight: bold; }
-  .entry-mood { font-size: 18px; }
-  .entry-body { background: #fef7f9; border-left: 4px solid #e91e63; padding: 14px 18px; border-radius: 0 10px 10px 0; white-space: pre-wrap; word-break: break-word; font-size: 15px; line-height: 1.9; }
-  .footer { text-align: center; color: #bbb; font-size: 11px; margin-top: 50px; padding-top: 15px; border-top: 1px solid #eee; }
-  @media print { body { padding: 0; } .entry { page-break-inside: avoid; } }
-</style></head><body>`;
-
-    html += `<h1>🌸 孕程日记</h1>`;
-    html += `<div class="meta">共 ${rows.length} 篇日记 · 导出时间 ${new Date().toLocaleString('zh-CN')}</div>`;
-
-    for (const row of rows) {
-      const plainText = escapeHtml(extractTextFromTiptap(row.content));
-
-      html += `<div class="entry">`;
-      html += `<div class="entry-header">`;
-      html += `<span class="entry-date">${escapeHtml(row.entry_date)}</span>`;
-      if (row.gestational_week) html += `<span style="font-size:13px;color:#999;">${escapeHtml(row.gestational_week)}</span>`;
-      if (row.mood) html += `<span class="entry-mood">${escapeHtml(moodMap[row.mood] || row.mood)}</span>`;
-      html += `</div>`;
-      html += `<div class="entry-body">${plainText}</div>`;
-      html += `</div>`;
+    // 注册中文字体
+    if (fontPath) {
+      doc.registerFont('Chinese', fontPath);
     }
 
-    html += `<div class="footer">— 由 孕程记 自动生成 —</div></body></html>`;
+    const PW = 595.28; // A4 width
+    const PH = 841.89; // A4 height
+    const ML = 55, MR = 55, MT = 50, MB = 50;
+    const CW = PW - ML - MR; // content width
+    const fontName = fontPath ? 'Chinese' : 'Helvetica';
+    const titleFont = fontName;
+    const bodyFont = fontName;
 
-    const filename = `孕程记_日记_${new Date().toISOString().slice(0, 10)}.html`;
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-    res.send(html);
+    // ---- 封面页 ----
+    doc.fontSize(32).font(titleFont).fillColor('#e91e63')
+      .text('🌸 孕程日记', 0, 200, { align: 'center', width: PW });
+    doc.moveDown(0.8);
+    doc.fontSize(13).fillColor('#666').font(bodyFont)
+      .text(`共 ${rows.length} 篇日记`, { align: 'center', width: PW });
+    doc.text(`导出时间：${new Date().toLocaleString('zh-CN')}`, { align: 'center', width: PW });
+    doc.moveDown(3);
+    doc.fontSize(11).fillColor('#999')
+      .text('— 由 孕程记 自动生成 —', { align: 'center', width: PW });
 
-    log.api('日记PDF导出', '成功', { count: rows.length });
+    // ---- 分隔线 + 换页 ----
+    doc.addPage();
+
+    const moodMap = { '1': '😢 很差', '2': '😔 不好', '3': '😐 一般', '4': '😊 不错', '5': '😄 很好' };
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const plainText = extractTextFromTiptap(row.content);
+
+      // 检查剩余空间，不够则换页
+      if (doc.y > PH - MB - 120) doc.addPage();
+
+      // 日期标签（圆角矩形背景）
+      const dateStr = String(row.entry_date || '');
+      const weekStr = row.gestational_week ? String(row.gestational_week) : '';
+      const moodStr = row.mood ? (moodMap[row.mood] || row.mood) : '';
+
+      // 绘制日期背景条
+      const startY = doc.y;
+      doc.save();
+      doc.roundedRect(ML, startY, CW, 24, 4).fill('#fce4ec');
+      doc.restore();
+
+      doc.font(titleFont).fontSize(12).fillColor('#c2185b')
+        .text(dateStr, ML + 10, startY + 5, { continued: true, width: CW - 20 });
+
+      if (weekStr) {
+        doc.font(bodyFont).fontSize(10).fillColor('#999')
+          .text(`  (${weekStr})`, { continued: moodStr ? true : false });
+      }
+      if (moodStr) {
+        doc.font(bodyFont).fontSize(10).fillColor('#666')
+          .text(`  ${moodStr}`);
+      }
+
+      doc.y = startY + 30;
+      doc.moveDown(0.3);
+
+      // 正文内容 - 左侧色条 + 文字区域
+      const bodyStartY = doc.y;
+      doc.save();
+      doc.rect(ML, bodyStartY, 3, Math.max(40, 60)).fill('#e91e63');
+      doc.restore();
+
+      doc.font(bodyFont).fontSize(12).fillColor('#333')
+        .text(plainText || '(无内容)', ML + 14, bodyStartY, {
+          width: CW - 18,
+          lineGap: 5,
+        });
+
+      doc.moveDown(0.8);
+
+      // 条目间分隔线
+      if (i < rows.length - 1) {
+        doc.save();
+        doc.moveTo(ML, doc.y).lineTo(PW - MR, doc.y)
+          .strokeColor('#f0f0f0').lineWidth(1).stroke();
+        doc.restore();
+        doc.moveDown(0.5);
+      }
+    }
+
+    // ---- 页脚（每页添加） ==========
+    const pages = doc.bufferedPageRange();
+    for (let p = 0; p < pages.count; p++) {
+      doc.switchToPage(p);
+      doc.font(bodyFont).fontSize(9).fillColor('#bbb')
+        .text(`— 孕程记 v${config.VERSION || '0.0.18'} —   第 ${p + 1} / ${pages.count} 页`,
+          ML, PH - 35, { align: 'center', width: CW });
+    }
+
+    doc.end();
+
+    // 等待流结束再发送响应
+    doc.on('end', () => {
+      const pdfBuf = Buffer.concat(chunks);
+      const filename = `孕程记_日记_${new Date().toISOString().slice(0, 10)}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Content-Length', pdfBuf.length);
+      res.send(pdfBuf);
+      log.api('日记PDF导出', '成功', { count: rows.length, size: pdfBuf.length });
+    });
   } catch (error) {
     log.error('日记PDF导出', '失败', { error: error.message });
+    res.json({ code: 1001, data: null, message: error.message });
+  }
+});
+
+// ========== 纪念相册 PDF 导出 ==========
+router.get('/export/album-pdf', verifyAuth, async (req, res) => {
+  try {
+    const pregnancyId = req.query.pregnancy_id;
+
+    let sql = 'SELECT * FROM pregnancy_photo WHERE media_type = \'photo\'';
+    const params = [];
+    if (pregnancyId) { sql += ' AND pregnancy_id = ?'; params.push(pregnancyId); }
+    sql += ' ORDER BY gestational_week ASC, gestational_day ASC, created_at ASC';
+
+    const stmt = db.prepare(sql);
+    if (params.length) stmt.bind(params);
+    const photos = [];
+    while (stmt.step()) photos.push(stmt.getAsObject());
+    stmt.free();
+
+    if (photos.length === 0) {
+      return res.json({ code: 1001, data: null, message: '没有可导出的照片' });
+    }
+
+    const fontPath = findChineseFont();
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 45, bottom: 45, left: 45, right: 45 }, bufferPages: true });
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+
+    if (fontPath) doc.registerFont('Chinese', fontPath);
+
+    const PW = 595.28, PH = 841.89;
+    const ML = 45, MR = 45, MT = 45, MB = 45;
+    const CW = PW - ML - MR;
+    const fontName = fontPath ? 'Chinese' : 'Helvetica';
+
+    // ---- 封面 ----
+    doc.fontSize(32).font(fontName).fillColor('#7b1fa2')
+      .text('📷 孕程纪念相册', 0, 200, { align: 'center', width: PW });
+    doc.moveDown(0.8);
+    doc.fontSize(13).fillColor('#666').font(fontName)
+      .text(`共 ${photos.length} 张珍贵瞬间`, { align: 'center', width: PW });
+    doc.text(`生成时间：${new Date().toLocaleString('zh-CN')}`, { align: 'center', width: PW });
+    doc.moveDown(3);
+    doc.fontSize(11).fillColor('#999')
+      .text('— 由 孕程记 自动生成 —', { align: 'center', width: PW });
+
+    doc.addPage();
+
+    // ---- 每张照片一页 ----
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i];
+
+      // 标题区：孕周信息
+      const weekLabel = photo.gestational_week != null
+        ? `第 ${photo.gestational_week} 周` + (photo.gestational_day ? `+${photo.gestational_day} 天` : '')
+        : '';
+      const typeLabel = photo.milestone_type || photo.photo_type || '';
+
+      doc.font(fontName).fontSize(16).fillColor('#7b1fa2')
+        .text(`${weekLabel}${typeLabel ? ' · ' + typeLabel : ''}`, ML, MT, { width: CW });
+
+      // 日期
+      const photoDate = photo.created_at ? photo.created_at.slice(0, 10) : '';
+      if (photoDate) {
+        doc.font(fontName).fontSize(10).fillColor('#999')
+          .text(photoDate, ML, doc.y + 2, { width: CW });
+      }
+      doc.moveDown(0.5);
+
+      // 图片区域
+      const imgX = ML;
+      const imgY = doc.y;
+      const imgW = CW;
+      const imgH = 380; // 固定图片高度
+
+      const imgPath = photo.file_path || photo.thumbnail_path;
+      if (imgPath && fs.existsSync(imgPath)) {
+        try {
+          doc.image(imgPath, imgX, imgY, { width: imgW, height: imgH, fit: [imgW, imgH], align: 'center', valign: 'center' });
+        } catch (e) {
+          // 图片加载失败时显示占位框
+          doc.save();
+          doc.rect(imgX, imgY, imgW, imgH).fillAndStroke('#f5f5f5', '#ddd');
+          doc.font(fontName).fontSize(12).fillColor('#999')
+            .text('[图片无法加载]', imgX, imgY + imgH / 2 - 8, { width: imgW, align: 'center' });
+          doc.restore();
+        }
+      } else {
+        doc.save();
+        doc.rect(imgX, imgY, imgW, imgH).fillAndStroke('#f5f5f5', '#ddd');
+        doc.font(fontName).fontSize(12).fillColor('#999')
+          .text('[图片文件不存在]', imgX, imgY + imgH / 2 - 8, { width: imgW, align: 'center' });
+        doc.restore();
+      }
+
+      // 描述文字
+      const descY = imgY + imgH + 12;
+      if (photo.note) {
+        doc.font(fontName).fontSize(11).fillColor('#555')
+          .text(String(photo.note), ML, descY, { width: CW, lineGap: 3 });
+      }
+
+      // 页码角标
+      doc.font(fontName).fontSize(9).fillColor('#ccc')
+        .text(`${i + 1} / ${photos.length}`, PW - MR - 40, PH - MB - 5, { width: 60, align: 'right' });
+
+      if (i < photos.length - 1) doc.addPage();
+    }
+
+    // ---- 尾页 ----
+    doc.addPage();
+    doc.fontSize(22).font(fontName).fillColor('#7b1fa2')
+      .text('— 全文完 —', 0, 300, { align: 'center', width: PW });
+    doc.moveDown(2);
+    doc.fontSize(11).fillColor('#999')
+      .text(`共 ${photos.length} 张照片`, { align: 'center', width: PW });
+    doc.text(`由 孕程记 自动生成`, { align: 'center', width: PW });
+
+    // ---- 页脚 ----
+    const pages = doc.bufferedPageRange();
+    for (let p = 0; p < pages.count; p++) {
+      doc.switchToPage(p);
+      doc.font(fontName).fontSize(9).fillColor('#bbb')
+        .text(`— 孕程记 v${config.VERSION || '0.0.18'} —   第 ${p + 1} / ${pages.count} 页`,
+          ML, PH - 35, { align: 'center', width: CW });
+    }
+
+    doc.end();
+
+    doc.on('end', () => {
+      const pdfBuf = Buffer.concat(chunks);
+      const filename = `孕程记_纪念相册_${new Date().toISOString().slice(0, 10)}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Content-Length', pdfBuf.length);
+      res.send(pdfBuf);
+      log.api('相册PDF导出', '成功', { count: photos.length, size: pdfBuf.length });
+    });
+  } catch (error) {
+    log.error('相册PDF导出', '失败', { error: error.message });
     res.json({ code: 1001, data: null, message: error.message });
   }
 });
@@ -840,3 +1083,84 @@ router.get('/browse-dir', (req, res) => {
 });
 
 module.exports = router;
+
+// ========== 一键恢复（自动查找最新备份） ==========
+router.post('/restore-latest', async (req, res) => {
+  try {
+    const backupBaseDir = path.join(config.DATA_DIR || '.', 'backups');
+    if (!fs.existsSync(backupBaseDir)) {
+      return res.json({ code: 1001, data: null, message: '未找到任何备份，请先创建备份' });
+    }
+
+    // 查找最新的备份目录
+    const dirs = fs.readdirSync(backupBaseDir)
+      .filter(name => name.startsWith('backup_'))
+      .map(name => ({ name, mtime: fs.statSync(path.join(backupBaseDir, name)).mtime }))
+      .sort((a, b) => b.mtime - a.mtime);
+
+    if (dirs.length === 0) {
+      return res.json({ code: 1001, data: null, message: '未找到备份文件' });
+    }
+
+    const latestBackup = path.join(backupBaseDir, dirs[0].name);
+    log.api('恢复', '一键恢复开始', { dir: latestBackup, backupDate: dirs[0].name });
+
+    // 复用 restore 逻辑：读取 data.json 并导入
+    const dataFile = path.join(latestBackup, 'data.json');
+    if (!fs.existsSync(dataFile)) {
+      return res.json({ code: 1001, data: null, message: '备份数据损坏：缺少 data.json' });
+    }
+
+    const importData = JSON.parse(fs.readFileSync(dataFile, 'utf-8'));
+    let totalRows = 0;
+    const results = {};
+
+    for (const [table, rows] of Object.entries(importData.tables)) {
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+      try {
+        // 清空表再插入
+        db.run(`DELETE FROM ${table}`);
+        const insertStmt = prepareInsertStatement(table, rows[0]);
+        const insertSql = insertStmt.sql;
+        for (const row of rows) {
+          db.run(insertSql, insertStmt.params(row));
+        }
+        results[table] = rows.length;
+        totalRows += rows.length;
+      } catch (e) {
+        results[table] = `ERROR: ${e.message}`;
+      }
+    }
+
+    // 恢复文件
+    let fileCount = 0;
+    const filesDir = path.join(latestBackup, 'files');
+    if (fs.existsSync(filesDir)) {
+      function copyFilesRecursive(srcDir, destBase) {
+        if (!fs.existsSync(srcDir)) return;
+        const items = fs.readdirSync(srcDir);
+        for (const item of items) {
+          const srcPath = path.join(srcDir, item);
+          const destPath = path.join(destBase, item);
+          if (fs.statSync(srcPath).isDirectory()) {
+            copyFilesRecursive(srcPath, destPath);
+          } else {
+            fs.mkdirSync(path.dirname(destPath), { recursive: true });
+            if (copyFile(srcPath, destPath)) fileCount++;
+          }
+        }
+      }
+      copyFilesRecursive(filesDir, config.DATA_DIR || '.');
+    }
+
+    log.api('恢复', '一键恢复完成', { dir: latestBackup, rows: totalRows, files: fileCount });
+    res.json({
+      code: 0,
+      data: { restored_rows: totalRows, files: fileCount, backup_dir: latestBackup, results },
+      message: `恢复完成：${totalRows} 条记录，${fileCount} 个文件（来自 ${dirs[0].name}）`
+    });
+  } catch (error) {
+    log.error('恢复', '一键恢复失败', { error: error.message });
+    res.json({ code: 1001, data: null, message: error.message });
+  }
+});

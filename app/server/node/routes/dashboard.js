@@ -369,6 +369,20 @@ router.get('/dashboard', async function(req, res) {
     }
     allTodos = allTodos.concat(checkupReminders.slice(0, 8)); // 最多8条产检提醒
     allTodos = allTodos.concat(customCheckupReminders); // 自定义产检
+
+    // 去重：按 name + type 组合去重，保留第一条（reminder 表优先）
+    var seenKeys = {};
+    var uniqueTodos = [];
+    for (var di = 0; di < allTodos.length; di++) {
+      var item = allTodos[di];
+      var dedupeKey = (item.name || '') + '|' + (item.type || '');
+      if (!seenKeys[dedupeKey]) {
+        seenKeys[dedupeKey] = true;
+        uniqueTodos.push(item);
+      }
+    }
+    allTodos = uniqueTodos;
+
     logger.info('dashboard', `GET /dashboard - today_todos merged: ${allTodos.length} total (${todayTodos.length} reminders + ${planReminders.length} plans + ${checkupReminders.length} checkups + ${customCheckupReminders.length} custom)`);
 
     var recommendedTodos = [];

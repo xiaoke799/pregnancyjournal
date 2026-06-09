@@ -3,6 +3,7 @@ import client from './client'
 export const exportApi = {
   backup: (dir: string) => client.post('/backup', { dir }),
   restore: (dir: string) => client.post('/restore', { dir }),
+  restoreLatest: () => client.post('/restore-latest'),
 
   browseDir: (dirPath?: string) =>
     client.get('/browse-dir', { params: { path: dirPath || '/' } }),
@@ -12,6 +13,9 @@ export const exportApi = {
 
   exportDiaryPdf: (params?: Record<string, any>) =>
     client.get('/export/diary-pdf', { params, responseType: 'blob' }),
+
+  exportAlbumPdf: (params?: Record<string, any>) =>
+    client.get('/export/album-pdf', { params, responseType: 'blob' }),
 
   generatePdf: (pregnancyId: string) =>
     client.post('/pdf/generate', { pregnancy_id: pregnancyId }),

@@ -31,9 +31,14 @@
           <span class="date-text">{{ formatFullDate(diary.entry_date || diary.record_date) }}</span>
           <span class="week-text">孕{{ getWeekInfo(diary.entry_date || diary.record_date) }}周</span>
         </div>
-        <div class="diary-content-preview">
+        <div class="diary-content-preview" :class="{ collapsed: !expandedDiaries[diary.id] }">
           {{ (diary.content || diary.note) || '无内容' }}
         </div>
+        <button
+          v-if="(diary.content || diary.note || '').length > 200"
+          class="diary-expand-btn"
+          @click.stop="toggleExpand(diary.id)"
+        >{{ expandedDiaries[diary.id] ? '收起 ↑' : '展开全文 ↓' }}</button>
         <div class="diary-footer">
           <span class="diary-time">{{ formatTime(diary.created_at) }}</span>
           <div class="diary-actions">
@@ -120,6 +125,11 @@ const loading = ref(false)
 const showDiaryModal = ref(false)
 const editingDiary = ref<any>(null)
 const saving = ref(false)
+const expandedDiaries = ref<Record<string, boolean>>({})
+
+function toggleExpand(id: string) {
+  expandedDiaries.value[id] = !expandedDiaries.value[id]
+}
 
 const moodOptions = [
   { value: 1, emoji: '😢', label: '很差' },
@@ -397,11 +407,18 @@ onMounted(async () => {
   line-height: 1.7;
   color: var(--text-secondary, #64748b);
   margin-bottom: 12px;
+}
+.diary-content-preview.collapsed {
   display: -webkit-box;
-  -webkit-line-clamp: 6;
+  -webkit-line-clamp: 10;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.diary-expand-btn {
+  font-size: 12px; color: var(--primary-color, #c44680); cursor: pointer;
+  background: none; border: none; padding: 0; margin-top: 4px;
+}
+.diary-expand-btn:hover { text-decoration: underline; }
 
 .diary-footer {
   display: flex;
