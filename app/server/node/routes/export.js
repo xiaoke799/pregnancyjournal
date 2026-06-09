@@ -778,14 +778,17 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
       // 正文内容 - 左侧色条 + 文字区域
       const bodyStartY = doc.y;
       doc.save();
-      doc.rect(ML, bodyStartY, 3, Math.max(40, 60)).fill('#e91e63');
-      doc.restore();
-
       doc.font(bodyFont).fontSize(12).fillColor('#333')
         .text(plainText || '(无内容)', ML + 14, bodyStartY, {
           width: CW - 18,
           lineGap: 5,
         });
+      const bodyEndY = doc.y;
+      // 色条高度 = 正文实际高度，最少 30pt
+      const barHeight = Math.max(30, bodyEndY - bodyStartY);
+      doc.save();
+      doc.rect(ML, bodyStartY, 3, barHeight).fill('#e91e63');
+      doc.restore();
 
       doc.moveDown(0.8);
 
@@ -874,6 +877,9 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
     // ---- 每张照片一页 ----
     for (let i = 0; i < photos.length; i++) {
       const photo = photos[i];
+
+      // 分页保护：如果剩余空间不足则换页
+      if (doc.y > PH - MB - 450) doc.addPage();
 
       // 标题区：孕周信息
       const weekLabel = photo.gestational_week != null

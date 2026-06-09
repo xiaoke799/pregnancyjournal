@@ -101,7 +101,7 @@ function startScheduler() {
   setInterval(async () => {
     try {
       const config = readConfig();
-      if (!config.enabled || !config.webhook_url || !config.push_time) return;
+      if (!config.enabled || !config.webhook_url || !config.push_time || config.push_daily === false) return;
 
       const now = new Date();
       const today = now.toISOString().slice(0, 10);
@@ -140,9 +140,13 @@ function startScheduler() {
 
 /**
  * 执行每日看板推送（供手动调用和定时调度共用）
+ * @param {string} pregnancyId
+ * @param {object} config
+ * @param {string} sourceType - 'scheduled' | 'catchup' | 'manual' | 'retry'
+ * @param {string|null} existingLogId - 重试时复用已有日志ID，避免创建重复记录
  */
-async function executeDailyPush(pregnancyId, config, sourceType) {
-  const logId = recordPushLog('daily', `每日看板推送(${sourceType})`, 'pending', null);
+async function executeDailyPush(pregnancyId, config, sourceType, existingLogId) {
+  const logId = existingLogId || recordPushLog('daily', `每日看板推送(${sourceType})`, 'pending', null);
 
   try {
     const dayjs = require('dayjs');
@@ -293,7 +297,7 @@ router.get('/wecom/config', async (req, res) => {
         webhook_url_masked: maskedUrl,
         enabled: config.enabled !== false,
         push_checkup: config.push_checkup !== false,
-        push_daily: config.daily !== false,
+        push_daily: config.push_daily !== false,
         push_reminder: config.push_reminder !== false,
         push_time: config.push_time || '08:00',
       },
@@ -475,7 +479,7 @@ router.post('/wecom/retry/:id', async (req, res) => {
     if (logEntry.push_type === 'daily') {
       const pregnancy = db.queryOne('SELECT id FROM pregnancy ORDER BY created_at DESC LIMIT 1');
       if (pregnancy) {
-        await executeDailyPush(pregnancy.id, config, 'retry');
+        await executeDailyPush(pregnancy.id, config, 'retry', req.params.id);
       }
     } else {
       // 非daily类型的简单重试

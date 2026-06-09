@@ -124,7 +124,7 @@
             📄 生成纪念册
           </n-button>
         </div>
-        <div class="setting-hint">CSV 包含所有健康指标数据，可用 Excel 打开；日记按日期排版，浏览器打开后可打印为 PDF</div>
+        <div class="setting-hint">CSV 包含所有健康指标数据，可用 Excel 打开；日记和相册导出为 PDF 文件</div>
       </div>
 
       <!-- 企业微信推送 -->
@@ -586,9 +586,9 @@ async function handleExportDiaryPdf() {
     const pregnancyId = pregnancyStore.currentPregnancy?.id
     const res: any = await exportApi.exportDiaryPdf({ pregnancy_id: pregnancyId })
     if (res.data) {
-      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: 'text/html' })
-      downloadBlob(blob, `孕程记_日记_${new Date().toISOString().slice(0, 10)}.html`)
-      message.success('日记导出成功，浏览器打开后可打印为 PDF')
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: 'application/pdf' })
+      downloadBlob(blob, `孕程记_日记_${new Date().toISOString().slice(0,10)}.pdf`)
+      message.success('日记 PDF 导出成功')
     } else {
       message.warning(res.message || '没有可导出的日记内容')
     }
