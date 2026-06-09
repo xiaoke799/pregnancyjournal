@@ -81,83 +81,32 @@
       <div class="section">
         <h3>💾 数据备份与恢复</h3>
 
-        <div class="backup-info-box">
-          <div class="backup-info-icon">📂</div>
-          <div class="backup-info-text">
-            <div class="backup-info-label">存储位置</div>
-            <div class="backup-info-path">共享区域（默认备份路径）</div>
-            <div class="backup-info-desc">备份文件将保存在应用共享目录中，可通过飞牛文件管理器访问</div>
-          </div>
-        </div>
-
-        <div class="backup-actions">
-          <n-button type="primary" size="large" @click="handleBackup" :loading="backingUp" :disabled="backingUp" block>
-            💾 立即备份
-          </n-button>
-        </div>
-
-        <div v-if="backupResult" class="setting-hint" :style="{ color: backupResult.success ? '#18a058' : '#d03050' }">
-          {{ backupResult.message }}
-        </div>
-      </div>
-
-      <!-- 数据恢复 -->
-      <div class="section">
-        <h3>📥 数据恢复</h3>
-
-        <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
-          <label>恢复目录路径</label>
-          <div style="display: flex; gap: 8px;">
-            <n-input v-model:value="restoreDir" placeholder="点击选择按钮浏览目录" style="flex: 1" clearable />
-            <n-button @click="toggleDirBrowser('restore')" :type="showDirBrowser && browsingFor === 'restore' ? 'error' : 'default'">
-              {{ showDirBrowser && browsingFor === 'restore' ? '✕ 关闭' : '📁 选择' }}
+        <div class="backup-simple">
+          <div class="backup-card">
+            <div class="backup-card-icon">💾</div>
+            <div class="backup-card-body">
+              <div class="backup-card-title">创建备份</div>
+              <div class="backup-card-desc">自动备份全部数据（记录、日记、相册等），覆盖上一次备份</div>
+            </div>
+            <n-button type="primary" @click="handleBackup" :loading="backingUp" :disabled="backingUp">
+              立即备份
             </n-button>
-            <n-button type="warning" @click="handleRestore" :loading="importing" :disabled="importing || !restoreDir.trim()">恢复</n-button>
           </div>
 
-          <div v-if="showDirBrowser && browsingFor === 'restore'" class="dir-browser-inline">
-            <!-- 快捷目录选择区 -->
-            <div class="db-quick-select" v-if="quickDirs.length > 0">
-              <div class="db-quick-label">快捷选择</div>
-              <div class="db-quick-list">
-                <button
-                  v-for="q in quickDirs" :key="q.path"
-                  class="db-quick-btn"
-                  :class="[q.type, { active: restoreDir === q.path, ro: !q.canRW }]"
-                  @click="selectQuickDir(q.path)"
-                >
-                  <span class="db-quick-icon">{{ q.type === 'accessible' ? '🔑' : q.type === 'share' ? '📂' : '💾' }}</span>
-                  <span class="db-quick-name">{{ q.name.replace(/^(授权-|共享-)/, '') }}</span>
-                  <span class="db-quick-desc">{{ q.desc || '' }}</span>
-                </button>
-              </div>
-            </div>
-            <div class="db-roots">
-              <button
-                v-for="r in dirRoots" :key="r.path"
-                class="db-root-btn"
-                :class="{ active: currentBrowsePath === r.path, readonly: !r.canRW }"
-                @click="navigateTo(r.path)"
-              >{{ r.name }}<span v-if="!r.canRW" class="db-ro-tag">只读</span></button>
-            </div>
-            <div class="db-path">📂 {{ currentBrowsePath }}</div>
-            <div v-if="dirLoading" class="db-loading">加载中...</div>
-            <div v-else-if="dirItems.length === 0" class="db-empty">此目录为空</div>
-            <div v-else class="db-list">
-              <div
-                v-for="item in dirItems" :key="item.path"
-                class="db-item"
-                @click="selectDir(item.path)"
-                @dblclick="navigateTo(item.path)"
-              >📁 {{ item.name }}</div>
-            </div>
-            <div class="db-bar">
-              <button class="db-nav-btn" @click="navigateUp" :disabled="!canNavigateUp">⬆️ 上级</button>
-              <button class="db-confirm-btn" @click="confirmDirSelect" :disabled="!selectedDirPath">确定选择此目录</button>
-            </div>
+          <div v-if="backupResult" class="backup-result" :class="{ success: backupResult.success, error: !backupResult.success }">
+            {{ backupResult.message }}
           </div>
 
-          <div class="setting-hint">从指定目录恢复全量数据（会覆盖当前数据）</div>
+          <div class="backup-card">
+            <div class="backup-card-icon">📥</div>
+            <div class="backup-card-body">
+              <div class="backup-card-title">一键恢复</div>
+              <div class="backup-card-desc">从最新备份数据自动恢复（会覆盖当前数据）</div>
+            </div>
+            <n-button type="warning" @click="handleRestoreLatest" :loading="importing" :disabled="importing">
+              恢复数据
+            </n-button>
+          </div>
         </div>
       </div>
 
@@ -526,11 +475,11 @@ async function handleBackup() {
   backingUp.value = true
   backupResult.value = null
   try {
-    // 直接保存到共享区域，不再需要选择目录
     const res: any = await exportApi.backup('')
     if (res.code === 0) {
-      backupResult.value = { success: true, message: res.message || '备份成功，文件已保存到共享区域' }
-      message.success('备份成功，文件已保存到共享区域')
+      const dirPath = res.data?.dir || '未知路径'
+      backupResult.value = { success: true, message: `备份完成！共 ${res.data?.total_rows || 0} 条记录，${res.data?.files?.total || 0} 个文件。备份位置：${dirPath}，请手动复制该备份文件到安全位置保存。` }
+      message.success('备份成功')
     } else {
       backupResult.value = { success: false, message: res.message || '备份失败' }
       message.error('备份失败: ' + (res.message || ''))
@@ -542,16 +491,16 @@ async function handleBackup() {
   backingUp.value = false
 }
 
-async function handleRestore() {
-  if (!restoreDir.value.trim()) { message.warning('请输入恢复目录路径'); return }
-  if (!confirm('确定要恢复吗？当前数据将被覆盖（建议先备份）')) return
+async function handleRestoreLatest() {
+  if (!confirm('确定要从最新备份数据恢复吗？当前数据将被覆盖！建议先手动备份一次。')) return
   importing.value = true
   backupResult.value = null
   try {
-    const res: any = await exportApi.restore(restoreDir.value.trim())
+    const res: any = await exportApi.restoreLatest()
     if (res.code === 0) {
-      backupResult.value = { success: true, message: res.message || '恢复成功' }
-      message.success('恢复成功')
+      backupResult.value = { success: true, message: res.message || '恢复成功！页面将刷新...' }
+      message.success('恢复成功，正在刷新...')
+      setTimeout(() => window.location.reload(), 1500)
     } else {
       backupResult.value = { success: false, message: res.message || '恢复失败' }
       message.error('恢复失败: ' + (res.message || ''))
@@ -865,4 +814,22 @@ async function saveWecomPrefs() {
 .db-quick-icon { font-size: 16px; }
 .db-quick-name { font-weight: 500; color: #334155; }
 .db-quick-desc { font-size: 10px; color: #94a3b8; }
+
+/* 简化备份恢复 */
+.backup-simple { display: flex; flex-direction: column; gap: 12px; }
+.backup-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border-radius: 10px;
+  background: #f8fafc; border: 1px solid #e2e8f0;
+}
+.backup-card-icon { font-size: 28px; flex-shrink: 0; }
+.backup-card-body { flex: 1; min-width: 0; }
+.backup-card-title { font-size: 15px; font-weight: 600; color: var(--text-color, #1e293b); }
+.backup-card-desc { font-size: 12px; color: var(--text-hint, #94a3b8); margin-top: 2px; line-height: 1.4; }
+.backup-result {
+  padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5;
+  word-break: break-all;
+}
+.backup-result.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.backup-result.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 </style>

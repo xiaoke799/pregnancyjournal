@@ -158,7 +158,7 @@ function hasDataForType(type: string): boolean {
     case 'uric_acid': return !!r.uric_acid
     case 'habit': return !!r.habit_text
     case 'supplement': return !!r.supplement_record
-    case 'intimacy': return !!r.intimacy_record
+    case 'intimacy': return !!(r.intimacy_record || r.intimacy_note)
     case 'plan': return !!r.plan_text
     default: return false
   }

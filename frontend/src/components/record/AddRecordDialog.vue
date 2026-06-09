@@ -148,11 +148,15 @@
           </div>
           <div class="form-group">
             <label>睡眠质量</label>
-            <n-radio-group v-model:value="formData.sleepQuality" size="small">
-              <n-radio-button value="good">好</n-radio-button>
-              <n-radio-button value="fair">一般</n-radio-button>
-              <n-radio-button value="poor">差</n-radio-button>
-            </n-radio-group>
+            <div class="sleep-quality-group">
+              <button
+                v-for="sq in sleepQualityOptions"
+                :key="sq.value"
+                class="sleep-quality-btn"
+                :class="{ active: formData.sleepQuality === sq.value }"
+                @click="formData.sleepQuality = sq.value as 'good' | 'fair' | 'poor'"
+              >{{ sq.label }}</button>
+            </div>
           </div>
         </template>
 
@@ -233,6 +237,21 @@
         <!-- 爱爱 -->
         <template v-if="selectedType === 'intimacy'">
           <div class="form-group">
+            <label>是否发生</label>
+            <div class="intimacy-toggle">
+              <button
+                class="intimacy-btn"
+                :class="{ active: formData.intimacyHappened === true }"
+                @click="formData.intimacyHappened = true"
+              >是</button>
+              <button
+                class="intimacy-btn"
+                :class="{ active: formData.intimacyHappened === false }"
+                @click="formData.intimacyHappened = false"
+              >否</button>
+            </div>
+          </div>
+          <div class="form-group" v-if="formData.intimacyHappened === true || formData.intimacyHappened === null">
             <label>备注（可选）</label>
             <n-input v-model:value="formData.intimacyNote" type="textarea" :rows="2" placeholder="如：正常、有轻微不适等" />
           </div>
@@ -446,6 +465,12 @@ const supplementOptions = [
   '益生菌', '蛋白粉', '燕窝', '鱼胶',
 ]
 
+const sleepQualityOptions = [
+  { value: 'good', label: '好' },
+  { value: 'fair', label: '一般' },
+  { value: 'poor', label: '差' },
+]
+
 function toggleSupplement(s: string) {
   const idx = formData.value.supplementItems.indexOf(s)
   if (idx >= 0) formData.value.supplementItems.splice(idx, 1)
@@ -499,6 +524,7 @@ const formData = ref({
   supplementItems: [] as string[],
   // 爱爱
   intimacyNote: '',
+  intimacyHappened: null as boolean | null,
   // 心情
   moodValue: 3 as number,
   moodNote: '',
@@ -633,7 +659,9 @@ watch(() => props.show, (val) => {
           } catch { formData.value.supplementItems = [] }
           break
         case 'intimacy':
-          formData.value.intimacyNote = r.intimacy_note || ''
+          formData.value.intimacyNote = r.intimacy_note || r.intimacy_record || ''
+          // intimacy_record 存储的是 "已记录" 或备注文本
+          formData.value.intimacyHappened = !!(r.intimacy_record || r.intimacy_note)
           break
         case 'mood':
           formData.value.moodValue = r.mood ? Number(r.mood) : 3
@@ -808,7 +836,8 @@ async function saveRecord() {
         data.supplement_record = JSON.stringify(formData.value.supplementItems.map(s => ({ name: s })))
         break
       case 'intimacy':
-        data.intimacy_note = formData.value.intimacyNote || '已记录'
+        data.intimacy_record = formData.value.intimacyHappened ? (formData.value.intimacyNote || '已记录') : ''
+        data.intimacy_note = formData.value.intimacyNote || (formData.value.intimacyHappened ? '已记录' : '')
         break
       case 'mood':
         data.mood = String(formData.value.moodValue ?? 3)
@@ -845,12 +874,14 @@ async function saveRecord() {
       }
     }
 
+    const isEdit = !!props.editRecord?.id
+
     // 乐观更新：立即关闭弹窗 + 显示成功提示，后台异步保存
     visible.value = false
     resetForm()
     emit('saved')
+    message.success(isEdit ? '记录已更新' : '记录已保存')
 
-    const isEdit = !!props.editRecord?.id
     const apiCall = isEdit
       ? dailyRecordApi.update(props.editRecord.id, data)
       : dailyRecordApi.upsert(data)
@@ -898,6 +929,7 @@ function resetForm() {
     uricAcid: null,
     supplementItems: [],
     intimacyNote: '',
+    intimacyHappened: null as boolean | null,
     moodValue: 3,
     moodNote: '',
     fetalHeartRate: null,
@@ -1146,6 +1178,60 @@ onBeforeUnmount(() => {
 .mood-btn.active {
   border-color: #a78bfa; background: #ede9fe;
   color: #7c3aed; font-weight: 600;
+}
+
+/* 睡眠质量按钮组 */
+.sleep-quality-group {
+  display: flex;
+  gap: 10px;
+}
+.sleep-quality-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: 2px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  background: var(--bg-card, #fff);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+.sleep-quality-btn:hover {
+  border-color: #818cf8;
+  background: #eef2ff;
+}
+.sleep-quality-btn.active {
+  border-color: #818cf8;
+  background: #e0e7ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+/* 爱爱切换按钮 */
+.intimacy-toggle {
+  display: flex;
+  gap: 12px;
+}
+.intimacy-btn {
+  flex: 1;
+  padding: 10px 20px;
+  border: 2px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  background: var(--bg-card, #fff);
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+.intimacy-btn:hover {
+  border-color: #f43f5e;
+  background: #fef2f2;
+}
+.intimacy-btn.active {
+  border-color: #f43f5e;
+  background: #ffe4e6;
+  color: #be123c;
+  font-weight: 600;
 }
 
 @media (max-width: 600px) {
