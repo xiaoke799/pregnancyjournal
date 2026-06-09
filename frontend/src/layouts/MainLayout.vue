@@ -75,9 +75,9 @@ const navItems = [
   { path: '/settings', icon: '⚙️', label: '设置' },
 ]
 
-// 手机端 tabbar 显示核心入口（产检是核心功能，必须显示）
+// 手机端 tabbar 显示所有功能入口（与电脑端侧边栏一致）
 const tabbarItems = computed(() => navItems.filter(i =>
-  ['/', '/record', '/checkup-schedule', '/diary', '/checklist', '/settings'].includes(i.path)
+  ['/', '/record', '/stats', '/diary', '/album', '/checkup-schedule', '/diet', '/checklist', '/settings'].includes(i.path)
 ))
 </script>
 

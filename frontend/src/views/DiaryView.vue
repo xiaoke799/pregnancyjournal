@@ -130,8 +130,9 @@ const moodOptions = [
 ]
 
 const gestationalAge = computed(() => {
-  if (!pregnancyStore.currentPregnancy?.last_period_date) return { weeks: 0, days: 0 }
-  return calculateGestationalAge(new Date().toISOString().split('T')[0])
+  const lmp = pregnancyStore.currentPregnancy?.last_period_date
+  if (!lmp) return { weeks: 0, days: 0 }
+  return calculateGestationalAge(lmp)
 })
 const gestationalWeeks = computed(() => gestationalAge.value.weeks)
 const gestationalDays = computed(() => gestationalAge.value.days)
@@ -397,7 +398,7 @@ onMounted(async () => {
   color: var(--text-secondary, #64748b);
   margin-bottom: 12px;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

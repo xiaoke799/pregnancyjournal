@@ -23,7 +23,14 @@ function readConfig() {
       return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
     }
   } catch (e) { /* ignore */ }
-  return { webhook_url: '', configured: false };
+  return {
+    webhook_url: '',
+    configured: false,
+    enabled: true,           // 总开关
+    push_checkup: true,      // 产检提醒
+    push_daily: true,        // 每日看板
+    push_reminder: true,     // 提醒事项
+  };
 }
 
 // 写入配置
@@ -102,6 +109,10 @@ router.get('/wecom/config', async (req, res) => {
       data: {
         configured: !!config.webhook_url,
         webhook_url_masked: maskedUrl,
+        enabled: config.enabled !== false,         // 新增
+        push_checkup: config.push_checkup !== false, // 新增
+        push_daily: config.push_daily !== false,     // 新增
+        push_reminder: config.push_reminder !== false, // 新增
       },
     });
   } catch (e) {
@@ -109,10 +120,29 @@ router.get('/wecom/config', async (req, res) => {
   }
 });
 
-/** 保存配置（自动测试发送） */
+/** 保存配置（自动测试发送）或仅更新推送偏好 */
 router.post('/wecom/config', async (req, res) => {
   try {
-    const { webhook_url } = req.body;
+    const { webhook_url, enabled, push_checkup, push_daily, push_reminder } = req.body || {};
+    const hasPrefs = enabled !== undefined || push_checkup !== undefined || push_daily !== undefined || push_reminder !== undefined;
+
+    // 模式1：仅更新推送偏好（不传 webhook_url 或传空字符串但带了偏好字段）
+    if (hasPrefs && (!webhook_url || !webhook_url.trim())) {
+      const existing = readConfig();
+      if (!existing.webhook_url) {
+        return res.json({ code: 1001, data: null, message: '请先配置 Webhook 地址' });
+      }
+      writeConfig({
+        ...existing,
+        enabled: enabled !== false,
+        push_checkup: push_checkup !== false,
+        push_daily: push_daily !== false,
+        push_reminder: push_reminder !== false,
+      });
+      return res.json({ code: 0, data: { configured: true }, message: '推送偏好已更新' });
+    }
+
+    // 模式2：完整保存（含 webhook_url）
     if (!webhook_url || !webhook_url.trim()) {
       return res.json({ code: 1001, data: null, message: 'Webhook地址不能为空' });
     }
@@ -132,7 +162,14 @@ router.post('/wecom/config', async (req, res) => {
       return res.json({ code: 1002, data: null, message: `测试发送失败: ${sendErr.message}` });
     }
 
-    writeConfig({ webhook_url: webhook_url.trim(), configured: true });
+    writeConfig({
+      webhook_url: webhook_url.trim(),
+      configured: true,
+      enabled: enabled !== false,
+      push_checkup: push_checkup !== false,
+      push_daily: push_daily !== false,
+      push_reminder: push_reminder !== false,
+    });
     res.json({ code: 0, data: { configured: true }, message: '配置保存成功，测试消息已发送' });
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
@@ -195,6 +232,10 @@ router.post('/wecom/send-checkup-reminder', async (req, res) => {
 router.post('/wecom/daily-push', async (req, res) => {
   try {
     const config = readConfig();
+    // 检查总开关
+    if (config.enabled === false) {
+      return res.json({ code: 0, data: null, message: '推送已关闭' });
+    }
     if (!config.webhook_url) {
       return res.json({ code: 1001, data: null, message: '请先配置Webhook地址' });
     }

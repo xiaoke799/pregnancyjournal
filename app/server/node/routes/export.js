@@ -555,6 +555,25 @@ const CSV_FIELDS = [
   { key: 'intimacy_note', label: '爱爱记录' },
   { key: 'stool_record', label: '排便情况' },
   { key: 'note', label: '日记/备注' },
+  { key: 'stool', label: '排便' },
+  { key: 'edema_level', label: '水肿等级' },
+  { key: 'vaginal_discharge', label: '分泌物' },
+  { key: 'skin_condition', label: '皮肤状况' },
+  { key: 'urination_frequency', label: '尿频' },
+  { key: 'hcg_weeks', label: 'HCG孕周' },
+  { key: 'uric_acid_period', label: '尿酸周期' },
+  { key: 'plan_text', label: '今日计划' },
+  { key: 'plan_date', label: '计划日期' },
+  { key: 'habit_text', label: '习惯打卡' },
+  { key: 'contraction_interval', label: '宫缩间隔(分)' },
+  { key: 'contraction_duration', label: '宫缩持续(分)' },
+  { key: 'contraction_pain', label: '宫缩疼痛感' },
+  { key: 'contraction_record', label: '宫缩详细记录' },
+  { key: 'fetal_movement_record', label: '胎动详细记录' },
+  { key: 'sleep_record', label: '睡眠记录' },
+  { key: 'diet_record', label: '饮食记录' },
+  { key: 'exercise_record', label: '运动记录' },
+  { key: 'intimacy_record', label: '爱爱详情' },
 ];
 
 function escapeCsv(val) {
@@ -608,18 +627,43 @@ router.get('/export/csv', verifyAuth, async (req, res) => {
   }
 });
 
+function extractTextFromTiptap(jsonContent) {
+  try {
+    if (!jsonContent) return '';
+    const doc = typeof jsonContent === 'string' ? JSON.parse(jsonContent) : jsonContent;
+    let texts = [];
+    function walk(node) {
+      if (!node) return;
+      if (node.type === 'text' && node.text) texts.push(node.text);
+      if (Array.isArray(node.content)) node.content.forEach(walk);
+    }
+    walk(doc);
+    return texts.join('\n');
+  } catch { return String(jsonContent || ''); }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
   try {
     const pregnancyId = req.query.pregnancy_id;
     const dateFrom = req.query.date_from;
     const dateTo = req.query.date_to;
 
-    let sql = "SELECT record_date, note, mood, mood_note, weight, blood_pressure_systolic, blood_pressure_diastolic, sleep_hours, diet_note, symptoms, exercise_type, created_at FROM daily_record WHERE note IS NOT NULL AND note != ''";
+    let sql = "SELECT * FROM diary_entry WHERE 1=1";
     const params = [];
     if (pregnancyId) { sql += ' AND pregnancy_id = ?'; params.push(pregnancyId); }
-    if (dateFrom) { sql += ' AND record_date >= ?'; params.push(dateFrom); }
-    if (dateTo) { sql += ' AND record_date <= ?'; params.push(dateTo); }
-    sql += ' ORDER BY record_date ASC';
+    if (dateFrom) { sql += ' AND entry_date >= ?'; params.push(dateFrom); }
+    if (dateTo) { sql += ' AND entry_date <= ?'; params.push(dateTo); }
+    sql += ' ORDER BY entry_date ASC';
 
     const stmt = db.prepare(sql);
     if (params.length) stmt.bind(params);
@@ -646,8 +690,6 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
   .entry-date { background: linear-gradient(135deg, #e91e63, #f06292); color: #fff; padding: 4px 14px; border-radius: 16px; font-size: 14px; font-weight: bold; }
   .entry-mood { font-size: 18px; }
   .entry-body { background: #fef7f9; border-left: 4px solid #e91e63; padding: 14px 18px; border-radius: 0 10px 10px 0; white-space: pre-wrap; word-break: break-word; font-size: 15px; line-height: 1.9; }
-  .entry-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .tag { background: #fff0f5; color: #c2185b; padding: 2px 10px; border-radius: 10px; font-size: 12px; }
   .footer { text-align: center; color: #bbb; font-size: 11px; margin-top: 50px; padding-top: 15px; border-top: 1px solid #eee; }
   @media print { body { padding: 0; } .entry { page-break-inside: avoid; } }
 </style></head><body>`;
@@ -656,27 +698,15 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
     html += `<div class="meta">共 ${rows.length} 篇日记 · 导出时间 ${new Date().toLocaleString('zh-CN')}</div>`;
 
     for (const row of rows) {
-      const tags = [];
-      if (row.weight) tags.push(`体重 ${row.weight}kg`);
-      if (row.blood_pressure_systolic && row.blood_pressure_diastolic) tags.push(`血压 ${row.blood_pressure_systolic}/${row.blood_pressure_diastolic}`);
-      if (row.sleep_hours) tags.push(`睡眠 ${row.sleep_hours}h`);
-      if (row.exercise_type) tags.push(`运动 ${row.exercise_type}`);
-      if (row.diet_note) tags.push(`饮食: ${row.diet_note}`);
-      if (row.symptoms) {
-        try { const syms = JSON.parse(row.symptoms); if (Array.isArray(syms)) tags.push(...syms); } catch {}
-      }
+      const plainText = escapeHtml(extractTextFromTiptap(row.content));
 
       html += `<div class="entry">`;
       html += `<div class="entry-header">`;
-      html += `<span class="entry-date">${row.record_date}</span>`;
-      if (row.mood) html += `<span class="entry-mood">${moodMap[row.mood] || row.mood}</span>`;
+      html += `<span class="entry-date">${escapeHtml(row.entry_date)}</span>`;
+      if (row.gestational_week) html += `<span style="font-size:13px;color:#999;">${escapeHtml(row.gestational_week)}</span>`;
+      if (row.mood) html += `<span class="entry-mood">${escapeHtml(moodMap[row.mood] || row.mood)}</span>`;
       html += `</div>`;
-      html += `<div class="entry-body">${(row.note || '').replace(/</g, '&lt;')}</div>`;
-      if (tags.length > 0) {
-        html += `<div class="entry-tags">`;
-        for (const t of tags) html += `<span class="tag">${t}</span>`;
-        html += `</div>`;
-      }
+      html += `<div class="entry-body">${plainText}</div>`;
       html += `</div>`;
     }
 
