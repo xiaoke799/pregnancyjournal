@@ -154,6 +154,11 @@
             </n-space>
           </n-checkbox-group>
         </div>
+        <div v-if="wecomConfigured && wecomEnabled" class="setting-item">
+          <label>每日推送时间</label>
+          <n-time-picker v-model:formatted-value="wecomPushTime" format="HH:mm" style="width: 130px" @update:value="saveWecomPrefs" />
+          <span style="font-size:12px;color:#999;margin-left:8px;">到达该时间将自动推送每日看板</span>
+        </div>
         <div style="display: flex; gap: 8px;">
           <n-button type="primary" @click="saveWebhook" :loading="savingWecom">保存</n-button>
           <n-button @click="sendTestMessage" :loading="testingPush">测试发送</n-button>
@@ -162,6 +167,36 @@
         <div v-if="wecomConfigured" class="setting-item">
           <label>状态</label>
           <n-tag :type="wecomStatus?.success ? 'success' : 'error'" size="small">{{ wecomStatus?.message || '已配置' }}</n-tag>
+        </div>
+
+        <!-- 推送记录 -->
+        <div v-if="wecomConfigured" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <label style="font-weight:500;">📋 推送记录</label>
+            <n-button size="small" @click="loadPushLogs">刷新</n-button>
+          </div>
+          <n-radio-group v-model:value="pushLogFilter" size="small" @update:value="loadPushLogs" style="margin-bottom:8px;">
+            <n-radio-button value="today">今天</n-radio-button>
+            <n-radio-button value="week7">近7天</n-radio-button>
+            <n-radio-button value="all">全部</n-radio-button>
+          </n-radio-group>
+          <div v-if="pushLogs.length === 0" style="text-align:center; color:#999; font-size:13px; padding:20px 0;">暂无推送记录</div>
+          <div v-else class="push-log-list">
+            <div v-for="log in pushLogs" :key="log.id" class="push-log-item">
+              <div class="push-log-left">
+                <n-tag :type="log.status === 'success' ? 'success' : log.status === 'failed' ? 'error' : 'default'" size="small">
+                  {{ log.status === 'success' ? '成功' : log.status === 'failed' ? '失败' : '等待中' }}
+                </n-tag>
+                <span class="push-log-type">{{ typeLabel(log.push_type) }}</span>
+                <span class="push-log-content">{{ log.push_content }}</span>
+              </div>
+              <div class="push-log-right">
+                <span class="push-log-time">{{ formatLogTime(log.pushed_at || log.created_at) }}</span>
+                <n-button v-if="log.status === 'failed'" size="tiny" type="primary" text :loading="retryingId === log.id" @click="retryPush(log.id)">重试</n-button>
+              </div>
+              <div v-if="log.error_message" class="push-log-error">{{ log.error_message }}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -274,6 +309,12 @@ const savingWecom = ref(false)
 const testingPush = ref(false)
 const wecomEnabled = ref(true)
 const wecomPushTypes = ref<string[]>(['push_checkup', 'push_daily', 'push_reminder'])
+const wecomPushTime = ref('08:00')
+
+// 推送记录
+const pushLogs = ref<any[]>([])
+const pushLogFilter = ref<'today' | 'week7' | 'all'>('all')
+const retryingId = ref<string | null>(null)
 
 const calculatedDueDate = computed(() => {
   if (!primaryDate.value || dueDateMode.value !== 'lmp') return ''
@@ -588,10 +629,13 @@ async function loadWecomStatus() {
     if (configRes?.data?.push_daily !== false) types.push('push_daily')
     if (configRes?.data?.push_reminder !== false) types.push('push_reminder')
     wecomPushTypes.value = types
+    wecomPushTime.value = configRes?.data?.push_time || '08:00'
     if (wecomConfigured.value) {
       const statusRes: any = await wecomApi.getStatus()
       wecomStatus.value = statusRes?.data?.status
       webhookUrl.value = ''
+      // 加载推送记录
+      loadPushLogs()
     }
   } catch {
     // 忽略
@@ -649,8 +693,39 @@ async function saveWecomPrefs() {
       push_checkup: wecomPushTypes.value.includes('push_checkup'),
       push_daily: wecomPushTypes.value.includes('push_daily'),
       push_reminder: wecomPushTypes.value.includes('push_reminder'),
+      push_time: wecomPushTime.value,
     })
   } catch {}
+}
+
+// ========== 推送记录 ==========
+async function loadPushLogs() {
+  try {
+    const res: any = await wecomApi.getPushLogs(pushLogFilter.value)
+    pushLogs.value = res?.data || []
+  } catch {}
+}
+
+async function retryPush(logId: string) {
+  retryingId.value = logId
+  try {
+    const res: any = await wecomApi.retryPush(logId)
+    if (res.code === 0) { message.success('重试成功'); loadPushLogs() }
+    else message.warning(res.message || '重试失败')
+  } catch (e: any) { message.error(e?.message || '重试失败') }
+  finally { retryingId.value = null }
+}
+
+function typeLabel(type: string): string {
+  const map: Record<string, string> = { daily: '每日看板', test: '测试', checkup: '产检提醒', reminder: '提醒' }
+  return map[type] || type
+}
+
+function formatLogTime(t?: string): string {
+  if (!t) return ''
+  const d = new Date(t)
+  if (isNaN(d.getTime())) return t
+  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 </script>
@@ -716,6 +791,15 @@ async function saveWecomPrefs() {
 .pregnancy-due { color: var(--text-secondary, #64748b); font-size: 13px; flex: 1; }
 
 .wecom-section { border-left: 4px solid #07c160; }
+
+.push-log-list { display: flex; flex-direction: column; gap: 6px; }
+.push-log-item { background: #f8fafc; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.push-log-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.push-log-type { font-weight: 500; color: #333; font-size: 12px; }
+.push-log-content { color: #666; font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.push-log-right { display: flex; align-items: center; gap: 8px; margin-top: 4px; justify-content: flex-end; }
+.push-log-time { color: #999; font-size: 11px; }
+.push-log-error { color: #e53e3e; font-size: 11px; margin-top: 4px; }
 
 .dir-browser-inline {
   border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;

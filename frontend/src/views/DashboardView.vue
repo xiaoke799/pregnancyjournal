@@ -726,12 +726,10 @@ async function pushToWecom() {
   if (!pregnancyStore.currentPregnancy) return
   pushing.value = true
   try {
-    const res: any = await wecomApi.sendTest()
-    if (res.code === 0) {
-      message.success('推送成功')
-    } else {
-      message.warning(res.message || '推送完成，请检查微信')
-    }
+    const res: any = await wecomApi.dailyPush(pregnancyStore.currentPregnancy.id)
+    if (res.code === 0) message.success('每日看板已推送到微信')
+    else if (res.code === 1002) message.warning(res.message || '推送失败')
+    else message.info(res.message || '已发送请求')
   } catch (e: any) {
     message.error(e?.message || '推送失败，请检查企业微信配置')
   } finally { pushing.value = false }

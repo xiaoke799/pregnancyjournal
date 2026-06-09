@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 const db = require('../db');
 
 // 配置文件路径
@@ -26,10 +27,11 @@ function readConfig() {
   return {
     webhook_url: '',
     configured: false,
-    enabled: true,           // 总开关
-    push_checkup: true,      // 产检提醒
-    push_daily: true,        // 每日看板
-    push_reminder: true,     // 提醒事项
+    enabled: true,
+    push_checkup: true,
+    push_daily: true,
+    push_reminder: true,
+    push_time: '08:00',
   };
 }
 
@@ -40,15 +42,16 @@ function writeConfig(config) {
 }
 
 /**
- * 发送企业微信群机器人消息
- * @param {string} webhookUrl - Webhook地址
- * @param {object} msg - 消息对象 { msgtype: 'text'|'markdown', text/markdown: {...} }
+ * 发送企业微信群机器人消息（纯文本格式，兼容微信端）
  */
-async function sendWebhookMessage(webhookUrl, msg) {
+async function sendWebhookMessage(webhookUrl, textContent) {
   const https = require('https');
   const url = new URL(webhookUrl);
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify(msg);
+    const data = JSON.stringify({
+      msgtype: 'text',
+      text: { content: textContent },
+    });
     const req = https.request(url, {
       method: 'POST',
       headers: {
@@ -72,6 +75,190 @@ async function sendWebhookMessage(webhookUrl, msg) {
   });
 }
 
+/**
+ * 记录推送日志到 push_log 表
+ */
+function recordPushLog(pushType, content, status, errorMsg) {
+  try {
+    const id = uuidv4();
+    db.run(
+      'INSERT INTO push_log (id, push_type, push_content, status, error_message, pushed_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, pushType, content || '', status, errorMsg || null, new Date().toISOString()]
+    );
+    return id;
+  } catch (e) { return null; }
+}
+
+// ========== 定时推送引擎 ==========
+
+let lastPushDate = null; // 格式 YYYY-MM-DD，记录今日是否已推送过每日看板
+let schedulerStarted = false;
+
+function startScheduler() {
+  if (schedulerStarted) return;
+  schedulerStarted = true;
+
+  setInterval(async () => {
+    try {
+      const config = readConfig();
+      if (!config.enabled || !config.webhook_url || !config.push_time) return;
+
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      // 检查是否到了推送时间（精确到分钟）
+      if (currentTime === config.push_time && lastPushDate !== today) {
+        lastPushDate = today;
+
+        // 获取当前活跃孕期
+        const pregnancy = db.queryOne('SELECT id FROM pregnancy ORDER BY created_at DESC LIMIT 1');
+        if (!pregnancy) return;
+
+        await executeDailyPush(pregnancy.id, config, 'scheduled');
+      }
+
+      // 补推：如果当前时间已超过设定时间且今天还没推过（比如服务重启后错过）
+      if (currentTime > config.push_time && lastPushDate !== today) {
+        // 只在超过设定时间1小时内补推
+        const [pushH, pushM] = config.push_time.split(':').map(Number);
+        const pushMinutes = pushH * 60 + pushM;
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        if (nowMinutes - pushMinutes <= 60) {
+          lastPushDate = today;
+          const pregnancy = db.queryOne('SELECT id FROM pregnancy ORDER BY created_at DESC LIMIT 1');
+          if (pregnancy) {
+            await executeDailyPush(pregnancy.id, config, 'catchup');
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[推送调度器] 错误:', e.message);
+    }
+  }, 60000); // 每分钟检查一次
+}
+
+/**
+ * 执行每日看板推送（供手动调用和定时调度共用）
+ */
+async function executeDailyPush(pregnancyId, config, sourceType) {
+  const logId = recordPushLog('daily', `每日看板推送(${sourceType})`, 'pending', null);
+
+  try {
+    const dayjs = require('dayjs');
+    const today = dayjs().format('YYYY-MM-DD');
+    const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
+    const weekLater = dayjs().add(7, 'day').format('YYYY-MM-DD');
+
+    const pregnancy = db.queryOne(
+      'SELECT lmp, edd, current_week FROM pregnancy WHERE id = ?',
+      [pregnancyId]
+    );
+    if (!pregnancy) throw new Error('未找到孕期记录');
+
+    let gestationalWeek = pregnancy.current_week || '?';
+    let daysUntilDue = '?';
+    if (pregnancy.lmp) {
+      const lmpDay = dayjs(pregnancy.lmp);
+      gestationalWeek = Math.floor(dayjs().diff(lmpDay, 'day') / 7);
+      if (pregnancy.edd) daysUntilDue = dayjs(pregnancy.edd).diff(dayjs(), 'day');
+    }
+
+    let dueText = typeof daysUntilDue === 'number'
+      ? (daysUntilDue > 0 ? `距预产期${daysUntilDue}天` : daysUntilDue === 0 ? '今天预产期！' : `已过预产期${Math.abs(daysUntilDue)}天`)
+      : '';
+
+    // 构建纯文本消息（不用markdown格式）
+    let lines = [];
+    lines.push(`【孕程记 · 每日看板】`);
+    lines.push(`📅 ${today}  |  孕${gestationalWeek}周  |  ${dueText}`);
+    lines.push('');
+
+    // --- 明日待办 ---
+    lines.push(`>>> 明日待办 (${tomorrow}) <<<`);
+
+    const tomorrowCheckups = db.queryAll(
+      `SELECT cs.id, cs.name, cs.week_range, sd.checkup_date
+       FROM schedule_dates sd
+       LEFT JOIN (SELECT id, name, week_range FROM prenatal_checkup WHERE pregnancy_id = ?) cs ON sd.schedule_id = cs.id
+       WHERE sd.checkup_date = ?`,
+      [pregnancyId, tomorrow]
+    );
+    for (const c of tomorrowCheckups) lines.push(`⚠️ 【产检】${c.name || c.id} ${c.week_range || ''}`);
+
+    const tomorrowCustoms = db.queryAll(
+      "SELECT name FROM custom_checkup WHERE pregnancy_id = ? AND checkup_date = ? AND is_completed = 0",
+      [pregnancyId, tomorrow]
+    );
+    for (const c of tomorrowCustoms) lines.push(`⚠️ 【自定义产检】${c.name}`);
+
+    const tomorrowReminders = db.queryAll(
+      "SELECT title FROM reminder WHERE pregnancy_id = ? AND trigger_date LIKE ? AND is_completed = 0",
+      [pregnancyId, tomorrow + '%']
+    );
+    for (const r of tomorrowReminders) lines.push(`⚠️ 【提醒】${r.title}`);
+
+    if (tomorrowCheckups.length === 0 && tomorrowCustoms.length === 0 && tomorrowReminders.length === 0) {
+      lines.push('✅ 明日暂无安排，好好休息~');
+    }
+    lines.push('');
+
+    // --- 近7天 ---
+    lines.push(`>>> 近7天安排 <<<`);
+
+    const upcomingCheckups = db.queryAll(
+      `SELECT cs.name, cs.week_range, sd.checkup_date
+       FROM schedule_dates sd
+       LEFT JOIN (SELECT id, name, week_range FROM prenatal_checkup WHERE pregnancy_id = ?) cs ON sd.schedule_id = cs.id
+       WHERE sd.checkup_date > ? AND sd.checkup_date <= ? ORDER BY sd.checkup_date`,
+      [pregnancyId, today, weekLater]
+    );
+    for (const c of upcomingCheckups) {
+      const diff = dayjs(c.checkup_date).diff(dayjs(), 'day');
+      const label = diff === 0 ? '(今天)' : diff === 1 ? '(明天)' : `(${diff}天后)`;
+      lines.push(`🩺 ${c.name || c.id} ${c.week_range || ''} - ${c.checkup_date} ${label}`);
+    }
+
+    const upcomingCustoms = db.queryAll(
+      "SELECT name, checkup_date FROM custom_checkup WHERE pregnancy_id = ? AND checkup_date > ? AND checkup_date <= ? AND is_completed = 0 ORDER BY checkup_date",
+      [pregnancyId, today, weekLater]
+    );
+    for (const c of upcomingCustoms) {
+      const diff = dayjs(c.checkup_date).diff(dayjs(), 'day');
+      lines.push(`🩺 ${c.name} - ${c.checkup_date} (${diff === 0 ? '今天' : diff + '天后'})`);
+    }
+
+    const upcomingReminders = db.queryAll(
+      "SELECT title, trigger_date FROM reminder WHERE pregnancy_id = ? AND trigger_date > ? AND trigger_date <= ? AND is_completed = 0 ORDER BY trigger_date",
+      [pregnancyId, today, weekLater]
+    );
+    for (const r of upcomingReminders) {
+      const diff = dayjs(r.trigger_date).diff(dayjs(), 'day');
+      lines.push(`📌 ${r.title} - ${r.trigger_date} (${diff === 0 ? '今天' : diff + '天后'})`);
+    }
+
+    if (upcomingCheckups.length === 0 && upcomingCustoms.length === 0 && upcomingReminders.length === 0) {
+      lines.push('✅ 近7天暂无其他安排');
+    }
+
+    lines.push('');
+    lines.push('--- 孕程记自动推送 ---');
+
+    const messageText = lines.join('\n');
+    await sendWebhookMessage(config.webhook_url, messageText);
+
+    // 更新日志为成功
+    if (logId) db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), logId]);
+    return { success: true };
+  } catch (e) {
+    if (logId) db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [e.message, logId]);
+    throw e;
+  }
+}
+
+// 启动定时器
+startScheduler();
+
 // ========== 路由 ==========
 
 /** 获取配置状态 */
@@ -94,25 +281,21 @@ router.get('/wecom/status', async (req, res) => {
 router.get('/wecom/config', async (req, res) => {
   try {
     const config = readConfig();
-    // URL脱敏：只显示前20和后10字符
     let maskedUrl = '';
     if (config.webhook_url) {
       const url = config.webhook_url;
-      if (url.length > 40) {
-        maskedUrl = url.substring(0, 20) + '****' + url.substring(url.length - 10);
-      } else {
-        maskedUrl = url.substring(0, 10) + '****';
-      }
+      maskedUrl = url.length > 40 ? url.substring(0, 20) + '****' + url.substring(url.length - 10) : url.substring(0, 10) + '****';
     }
     res.json({
       code: 0,
       data: {
         configured: !!config.webhook_url,
         webhook_url_masked: maskedUrl,
-        enabled: config.enabled !== false,         // 新增
-        push_checkup: config.push_checkup !== false, // 新增
-        push_daily: config.push_daily !== false,     // 新增
-        push_reminder: config.push_reminder !== false, // 新增
+        enabled: config.enabled !== false,
+        push_checkup: config.push_checkup !== false,
+        push_daily: config.daily !== false,
+        push_reminder: config.push_reminder !== false,
+        push_time: config.push_time || '08:00',
       },
     });
   } catch (e) {
@@ -120,13 +303,13 @@ router.get('/wecom/config', async (req, res) => {
   }
 });
 
-/** 保存配置（自动测试发送）或仅更新推送偏好 */
+/** 保存配置或仅更新偏好 */
 router.post('/wecom/config', async (req, res) => {
   try {
-    const { webhook_url, enabled, push_checkup, push_daily, push_reminder } = req.body || {};
-    const hasPrefs = enabled !== undefined || push_checkup !== undefined || push_daily !== undefined || push_reminder !== undefined;
+    const { webhook_url, enabled, push_checkup, push_daily, push_reminder, push_time } = req.body || {};
+    const hasPrefs = enabled !== undefined || push_checkup !== undefined || push_daily !== undefined || push_reminder !== undefined || push_time !== undefined;
 
-    // 模式1：仅更新推送偏好（不传 webhook_url 或传空字符串但带了偏好字段）
+    // 模式1：仅更新偏好
     if (hasPrefs && (!webhook_url || !webhook_url.trim())) {
       const existing = readConfig();
       if (!existing.webhook_url) {
@@ -138,26 +321,22 @@ router.post('/wecom/config', async (req, res) => {
         push_checkup: push_checkup !== false,
         push_daily: push_daily !== false,
         push_reminder: push_reminder !== false,
+        push_time: push_time || existing.push_time || '08:00',
       });
       return res.json({ code: 0, data: { configured: true }, message: '推送偏好已更新' });
     }
 
-    // 模式2：完整保存（含 webhook_url）
+    // 模式2：完整保存
     if (!webhook_url || !webhook_url.trim()) {
       return res.json({ code: 1001, data: null, message: 'Webhook地址不能为空' });
     }
-
-    // 验证URL格式
     if (!webhook_url.startsWith('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=')) {
       return res.json({ code: 1001, data: null, message: 'Webhook地址格式不正确' });
     }
 
     // 测试发送
     try {
-      await sendWebhookMessage(webhook_url, {
-        msgtype: 'text',
-        text: { content: '🤰 孕程记 - 企业微信推送已连接成功！\n您将收到每日产检提醒和计划通知。' },
-      });
+      await sendWebhookMessage(webhook_url, '🤰 孕程记 - 企业微信推送已连接成功！\n您将收到每日产检提醒和计划通知。');
     } catch (sendErr) {
       return res.json({ code: 1002, data: null, message: `测试发送失败: ${sendErr.message}` });
     }
@@ -169,6 +348,7 @@ router.post('/wecom/config', async (req, res) => {
       push_checkup: push_checkup !== false,
       push_daily: push_daily !== false,
       push_reminder: push_reminder !== false,
+      push_time: push_time || '08:00',
     });
     res.json({ code: 0, data: { configured: true }, message: '配置保存成功，测试消息已发送' });
   } catch (e) {
@@ -183,13 +363,15 @@ router.post('/wecom/send-test', async (req, res) => {
     if (!config.webhook_url) {
       return res.json({ code: 1001, data: null, message: '请先配置Webhook地址' });
     }
-    await sendWebhookMessage(config.webhook_url, {
-      msgtype: 'markdown',
-      markdown: {
-        content: '🤰 **孕程记 测试消息**\n\n> 这是一条测试消息，如果您收到说明推送功能正常！✅',
-      },
-    });
-    res.json({ code: 0, data: null, message: '测试消息已发送' });
+    const logId = recordPushLog('test', '测试消息', 'pending', null);
+    try {
+      await sendWebhookMessage(config.webhook_url, '🤰 孕程记 测试消息\n\n这是一条测试消息，如果您收到说明推送功能正常！');
+      if (logId) db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), logId]);
+      res.json({ code: 0, data: null, message: '测试消息已发送' });
+    } catch (sendErr) {
+      if (logId) db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [sendErr.message, logId]);
+      res.json({ code: 1002, data: null, message: sendErr.message });
+    }
   } catch (e) {
     res.json({ code: 1002, data: null, message: e.message });
   }
@@ -204,35 +386,30 @@ router.post('/wecom/send-checkup-reminder', async (req, res) => {
     }
     const { checkup_name, gestational_week, checkup_date, items } = req.query;
 
-    let content = `📋 **产检提醒**\n\n`;
-    content += `> **${checkup_name || '产检'}**\n`;
-    if (gestational_week) content += `> 孕 **${gestational_week}** 周\n`;
-    if (checkup_date) content += `> 计划日期: ${checkup_date}\n`;
-    if (items) content += `\n> 检查项目: ${items}\n`;
+    let content = `📋 产检提醒\n`;
+    content += `${checkup_name || '产检'}\n`;
+    if (gestational_week) content += `孕${gestational_week}周\n`;
+    if (checkup_date) content += `计划日期: ${checkup_date}\n`;
+    if (items) content += `检查项目: ${items}\n`;
 
-    await sendWebhookMessage(config.webhook_url, {
-      msgtype: 'markdown',
-      markdown: { content },
-    });
-    res.json({ code: 0, data: null, message: '提醒已发送' });
+    const logId = recordPushLog('checkup', `产检提醒: ${checkup_name}`, 'pending', null);
+    try {
+      await sendWebhookMessage(config.webhook_url, content);
+      if (logId) db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), logId]);
+      res.json({ code: 0, data: null, message: '提醒已发送' });
+    } catch (sendErr) {
+      if (logId) db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [sendErr.message, logId]);
+      res.json({ code: 1002, data: null, message: sendErr.message });
+    }
   } catch (e) {
     res.json({ code: 1002, data: null, message: e.message });
   }
 });
 
-/**
- * 每日看板推送（核心功能）
- * 推送内容：
- *   - 当前孕周、距预产期天数
- *   - 明天的待办事项（重点高亮）
- *   - 未来7天内的产检/计划/提醒
- *
- * 用法: POST /api/v1/wecom/daily-push 或由定时任务调用
- */
+/** 手动触发每日看板推送（首页"推送微信"按钮调用） */
 router.post('/wecom/daily-push', async (req, res) => {
   try {
     const config = readConfig();
-    // 检查总开关
     if (config.enabled === false) {
       return res.json({ code: 0, data: null, message: '推送已关闭' });
     }
@@ -245,143 +422,70 @@ router.post('/wecom/daily-push', async (req, res) => {
       return res.json({ code: 1001, data: null, message: '缺少pregnancy_id' });
     }
 
-    // 获取孕期信息
-    const pregnancy = await db.queryOne(
-      'SELECT lmp, edd, current_week FROM pregnancy WHERE id = ?',
-      [pregnancyId]
-    );
-    if (!pregnancy) {
-      return res.json({ code: 1001, data: null, message: '未找到孕期记录' });
-    }
-
-    const dayjs = require('dayjs');
-    const today = dayjs().format('YYYY-MM-DD');
-    const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
-    const weekLater = dayjs().add(7, 'day').format('YYYY-MM-DD');
-
-    // 计算孕周和距预产期天数
-    let gestationalWeek = pregnancy.current_week || '?';
-    let daysUntilDue = '?';
-    if (pregnancy.lmp) {
-      const lmpDay = dayjs(pregnancy.lmp);
-      const diffDays = dayjs().diff(lmpDay, 'day');
-      gestationalWeek = Math.floor(diffDays / 7);
-      if (pregnancy.edd) {
-        daysUntilDue = dayjs(pregnancy.edd).diff(dayjs(), 'day');
-      }
-    }
-
-    // 构建消息
-    let lines = [];
-    lines.push(`🤰 **孕程记 · 每日看板**`);
-    lines.push(`> 📅 ${today}  |  孕 **${gestationalWeek}** 周  |  ${typeof daysUntilDue === 'number' ? (daysUntilDue > 0 ? `距预产期${daysUntilDue}天` : daysUntilDue === 0 ? '**今天预产期！**' : `已过预产期${Math.abs(daysUntilDue)}天`) : ''}`);
-
-    // --- 明日待办（重点） ---
-    lines.push(`\n---\n### 🔔 明日待办 (${tomorrow})`);
-
-    // 1. 明日的产检（从schedule_dates表）
-    const tomorrowCheckups = await db.queryAll(
-      `SELECT cs.id, cs.name, cs.week_range, sd.checkup_date
-       FROM schedule_dates sd
-       LEFT JOIN (
-         SELECT id, name, week_range FROM prenatal_checkup WHERE pregnancy_id = ?
-       ) cs ON sd.schedule_id = cs.id
-       WHERE sd.checkup_date = ?`,
-      [pregnancyId, tomorrow]
-    );
-    if (tomorrowCheckups.length > 0) {
-      for (const c of tomorrowCheckups) {
-        lines.push(`> ⚠️ **【产检】${c.name || c.id}** ${c.week_range ? '(' + c.week_range + ')' : ''}`);
-      }
-    }
-
-    // 2. 明日的自定义产检
-    const tomorrowCustoms = await db.queryAll(
-      "SELECT id, name, checkup_date FROM custom_checkup WHERE pregnancy_id = ? AND checkup_date = ? AND is_completed = 0",
-      [pregnancyId, tomorrow]
-    );
-    for (const c of tomorrowCustoms) {
-      lines.push(`> ⚠️ **【自定义产检】${c.name}**`);
-    }
-
-    // 3. 明日的提醒/计划
-    const tomorrowReminders = await db.queryAll(
-      "SELECT title, trigger_date FROM reminder WHERE pregnancy_id = ? AND trigger_date = ? AND is_completed = 0",
-      [pregnancyId, tomorrow]
-    );
-    for (const r of tomorrowReminders) {
-      lines.push(`> ⚠️ **【提醒】${r.title}**`);
-    }
-
-    // 4. 明日的计划
-    const tomorrowPlans = await db.queryAll(
-      "SELECT content, record_date FROM plan WHERE pregnancy_id = ? AND record_date = ?",
-      [pregnancyId, tomorrow]
-    );
-    for (const p of tomorrowPlans) {
-      lines.push(`> ⚠️ **【计划】${p.content}**`);
-    }
-
-    if (tomorrowCheckups.length === 0 && tomorrowCustoms.length === 0 && tomorrowReminders.length === 0 && tomorrowPlans.length === 0) {
-      lines.push('> ✅ 明日暂无安排，好好休息~');
-    }
-
-    // --- 未来7天内 ---
-    lines.push(`\n---\n### 📆 近7天安排`);
-
-    // 未来7天内的产检
-    const upcomingCheckups = await db.queryAll(
-      `SELECT cs.name, cs.week_range, sd.checkup_date
-       FROM schedule_dates sd
-       LEFT JOIN (
-         SELECT id, name, week_range FROM prenatal_checkup WHERE pregnancy_id = ?
-       ) cs ON sd.schedule_id = cs.id
-       WHERE sd.checkup_date > ? AND sd.checkup_date <= ?
-       ORDER BY sd.checkup_date`,
-      [pregnancyId, today, weekLater]
-    );
-    for (const c of upcomingCheckups) {
-      const d = dayjs(c.checkup_date);
-      const diff = d.diff(dayjs(), 'day');
-      const label = diff === 0 ? '(今天)' : diff === 1 ? '(明天)' : `(${diff}天后)`;
-      lines.push(`> 🩺 ${c.name || c.id} ${c.week_range || ''} - **${c.checkup_date}** ${label}`);
-    }
-
-    // 未来7天内的自定义产检
-    const upcomingCustoms = await db.queryAll(
-      "SELECT name, checkup_date FROM custom_checkup WHERE pregnancy_id = ? AND checkup_date > ? AND checkup_date <= ? AND is_completed = 0 ORDER BY checkup_date",
-      [pregnancyId, today, weekLater]
-    );
-    for (const c of upcomingCustoms) {
-      const d = dayjs(c.checkup_date);
-      const diff = d.diff(dayjs(), 'day');
-      lines.push(`> 🩺 ${c.name} - **${c.checkup_date}** (${diff === 0 ? '今天' : diff + '天后'})`);
-    }
-
-    // 未来7天内的提醒
-    const upcomingReminders = await db.queryAll(
-      "SELECT title, trigger_date FROM reminder WHERE pregnancy_id = ? AND trigger_date > ? AND trigger_date <= ? AND is_completed = 0 ORDER BY trigger_date",
-      [pregnancyId, today, weekLater]
-    );
-    for (const r of upcomingReminders) {
-      const d = dayjs(r.trigger_date);
-      const diff = d.diff(dayjs(), 'day');
-      lines.push(`> 📌 ${r.title} - **${r.trigger_date}** (${diff === 0 ? '今天' : diff + '天后'})`);
-    }
-
-    if (upcomingCheckups.length === 0 && upcomingCustoms.length === 0 && upcomingReminders.length === 0) {
-      lines.push('> ✅ 近7天暂无其他安排');
-    }
-
-    lines.push(`\n---\n> 💡 孕程记 · 自动推送`);
-
-    await sendWebhookMessage(config.webhook_url, {
-      msgtype: 'markdown',
-      markdown: { content: lines.join('\n') },
-    });
-
+    await executeDailyPush(pregnancyId, config, 'manual');
     res.json({ code: 0, data: null, message: '每日看板已推送' });
   } catch (e) {
+    res.json({ code: 1002, data: null, message: e.message });
+  }
+});
+
+/** 查询推送记录列表 */
+router.get('/wecom/push-logs', async (req, res) => {
+  try {
+    const filter = req.query.filter || 'all'; // today | week7 | all
+    let sql = 'SELECT * FROM push_log ORDER BY created_at DESC';
+    const params = [];
+
+    if (filter === 'today') {
+      sql = 'SELECT * FROM push_log WHERE created_at >= ? ORDER BY created_at DESC';
+      params.push(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
+    } else if (filter === 'week7') {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      sql = 'SELECT * FROM push_log WHERE created_at >= ? ORDER BY created_at DESC';
+      params.push(weekAgo);
+    }
+
+    const rows = db.queryAll(sql, params);
+    res.json({ code: 0, data: rows, message: 'success' });
+  } catch (e) {
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
+/** 重试失败的推送 */
+router.post('/wecom/retry/:id', async (req, res) => {
+  try {
+    const logEntry = db.queryOne('SELECT * FROM push_log WHERE id = ?', [req.params.id]);
+    if (!logEntry) {
+      return res.json({ code: 1001, data: null, message: '推送记录不存在' });
+    }
+    if (logEntry.status === 'success') {
+      return res.json({ code: 1001, data: null, message: '该推送已成功，无需重试' });
+    }
+
+    const config = readConfig();
+    if (!config.webhook_url) {
+      return res.json({ code: 1001, data: null, message: '请先配置Webhook地址' });
+    }
+
+    // 更新为 pending 重试
+    db.run("UPDATE push_log SET status='pending', error_message=NULL, pushed_at=NULL WHERE id=?", [req.params.id]);
+
+    // 根据类型重新执行
+    if (logEntry.push_type === 'daily') {
+      const pregnancy = db.queryOne('SELECT id FROM pregnancy ORDER BY created_at DESC LIMIT 1');
+      if (pregnancy) {
+        await executeDailyPush(pregnancy.id, config, 'retry');
+      }
+    } else {
+      // 非daily类型的简单重试
+      await sendWebhookMessage(config.webhook_url, logEntry.push_content || '(重试)');
+      db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), req.params.id]);
+    }
+
+    res.json({ code: 0, data: null, message: '重试成功' });
+  } catch (e) {
+    db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [e.message, req.params.id]);
     res.json({ code: 1002, data: null, message: e.message });
   }
 });
