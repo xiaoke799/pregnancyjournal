@@ -303,7 +303,27 @@ router.get('/dashboard', async function(req, res) {
           week_start: cws
         });
       }
-      checkupReminders.sort(function(a, b) { return (a.days_until || 999) - (b.days_until || 999); });
+      checkupReminders.sort(function(a, b) { return (a.days_until || 999) - (b.days_until || 999) });
+    }
+
+    // 自定义产检：未来一个月内未完成的自定义产检
+    var customCheckups = await db.queryAll(
+      "SELECT * FROM custom_checkup WHERE pregnancy_id = ? AND is_completed = 0 AND checkup_date BETWEEN ? AND ? ORDER BY checkup_date ASC LIMIT 10",
+      [pregnancy_id, todayStr, monthLaterStr]
+    );
+    var customCheckupReminders = [];
+    for (var cc = 0; cc < customCheckups.length; cc++) {
+      var citem = customCheckups[cc];
+      var cDaysUntil = citem.checkup_date ? Math.ceil((new Date(citem.checkup_date) - new Date(todayStr)) / (24 * 60 * 60 * 1000)) : null;
+      customCheckupReminders.push({
+        id: 'custom_' + citem.id,
+        name: citem.name + (cDaysUntil !== null && cDaysUntil >= 0 ? ' (还有' + cDaysUntil + '天)' : ''),
+        type: 'custom_checkup',
+        trigger_date: citem.checkup_date,
+        is_enabled: 1,
+        is_completed: 0,
+        days_until: cDaysUntil
+      });
     }
 
     // 合并计划记录：未来一个月内有计划的记录
@@ -348,7 +368,8 @@ router.get('/dashboard', async function(req, res) {
       if (planReminders[pri].id !== 'plan_today') allTodos.push(planReminders[pri]);
     }
     allTodos = allTodos.concat(checkupReminders.slice(0, 8)); // 最多8条产检提醒
-    logger.info('dashboard', `GET /dashboard - today_todos merged: ${allTodos.length} total (${todayTodos.length} reminders + ${planReminders.length} plans + ${Math.min(checkupReminders.length, 8)} checkups)`);
+    allTodos = allTodos.concat(customCheckupReminders); // 自定义产检
+    logger.info('dashboard', `GET /dashboard - today_todos merged: ${allTodos.length} total (${todayTodos.length} reminders + ${planReminders.length} plans + ${checkupReminders.length} checkups + ${customCheckupReminders.length} custom)`);
 
     var recommendedTodos = [];
     if (gestationalAge.weeks > 0 && scheduleItems.length > 0) {

@@ -1,52 +1,94 @@
 <template>
   <div class="export-panel">
     <h3>数据导出</h3>
+
+    <!-- CSV 健康数据 -->
     <div class="export-item">
       <div class="export-info">
-        <span class="export-icon">📄</span>
+        <span class="export-icon">📊</span>
         <div>
-          <span class="export-title">PDF 纪念册</span>
-          <span class="export-desc">生成包含孕期记录的精美PDF</span>
+          <span class="export-title">健康数据 (CSV)</span>
+          <span class="export-desc">导出全部健康指标，可用 Excel 打开</span>
         </div>
       </div>
-      <n-button size="small" :loading="generating" @click="handleGeneratePdf">生成</n-button>
+      <n-button size="small" :loading="exportingCsv" @click="handleExportCsv">导出</n-button>
     </div>
-    <div class="export-item" v-if="pdfTaskId">
+
+    <!-- 日记导出 -->
+    <div class="export-item">
       <div class="export-info">
-        <span>生成进度</span>
+        <span class="export-icon">📖</span>
+        <div>
+          <span class="export-title">孕期日记 (HTML)</span>
+          <span class="export-desc">按日期排版导出日记，可打印为 PDF</span>
+        </div>
       </div>
-      <n-button size="small" @click="downloadPdf">下载</n-button>
+      <n-button size="small" :loading="exportingDiary" @click="handleExportDiary">导出</n-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NButton } from 'naive-ui'
+import { NButton, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
-import client from '@/api/client'
 import { exportApi } from '@/api/export'
 
 const pregnancyStore = usePregnancyStore()
-const generating = ref(false)
-const pdfTaskId = ref('')
+const message = useMessage()
+const exportingCsv = ref(false)
+const exportingDiary = ref(false)
 
-async function handleGeneratePdf() {
+async function handleExportCsv() {
   if (!pregnancyStore.currentPregnancy) return
-  generating.value = true
+  exportingCsv.value = true
   try {
-    const res: any = await exportApi.generatePdf(pregnancyStore.currentPregnancy.id)
-    if (res.code === 0 && res.data) {
-      pdfTaskId.value = res.data.task_id
+    const res: any = await exportApi.exportCsv({ pregnancy_id: pregnancyStore.currentPregnancy.id })
+    // 后端错误时返回的是 JSON Blob，需检查是否为错误响应
+    if (res instanceof Blob) {
+      const text = await res.text()
+      try {
+        const errJson = JSON.parse(text)
+        if (errJson.code !== 0) { message.warning(errJson.message || '导出失败'); return }
+      } catch { /* 非 JSON，正常 CSV 内容 */ }
+      const url = window.URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `孕程记_健康记录_${new Date().toISOString().slice(0,10)}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      message.success('CSV 导出成功')
     }
+  } catch (e: any) {
+    message.error(e?.message || '导出失败')
   } finally {
-    generating.value = false
+    exportingCsv.value = false
   }
 }
 
-function downloadPdf() {
-  if (pdfTaskId.value) {
-    window.open(`${(client as any).defaults.baseURL}/pdf/download/${pdfTaskId.value}`, '_blank')
+async function handleExportDiary() {
+  if (!pregnancyStore.currentPregnancy) return
+  exportingDiary.value = true
+  try {
+    const res: any = await exportApi.exportDiaryPdf({ pregnancy_id: pregnancyStore.currentPregnancy.id })
+    if (res instanceof Blob) {
+      const text = await res.text()
+      try {
+        const errJson = JSON.parse(text)
+        if (errJson.code !== 0) { message.warning(errJson.message || '导出失败'); return }
+      } catch { /* 非 JSON，正常 HTML 内容 */ }
+      const url = window.URL.createObjectURL(new Blob([text], { type: 'text/html;charset=utf-8' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `孕程记_日记_${new Date().toISOString().slice(0,10)}.html`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      message.success('日记导出成功')
+    }
+  } catch (e: any) {
+    message.error(e?.message || '导出失败')
+  } finally {
+    exportingDiary.value = false
   }
 }
 </script>

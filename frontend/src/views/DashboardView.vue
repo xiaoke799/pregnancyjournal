@@ -578,6 +578,7 @@ function formatDaysUntil(days: number | null | undefined): string {
 function todoIcon(item: any): string {
   const t = item.type || item.source_type || ''
   if (t === 'checkup_reminder') return '🏥'
+  if (t === 'custom_checkup') return '🏥'
   if (t === 'plan' || item.id === 'plan_today') return '📋'
   const icons: Record<string, string> = { manual: '📌', medication: '💊', exercise: '🏃', custom: '📌' }
   return icons[t] || '⏰'
@@ -610,8 +611,8 @@ const lmpDate = computed(() => pregnancyStore.currentPregnancy?.last_period_date
 
 async function completeTodo(item: any) {
   try {
-    // 产检提醒和计划项不支持通过此按钮完成
-    if (item.type === 'checkup_reminder') {
+    // 产检提醒和自定义产检不支持通过此按钮完成，跳转到产检页面
+    if (item.type === 'checkup_reminder' || item.type === 'custom_checkup') {
       message.info('请前往产检页面标记完成')
       return
     }

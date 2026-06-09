@@ -190,6 +190,21 @@
             placeholder="企业微信群机器人 Webhook 地址"
           />
         </div>
+        <!-- 推送开关和内容选项 -->
+        <div v-if="wecomConfigured" class="setting-item">
+          <label>推送开关</label>
+          <n-switch v-model:value="wecomEnabled" @update:value="saveWecomPrefs" />
+        </div>
+        <div v-if="wecomConfigured && wecomEnabled" class="setting-item" style="flex-direction:column; align-items:stretch; gap:6px;">
+          <label style="font-size:13px;color:#666;">推送内容</label>
+          <n-checkbox-group v-model:value="wecomPushTypes" @update:value="saveWecomPrefs">
+            <n-space>
+              <n-checkbox value="push_checkup" label="产检提醒" />
+              <n-checkbox value="push_daily" label="每日看板" />
+              <n-checkbox value="push_reminder" label="提醒事项" />
+            </n-space>
+          </n-checkbox-group>
+        </div>
         <div style="display: flex; gap: 8px;">
           <n-button type="primary" @click="saveWebhook" :loading="savingWecom">保存</n-button>
           <n-button @click="sendTestMessage" :loading="testingPush">测试发送</n-button>
@@ -237,7 +252,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { NInput, NButton, NRadioGroup, NRadioButton, NTag, useMessage } from 'naive-ui'
+import { NInput, NButton, NRadioGroup, NRadioButton, NTag, NSwitch, NCheckboxGroup, NCheckbox, NSpace, useMessage } from 'naive-ui'
 import dayjs from 'dayjs'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { pregnancyApi } from '@/api/pregnancy'
@@ -308,6 +323,8 @@ const wecomConfigured = ref(false)
 const wecomStatus = ref<any>(null)
 const savingWecom = ref(false)
 const testingPush = ref(false)
+const wecomEnabled = ref(true)
+const wecomPushTypes = ref<string[]>(['push_checkup', 'push_daily', 'push_reminder'])
 
 const calculatedDueDate = computed(() => {
   if (!primaryDate.value || dueDateMode.value !== 'lmp') return ''
@@ -616,6 +633,12 @@ async function loadWecomStatus() {
   try {
     const configRes: any = await wecomApi.getConfig()
     wecomConfigured.value = configRes?.data?.configured || false
+    wecomEnabled.value = configRes?.data?.enabled !== false
+    const types: string[] = []
+    if (configRes?.data?.push_checkup !== false) types.push('push_checkup')
+    if (configRes?.data?.push_daily !== false) types.push('push_daily')
+    if (configRes?.data?.push_reminder !== false) types.push('push_reminder')
+    wecomPushTypes.value = types
     if (wecomConfigured.value) {
       const statusRes: any = await wecomApi.getStatus()
       wecomStatus.value = statusRes?.data?.status
@@ -668,6 +691,17 @@ async function clearWecomConfig() {
   } catch {
     message.error('操作失败')
   }
+}
+
+async function saveWecomPrefs() {
+  try {
+    await wecomApi.saveConfig(webhookUrl.value.trim(), {
+      enabled: wecomEnabled.value,
+      push_checkup: wecomPushTypes.value.includes('push_checkup'),
+      push_daily: wecomPushTypes.value.includes('push_daily'),
+      push_reminder: wecomPushTypes.value.includes('push_reminder'),
+    })
+  } catch {}
 }
 
 </script>

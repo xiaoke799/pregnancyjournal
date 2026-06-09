@@ -10,7 +10,8 @@ export const wecomApi = {
   getConfig: () => client.get('/wecom/config'),
 
   /** 保存 Webhook URL（自动测试发送） */
-  saveConfig: (webhookUrl: string) => client.post('/wecom/config', { webhook_url: webhookUrl }),
+  saveConfig: (webhookUrl: string, prefs?: { enabled?: boolean; push_checkup?: boolean; push_daily?: boolean; push_reminder?: boolean }) =>
+    client.post('/wecom/config', { webhook_url: webhookUrl, ...prefs }),
 
   /** 发送测试消息 */
   sendTest: () => client.post('/wecom/send-test'),
