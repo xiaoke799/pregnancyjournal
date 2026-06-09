@@ -297,6 +297,16 @@ CREATE TABLE IF NOT EXISTS app_config (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS push_log (
+  id TEXT PRIMARY KEY,
+  push_type TEXT NOT NULL,
+  push_content TEXT,
+  status TEXT DEFAULT 'pending',
+  error_message TEXT,
+  pushed_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 function getDb() {
