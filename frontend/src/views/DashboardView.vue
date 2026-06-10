@@ -32,10 +32,10 @@
       </div>
       <div v-if="todayTodos.length === 0" class="empty-hint">暂无提醒，快添加一条吧</div>
       <div v-else class="plan-list">
-        <div v-for="item in todayTodos" :key="item.id" class="plan-item" :class="{ 'is-today': item.days_until === 0, 'is-past': (item.days_until || 0) < 0 }">
+        <div v-for="item in todayTodos" :key="item.id" class="plan-item" :class="{ 'is-today': item.days_until === 0, 'is-past': (item.days_until || 0) < 0, 'is-completed': item.is_completed }">
           <span class="plan-icon">{{ todoIcon(item) }}</span>
           <div class="plan-body">
-            <span class="plan-title">{{ item.name || item.title || '提醒' }}</span>
+            <span class="plan-title" :class="{ 'completed-text': item.is_completed }">{{ item.name || item.title || '提醒' }}</span>
             <span class="plan-meta" v-if="item.trigger_date || item.days_until != null">
               <template v-if="item.days_until != null">
                 {{ formatDaysUntil(item.days_until) }}
@@ -44,7 +44,8 @@
               <template v-if="item.trigger_date && item.days_until !== 0"> · {{ item.trigger_date.slice(5) }}</template>
             </span>
           </div>
-          <n-button size="tiny" quaternary type="primary" @click="completeTodo(item)">完成</n-button>
+          <n-button v-if="!item.is_completed" size="tiny" quaternary type="primary" @click="completeTodo(item)">完成</n-button>
+          <span v-else class="completed-badge">已完成</span>
         </div>
       </div>
       <div class="quick-add-row">
@@ -200,7 +201,7 @@
               </div>
               <div class="rs-item" v-if="todayRecord.intimacy_record || todayRecord.intimacy_note">
                 <span class="rs-icon">💑</span>
-                <span>爱爱 {{ todayRecord.intimacy_record || todayRecord.intimacy_note }}</span>
+                <span>爱爱 {{ parseJsonText(todayRecord.intimacy_record || todayRecord.intimacy_note) }}</span>
               </div>
             </div>
           </template>
@@ -338,6 +339,8 @@ import { useGestationalAge } from '@/composables/useGestationalAge'
 import { getDashboard } from '@/api/dashboard'
 import { reminderApi } from '@/api/reminder'
 import { wecomApi } from '@/api/wecom'
+import { markCheckupCompleted } from '@/api/checkup-schedule'
+import { checkupApi } from '@/api/checkup'
 import { calculateGestationalAge } from '@/utils/gestational'
 import dayjs from 'dayjs'
 import VChart from 'vue-echarts'
@@ -682,19 +685,23 @@ const lmpDate = computed(() => pregnancyStore.currentPregnancy?.last_period_date
 
 async function completeTodo(item: any) {
   try {
-    // 产检提醒和自定义产检不支持通过此按钮完成，跳转到产检页面
-    if (item.type === 'checkup_reminder' || item.type === 'custom_checkup') {
-      message.info('请前往产检页面标记完成')
+    const type = item.type || ''
+    if (type === 'checkup_reminder' && item.schedule_item_id) {
+      await markCheckupCompleted(item.schedule_item_id, pregnancyStore.currentPregnancy.id)
+    } else if (type === 'custom_checkup' && item.id) {
+      await checkupApi.markCustomComplete(item.id)
+    } else if (type === 'plan' || item.id === 'plan_today') {
+      message.info('计划项请在记录页完成')
+      return
+    } else if (item.id) {
+      await reminderApi.complete(item.id)
+    } else {
+      message.warning('无法完成此项')
       return
     }
-    if (item.type === 'plan' || item.id === 'plan_today') {
-      message.info('请在记录页完成计划')
-      return
-    }
-    await reminderApi.complete(item.id)
     await loadDashboard()
     message.success('已完成')
-  } catch { message.error('操作失败') }
+  } catch (e: any) { message.error('操作失败: ' + (e?.message || '')) }
 }
 
 async function quickAddReminder() {
@@ -741,7 +748,8 @@ async function loadDashboard() {
   try {
     const res: any = await getDashboard(pregnancyStore.currentPregnancy.id)
     if (res.code === 0) dashboardData.value = res.data
-  } finally { loading.value = false }
+  } catch (e: any) { console.error('加载看板失败:', e?.message || e) }
+  finally { loading.value = false }
 }
 
 onMounted(async () => {
@@ -987,6 +995,10 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .plan-item:hover { background: #f1f5f9; }
 .plan-item.is-today { background: #fef3c7; border-left: 3px solid #f59e0b; }
 .plan-item.is-past { opacity: 0.6; }
+.plan-item.is-completed { opacity: 0.55; background: #f1f5f9; }
+.plan-item.is-completed .plan-icon { filter: grayscale(0.5); }
+.completed-text { text-decoration: line-through; color: #94a3b8 !important; }
+.completed-badge { font-size: 11px; color: #16a34a; font-weight: 500; }
 .plan-icon { font-size: 18px; }
 .plan-body { flex: 1; min-width: 0; }
 .plan-title { font-size: 13px; font-weight: 600; color: var(--text-color, #1e293b); display: block; }

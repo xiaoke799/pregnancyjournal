@@ -533,6 +533,8 @@ const formData = ref({
   // 计划
   planText: '',
   planDate: '',
+  // 好习惯
+  habitText: '',
   // 日记（富文本 HTML）
   diaryContent: '',
 })
@@ -627,7 +629,7 @@ watch(() => props.show, (val) => {
           formData.value.exerciseDuration = r.exercise_duration ?? null
           break
         case 'sleep':
-          formData.value.sleepHours = r.sleep_hours ?? null
+          formData.value.sleepHours = r.sleep_hours != null ? Number(r.sleep_hours) : null
           formData.value.sleepQuality = r.sleep_quality || 'fair'
           break
         case 'water':
@@ -662,6 +664,9 @@ watch(() => props.show, (val) => {
           formData.value.intimacyNote = r.intimacy_note || r.intimacy_record || ''
           // intimacy_record 存储的是 "已记录" 或备注文本
           formData.value.intimacyHappened = !!(r.intimacy_record || r.intimacy_note)
+          break
+        case 'habit':
+          formData.value.habitText = r.habit_text || ''
           break
         case 'mood':
           formData.value.moodValue = r.mood ? Number(r.mood) : 3
@@ -852,6 +857,10 @@ async function saveRecord() {
         data.plan_text = formData.value.planText
         if (formData.value.planDate) data.plan_date = formData.value.planDate
         break
+      case 'habit':
+        if (!formData.value.habitText) { message.warning('请输入好习惯内容'); saving.value = false; return }
+        data.habit_text = formData.value.habitText
+        break
       case 'water':
         if (!formData.value.waterIntake) { message.warning('请输入饮水量'); saving.value = false; return }
         data.water_intake = formData.value.waterIntake
@@ -872,22 +881,25 @@ async function saveRecord() {
         data.note = htmlContent
         break
       }
+      default:
+        message.warning('未知的记录类型'); saving.value = false; return
     }
 
     const isEdit = !!props.editRecord?.id
 
-    // 乐观更新：立即关闭弹窗 + 显示成功提示，后台异步保存
+    // 乐观更新：立即关闭弹窗，后台异步保存
     visible.value = false
     resetForm()
     emit('saved')
-    message.success(isEdit ? '记录已更新' : '记录已保存')
 
     const apiCall = isEdit
       ? dailyRecordApi.update(props.editRecord.id, data)
       : dailyRecordApi.upsert(data)
 
     apiCall.then((res: any) => {
-      if (res.code !== 0) {
+      if (res.code === 0) {
+        message.success(isEdit ? '记录已更新' : '记录已保存')
+      } else {
         message.error(res.message || '保存失败，请刷新页面确认')
       }
     }).catch((err: any) => {
@@ -935,6 +947,7 @@ function resetForm() {
     fetalHeartRate: null,
     planText: '',
     planDate: '',
+    habitText: '',
     waterIntake: null,
     stoolCount: null,
     stoolConsistency: 'normal' as 'hard' | 'normal' | 'soft' | 'diarrhea',
