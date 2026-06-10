@@ -63,16 +63,27 @@
           size="small"
           style="width: 130px"
         />
-        <n-time-picker
-          v-model:formatted-value="newTodoTime"
-          format="HH:mm"
+        <n-select
+          v-model:value="newTodoTime"
+          :options="timeOptions"
           size="small"
           style="width: 100px"
           placeholder="--:--"
+          clearable
         />
         <n-button type="primary" size="small" :loading="adding" @click="quickAddReminder" :disabled="!newTodoTitle.trim()">添加</n-button>
       </div>
     </div>
+
+    <!-- ===== 运动建议入口 ===== -->
+    <router-link to="/exercise-guide" class="eg-entry-card">
+      <span class="eg-entry-icon">🤸</span>
+      <div class="eg-entry-body">
+        <strong>孕期运动指南</strong>
+        <span>根据孕周推荐适合的运动 · 科学助力顺产</span>
+      </div>
+      <span class="eg-entry-arrow">→</span>
+    </router-link>
 
     <!-- ===== 今日记录 ===== -->
     <div class="section record-section">
@@ -191,7 +202,7 @@
                 <span class="rs-icon">✅</span>
                 <span>{{ todayRecord.habit_text }}</span>
               </div>
-              <div class="rs-item" v-if="todayRecord.sleep_quality && todayRecord.sleep_quality !== 'fair'">
+              <div class="rs-item" v-if="todayRecord.sleep_quality && todayRecord.sleep_quality !== 'fair' && todayRecord.sleep_quality !== '一般'">
                 <span class="rs-icon">😴</span>
                 <span>睡眠质量 {{ sleepQualityLabel(todayRecord.sleep_quality) }}</span>
               </div>
@@ -333,7 +344,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { NInput, NButton, NTag, NDatePicker, NTimePicker, useMessage } from 'naive-ui'
+import { NInput, NButton, NTag, NDatePicker, NSelect, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useGestationalAge } from '@/composables/useGestationalAge'
 import { getDashboard } from '@/api/dashboard'
@@ -390,6 +401,14 @@ const loading = ref(false)
 const newTodoTitle = ref('')
 const newTodoDate = ref<string>(dayjs().format('YYYY-MM-DD'))
 const newTodoTime = ref<string>('')
+
+// 时间选项（每30分钟一个）
+const timeOptions = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2)
+  const m = (i % 2) * 30
+  const v = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0')
+  return { value: v, label: v }
+})
 const adding = ref(false)
 const pushing = ref(false)
 
@@ -658,7 +677,10 @@ function edemaLabel(level: string | undefined): string {
 }
 
 function sleepQualityLabel(q: string): string {
-  return q === 'good' ? '好' : q === 'poor' ? '差' : '一般'
+  // 兼容小弹窗保存的中文质量值
+  const zhMap: Record<string, string> = { '好': 'good', '一般': 'fair', '差': 'poor' }
+  const normalized = zhMap[q] || q
+  return normalized === 'good' ? '好' : normalized === 'poor' ? '差' : '一般'
 }
 
 // 分组可见性计算
@@ -1006,6 +1028,30 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
 .quick-add-row { display: flex; gap: 8px; margin-top: 4px; }
+
+/* 运动建议入口 */
+.eg-entry-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f0ebfb, #e8f2fb);
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  margin-top: 16px;
+  transition: transform .15s, box-shadow .15s;
+}
+.eg-entry-card:active { transform: scale(0.98); }
+.eg-entry-icon { font-size: 28px; flex-shrink: 0; }
+.eg-entry-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.eg-entry-body strong { font-size: 15px; color: #333; }
+.eg-entry-body span { font-size: 12px; color: #888; margin-top: 2px; }
+.eg-entry-arrow { font-size: 18px; color: #7c5cbf; font-weight: 700; }
 
 .record-content { display: flex; flex-direction: column; gap: 10px; }
 .record-primary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }

@@ -196,7 +196,12 @@ function getPreview(type: string): string {
     case 'exercise':
       return (r.exercise_type || '运动') + (r.exercise_duration ? ' ' + r.exercise_duration + 'min' : '')
     case 'diet':
-      return r.diet_note ? r.diet_note.slice(0, 30) + (r.diet_note.length > 30 ? '…' : '') : ''
+      if (!r.diet_note) return ''
+      try {
+        const meals = JSON.parse(r.diet_note)
+        if (Array.isArray(meals)) return meals.map((m: any) => m.type + ': ' + (m.content || '').slice(0, 10)).join(' | ')
+      } catch { /* old format */ }
+      return r.diet_note.slice(0, 30) + (r.diet_note.length > 30 ? '…' : '')
     case 'medication': {
       const meds = getMedications()
       return meds.length > 0 ? meds.map((m: any) => m.name).join('、') : ''
@@ -329,8 +334,21 @@ function renderDetail(type: string) {
           h('div', { class: 'exercise-bar-fill', style: { width: Math.min(100, (r.exercise_duration / 60) * 100) + '%' } }),
         ]) : null,
       ])
-    case 'diet':
-      return h('div', { class: 'detail-text' }, r.diet_note)
+    case 'diet': {
+      let meals: any[] = []
+      if (r.diet_note) {
+        try { const p = JSON.parse(r.diet_note); if (Array.isArray(p)) meals = p } catch { /* old format */ }
+      }
+      if (!meals.length && r.diet_note) meals = [{ type: '饮食', content: r.diet_note }]
+      return h('div', { class: 'diet-meal-list' },
+        meals.map((m: any, i: number) =>
+          h('div', { key: i, class: 'diet-meal-detail' }, [
+            h('span', { class: 'diet-meal-tag' }, m.type || '饮食'),
+            h('span', { class: 'diet-meal-content' }, m.content || ''),
+          ])
+        )
+      )
+    }
     case 'medication':
       return h('div', { class: 'med-list' }, getMedications().map((med: any, i: number) =>
         h('div', { key: i, class: 'med-item' }, [
@@ -668,14 +686,22 @@ function getFhrStatusLabel(): string {
 }
 
 const sleepQualityMap: Record<string, string> = { good: '好', fair: '一般', poor: '差' }
+// 兼容小弹窗保存的中文质量值
+const sleepQualityFromZh: Record<string, string> = { '好': 'good', '一般': 'fair', '差': 'poor' }
+
+function normalizeSleepQuality(q: any): string {
+  if (!q) return ''
+  const s = String(q)
+  return sleepQualityFromZh[s] || s
+}
 
 function getSleepQualityLabel(): string {
-  const q = record.value.sleep_quality
+  const q = normalizeSleepQuality(record.value.sleep_quality)
   return sleepQualityMap[q] || q || ''
 }
 
 function getSleepQualityClass(): string {
-  const q = record.value.sleep_quality
+  const q = normalizeSleepQuality(record.value.sleep_quality)
   if (q === 'good') return 'value-normal'
   if (q === 'fair') return 'value-warning'
   if (q === 'poor') return 'value-alert'
@@ -683,7 +709,7 @@ function getSleepQualityClass(): string {
 }
 
 function getSleepQualityWidth(): string {
-  const q = record.value.sleep_quality
+  const q = normalizeSleepQuality(record.value.sleep_quality)
   if (q === 'good') return '80%'
   if (q === 'fair') return '50%'
   if (q === 'poor') return '25%'
@@ -1014,6 +1040,32 @@ function getSleepQualityWidth(): string {
   color: var(--text-color, #1e293b);
   line-height: 1.7;
   word-break: break-word;
+}
+
+.diet-meal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.diet-meal-detail {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.diet-meal-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.diet-meal-content {
+  font-size: 14px;
+  color: var(--text-color, #1e293b);
+  line-height: 1.6;
 }
 
 .value-neutral {
