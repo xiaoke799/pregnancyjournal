@@ -380,6 +380,12 @@ function migrateDb() {
       contraction_record: null,
       intimacy_record: null,
     },
+    diary_entry: {
+      title: null,
+      gestational_week: null,
+      mood: null,
+      image_urls: null,
+    },
     contraction_session: {
       pregnancy_id: null,
       avg_duration: null,

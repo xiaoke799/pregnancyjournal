@@ -70,6 +70,7 @@ async function sendWebhookMessage(webhookUrl, textContent) {
       });
     });
     req.on('error', reject);
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('webhook请求超时(10s)')); });
     req.write(data);
     req.end();
   });
@@ -97,6 +98,16 @@ let schedulerStarted = false;
 function startScheduler() {
   if (schedulerStarted) return;
   schedulerStarted = true;
+
+  // 启动时检查今天是否已成功推送过每日看板（防止重启后重复推送）
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayPush = db.queryOne(
+      "SELECT id FROM push_log WHERE push_type='daily' AND status='success' AND pushed_at LIKE ? LIMIT 1",
+      [today + '%']
+    );
+    if (todayPush) lastPushDate = today;
+  } catch (e) { console.error('[推送调度器] 启动检查失败:', e.message); }
 
   setInterval(async () => {
     try {

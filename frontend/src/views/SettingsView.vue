@@ -563,37 +563,47 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 async function handleExportCsv() {
+  if (!pregnancyStore.currentPregnancy?.id) { message.warning('请先创建孕期档案'); return }
   exportingCsv.value = true
   try {
-    const pregnancyId = pregnancyStore.currentPregnancy?.id
-    const res: any = await exportApi.exportCsv({ pregnancy_id: pregnancyId })
-    if (res.data) {
-      const blob = res.data instanceof Blob ? res.data : new Blob([res.data])
+    const res: any = await exportApi.exportCsv({ pregnancy_id: pregnancyStore.currentPregnancy.id })
+    if (res instanceof Blob) {
+      downloadBlob(res, `孕程记_健康记录_${new Date().toISOString().slice(0, 10)}.csv`)
+      message.success('CSV 导出成功')
+    } else if (res && typeof res === 'object' && res.code !== undefined) {
+      message.warning(res.message || '没有可导出的数据')
+    } else if (res) {
+      const blob = new Blob([res], { type: 'text/csv;charset=utf-8;' })
       downloadBlob(blob, `孕程记_健康记录_${new Date().toISOString().slice(0, 10)}.csv`)
       message.success('CSV 导出成功')
     } else {
-      message.warning(res.message || '没有可导出的数据')
+      message.warning('没有可导出的数据')
     }
   } catch (e: any) {
-    message.error('导出失败')
+    message.error('导出失败: ' + (e?.message || ''))
   }
   exportingCsv.value = false
 }
 
 async function handleExportDiaryPdf() {
+  if (!pregnancyStore.currentPregnancy?.id) { message.warning('请先创建孕期档案'); return }
   exportingDiary.value = true
   try {
-    const pregnancyId = pregnancyStore.currentPregnancy?.id
-    const res: any = await exportApi.exportDiaryPdf({ pregnancy_id: pregnancyId })
-    if (res.data) {
-      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: 'application/pdf' })
+    const res: any = await exportApi.exportDiaryPdf({ pregnancy_id: pregnancyStore.currentPregnancy.id })
+    if (res instanceof Blob) {
+      downloadBlob(res, `孕程记_日记_${new Date().toISOString().slice(0,10)}.pdf`)
+      message.success('日记 PDF 导出成功')
+    } else if (res && typeof res === 'object' && res.code !== undefined) {
+      message.warning(res.message || '没有可导出的日记内容')
+    } else if (res) {
+      const blob = new Blob([res], { type: 'application/pdf' })
       downloadBlob(blob, `孕程记_日记_${new Date().toISOString().slice(0,10)}.pdf`)
       message.success('日记 PDF 导出成功')
     } else {
-      message.warning(res.message || '没有可导出的日记内容')
+      message.warning(res?.message || '没有可导出的日记内容')
     }
   } catch (e: any) {
-    message.error('导出失败')
+    message.error('导出失败: ' + (e?.message || ''))
   }
   exportingDiary.value = false
 }
@@ -605,15 +615,21 @@ async function handleGeneratePdf() {
   }
   generatingPdf.value = true
   try {
-    const res: any = await exportApi.generatePdf(pregnancyStore.currentPregnancy.id)
-    if (res.code === 0 && res.data?.task_id) {
-      message.success('PDF 生成成功，开始下载...')
-      try { window.open(`${(client as any).defaults.baseURL}/pdf/download/${res.data.task_id}`, '_blank') } catch {}
-    } else {
+    const res: any = await exportApi.exportAlbumPdf({ pregnancy_id: pregnancyStore.currentPregnancy.id })
+    if (res instanceof Blob) {
+      downloadBlob(res, `孕程记_纪念相册_${new Date().toISOString().slice(0,10)}.pdf`)
+      message.success('纪念相册 PDF 生成成功')
+    } else if (res && typeof res === 'object' && res.code !== undefined) {
       message.error('生成失败' + (res.message ? ': ' + res.message : ''))
+    } else if (res) {
+      const blob = new Blob([res], { type: 'application/pdf' })
+      downloadBlob(blob, `孕程记_纪念相册_${new Date().toISOString().slice(0,10)}.pdf`)
+      message.success('纪念相册 PDF 生成成功')
+    } else {
+      message.error('生成失败，没有可导出的相册内容')
     }
-  } catch {
-    message.error('生成失败，请重试')
+  } catch (e: any) {
+    message.error('生成失败: ' + (e?.message || ''))
   }
   generatingPdf.value = false
 }
@@ -695,7 +711,7 @@ async function saveWecomPrefs() {
       push_reminder: wecomPushTypes.value.includes('push_reminder'),
       push_time: wecomPushTime.value,
     })
-  } catch {}
+  } catch (e: any) { console.error('保存推送偏好失败:', e?.message) }
 }
 
 // ========== 推送记录 ==========
@@ -703,7 +719,7 @@ async function loadPushLogs() {
   try {
     const res: any = await wecomApi.getPushLogs(pushLogFilter.value)
     pushLogs.value = res?.data || []
-  } catch {}
+  } catch (e: any) { console.error('加载推送记录失败:', e?.message) }
 }
 
 async function retryPush(logId: string) {

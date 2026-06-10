@@ -30,12 +30,13 @@
         <div class="diary-date-header">
           <span class="date-text">{{ formatFullDate(diary.entry_date || diary.record_date) }}</span>
           <span class="week-text">孕{{ getWeekInfo(diary.entry_date || diary.record_date) }}周</span>
+          <span v-if="diary.title" class="diary-title-inline">{{ diary.title }}</span>
         </div>
         <div class="diary-content-preview" :class="{ collapsed: !expandedDiaries[diary.id] }">
-          {{ (diary.content || diary.note) || '无内容' }}
+          {{ stripHtml(diary.content || diary.note) || '无内容' }}
         </div>
         <button
-          v-if="(diary.content || diary.note || '').length > 200"
+          v-if="(stripHtml(diary.content || diary.note) || '').length > 200"
           class="diary-expand-btn"
           @click.stop="toggleExpand(diary.id)"
         >{{ expandedDiaries[diary.id] ? '收起 ↑' : '展开全文 ↓' }}</button>
@@ -131,6 +132,12 @@ function toggleExpand(id: string) {
   expandedDiaries.value[id] = !expandedDiaries.value[id]
 }
 
+/** 从富文本HTML中提取纯文本（去除标签） */
+function stripHtml(html: string): string {
+  if (!html) return ''
+  return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim()
+}
+
 const moodOptions = [
   { value: 1, emoji: '😢', label: '很差' },
   { value: 2, emoji: '😔', label: '不好' },
@@ -218,6 +225,7 @@ async function saveDiary() {
     const data = {
       pregnancy_id: pregnancyStore.currentPregnancy.id,
       entry_date: diaryForm.value.record_date,
+      title: diaryForm.value.title || '',
       content: diaryForm.value.note,
       mood: String(diaryForm.value.mood),
     }
@@ -400,6 +408,16 @@ onMounted(async () => {
   background: #fdf4ff;
   padding: 2px 8px;
   border-radius: 8px;
+}
+
+.diary-title-inline {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  margin-left: 8px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .diary-content-preview {

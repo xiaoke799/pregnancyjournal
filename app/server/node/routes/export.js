@@ -610,7 +610,7 @@ router.get('/export/csv', verifyAuth, async (req, res) => {
     if (dateTo) { sql += ' AND record_date <= ?'; params.push(dateTo); }
     sql += ' ORDER BY record_date ASC';
 
-    const stmt = db.prepare(sql);
+    const stmt = db.getDb().prepare(sql);
     if (params.length) stmt.bind(params);
     const rows = [];
     while (stmt.step()) rows.push(stmt.getAsObject());
@@ -698,7 +698,7 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
     if (dateTo) { sql += ' AND entry_date <= ?'; params.push(dateTo); }
     sql += ' ORDER BY entry_date ASC';
 
-    const stmt = db.prepare(sql);
+    const stmt = db.getDb().prepare(sql);
     if (params.length) stmt.bind(params);
     const rows = [];
     while (stmt.step()) rows.push(stmt.getAsObject());
@@ -839,7 +839,7 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
     if (pregnancyId) { sql += ' AND pregnancy_id = ?'; params.push(pregnancyId); }
     sql += ' ORDER BY gestational_week ASC, gestational_day ASC, created_at ASC';
 
-    const stmt = db.prepare(sql);
+    const stmt = db.getDb().prepare(sql);
     if (params.length) stmt.bind(params);
     const photos = [];
     while (stmt.step()) photos.push(stmt.getAsObject());
