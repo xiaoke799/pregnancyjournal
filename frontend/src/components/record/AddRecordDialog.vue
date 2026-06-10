@@ -120,11 +120,25 @@
           </div>
         </template>
 
-        <!-- 饮食 -->
+        <!-- 饮食（三餐+加餐列表） -->
         <template v-if="selectedType === 'diet'">
+          <div class="diet-meals-list">
+            <div v-for="(meal, idx) in formData.dietMeals" :key="idx" class="diet-meal-item">
+              <div class="diet-meal-row">
+                <n-select v-model:value="meal.type" :options="dietMealOptions" size="small" style="width: 90px" />
+                <n-input v-model:value="meal.content" type="textarea" placeholder="记录吃了什么..." :rows="2" style="flex: 1" />
+                <n-button v-if="formData.dietMeals.length > 1" quaternary circle type="error" size="small" @click="removeDietMeal(idx)" style="margin-left: 4px; flex-shrink: 0">×</n-button>
+              </div>
+            </div>
+            <n-button dashed block @click="addDietMeal" style="margin-top: 8px">+ 添加一餐</n-button>
+          </div>
+        </template>
+
+        <!-- 好习惯 -->
+        <template v-if="selectedType === 'habit'">
           <div class="form-group">
-            <label>饮食备注</label>
-            <n-input v-model:value="formData.dietNote" type="textarea" placeholder="记录今天的饮食..." :rows="3" />
+            <label>好习惯内容</label>
+            <n-input v-model:value="formData.habitText" type="textarea" placeholder="记录今天坚持的好习惯..." :rows="3" />
           </div>
         </template>
 
@@ -142,9 +156,15 @@
 
         <!-- 睡眠 -->
         <template v-if="selectedType === 'sleep'">
-          <div class="form-group">
-            <label>睡眠时长 (小时)</label>
-            <n-input-number v-model:value="formData.sleepHours" :min="0" :max="24" :step="0.5" placeholder="时长" style="width: 100%" />
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>入睡时间</label>
+              <n-select v-model:value="formData.sleepBedtime" :options="timeOptions" placeholder="选择" filterable style="width: 100%" />
+            </div>
+            <div class="form-group flex-1">
+              <label>起床时间</label>
+              <n-select v-model:value="formData.sleepWaketime" :options="timeOptions" placeholder="选择" filterable style="width: 100%" />
+            </div>
           </div>
           <div class="form-group">
             <label>睡眠质量</label>
@@ -388,7 +408,7 @@
 import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
 import {
   NModal, NButton, NButtonGroup, NInput, NInputNumber, NDatePicker,
-  NTimePicker, NRadioGroup, NRadioButton, useMessage,
+  NRadioGroup, NRadioButton, NSelect, useMessage,
 } from 'naive-ui'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
@@ -429,6 +449,7 @@ const recordTypes = [
   { value: 'hcg', icon: '🧬', label: 'HCG' },
   { value: 'uric_acid', icon: '🧪', label: '尿酸' },
   { value: 'supplement', icon: '💊', label: '营养补充' },
+  { value: 'habit', icon: '✅', label: '好习惯' },
   { value: 'fetal_movement', icon: '🦶', label: '胎动' },
   { value: 'contraction', icon: '⏱️', label: '宫缩' },
   { value: 'intimacy', icon: '💑', label: '爱爱' },
@@ -471,6 +492,35 @@ const sleepQualityOptions = [
   { value: 'poor', label: '差' },
 ]
 
+const dietMealOptions = [
+  { value: '早餐', label: '早餐' },
+  { value: '午餐', label: '午餐' },
+  { value: '晚餐', label: '晚餐' },
+  { value: '加餐', label: '加餐' },
+]
+
+// 时间选项（每30分钟一个，00:00 ~ 23:30）
+const timeOptions = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2)
+  const m = (i % 2) * 30
+  const v = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0')
+  return { value: v, label: v }
+})
+
+function addDietMeal() {
+  const used = formData.value.dietMeals.map(m => m.type)
+  // 默认选第一个未使用的餐次，否则默认加餐
+  let next = '加餐'
+  for (const opt of dietMealOptions) {
+    if (!used.includes(opt.value)) { next = opt.value; break }
+  }
+  formData.value.dietMeals.push({ type: next, content: '' })
+}
+
+function removeDietMeal(idx: number) {
+  formData.value.dietMeals.splice(idx, 1)
+}
+
 function toggleSupplement(s: string) {
   const idx = formData.value.supplementItems.indexOf(s)
   if (idx >= 0) formData.value.supplementItems.splice(idx, 1)
@@ -500,14 +550,16 @@ const formData = ref({
   medName: '',
   medDosage: '',
   medFrequency: '',
-  // 饮食
-  dietNote: '',
+  // 饮食（三餐+加餐列表）
+  dietMeals: [] as { type: string; content: string }[],
   // 运动
   exerciseType: '',
   exerciseDuration: null as number | null,
   // 睡眠
-  sleepHours: null as number | null,
-  sleepQuality: 'fair' as 'good' | 'fair' | 'poor',
+  // 睡眠（入/起床时间）
+    sleepBedtime: '' as string,
+    sleepWaketime: '' as string,
+    sleepQuality: 'fair' as 'good' | 'fair' | 'poor',
   // 饮水
   waterIntake: null as number | null,
   // 排便
@@ -622,15 +674,36 @@ watch(() => props.show, (val) => {
           } catch { /* ignore */ }
           break
         case 'diet':
-          formData.value.dietNote = r.diet_note || ''
+          // 从旧格式 diet_note 回填：尝试解析 JSON 数组，否则作为单条"其他"
+          if (r.diet_note) {
+            try {
+              const parsed = JSON.parse(r.diet_note)
+              if (Array.isArray(parsed)) { formData.value.dietMeals = parsed }
+              else { formData.value.dietMeals = [{ type: '早餐', content: String(r.diet_note) }] }
+            } catch {
+              formData.value.dietMeals = [{ type: '早餐', content: r.diet_note }]
+            }
+          } else if (!formData.value.dietMeals.length) {
+            addDietMeal()
+          }
           break
         case 'exercise':
           formData.value.exerciseType = r.exercise_type || ''
           formData.value.exerciseDuration = r.exercise_duration ?? null
           break
         case 'sleep':
-          formData.value.sleepHours = r.sleep_hours != null ? Number(r.sleep_hours) : null
-          formData.value.sleepQuality = r.sleep_quality || 'fair'
+          // 兼容小弹窗保存的中文质量值（好/一般/差）→ 英文（good/fair/poor）
+          const sqMap2: Record<string, string> = { '好': 'good', '一般': 'fair', '差': 'poor' }
+          const mappedQ2 = sqMap2[String(r.sleep_quality)] || r.sleep_quality
+          formData.value.sleepQuality = (mappedQ2 || 'fair') as 'good' | 'fair' | 'poor'
+          // 尝试从备注中解析入/起床时间（格式如 "22:00~07:00"）
+          if (r.note) {
+            const m = r.note.match(/(\d{1,2}:\d{2})[~\-～](\d{1,2}:\d{2})/)
+            if (m) {
+              formData.value.sleepBedtime = m[1]
+              formData.value.sleepWaketime = m[2]
+            }
+          }
           break
         case 'water':
           formData.value.waterIntake = r.water_intake ?? null
@@ -813,8 +886,9 @@ async function saveRecord() {
         }])
         break
       case 'diet':
-        if (!formData.value.dietNote) { message.warning('请输入饮食备注'); saving.value = false; return }
-        data.diet_note = formData.value.dietNote
+        const validMeals = formData.value.dietMeals.filter(m => m.content && m.content.trim())
+        if (!validMeals.length) { message.warning('请至少填写一餐饮食'); saving.value = false; return }
+        data.diet_note = JSON.stringify(validMeals)
         break
       case 'exercise':
         if (!formData.value.exerciseType) { message.warning('请输入运动类型'); saving.value = false; return }
@@ -822,8 +896,21 @@ async function saveRecord() {
         data.exercise_duration = formData.value.exerciseDuration
         break
       case 'sleep':
-        data.sleep_hours = formData.value.sleepHours
+        // 从入/起床时间计算睡眠时长
+        let calcHours: number | undefined = undefined
+        if (formData.value.sleepBedtime && formData.value.sleepWaketime) {
+          const [bh, bm] = formData.value.sleepBedtime.split(':').map(Number)
+          const [wh, wm] = formData.value.sleepWaketime.split(':').map(Number)
+          let diff = (wh * 60 + wm) - (bh * 60 + bm)
+          if (diff < 0) diff += 24 * 60 // 跨天
+          calcHours = Math.round((diff / 60) * 10) / 10
+        }
+        data.sleep_hours = calcHours
         data.sleep_quality = formData.value.sleepQuality
+        // 在备注中保存入/起床时间，方便编辑时回填
+        if (formData.value.sleepBedtime && formData.value.sleepWaketime) {
+          data.note = `${formData.value.sleepBedtime}~${formData.value.sleepWaketime}`
+        }
         break
       case 'temperature':
         if (!formData.value.bodyTemperature) { message.warning('请输入体温'); saving.value = false; return }
@@ -931,11 +1018,14 @@ function resetForm() {
     medName: '',
     medDosage: '',
     medFrequency: '',
-    dietNote: '',
+    // 饮食（三餐+加餐列表）
+    dietMeals: [] as { type: string; content: string }[],
     exerciseType: '',
     exerciseDuration: null,
-    sleepHours: null,
-    sleepQuality: 'fair',
+    // 睡眠（入/起床时间）
+    sleepBedtime: '',
+    sleepWaketime: '',
+    sleepQuality: 'fair' as 'good' | 'fair' | 'poor',
     bodyTemperature: null,
     hcgValue: null,
     uricAcid: null,
@@ -1218,6 +1308,21 @@ onBeforeUnmount(() => {
   background: #e0e7ff;
   color: #4f46e5;
   font-weight: 600;
+}
+
+/* 饮食三餐列表 */
+.diet-meals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.diet-meal-item {
+  /* container */
+}
+.diet-meal-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 /* 爱爱切换按钮 */

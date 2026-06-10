@@ -388,8 +388,8 @@
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="sleepForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
         <div class="qf-row">
-          <div class="qf-group flex1"><label>入睡时间</label><n-time-picker v-model:formatted-value="sleepForm.bedtime" format="HH:mm" value-format="HH:mm" placeholder="22:00" style="width:100%" /></div>
-          <div class="qf-group flex1"><label>起床时间</label><n-time-picker v-model:formatted-value="sleepForm.waketime" format="HH:mm" value-format="HH:mm" placeholder="07:00" style="width:100%" /></div>
+          <div class="qf-group flex1"><label>入睡时间</label><n-select v-model:value="sleepForm.bedtime" :options="timeOptions" placeholder="选择" filterable style="width:100%" /></div>
+          <div class="qf-group flex1"><label>起床时间</label><n-select v-model:value="sleepForm.waketime" :options="timeOptions" placeholder="选择" filterable style="width:100%" /></div>
         </div>
         <div class="qf-group"><label>睡眠质量</label><n-radio-group v-model:value="sleepForm.quality" size="small"><n-radio-button value="差">差</n-radio-button><n-radio-button value="一般">一般</n-radio-button><n-radio-button value="好">好</n-radio-button></n-radio-group></div>
         <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="sleepForm.note" placeholder="如：起夜几次、做梦等" /></div>
@@ -516,7 +516,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   NButton, NModal, NInput, NInputNumber, NDatePicker,
-  NRadioGroup, NRadioButton, NPopover, NTimePicker, NSelect,
+  NRadioGroup, NRadioButton, NPopover, NSelect,
   useMessage,
 } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
@@ -599,6 +599,14 @@ const habitForm = ref({ date: '', text: '' })
 const tempForm = ref({ date: '', value: null as number | null, note: '' })
 // 睡眠
 const sleepForm = ref({ date: '', bedtime: '' as string, waketime: '' as string, quality: '一般' as '差' | '一般' | '好', note: '' })
+
+// 时间选项（每30分钟一个，00:00 ~ 23:30）
+const timeOptions = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2)
+  const m = (i % 2) * 30
+  const v = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0')
+  return { value: v, label: v }
+})
 // 饮水
 const waterForm = ref({ date: '', value: null as number | null, note: '' })
 // 饮食
