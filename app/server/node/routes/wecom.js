@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../db');
+const dayjs = require('dayjs');
 
 // 配置文件路径
 const CONFIG_FILE = path.join(__dirname, '..', 'data', 'wecom.json');
@@ -160,7 +161,6 @@ async function executeDailyPush(pregnancyId, config, sourceType, existingLogId) 
   const logId = existingLogId || recordPushLog('daily', `每日看板推送(${sourceType})`, 'pending', null);
 
   try {
-    const dayjs = require('dayjs');
     const today = dayjs().format('YYYY-MM-DD');
     const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
     const weekLater = dayjs().add(7, 'day').format('YYYY-MM-DD');

@@ -202,9 +202,9 @@
                 <span class="rs-icon">✅</span>
                 <span>{{ todayRecord.habit_text }}</span>
               </div>
-              <div class="rs-item" v-if="todayRecord.sleep_quality && todayRecord.sleep_quality !== 'fair' && todayRecord.sleep_quality !== '一般'">
+              <div class="rs-item" v-if="todayRecord.sleep_quality || todayRecord.sleep_hours">
                 <span class="rs-icon">😴</span>
-                <span>睡眠质量 {{ sleepQualityLabel(todayRecord.sleep_quality) }}</span>
+                <span>睡眠{{ todayRecord.sleep_hours ? todayRecord.sleep_hours + 'h ' : '' }}质量 {{ sleepQualityLabel(todayRecord.sleep_quality) }}</span>
               </div>
               <div class="rs-item" v-if="todayRecord.medication">
                 <span class="rs-icon">💊</span>

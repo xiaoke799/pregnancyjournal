@@ -5,9 +5,13 @@
       <MiniCalendar @select="onDateSelect" />
     </div>
 
-    <!-- ====== 2. 操作栏（+ 添加按钮 / 日期标题）====== -->
+    <!-- ====== 2. 操作栏（+ 添加按钮 / 日期标题 / 子级Tab切换）====== -->
     <div class="action-bar">
       <h3 class="date-title">{{ selectedDate }}</h3>
+      <div class="sub-tab-bar">
+        <button class="sub-tab-btn" :class="{ active: activeSubTab === 'record' }" @click="activeSubTab = 'record'">📝 记录</button>
+        <button class="sub-tab-btn" :class="{ active: activeSubTab === 'stats' }" @click="activeSubTab = 'stats'">📊 统计</button>
+      </div>
       <n-popover trigger="click" placement="bottom-end" :show-arrow="false" :style="{ maxWidth: '320px', padding: '8px' }">
         <template #trigger>
           <n-button type="primary" round :size="isMobile ? 'medium' : 'small'">
@@ -29,6 +33,8 @@
       </n-popover>
     </div>
 
+    <!-- ====== 记录模式内容 ====== -->
+    <template v-if="activeSubTab === 'record'">
     <!-- ====== 3. 今日数据预览卡片 ====== -->
     <div v-if="previewItems.length > 0" class="preview-section">
       <div class="preview-grid">
@@ -53,6 +59,93 @@
         @edit="onEditRecord"
         @add-type="openQuickAdd"
       />
+    </div>
+    </template>
+
+    <!-- ====== 统计模式内容 ====== -->
+    <div v-if="activeSubTab === 'stats'" class="stats-panel">
+      <div class="stats-header">
+        <h3>📊 数据统计</h3>
+        <div class="period-tabs">
+          <button
+            v-for="p in periodOptions" :key="p.value"
+            class="period-tab" :class="{ active: statsPeriod === p.value }"
+            @click="switchStatsPeriod(p.value)"
+          >{{ p.label }}</button>
+        </div>
+        <div class="period-info">{{ periodLabel }}</div>
+      </div>
+
+      <!-- 加载中 -->
+      <div v-if="statsLoading && statsRecords.length === 0" class="loading-state">
+        <span class="loading-spinner"></span> 加载中...
+      </div>
+
+      <!-- 空状态 -->
+      <div v-if="!statsLoading && statsRecords.length === 0" class="empty-state">
+        <span class="empty-icon">📈</span>
+        <span class="empty-text">暂无数据，先去记录一些吧</span>
+      </div>
+
+      <!-- 图表区域 -->
+      <div v-if="statsRecords.length > 0" class="charts-section">
+        <!-- 体重 -->
+        <MetricCard v-if="hasData('weight')" title="⚖️ 体重变化" unit="kg" :color="'#a78bfa'"
+          :dates="chartDates" :values="chartValues('weight')" :table-data="tableData('weight', 'weight')" />
+
+        <!-- 血压 -->
+        <MetricCard v-if="hasData('bp')" title="🩺 血压变化" unit="mmHg" :color="'#ef4444'"
+          :dates="chartDates"
+          :values="chartValues('bp_systolic')"
+          :values2="chartValues('bp_diastolic')"
+          :legend="['收缩压', '舒张压']"
+          :table-data="tableData('bp', 'blood_pressure_systolic', { sub: 'blood_pressure_diastolic', format: (r: any) => `${r.blood_pressure_systolic || '--'}/${r.blood_pressure_diastolic || '--'}` })" />
+
+        <!-- 血糖 -->
+        <MetricCard v-if="hasData('glucose')" title="🩸 血糖变化" unit="mmol/L" :color="'#f59e0b'"
+          :dates="chartDates"
+          :values="chartValues('glucose_fasting')"
+          :values2="chartValues('glucose_1h')"
+          :values3="chartValues('glucose_2h')"
+          :legend="['空腹', '餐后1h', '餐后2h']"
+          :table-data="tableData('glucose', 'blood_glucose_fasting', {
+            cols: [
+              { key: 'blood_glucose_fasting', label: '空腹' },
+              { key: 'blood_glucose_1h', label: '餐后1h' },
+              { key: 'blood_glucose_2h', label: '餐后2h' },
+            ]
+          })" />
+
+        <!-- HCG -->
+        <MetricCard v-if="hasData('hcg')" title="🧬 HCG 变化" unit="mIU/mL" :color="'#ec4899'"
+          :dates="chartDates" :values="chartValues('hcg_value')"
+          :table-data="tableData('hcg', 'hcg_value', { extra: 'hcg_weeks', extraLabel: '孕周' })" />
+
+        <!-- 尿酸 -->
+        <MetricCard v-if="hasData('uric_acid')" title="🧪 尿酸变化" unit="μmol/L" :color="'#06b6d4'"
+          :dates="chartDates" :values="chartValues('uric_acid')"
+          :table-data="tableData('uric_acid', 'uric_acid', { extra: 'uric_acid_period', extraLabel: '时段' })" />
+
+        <!-- 体温 -->
+        <MetricCard v-if="hasData('temp')" title="🌡️ 体温变化" unit="°C" :color="'#f97316'"
+          :dates="chartDates" :values="chartValues('body_temperature')"
+          :table-data="tableData('temp', 'body_temperature')" />
+
+        <!-- 睡眠 -->
+        <MetricCard v-if="hasData('sleep')" title="😴 睡眠时长" unit="小时" :color="'#8b5cf6'"
+          :dates="chartDates" :values="chartValues('sleep_hours')"
+          :table-data="tableData('sleep', 'sleep_hours', { extra: 'sleep_quality', extraLabel: '质量' })" />
+
+        <!-- 饮水 -->
+        <MetricCard v-if="hasData('water')" title="💧 饮水量" unit="ml" :color="'#3b82f6'"
+          :dates="chartDates" :values="chartValues('water_intake')"
+          :table-data="tableData('water', 'water_intake')" />
+
+        <!-- 胎动 -->
+        <MetricCard v-if="hasData('fm')" title="🦶 胎动次数" unit="次" :color="'#10b981'"
+          :dates="chartDates" :values="chartValues('fetal_movement_count')"
+          :table-data="tableData('fm', 'fetal_movement_count', { extra: 'fetal_movement_duration', extraLabel: '用时(分)' })" />
+      </div>
     </div>
 
     <!-- ====== 各类型独立小弹窗 ====== -->
@@ -526,6 +619,7 @@ import dayjs from 'dayjs'
 import MiniCalendar from '@/components/record/MiniCalendar.vue'
 import RecordList from '@/components/record/RecordList.vue'
 import AddRecordDialog from '@/components/record/AddRecordDialog.vue'
+import MetricCard from './StatsView/MetricCard.vue'
 
 const pregnancyStore = usePregnancyStore()
 const { isMobile } = useResize()
@@ -534,6 +628,9 @@ const message = useMessage()
 const selectedDate = ref(dayjs().format('YYYY-MM-DD'))
 const saving = ref(false)
 const currentRecords = ref<any[]>([])
+
+// ====== 子级 Tab 切换 ======
+const activeSubTab = ref<'record' | 'stats'>('record')
 
 // ====== 弹窗状态 ======
 const showAddDialog = ref(false)
@@ -1051,6 +1148,83 @@ function toggleSuppItem(s: string) {
   if (idx >= 0) supplementForm.value.items.splice(idx, 1)
   else supplementForm.value.items.push(s)
 }
+
+// ====== 统计数据（从 StatsView 复制并适配）======
+const statsLoading = ref(false)
+const statsRecords = ref<any[]>([])
+const statsPeriod = ref<'month'|'pregnancy'>('month')
+
+const periodOptions = [
+  { value: 'month' as const, label: '本月' },
+  { value: 'pregnancy' as const, label: '孕期全部' },
+]
+
+const periodLabel = computed(() => {
+  if (statsPeriod.value === 'month') return dayjs().format('YYYY年MM月')
+  if (pregnancyStore.currentPregnancy?.last_menstrual_date) {
+    return `从 ${dayjs(pregnancyStore.currentPregnancy.last_menstrual_date).format('YYYY-MM')} 至今`
+  }
+  return '孕期全部记录'
+})
+
+async function loadStatsData() {
+  if (!pregnancyStore.currentPregnancy?.id) return
+  statsLoading.value = true
+  try {
+    let start = '', end = ''
+    if (statsPeriod.value === 'month') {
+      start = dayjs().startOf('month').format('YYYY-MM-DD')
+      end = dayjs().endOf('month').format('YYYY-MM-DD')
+    }
+    const res: any = await dailyRecordApi.list(
+      pregnancyStore.currentPregnancy.id,
+      { start_date: start || undefined, end_date: end || undefined, page_size: 365 }
+    )
+    if (res.code === 0) {
+      const data = res.data
+      statsRecords.value = Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : [])
+      statsRecords.value.sort((a: any, b: any) => (a.record_date || '').localeCompare(b.record_date || ''))
+    }
+  } catch (e) { console.error('[Stats] load error:', e) }
+  finally { statsLoading.value = false }
+}
+
+function switchStatsPeriod(p: 'month'|'pregnancy') {
+  if (statsPeriod.value === p) return
+  statsPeriod.value = p
+  loadStatsData()
+}
+
+// 图表数据提取函数
+const chartDates = computed(() => statsRecords.value.map((r: any) => dayjs(r.record_date).format('MM/DD')))
+
+function chartValues(field: string): (number | null)[] {
+  return statsRecords.value.map((r: any) => { const v = r[field]; if (v == null || v === '') return null; const n = Number(v); return isNaN(n) ? null : n })
+}
+
+function hasData(metric: string): boolean {
+  switch (metric) {
+    case 'weight': return statsRecords.value.some((r: any) => r.weight != null)
+    case 'bp': return statsRecords.value.some((r: any) => r.blood_pressure_systolic != null || r.blood_pressure_diastolic != null)
+    case 'glucose': return statsRecords.value.some((r: any) => r.blood_glucose_fasting != null || r.blood_glucose_1h != null || r.blood_glucose_2h != null)
+    case 'hcg': return statsRecords.value.some((r: any) => r.hcg_value != null)
+    case 'uric_acid': return statsRecords.value.some((r: any) => r.uric_acid != null)
+    case 'temp': return statsRecords.value.some((r: any) => r.body_temperature != null)
+    case 'sleep': return statsRecords.value.some((r: any) => r.sleep_hours != null)
+    case 'water': return statsRecords.value.some((r: any) => r.water_intake != null)
+    case 'fm': return statsRecords.value.some((r: any) => r.fetal_movement_count != null)
+    default: return false
+  }
+}
+
+interface TableCol { date: string; value: string | number; extra?: string; note?: string }
+
+function tableData(metric: string, mainField: string, opts?: { sub?: string; format?: (r: any) => string; cols?: Array<{key:string;label:string}>; extra?: string; extraLabel?: string }): TableCol[] {
+  return statsRecords.value.filter((r: any) => { if (opts?.cols) return opts.cols.some(c => r[c.key] != null); if (opts?.format) return true; return r[mainField] != null })
+    .map((r: any) => ({ date: dayjs(r.record_date).format('MM-DD'), value: opts?.format ? opts.format(r) : (r[mainField] ?? '--'), extra: opts?.extra ? (r[opts.extra] ?? '') : undefined, note: r.note || undefined }))
+}
+
+watch(activeSubTab, (val) => { if (val === 'stats') loadStatsData() })
 </script>
 
 <style scoped>
@@ -1414,5 +1588,101 @@ function toggleSuppItem(s: string) {
   .action-bar {
     padding: 8px 2px 6px;
   }
+}
+
+/* ====== 子级 Tab 切换 ====== */
+.sub-tab-bar {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.sub-tab-btn {
+  padding: 5px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  background: white;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.sub-tab-btn:hover { border-color: #c44680; color: #c44680; }
+.sub-tab-btn.active {
+  background: linear-gradient(135deg, #e879a0, #c44680);
+  color: white;
+  border-color: transparent;
+}
+
+/* ====== 统计面板 ====== */
+.stats-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 2px;
+}
+.stats-panel .stats-header {
+  background: white;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.stats-panel .stats-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: #1e293b;
+}
+.stats-panel .charts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stats-panel .loading-state,
+.stats-panel .empty-state {
+  text-align: center;
+  padding: 50px 20px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+.stats-panel .empty-icon { font-size: 40px; display: block; margin-bottom: 8px; opacity: .4; }
+.stats-panel .loading-spinner {
+  display: inline-block;
+  width: 20px; height: 20px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #c44680;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.stats-panel .period-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.stats-panel .period-tab {
+  padding: 6px 18px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  background: white;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all .2s;
+}
+.stats-panel .period-tab:hover { border-color: #c44680; color: #c44680; }
+.stats-panel .period-tab.active {
+  background: linear-gradient(135deg, #e879a0, #c44680);
+  color: white;
+  border-color: transparent;
+}
+.stats-panel .period-info {
+  font-size: 12px;
+  color: #94a3b8;
 }
 </style>
