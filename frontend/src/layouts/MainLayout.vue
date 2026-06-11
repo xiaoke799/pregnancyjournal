@@ -66,7 +66,6 @@ const { isMobile } = useResize()
 const navItems = [
   { path: '/', icon: '🏠', label: '首页' },
   { path: '/record', icon: '📝', label: '记录' },
-  { path: '/stats', icon: '📊', label: '统计' },
   { path: '/diary', icon: '📖', label: '日记' },
   { path: '/album', icon: '📷', label: '相册' },
   { path: '/checkup-schedule', icon: '🏥', label: '产检' },
@@ -77,7 +76,7 @@ const navItems = [
 
 // 手机端 tabbar 显示所有功能入口（与电脑端侧边栏一致）
 const tabbarItems = computed(() => navItems.filter(i =>
-  ['/', '/record', '/stats', '/diary', '/album', '/checkup-schedule', '/diet', '/checklist', '/settings'].includes(i.path)
+  ['/', '/record', '/diary', '/album', '/checkup-schedule', '/diet', '/checklist', '/settings'].includes(i.path)
 ))
 </script>
 

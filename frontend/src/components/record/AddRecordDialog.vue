@@ -907,7 +907,10 @@ async function saveRecord() {
         }
         data.sleep_hours = calcHours
         data.sleep_quality = formData.value.sleepQuality
-        // 在备注中保存入/起床时间，方便编辑时回填
+        // note 字段复用设计：
+        // - sleep 类型：存 "22:00~07:00" 格式的时间范围，编辑时正则解析回填 bedtime/waketime
+        // - diary 类型：存 Tiptap 富文本 HTML 内容（日记无独立 content 字段）
+        // - 其他类型不使用 note 字段
         if (formData.value.sleepBedtime && formData.value.sleepWaketime) {
           data.note = `${formData.value.sleepBedtime}~${formData.value.sleepWaketime}`
         }
@@ -965,6 +968,7 @@ async function saveRecord() {
         const htmlContent = formData.value.diaryContent
         const textContent = editor.value?.getText()?.trim() || ''
         if (!textContent) { message.warning('请输入日记内容'); saving.value = false; return }
+        // diary 类型复用 note 字段存储 Tiptap 富文本 HTML（见上方 sleep 类型的 note 复用说明）
         data.note = htmlContent
         break
       }
