@@ -867,12 +867,16 @@ async function doUpsert(data: any) {
     message.error('缺少孕期信息')
     return false
   }
+  // 强制确保 record_date 为有效 YYYY-MM-DD 格式
+  let rawDate = data.record_date
+  data.record_date = (rawDate && dayjs(rawDate, 'YYYY-MM-DD', true).isValid())
+    ? dayjs(rawDate).format('YYYY-MM-DD')
+    : dayjs().format('YYYY-MM-DD')
   const fields = Object.keys(data).filter(k => !['pregnancy_id', 'record_date'].includes(k))
   console.log('[Record] doUpsert:', { date: data.record_date, fields })
   saving.value = true
   try {
     data.pregnancy_id = pregnancyStore.currentPregnancy.id
-    data.record_date = data.record_date || dayjs().format('YYYY-MM-DD')
     const res: any = await dailyRecordApi.upsert(data)
     console.log('[Record] doUpsert 响应:', res.code, res.message || 'OK')
     if (res.code === 0) {
@@ -1085,6 +1089,7 @@ async function saveContr() {
   console.log('[Record] saveContraction:', { duration: contrForm.value.duration, interval: contrForm.value.interval, pain: contrForm.value.pain })
   const ok = await doUpsert({
     record_date: contrForm.value.date,
+    contraction_count: contrForm.value.duration ? 1 : 0,
     contraction_duration: contrForm.value.duration || undefined,  // 持续时间(秒)
     contraction_interval: contrForm.value.interval || undefined,   // 间隔时间(分钟)
     contraction_pain: contrForm.value.pain || undefined,           // 疼痛程度
@@ -1096,7 +1101,11 @@ async function saveContr() {
 async function savePlan() {
   if (!planForm.value.text.trim()) { message.warning('请输入计划内容'); return }
   console.log('[Record] savePlan:', planForm.value.text.slice(0, 30))
-  const ok = await doUpsert({ record_date: planForm.value.date, plan_text: planForm.value.text })
+  const ok = await doUpsert({
+    record_date: planForm.value.date,
+    plan_text: planForm.value.text,
+    plan_date: planForm.value.date || undefined,
+  })
   if (ok) showPlanModal.value = false
 }
 
@@ -1161,9 +1170,9 @@ const periodOptions = [
 
 const periodLabel = computed(() => {
   if (statsPeriod.value === 'month') return dayjs().format('YYYY年MM月')
-  if (pregnancyStore.currentPregnancy?.last_menstrual_date) {
-    return `从 ${dayjs(pregnancyStore.currentPregnancy.last_menstrual_date).format('YYYY-MM')} 至今`
-  }
+  if (pregnancyStore.currentPregnancy?.last_period_date) {
+      return `从 ${dayjs(pregnancyStore.currentPregnancy.last_period_date).format('YYYY-MM')} 至今`
+    }
   return '孕期全部记录'
 })
 
