@@ -36,8 +36,8 @@ const props = defineProps<{
       id: string
       name: string
       category: string
-      is_checked: boolean
-      is_custom: boolean
+      is_checked: number
+      is_custom: number
     }>
   }
 }>()
@@ -48,7 +48,7 @@ defineEmits<{
   deleteItem: [itemId: string]
 }>()
 
-const checkedCount = computed(() => props.checklist.items.filter(i => i.is_checked).length)
+const checkedCount = computed(() => props.checklist.items.filter(i => i.is_checked === 1).length)
 
 const progressPercent = computed(() => {
   if (props.checklist.items.length === 0) return 0

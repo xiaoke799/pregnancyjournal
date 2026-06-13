@@ -7,9 +7,16 @@ const path = require('path');
 const log = require('../logger');
 const PDFDocument = require('pdfkit');
 
+// 导入/恢复端点的最大请求体大小（100MB），防止内存耗尽
+const MAX_PAYLOAD_BYTES = 100 * 1024 * 1024;
+
 // 简单认证中间件（fnOS CGI已通过header传递用户信息）
+// 注意：此中间件在 fnOS 部署环境下由反向代理层鉴权，此处直接放行。
+// 若脱离 fnOS 环境（直连 Node 进程），需替换为实际 token 校验逻辑。
 function verifyAuth(req, res, next) {
-  // 在fnOS环境中，CGI代理已处理认证，这里直接放行
+  if (config.APP_MODE === 'dev') {
+    log.warn('安全', 'verifyAuth 为空操作模式，生产环境请确保上游已鉴权');
+  }
   next();
 }
 
@@ -22,17 +29,52 @@ const ALL_TABLES = [
 ];
 
 function readTable(table) {
-  try { return db.queryAll(`SELECT * FROM ${table}`); } catch { return []; }
+  try { return db.queryAll(`SELECT * FROM ${table}`); } catch (e) { log.warn('导出', `读取表 ${table} 失败`, { error: e.message }); return []; }
+}
+
+// 表名 → 允许的列名白名单（防止 SQL 列名注入）
+const TABLE_COLUMNS = {
+  pregnancy: ['id','last_period_date','conception_date','due_date','is_active','baby_name','created_at','updated_at'],
+  prenatal_checkup: ['id','pregnancy_id','checkup_date','gestational_week','gestational_day','checkup_type','weight','blood_pressure','fetal_heart_rate','fundal_height','abdominal_circumference','hospital','notes','is_completed','is_recommended','created_at','updated_at'],
+  custom_checkup: ['id','pregnancy_id','name','items','checkup_date','notes','is_completed','created_at','updated_at'],
+  checkup_photo: ['id','checkup_id','file_path','thumbnail_path','note','created_at'],
+  checkup_report: ['id','checkup_id','checkup_type','filename','file_path','file_type','mime_type','file_size','report_category','sub_item','created_at'],
+  lab_result: ['id','checkup_id','category','item_name','value','unit','reference_min','reference_max','status','updated_at','created_at'],
+  daily_record: ['id','pregnancy_id','record_date','weight','fetal_heart_rate','body_temperature','blood_glucose_fasting','blood_glucose_1h','blood_glucose_2h','mood','mood_note','stool','stool_record','note','blood_pressure_systolic','blood_pressure_diastolic','sleep_hours','sleep_quality','symptoms','exercise_type','exercise_duration','diet_note','medication','edema_level','vaginal_discharge','skin_condition','urination_frequency','hcg_value','hcg_weeks','uric_acid','uric_acid_period','supplement_record','intimacy_note','plan_text','plan_date','is_plan_done','water_intake','habit_text','contraction_count','contraction_interval','contraction_duration','contraction_pain','contraction_record','fetal_movement_count','fetal_movement_duration','fetal_movement_record','sleep_record','diet_record','exercise_record','intimacy_record','created_at','updated_at'],
+  contraction_session: ['id','pregnancy_id','session_date','start_time','end_time','total_count','avg_duration','avg_interval','notes','created_at'],
+  contraction: ['id','session_id','start_time','end_time','duration','interval_from_prev','created_at'],
+  pregnancy_photo: ['id','pregnancy_id','checkup_id','photo_type','gestational_week','gestational_day','milestone_type','file_path','thumbnail_path','note','media_type','created_at','updated_at'],
+  diary_entry: ['id','pregnancy_id','entry_date','gestational_week','content','mood','image_urls','created_at','updated_at'],
+  checklist: ['id','pregnancy_id','type','name','created_at'],
+  checklist_item: ['id','checklist_id','name','description','category','is_checked','is_custom','is_mandatory','sort_order','created_at'],
+  reminder: ['id','pregnancy_id','title','trigger_date','trigger_time','reminder_type','source_type','source_id','is_enabled','is_triggered','is_completed','notes','created_at','updated_at'],
+  fetal_movement_session: ['id','pregnancy_id','session_date','start_time','end_time','total_count','notes','created_at'],
+  fetal_movement: ['id','session_id','timestamp','created_at'],
+  habit_checkin: ['id','pregnancy_id','date','items','notes','created_at','updated_at'],
+  supplement_checkin: ['id','pregnancy_id','date','items','notes','created_at','updated_at'],
+  app_config: ['id','key','value','description','created_at','updated_at'],
+};
+
+function sanitizeColumns(table, row) {
+  const allowed = TABLE_COLUMNS[table];
+  if (!allowed) return null;
+  const sanitized = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (allowed.includes(k)) sanitized[k] = v;
+  }
+  return sanitized;
 }
 
 function writeTable(table, rows) {
   if (!rows || rows.length === 0) return 0;
   let count = 0;
   for (const row of rows) {
-    const keys = Object.keys(row);
+    const sanitized = sanitizeColumns(table, row);
+    if (!sanitized || Object.keys(sanitized).length === 0) continue;
+    const keys = Object.keys(sanitized);
     const placeholders = keys.map(() => '?').join(',');
     const sql = `INSERT OR REPLACE INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`;
-    try { db.run(sql, keys.map(k => row[k])); count++; } catch (e) { log.warn('导入', `${table} 行导入失败`, { error: e.message }); }
+    try { db.run(sql, keys.map(k => sanitized[k])); count++; } catch (e) { log.warn('导入', `${table} 行导入失败`, { error: e.message }); }
   }
   return count;
 }
@@ -45,7 +87,7 @@ function copyFile(src, destDir) {
     const dest = path.join(destDir, fileName);
     if (src !== dest) fs.copyFileSync(src, dest);
     return dest;
-  } catch { return null; }
+  } catch (e) { log.warn('文件', `复制文件失败 ${src} → ${destDir}`, { error: e.message }); return null; }
 }
 
 function copyDirFiles(srcDir, destDir) {
@@ -59,11 +101,11 @@ function copyDirFiles(srcDir, destDir) {
       const dest = path.join(destDir, f);
       if (fs.statSync(src).isFile()) { fs.copyFileSync(src, dest); count++; }
     }
-  } catch {}
+  } catch (e) { log.warn('文件', `复制目录失败 ${srcDir} → ${destDir}`, { error: e.message }); }
   return count;
 }
 
-function copyDirContentsRecursive(srcBase, destBase) {
+function copyDirContentsRecursive(srcBase, destBase, maxDepth = 20) {
   let count = 0;
   try {
     if (!fs.existsSync(srcBase)) return 0;
@@ -71,15 +113,16 @@ function copyDirContentsRecursive(srcBase, destBase) {
     for (const item of items) {
       const srcPath = path.join(srcBase, item.name);
       const destPath = path.join(destBase, item.name);
+      if (item.isSymbolicLink()) continue; // 跳过符号链接，防止循环引用
       if (item.isFile()) {
         fs.mkdirSync(path.dirname(destPath), { recursive: true });
         fs.copyFileSync(srcPath, destPath);
         count++;
-      } else if (item.isDirectory()) {
-        count += copyDirContentsRecursive(srcPath, destPath);
+      } else if (item.isDirectory() && maxDepth > 1) {
+        count += copyDirContentsRecursive(srcPath, destPath, maxDepth - 1);
       }
     }
-  } catch {}
+  } catch (e) { log.warn('文件', `递归复制目录失败 ${srcBase}`, { error: e.message }); }
   return count;
 }
 
@@ -183,7 +226,7 @@ router.get('/export/download-dir', (req, res) => {
     }
     const resolved = path.resolve(exportDir);
     const backupsRoot = path.resolve(config.DATA_DIR || '.', 'backups');
-    if (!resolved.startsWith(backupsRoot)) {
+    if (resolved !== backupsRoot && !resolved.startsWith(backupsRoot + path.sep)) {
       return res.json({ code: 1001, data: null, message: '不允许访问该目录' });
     }
     const files = [];
@@ -207,6 +250,11 @@ router.post('/export/import-json', async (req, res) => {
     const importData = req.body;
     if (!importData || !importData.tables) {
       return res.json({ code: 1001, data: null, message: '无效的导入数据' });
+    }
+    // 防止超大 payload 导致内存耗尽
+    const payloadSize = JSON.stringify(importData).length;
+    if (payloadSize > MAX_PAYLOAD_BYTES) {
+      return res.json({ code: 1001, data: null, message: `导入数据过大（${Math.round(payloadSize / 1024 / 1024)}MB），超过限制` });
     }
     log.api('导入', 'JSON导入开始', { version: importData.version });
 
@@ -233,6 +281,12 @@ router.post('/export/import-dir', async (req, res) => {
     const importDir = req.query.dir || req.body.dir;
     if (!importDir || !fs.existsSync(importDir)) {
       return res.json({ code: 1001, data: null, message: '导入目录不存在' });
+    }
+    // 路径安全校验：仅允许从 backups 目录导入
+    const resolvedImport = path.resolve(importDir);
+    const backupsRoot = path.resolve(config.DATA_DIR || '.', 'backups');
+    if (!resolvedImport.startsWith(backupsRoot + path.sep) && resolvedImport !== backupsRoot) {
+      return res.json({ code: 1001, data: null, message: '不允许从该目录导入' });
     }
     log.api('导入', '目录导入开始', { dir: importDir });
 
@@ -268,6 +322,40 @@ router.post('/export/import-dir', async (req, res) => {
       const destReports = path.join(config.PHOTOS_DIR, 'checkup_reports');
       photoCount += copyDirFiles(reportsDir, destReports);
     }
+
+    // 路径重写：将导入数据中的旧绝对路径替换为本机路径
+    // import-dir 使用旧版格式（photos/media/checkup_reports 目录），无 _file_map，
+    // 需要根据文件名匹配来重写数据库路径
+    function rewriteImportPaths(table, col, srcDir, destBase) {
+      try {
+        if (!fs.existsSync(srcDir)) return;
+        const rows = db.queryAll(`SELECT id, ${col} FROM ${table}`);
+        for (const row of rows) {
+          const oldPath = row[col];
+          if (!oldPath) continue;
+          const fileName = path.basename(oldPath);
+          if (fs.existsSync(path.join(srcDir, fileName)) && oldPath !== path.join(destBase, fileName)) {
+            db.run(`UPDATE ${table} SET ${col} = ? WHERE id = ?`, [path.join(destBase, fileName), row.id]);
+          }
+        }
+      } catch {}
+    }
+    rewriteImportPaths('pregnancy_photo', 'file_path', photosDir, config.PHOTOS_DIR);
+    rewriteImportPaths('pregnancy_photo', 'thumbnail_path', photosDir, config.PHOTOS_DIR);
+    rewriteImportPaths('checkup_photo', 'file_path', photosDir, config.PHOTOS_DIR);
+    rewriteImportPaths('checkup_photo', 'thumbnail_path', photosDir, config.PHOTOS_DIR);
+    rewriteImportPaths('checkup_report', 'file_path', reportsDir, path.join(config.PHOTOS_DIR, 'checkup_reports'));
+    // 视频文件重写到 MEDIA_DIR
+    try {
+      const vids = db.queryAll("SELECT id, file_path FROM pregnancy_photo WHERE media_type = 'video'");
+      for (const v of vids) {
+        if (!v.file_path) continue;
+        const fileName = path.basename(v.file_path);
+        if (fs.existsSync(path.join(mediaDir, fileName))) {
+          db.run("UPDATE pregnancy_photo SET file_path = ? WHERE id = ?", [path.join(config.MEDIA_DIR, fileName), v.id]);
+        }
+      }
+    } catch {}
 
     db.saveDb();
     log.api('导入', `目录导入完成`, { totalRows, photos: photoCount });
@@ -372,14 +460,23 @@ router.post('/export/restore-db', async (req, res) => {
     if (!backupPath || !fs.existsSync(backupPath)) {
       return res.json({ code: 1001, data: null, message: '备份文件不存在' });
     }
-    const dbPath = config.DATABASE_PATH;
+    // 路径安全校验：仅允许恢复 backups 目录下的 .db 文件
+    const resolvedBackup = path.resolve(backupPath);
     const backupsDir = path.join(config.DATA_DIR || '.', 'backups');
+    if (!resolvedBackup.startsWith(path.resolve(backupsDir) + path.sep) && resolvedBackup !== path.resolve(backupsDir)) {
+      return res.json({ code: 1001, data: null, message: '不允许从该路径恢复数据库' });
+    }
+    if (!resolvedBackup.endsWith('.db')) {
+      return res.json({ code: 1001, data: null, message: '备份文件必须是 .db 格式' });
+    }
+    const dbPath = config.DATABASE_PATH;
+    const backupsDirForPre = path.join(config.DATA_DIR || '.', 'backups');
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const preRestore = path.join(backupsDir, `pre_restore_${timestamp}.db`);
+    const preRestore = path.join(backupsDirForPre, `pre_restore_${timestamp}.db`);
     if (fs.existsSync(dbPath)) fs.copyFileSync(dbPath, preRestore);
 
-    fs.copyFileSync(backupPath, dbPath);
+    fs.copyFileSync(resolvedBackup, dbPath);
     log.api('恢复', `数据库恢复完成`, { from: backupPath });
     res.json({ code: 0, data: { restored: true, pre_restore_backup: preRestore }, message: '恢复成功，重启后生效' });
   } catch (error) {
@@ -389,17 +486,29 @@ router.post('/export/restore-db', async (req, res) => {
 
 router.get('/export/backups', async (req, res) => {
   try {
-    const backupsDir = path.join(config.DATA_DIR || '.', 'backups');
-    if (!fs.existsSync(backupsDir)) return res.json({ code: 0, data: [], message: 'success' });
-    const files = fs.readdirSync(backupsDir)
-      .filter(f => f.endsWith('.db'))
-      .map(f => {
-        const fp = path.join(backupsDir, f);
-        const stat = fs.statSync(fp);
-        return { name: f, path: fp, size: stat.size, created_at: stat.mtime.toISOString() };
-      })
-      .sort((a, b) => b.created_at.localeCompare(a.created_at));
-    res.json({ code: 0, data: files, message: 'success' });
+    // 与备份一致：多候选目录搜索
+    const candidates = [
+      config.BACKUPS_DIR,
+      path.join(config.DATA_DIR || '.', 'backups'),
+      path.join(config.PHOTOS_DIR || '.', '..', 'backups'),
+    ];
+    const allBackups = [];
+    for (const base of candidates) {
+      if (!fs.existsSync(base)) continue;
+      try {
+        const dirs = fs.readdirSync(base)
+          .filter(f => f.startsWith('backup_'))
+          .map(f => {
+            const fp = path.join(base, f);
+            try { var stat = fs.statSync(fp); return { name: f, path: fp, size: stat.size, created_at: stat.mtime.toISOString() }; }
+            catch { return null; }
+          })
+          .filter(Boolean);
+        allBackups.push(...dirs);
+      } catch {}
+    }
+    allBackups.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    res.json({ code: 0, data: allBackups, message: 'success' });
   } catch (error) {
     res.json({ code: 1001, data: null, message: error.message });
   }
@@ -408,7 +517,28 @@ router.get('/export/backups', async (req, res) => {
 router.post('/backup', async (req, res) => {
   try {
     const { dir } = req.body || {};
-    const backupDir = dir ? path.resolve(dir) : path.join(config.DATA_DIR || '.', 'backups', `backup_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`);
+    // 确定备份目录：用户指定 > BACKUPS_DIR > DATA_DIR/backups > PHOTOS_DIR/../backups
+    var backupBase;
+    if (dir && typeof dir === 'string' && dir.trim()) {
+      backupBase = path.resolve(dir);
+    } else {
+      // 按优先级尝试可写目录（fnOS 上 data/ 可能无写权限，但 photos/ 可写）
+      const candidates = [
+        config.BACKUPS_DIR,
+        path.join(config.DATA_DIR || '.', 'backups'),
+        path.join(config.PHOTOS_DIR || '.', '..', 'backups'),
+      ];
+      backupBase = null;
+      for (const c of candidates) {
+        try { fs.mkdirSync(c, { recursive: true }); backupBase = c; break; }
+        catch { /* 继续尝试下一个 */ }
+      }
+      if (!backupBase) {
+        return res.json({ code: 1001, data: null, message: '无法创建备份目录，请检查存储权限' });
+      }
+    }
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const backupDir = path.join(backupBase, `backup_${ts}`);
     fs.mkdirSync(backupDir, { recursive: true });
 
     log.api('备份', '全量备份开始', { dir: backupDir });
@@ -436,7 +566,7 @@ router.post('/backup', async (req, res) => {
       try {
         if (srcPath !== dest) fs.copyFileSync(srcPath, dest);
         return fileName;
-      } catch { return null; }
+      } catch (e) { log.warn('文件', `复制文件失败 ${src} → ${destDir}`, { error: e.message }); return null; }
     }
     function trackCount(type, n) {
       exportData.file_manifest.total += n;
@@ -533,62 +663,87 @@ router.post('/restore', async (req, res) => {
     if (!dir) return res.json({ code: 1001, data: null, message: '请指定恢复目录路径' });
     const restoreDir = path.resolve(dir);
     if (!fs.existsSync(restoreDir)) return res.json({ code: 1001, data: null, message: '目录不存在: ' + restoreDir });
+    // 路径安全校验：仅允许从 backups 目录恢复
+    const backupsRoot = path.resolve(config.DATA_DIR || '.', 'backups');
+    if (!restoreDir.startsWith(backupsRoot + path.sep) && restoreDir !== backupsRoot) {
+      return res.json({ code: 1001, data: null, message: '不允许从该目录恢复，超出备份目录范围' });
+    }
 
     const dataFile = path.join(restoreDir, 'data.json');
     if (!fs.existsSync(dataFile)) return res.json({ code: 1001, data: null, message: '目录中没有 data.json 文件' });
 
     log.api('恢复', '全量恢复开始', { dir: restoreDir });
+    db.lockDb();
     let importData;
     try {
       importData = JSON.parse(fs.readFileSync(dataFile, 'utf-8'));
     } catch (parseErr) {
+      db.unlockDb();
       return res.json({ code: 1001, data: null, message: '备份文件格式错误或已损坏: ' + parseErr.message });
     }
     if (!importData || !importData.tables || typeof importData.tables !== 'object') {
+      db.unlockDb();
       return res.json({ code: 1001, data: null, message: '备份文件数据结构无效，缺少 tables 字段' });
     }
 
-    // ====== 1. 导入数据库表数据 ======
+    // ====== 1. 导入数据库表数据（事务保护） ======
     let totalRows = 0;
     const results = {};
-    for (const [table, rows] of Object.entries(importData.tables || {})) {
-      if (ALL_TABLES.includes(table) && Array.isArray(rows)) {
-        const count = writeTable(table, rows);
-        results[table] = count;
-        totalRows += count;
-      }
-    }
-
-    // ====== 2. 获取路径映射表（跨机器迁移核心） ======
-    const fileMap = importData._file_map || { album: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
-
-    // ====== 3. 重写数据库中的绝对路径 → 本机路径 ======
-    function rewriteTablePaths(table, pathColumn, mapObj, newBaseDir) {
-      const rows = db.queryAll(`SELECT id, ${pathColumn} FROM ${table}`);
-      for (const row of rows) {
-        const oldPath = row[pathColumn];
-        if (oldPath && mapObj[oldPath]) {
-          const newPath = path.join(newBaseDir, mapObj[oldPath]);
-          db.run(`UPDATE ${table} SET ${pathColumn} = ? WHERE id = ?`, [newPath, row.id]);
+    try {
+      db.getDb().run('BEGIN TRANSACTION');
+      for (const [table, rows] of Object.entries(importData.tables || {})) {
+        if (ALL_TABLES.includes(table) && Array.isArray(rows)) {
+          const count = writeTable(table, rows);
+          results[table] = count;
+          totalRows += count;
         }
       }
-    }
-    // 相册照片：file_path + thumbnail_path
-    rewriteTablePaths('pregnancy_photo', 'file_path', fileMap.album, config.PHOTOS_DIR);
-    rewriteTablePaths('pregnancy_photo', 'thumbnail_path', fileMap.album, config.PHOTOS_DIR);
-    // 视频（media_type=video 的文件应放到 MEDIA_DIR）
-    const photoRows = db.queryAll('SELECT id, file_path, media_type FROM pregnancy_photo WHERE media_type = \'video\'');
-    for (const r of photoRows) {
-      if (r.file_path && fileMap.album[r.file_path]) {
-        const newPath = path.join(config.MEDIA_DIR, fileMap.album[r.file_path]);
-        db.run('UPDATE pregnancy_photo SET file_path = ? WHERE id = ?', [newPath, r.id]);
+
+      // ====== 2. 获取路径映射表（跨机器迁移核心） ======
+      const fileMap = importData._file_map || { album: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
+
+      // ====== 3. 重写数据库中的绝对路径 → 本机路径 ======
+      function rewriteTablePaths(table, pathColumn, mapObj, newBaseDir) {
+        const rows = db.queryAll(`SELECT id, ${pathColumn} FROM ${table}`);
+        for (const row of rows) {
+          const oldPath = row[pathColumn];
+          if (oldPath && mapObj[oldPath]) {
+            const newPath = path.join(newBaseDir, mapObj[oldPath]);
+            db.run(`UPDATE ${table} SET ${pathColumn} = ? WHERE id = ?`, [newPath, row.id]);
+          }
+        }
       }
+
+      // 3a. 先缓存视频的路径映射（在通用重写前读取原始旧路径）
+      const videoPathUpdates = [];
+      const videoRows = db.queryAll('SELECT id, file_path FROM pregnancy_photo WHERE media_type = \'video\'');
+      for (const r of videoRows) {
+        if (r.file_path && fileMap.album[r.file_path]) {
+          videoPathUpdates.push({ id: r.id, newPath: path.join(config.MEDIA_DIR, fileMap.album[r.file_path]) });
+        }
+      }
+
+      // 3b. 相册照片：file_path + thumbnail_path → PHOTOS_DIR
+      rewriteTablePaths('pregnancy_photo', 'file_path', fileMap.album, config.PHOTOS_DIR);
+      rewriteTablePaths('pregnancy_photo', 'thumbnail_path', fileMap.album, config.PHOTOS_DIR);
+
+      // 3c. 将视频路径从 PHOTOS_DIR 覆盖到 MEDIA_DIR（必须放在通用重写之后）
+      for (const v of videoPathUpdates) {
+        db.run('UPDATE pregnancy_photo SET file_path = ? WHERE id = ?', [v.newPath, v.id]);
+      }
+      // 产检照片
+      rewriteTablePaths('checkup_photo', 'file_path', fileMap.checkup_photos, config.PHOTOS_DIR);
+      rewriteTablePaths('checkup_photo', 'thumbnail_path', fileMap.checkup_photos, config.PHOTOS_DIR);
+      // 检查报告
+      rewriteTablePaths('checkup_report', 'file_path', fileMap.checkup_reports, config.PHOTOS_DIR);
+
+      db.getDb().run('COMMIT');
+    } catch (txError) {
+      try { db.getDb().run('ROLLBACK'); } catch {}
+      db.unlockDb();
+      log.error('恢复', '全量恢复事务回滚', { error: txError.message });
+      return res.json({ code: 1001, data: null, message: `恢复失败（已回滚）: ${txError.message}` });
     }
-    // 产检照片
-    rewriteTablePaths('checkup_photo', 'file_path', fileMap.checkup_photos, config.PHOTOS_DIR);
-    rewriteTablePaths('checkup_photo', 'thumbnail_path', fileMap.checkup_photos, config.PHOTOS_DIR);
-    // 检查报告
-    rewriteTablePaths('checkup_report', 'file_path', fileMap.checkup_reports, config.PHOTOS_DIR);
 
     // ====== 4. 复制文件到本机对应目录 ======
     let fileCount = 0;
@@ -632,9 +787,10 @@ router.post('/restore', async (req, res) => {
     const legacyMediaDir = path.join(restoreDir, 'media');
     if (fs.existsSync(legacyMediaDir)) fileCount += copyDirFiles(legacyMediaDir, config.MEDIA_DIR);
     const legacyReportsDir = path.join(restoreDir, 'checkup_reports');
-    if (fs.existsSync(legacyReportsDir)) fileCount += copyDirFiles(legacyReportsDir, path.join(config.PHOTOS_DIR, 'checkups'));
+    if (fs.existsSync(legacyReportsDir)) fileCount += copyDirFiles(legacyReportsDir, path.join(config.PHOTOS_DIR, 'checkup_reports'));
 
     db.saveDb();
+    db.unlockDb();
     log.api('恢复', '全量恢复完成', { rows: totalRows, files: fileCount });
     res.json({
       code: 0,
@@ -642,6 +798,7 @@ router.post('/restore', async (req, res) => {
       message: `恢复完成: ${totalRows} 条记录, ${fileCount} 个文件`
     });
   } catch (error) {
+    db.unlockDb();
     log.error('恢复', '全量恢复失败', { error: error.message });
     res.json({ code: 1001, data: null, message: error.message });
   }
@@ -794,6 +951,8 @@ function findChineseFont() {
 }
 
 // ========== 日记 PDF 导出（真正 PDF） ==========
+// 注意：当前实现在内存中累积全部 PDF chunk 后发送。若数据量极大（数百篇长日记/照片），
+// 可能占用较多内存。后续可考虑改用流式响应（pipe）以降低内存峰值。
 router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
   try {
     const pregnancyId = req.query.pregnancy_id;
@@ -939,6 +1098,7 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
 });
 
 // ========== 纪念相册 PDF 导出 ==========
+// 注意：同 diary-pdf，大量照片时内存占用较高，后续可改用流式响应优化
 router.get('/export/album-pdf', verifyAuth, async (req, res) => {
   try {
     const pregnancyId = req.query.pregnancy_id;
@@ -1087,6 +1247,20 @@ router.get('/browse-dir', (req, res) => {
     let dirPath = req.query.path || '/';
     if (dirPath === '/') dirPath = '/';
 
+    // 先解码 URL 编码（防止 %2e%2e 等编码绕过）
+    try { dirPath = decodeURIComponent(dirPath); } catch {}
+
+    // 安全校验 1：禁止路径遍历和敏感目录访问
+    const normalized = path.normalize(dirPath).replace(/\\/g, '/');
+    const sensitivePatterns = ['/etc/', '/proc', '/sys/', '/dev/', 'C:\\Windows\\', 'C:\\Program Files', 'C:\\ProgramData'];
+    const isSensitive = sensitivePatterns.some(p => normalized.startsWith(p) || normalized.toLowerCase().startsWith(p.toLowerCase()));
+    if (isSensitive) {
+      return res.json({ code: 1001, data: null, message: '不允许访问系统敏感目录' });
+    }
+
+    // 安全校验 3：收集允许的根目录列表，用于后续路径锚定校验
+    const allowedRoots = [];
+
     const roots = [];
 
     // 飞牛系统：检测用户授权目录 (TRIM_DATA_ACCESSIBLE_PATHS, V1.1.8+)
@@ -1107,6 +1281,7 @@ router.get('/browse-dir', (req, res) => {
               type: 'accessible',
               desc: '用户授权目录',
             });
+            allowedRoots.push(p);
           }
         } catch { /* skip */ }
       }
@@ -1130,6 +1305,7 @@ router.get('/browse-dir', (req, res) => {
               type: 'share',
               desc: '应用共享目录',
             });
+            allowedRoots.push(p);
           }
         } catch { /* skip */ }
       }
@@ -1143,8 +1319,10 @@ router.get('/browse-dir', (req, res) => {
           try {
             fs.accessSync(vol, fs.constants.R_OK | fs.constants.W_OK);
             roots.push({ name: `存储${i} (${vol})`, path: vol, isRoot: true, canRW: true, type: 'volume' });
+            allowedRoots.push(vol);
           } catch {
             roots.push({ name: `存储${i}-只读 (${vol})`, path: vol, isRoot: true, canRW: false, type: 'volume' });
+            allowedRoots.push(vol);
           }
         }
       } catch { /* skip */ }
@@ -1161,6 +1339,16 @@ router.get('/browse-dir', (req, res) => {
         type: 'dev',
         desc: '开发模式默认目录',
       });
+      allowedRoots.push(cwd);
+    }
+
+    // 安全校验 4（核心防御）：路径锚定 — 确保 dirPath 解析后在允许的根目录内
+    const resolvedDir = path.resolve(normalized);
+    const isWithinAllowedRoot = allowedRoots.some(root =>
+      resolvedDir === path.resolve(root) || resolvedDir.startsWith(path.resolve(root) + path.sep)
+    );
+    if (!isWithinAllowedRoot && dirPath !== '/') {
+      return res.json({ code: 1001, data: null, message: '不允许访问该目录，超出授权范围' });
     }
 
     if (!fs.existsSync(dirPath)) {
@@ -1202,23 +1390,36 @@ module.exports = router;
 // ========== 一键恢复（自动查找最新备份） ==========
 router.post('/restore-latest', async (req, res) => {
   try {
-    const backupBaseDir = path.join(config.DATA_DIR || '.', 'backups');
-    if (!fs.existsSync(backupBaseDir)) {
+    // 与备份保持一致：多候选目录搜索（fnOS 上 data/ 可能无写权限）
+    const candidates = [
+      config.BACKUPS_DIR,
+      path.join(config.DATA_DIR || '.', 'backups'),
+      path.join(config.PHOTOS_DIR || '.', '..', 'backups'),
+    ];
+
+    let latestBackup = null;
+    for (const base of candidates) {
+      if (!fs.existsSync(base)) continue;
+      try {
+        const dirs = fs.readdirSync(base)
+          .filter(name => name.startsWith('backup_'))
+          .map(name => ({ name, mtime: fs.statSync(path.join(base, name)).mtime }))
+          .sort((a, b) => b.mtime - a.mtime);
+        if (dirs.length > 0) {
+          const candidate = path.join(base, dirs[0].name);
+          // 取所有候选中最新的
+          if (!latestBackup || fs.statSync(candidate).mtime > fs.statSync(latestBackup).mtime) {
+            latestBackup = candidate;
+          }
+        }
+      } catch { /* 继续下一个 */ }
+    }
+
+    if (!latestBackup) {
       return res.json({ code: 1001, data: null, message: '未找到任何备份，请先创建备份' });
     }
-
-    // 查找最新的备份目录
-    const dirs = fs.readdirSync(backupBaseDir)
-      .filter(name => name.startsWith('backup_'))
-      .map(name => ({ name, mtime: fs.statSync(path.join(backupBaseDir, name)).mtime }))
-      .sort((a, b) => b.mtime - a.mtime);
-
-    if (dirs.length === 0) {
-      return res.json({ code: 1001, data: null, message: '未找到备份文件' });
-    }
-
-    const latestBackup = path.join(backupBaseDir, dirs[0].name);
-    log.api('恢复', '一键恢复开始', { dir: latestBackup, backupDate: dirs[0].name });
+    log.api('恢复', '一键恢复开始', { dir: latestBackup });
+    db.lockDb();
 
     // 读取 data.json
     const dataFile = path.join(latestBackup, 'data.json');
@@ -1233,58 +1434,84 @@ router.post('/restore-latest', async (req, res) => {
       return res.json({ code: 1001, data: null, message: '备份文件格式错误或已损坏: ' + parseErr.message });
     }
     if (!importData || !importData.tables || typeof importData.tables !== 'object') {
+      db.unlockDb();
       return res.json({ code: 1001, data: null, message: '备份数据结构无效，缺少 tables 字段' });
     }
 
-    // ====== 1. 清空表并重新插入（全量替换） ======
+    // ====== 1. 清空表并重新插入 + 2. 路径重写（全量事务保护） ======
     let totalRows = 0;
     const results = {};
+    let restoreOk = false;
 
-    for (const [table, rows] of Object.entries(importData.tables)) {
-      if (!Array.isArray(rows) || rows.length === 0) continue;
-      try {
-        db.run(`DELETE FROM ${table}`);
-        if (rows.length > 0) {
-          const insertStmt = prepareInsertStatement(table, rows[0]);
-          for (const row of rows) {
-            db.run(insertStmt.sql, insertStmt.params(row));
+    try {
+      db.getDb().run('BEGIN TRANSACTION');
+
+      for (const [table, rows] of Object.entries(importData.tables)) {
+        if (!Array.isArray(rows) || rows.length === 0) continue;
+        try {
+          db.run(`DELETE FROM ${table}`);
+          if (rows.length > 0) {
+            // 使用白名单过滤列名，防止备份数据包含恶意/多余列
+            const sanitizedRows = rows.map(r => sanitizeColumns(table, r)).filter(Boolean);
+            if (sanitizedRows.length > 0) {
+              const insertStmt = prepareInsertStatement(table, sanitizedRows[0]);
+              for (const row of sanitizedRows) {
+                db.run(insertStmt.sql, insertStmt.params(row));
+              }
+            }
           }
+          results[table] = rows.length;
+          totalRows += rows.length;
+        } catch (e) {
+          results[table] = `ERROR: ${e.message}`;
+          throw e; // 任一表失败则整体回滚
         }
-        results[table] = rows.length;
-        totalRows += rows.length;
-      } catch (e) {
-        results[table] = `ERROR: ${e.message}`;
       }
-    }
 
-    // ====== 2. 路径重写（与 restore 保持一致） ======
-    const fileMap = importData._file_map || { album: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
+      // ====== 路径重写（同一事务内） ======
+      const fileMap = importData._file_map || { album: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
 
-    function rewritePaths(table, col, mapObj, baseDir) {
+      // 先缓存视频的路径映射（在通用重写前读取原始旧路径）
+      const videoUpdates = [];
       try {
-        const rows = db.queryAll(`SELECT id, ${col} FROM ${table}`);
-        for (const row of rows) {
-          const oldPath = row[col];
-          if (oldPath && mapObj[oldPath]) {
-            db.run(`UPDATE ${table} SET ${col} = ? WHERE id = ?`, [path.join(baseDir, mapObj[oldPath]), row.id]);
+        const vids = db.queryAll("SELECT id, file_path FROM pregnancy_photo WHERE media_type = 'video'");
+        for (const v of vids) {
+          if (v.file_path && fileMap.album[v.file_path]) {
+            videoUpdates.push({ id: v.id, newPath: path.join(config.MEDIA_DIR, fileMap.album[v.file_path]) });
           }
         }
       } catch {}
-    }
-    rewritePaths('pregnancy_photo', 'file_path', fileMap.album, config.PHOTOS_DIR);
-    rewritePaths('pregnancy_photo', 'thumbnail_path', fileMap.album, config.PHOTOS_DIR);
-    // 视频文件放到 MEDIA_DIR
-    try {
-      const vids = db.queryAll("SELECT id, file_path FROM pregnancy_photo WHERE media_type = 'video'");
-      for (const v of vids) {
-        if (v.file_path && fileMap.album[v.file_path]) {
-          db.run("UPDATE pregnancy_photo SET file_path = ? WHERE id = ?", [path.join(config.MEDIA_DIR, fileMap.album[v.file_path]), v.id]);
-        }
+
+      function rewritePaths(table, col, mapObj, baseDir) {
+        try {
+          const rows = db.queryAll(`SELECT id, ${col} FROM ${table}`);
+          for (const row of rows) {
+            const oldPath = row[col];
+            if (oldPath && mapObj[oldPath]) {
+              db.run(`UPDATE ${table} SET ${col} = ? WHERE id = ?`, [path.join(baseDir, mapObj[oldPath]), row.id]);
+            }
+          }
+        } catch {}
       }
-    } catch {}
-    rewritePaths('checkup_photo', 'file_path', fileMap.checkup_photos, config.PHOTOS_DIR);
-    rewritePaths('checkup_photo', 'thumbnail_path', fileMap.checkup_photos, config.PHOTOS_DIR);
-    rewritePaths('checkup_report', 'file_path', fileMap.checkup_reports, config.PHOTOS_DIR);
+      rewritePaths('pregnancy_photo', 'file_path', fileMap.album, config.PHOTOS_DIR);
+      rewritePaths('pregnancy_photo', 'thumbnail_path', fileMap.album, config.PHOTOS_DIR);
+
+      // 将视频路径覆盖到 MEDIA_DIR
+      for (const vu of videoUpdates) {
+        db.run("UPDATE pregnancy_photo SET file_path = ? WHERE id = ?", [vu.newPath, vu.id]);
+      }
+      rewritePaths('checkup_photo', 'file_path', fileMap.checkup_photos, config.PHOTOS_DIR);
+      rewritePaths('checkup_photo', 'thumbnail_path', fileMap.checkup_photos, config.PHOTOS_DIR);
+      rewritePaths('checkup_report', 'file_path', fileMap.checkup_reports, config.PHOTOS_DIR);
+
+      db.getDb().run('COMMIT');
+      restoreOk = true;
+    } catch (txError) {
+      try { db.getDb().run('ROLLBACK'); } catch {}
+      db.unlockDb();
+      log.error('恢复', '一键恢复事务回滚', { error: txError.message });
+      return res.json({ code: 1001, data: null, message: `恢复失败（已回滚）: ${txError.message}` });
+    }
 
     // ====== 3. 文件恢复（按类型分发到正确目录，与 restore 一致） ======
     let fileCount = 0;
@@ -1309,13 +1536,15 @@ router.post('/restore-latest', async (req, res) => {
     }
 
     db.saveDb();
+    db.unlockDb();
     log.api('恢复', '一键恢复完成', { dir: latestBackup, rows: totalRows, files: fileCount });
     res.json({
       code: 0,
       data: { restored_rows: totalRows, files: fileCount, backup_dir: latestBackup, results },
-      message: `恢复完成：${totalRows} 条记录，${fileCount} 个文件（来自 ${dirs[0].name}）`
+      message: `恢复完成：${totalRows} 条记录，${fileCount} 个文件（来自 ${path.basename(latestBackup)}）`
     });
   } catch (error) {
+    db.unlockDb();
     log.error('恢复', '一键恢复失败', { error: error.message });
     res.json({ code: 1001, data: null, message: error.message });
   }

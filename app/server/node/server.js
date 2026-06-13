@@ -153,6 +153,8 @@ async function start() {
 
 process.on('uncaughtException', (err) => {
   log.error('进程', 'uncaughtException', { error: err.message, stack: err.stack?.substring(0, 300) });
+  // 退出进程避免处于未知状态（定时器将在下次启动时恢复）
+  setTimeout(() => process.exit(1), 1000);
 });
 
 process.on('unhandledRejection', (reason) => {

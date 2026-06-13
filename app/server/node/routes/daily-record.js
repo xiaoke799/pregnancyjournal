@@ -84,12 +84,29 @@ router.get('/daily-records/diary/:filename', (req, res) => {
 
 router.post('/daily-records', (req, res) => {
   try {
-    const { pregnancy_id, record_date } = req.body;
+    let { pregnancy_id, record_date } = req.body;
+
+    // 容错：尝试修复 record_date 格式（处理数字时间戳、Date对象字符串等）
+    if (!record_date || typeof record_date !== 'string') {
+      // 如果完全缺失或非字符串，使用今天日期
+      record_date = new Date().toISOString().slice(0, 10);
+    } else if (!config.isValidDate(record_date)) {
+      // 尝试将各种格式解析后重新输出 YYYY-MM-DD
+      const parsed = new Date(record_date);
+      if (!isNaN(parsed.getTime())) {
+        record_date = parsed.toISOString().slice(0, 10);
+      }
+    }
+
     logger.info('daily-record', `POST /daily-records - pregnancy_id=${pregnancy_id}, record_date=${record_date}, fields=${Object.keys(req.body).length}`);
 
-    if (!pregnancy_id || !record_date) {
-      logger.warn('daily-record', `POST /daily-records - missing required fields: pregnancy_id=${pregnancy_id}, record_date=${record_date}`);
-      return res.json({ code: 1001, data: null, message: 'pregnancy_id 和 record_date 为必填项' });
+    if (!pregnancy_id) {
+      logger.warn('daily-record', `POST /daily-records - missing pregnancy_id`);
+      return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
+    }
+
+    if (!config.isValidDate(record_date)) {
+      return res.json({ code: 1001, data: null, message: 'record_date 格式无效，应为 YYYY-MM-DD' });
     }
 
     const existing = db.queryOne(
@@ -110,7 +127,7 @@ router.post('/daily-records', (req, res) => {
                       'exercise_duration', 'exercise_record', 'diet_note', 'diet_record', 'medication',
                       'edema_level', 'vaginal_discharge', 'skin_condition', 'urination_frequency',
                       'hcg_value', 'hcg_weeks', 'uric_acid', 'uric_acid_period', 'supplement_record', 'intimacy_note', 'intimacy_record',
-                      'plan_text', 'plan_date', 'water_intake', 'habit_text',
+                      'plan_text', 'plan_date', 'is_plan_done', 'water_intake', 'habit_text',
                       'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain', 'contraction_record',
                       'fetal_movement_count', 'fetal_movement_duration', 'fetal_movement_record'];
  
@@ -140,27 +157,30 @@ router.post('/daily-records', (req, res) => {
     const id = db.generateId();
     logger.info('daily-record', `POST /daily-records - inserting new record (id=${id})`);
     db.run(
-      `INSERT INTO daily_record (id, pregnancy_id, record_date,
-       weight, fetal_heart_rate, body_temperature,
-       blood_glucose_fasting, blood_glucose_1h, blood_glucose_2h,
-       mood, mood_note, stool, stool_record, note,
-       blood_pressure_systolic, blood_pressure_diastolic,
-       sleep_hours, sleep_quality, symptoms,
-       exercise_type, exercise_duration,
-       diet_note, medication,
-       edema_level, vaginal_discharge, skin_condition,
-       urination_frequency,
-       hcg_value, hcg_weeks,
-       uric_acid, uric_acid_period,
-       supplement_record,
-       intimacy_note,
-       plan_text, plan_date,
-       water_intake,
-       habit_text,
-       contraction_count, contraction_interval, contraction_duration, contraction_pain, contraction_record,
-       fetal_movement_count, fetal_movement_duration, fetal_movement_record,
-       sleep_record, diet_record, exercise_record, intimacy_record)
-       VALUES (?, ?, ?,
+      `INSERT INTO daily_record (
+        id, pregnancy_id, record_date,
+        weight, fetal_heart_rate, body_temperature,
+        blood_glucose_fasting, blood_glucose_1h, blood_glucose_2h,
+        mood, mood_note, stool, stool_record, note,
+        blood_pressure_systolic, blood_pressure_diastolic,
+        sleep_hours, sleep_quality, symptoms,
+        exercise_type, exercise_duration,
+        diet_note, medication,
+        edema_level, vaginal_discharge, skin_condition,
+        urination_frequency,
+        hcg_value, hcg_weeks,
+        uric_acid, uric_acid_period,
+        supplement_record,
+        intimacy_note,
+        plan_text, plan_date,
+        is_plan_done,
+        water_intake,
+        habit_text,
+        contraction_count, contraction_interval, contraction_duration, contraction_pain, contraction_record,
+        fetal_movement_count, fetal_movement_duration, fetal_movement_record,
+        sleep_record, diet_record, exercise_record, intimacy_record
+       ) VALUES (
+        ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?, ?, ?,
@@ -177,9 +197,11 @@ router.post('/daily-records', (req, res) => {
         ?, ?,
         ?,
         ?,
+        ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?,
-        ?, ?, ?, ?)`,
+        ?, ?, ?, ?
+       )`,
       [id, pregnancy_id, record_date,
        req.body.weight ?? null, req.body.fetal_heart_rate ?? null, req.body.body_temperature ?? null,
        req.body.blood_glucose_fasting ?? null, req.body.blood_glucose_1h ?? null, req.body.blood_glucose_2h ?? null,
@@ -195,6 +217,7 @@ router.post('/daily-records', (req, res) => {
        req.body.supplement_record || null,
        req.body.intimacy_note || null,
        req.body.plan_text || null, req.body.plan_date || null,
+       req.body.is_plan_done ?? null,
        req.body.water_intake ?? null,
        req.body.habit_text || null,
        req.body.contraction_count ?? null, req.body.contraction_interval ?? null, req.body.contraction_duration ?? null, req.body.contraction_pain || null, req.body.contraction_record || null,
@@ -224,6 +247,12 @@ router.get('/daily-records', (req, res) => {
     let where = 'WHERE pregnancy_id = ?';
     const params = [pregnancy_id];
 
+    if (start_date && !config.isValidDate(start_date)) {
+      return res.json({ code: 1001, data: null, message: 'start_date 格式无效，应为 YYYY-MM-DD' });
+    }
+    if (end_date && !config.isValidDate(end_date)) {
+      return res.json({ code: 1001, data: null, message: 'end_date 格式无效，应为 YYYY-MM-DD' });
+    }
     if (start_date) {
       where += ' AND record_date >= ?';
       params.push(start_date);
@@ -322,7 +351,7 @@ router.put('/daily-records/:record_id', (req, res) => {
                     'exercise_duration', 'exercise_record', 'diet_note', 'diet_record', 'medication',
                     'edema_level', 'vaginal_discharge', 'skin_condition', 'urination_frequency',
                     'hcg_value', 'hcg_weeks', 'uric_acid', 'uric_acid_period', 'supplement_record', 'intimacy_note', 'intimacy_record',
-                    'plan_text', 'plan_date', 'water_intake', 'habit_text',
+                    'plan_text', 'plan_date', 'is_plan_done', 'water_intake', 'habit_text',
                     'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain', 'contraction_record',
                     'fetal_movement_count', 'fetal_movement_duration', 'fetal_movement_record'];
 

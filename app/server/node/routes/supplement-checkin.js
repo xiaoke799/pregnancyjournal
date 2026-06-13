@@ -26,7 +26,7 @@ router.post('/supplement-checkins', async (req, res) => {
     } else {
       const id = db.generateId();
       await db.run(
-        'INSERT INTO supplement_checkin (id, pregnancy_id, date, items, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+        'INSERT INTO supplement_checkin (id, pregnancy_id, date, items, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
         [id, pregnancy_id, date, itemsJson, note || '']
       );
       res.json({ code: 0, data: { id, created: true }, message: '创建成功' });

@@ -109,8 +109,8 @@ const periodOptions = [
 
 const periodLabel = computed(() => {
   if (currentPeriod.value === 'month') return dayjs().format('YYYY年MM月')
-  if (pregnancyStore.currentPregnancy?.last_menstrual_date) {
-    return `从 ${dayjs(pregnancyStore.currentPregnancy.last_menstrual_date).format('YYYY-MM')} 至今`
+  if (pregnancyStore.currentPregnancy?.last_period_date) {
+    return `从 ${dayjs(pregnancyStore.currentPregnancy.last_period_date).format('YYYY-MM')} 至今`
   }
   return '孕期全部记录'
 })

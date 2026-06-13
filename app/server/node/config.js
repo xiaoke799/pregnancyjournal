@@ -1,5 +1,14 @@
 const path = require('path');
 
+// 日期格式校验正则（YYYY-MM-DD）
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+function isValidDate(dateStr) {
+  if (typeof dateStr !== 'string' || !DATE_REGEX.test(dateStr)) return false;
+  const d = new Date(dateStr + 'T00:00:00');
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === dateStr;
+}
+
 const config = {
   DATABASE_PATH: process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'pregnancyjournal.db'),
   PHOTOS_DIR: process.env.PHOTOS_DIR || path.join(process.cwd(), 'data', 'photos'),
@@ -11,10 +20,12 @@ const config = {
   PORT: parseInt(process.env.TRIM_SERVICE_PORT || process.env.PORT || '3867', 10),
   TRIM_SERVICE_PORT: process.env.TRIM_SERVICE_PORT || '3867',
   APP_MODE: process.env.APP_MODE || 'dev',
-  APP_VERSION: '0.0.21',
+  APP_VERSION: '0.0.23',
   TRIM_APPDEST: process.env.TRIM_APPDEST || '',
   TRIM_PKGVAR: process.env.TRIM_PKGVAR || '',
   TRIM_DATA_SHARE_PATHS: process.env.TRIM_DATA_SHARE_PATHS || '',
+  DATE_REGEX,
+  isValidDate,
 };
 
 module.exports = config;

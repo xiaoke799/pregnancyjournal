@@ -84,6 +84,8 @@ router.post('/photos', upload.single('file'), async (req, res) => {
     logger.info('photo', `POST /photos - uploaded id=${id}, media_type=${finalMediaType}, path=${destPath}`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    // 清理上传临时文件
+    if (req?.file?.path && fs.existsSync(req.file.path)) { try { fs.unlinkSync(req.file.path); } catch {} }
     logger.error('photo', 'POST /photos error', e);
     res.json({ code: 1001, data: null, message: e.message });
   }
@@ -162,10 +164,17 @@ router.get('/photos/:id/file', async (req, res) => {
     const photo = await db.queryOne('SELECT * FROM pregnancy_photo WHERE id = ?', [req.params.id]);
     if (!photo || !photo.file_path) return res.status(404).json({ code: 1001, data: null, message: '照片不存在' });
     if (!fs.existsSync(photo.file_path)) return res.status(404).json({ code: 1001, data: null, message: '文件不存在' });
-    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.tiff': 'image/tiff', '.heic': 'image/heic', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.avi': 'video/x-msvideo', '.mkv': 'video/x-matroska', '.ogg': 'video/ogg', '.flv': 'video/x-flv', '.wmv': 'video/x-ms-wmv', '.m4v': 'video/x-m4v', '.3gp': 'video/3gpp' };
+
+    // 安全校验：确保文件路径在允许的目录内（防止路径遍历）
+    const resolvedPath = path.resolve(photo.file_path);
+    const allowedDirs = [path.resolve(config.PHOTOS_DIR), path.resolve(config.MEDIA_DIR)].map(d => d.toLowerCase());
+    const isAllowed = allowedDirs.some(dir => resolvedPath.toLowerCase().startsWith(dir));
+    if (!isAllowed) return res.status(403).json({ code: 1001, data: null, message: '不允许访问该路径' });
+
+    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.tiff': 'image/tiff', '.heic': 'image/heic', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webp', '.mov': 'video/quicktime', '.avi': 'video/x-msvideo', '.mkv': 'video/x-matroska', '.ogg': 'video/ogg', '.flv': 'video/x-flv', '.wmv': 'video/x-ms-wmv', '.m4v': 'video/x-m4v', '.3gp': 'video/3gpp' };
     const ext = path.extname(photo.file_path).toLowerCase();
     res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
-    res.sendFile(path.resolve(photo.file_path));
+    res.sendFile(resolvedPath);
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
   }

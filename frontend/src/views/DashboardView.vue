@@ -44,8 +44,9 @@
               <template v-if="item.trigger_date && item.days_until !== 0"> · {{ item.trigger_date.slice(5) }}</template>
             </span>
           </div>
-          <n-button v-if="!item.is_completed" size="tiny" quaternary type="primary" @click="completeTodo(item)">完成</n-button>
-          <span v-else class="completed-badge">已完成</span>
+          <!-- 完成按钮：只对"计划"和"手动提醒"显示，产检去产检页完成 -->
+          <n-button v-if="!item.is_completed && canCompleteOnDashboard(item)" size="tiny" quaternary type="primary" @click="completeTodo(item)">完成</n-button>
+          <span v-else-if="item.is_completed" class="completed-badge">已完成</span>
         </div>
       </div>
       <div class="quick-add-row">
@@ -94,134 +95,62 @@
         </router-link>
       </div>
       <div v-if="todayRecord && Object.keys(todayRecord).length > 1" class="record-content">
-        <div class="record-primary">
-          <div class="rg-cell primary" v-if="todayRecord.weight != null">
-            <span class="rg-icon">⚖️</span>
-            <span class="rg-val">{{ todayRecord.weight }}<small>kg</small></span>
-            <span class="rg-label">体重</span>
+        <!-- 健康数据宫格：只显示健康指标，统一卡片样式 -->
+        <div class="health-grid">
+          <!-- 体重 -->
+          <div class="hg-card" v-if="todayRecord.weight != null">
+            <span class="hg-icon">⚖️</span>
+            <span class="hg-val">{{ todayRecord.weight }}<small>kg</small></span>
+            <span class="hg-label">体重</span>
           </div>
-          <div class="rg-cell primary" v-if="todayRecord.mood != null">
-            <span class="rg-icon">{{ moodEmoji(todayRecord.mood) }}</span>
-            <span class="rg-val">{{ moodLabel(todayRecord.mood) }}</span>
-            <span class="rg-label">心情</span>
+          <!-- 心情 -->
+          <div class="hg-card" v-if="todayRecord.mood != null">
+            <span class="hg-icon">{{ moodEmoji(todayRecord.mood) }}</span>
+            <span class="hg-val">{{ moodLabel(todayRecord.mood) }}</span>
+            <span class="hg-label">心情</span>
           </div>
-          <div class="rg-cell primary" v-if="todayRecord.fetal_heart_rate != null">
-            <span class="rg-icon">💓</span>
-            <span class="rg-val">{{ todayRecord.fetal_heart_rate }}<small>bpm</small></span>
-            <span class="rg-label">胎心</span>
+          <!-- 胎心 -->
+          <div class="hg-card" v-if="todayRecord.fetal_heart_rate != null">
+            <span class="hg-icon">💓</span>
+            <span class="hg-val">{{ todayRecord.fetal_heart_rate }}<small>bpm</small></span>
+            <span class="hg-label">胎心</span>
           </div>
-          <div class="rg-cell primary" v-if="todayRecord.sleep_hours != null">
-            <span class="rg-icon">😴</span>
-            <span class="rg-val">{{ todayRecord.sleep_hours }}<small>h</small></span>
-            <span class="rg-label">睡眠</span>
+          <!-- 睡眠 -->
+          <div class="hg-card" v-if="todayRecord.sleep_hours != null || todayRecord.sleep_quality">
+            <span class="hg-icon">😴</span>
+            <span class="hg-val">{{ todayRecord.sleep_hours ?? '--' }}<small>h</small></span>
+            <span class="hg-label">睡眠 {{ sleepQualityLabel(todayRecord.sleep_quality) }}</span>
           </div>
-        </div>
-        <div class="record-secondary">
-          <!-- 生命体征组 -->
-          <template v-if="hasVitals">
-            <div class="rs-group-label">🫀 生命体征</div>
-            <div class="rs-row">
-              <div class="rs-item" v-if="todayRecord.blood_pressure_systolic">
-                <span class="rs-icon">❤️</span>
-                <span>血压 {{ todayRecord.blood_pressure_systolic }}/{{ todayRecord.blood_pressure_diastolic }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.body_temperature">
-                <span class="rs-icon">🌡️</span>
-                <span>体温 {{ todayRecord.body_temperature }}°C</span>
-              </div>
-            </div>
-          </template>
-          <!-- 血糖组 -->
-          <template v-if="hasGlucose">
-            <div class="rs-group-label">🩸 血糖</div>
-            <div class="rs-row">
-              <div class="rs-item" v-if="todayRecord.blood_glucose_fasting">
-                <span>空腹 {{ todayRecord.blood_glucose_fasting }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.blood_glucose_1h">
-                <span>餐后1h {{ todayRecord.blood_glucose_1h }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.blood_glucose_2h">
-                <span>餐后2h {{ todayRecord.blood_glucose_2h }}</span>
-              </div>
-            </div>
-          </template>
-          <!-- 运动饮水组 -->
-          <template v-if="todayRecord.exercise_type || todayRecord.water_intake || todayRecord.diet_note">
-            <div class="rs-group-label">🏃 生活习惯</div>
-            <div class="rs-row">
-              <div class="rs-item" v-if="todayRecord.exercise_type">
-                <span class="rs-icon">🏃</span>
-                <span>{{ todayRecord.exercise_type }}{{ todayRecord.exercise_duration ? ' ' + todayRecord.exercise_duration + 'min' : '' }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.water_intake">
-                <span class="rs-icon">💧</span>
-                <span>饮水 {{ todayRecord.water_intake }}ml</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.diet_note">
-                <span class="rs-icon">🍽️</span>
-                <span class="rs-note">{{ todayRecord.diet_note }}</span>
-              </div>
-            </div>
-          </template>
-          <!-- 检查数据组 -->
-          <template v-if="hasCheckData">
-            <div class="rs-group-label">🔬 检查数据</div>
-            <div class="rs-row">
-              <div class="rs-item" v-if="todayRecord.fetal_movement_count">
-                <span class="rs-icon">👶</span>
-                <span>胎动 {{ todayRecord.fetal_movement_count }}次{{ todayRecord.fetal_movement_duration ? ' ·' + todayRecord.fetal_movement_duration + 'min' : '' }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.contraction_duration">
-                <span class="rs-icon">⏱️</span>
-                <span>宫缩 {{ todayRecord.contraction_duration }}s{{ todayRecord.contraction_interval ? ' ·间隔' + todayRecord.contraction_interval + 'min' : '' }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.uric_acid != null">
-                <span class="rs-icon">🧪</span>
-                <span>尿酸 {{ todayRecord.uric_acid }} μmol/L</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.hcg_value != null">
-                <span class="rs-icon">🧬</span>
-                <span>HCG {{ todayRecord.hcg_value }}</span>
-              </div>
-            </div>
-          </template>
-          <!-- 其他记录 -->
-          <template v-if="hasOtherRecords">
-            <div class="rs-group-label">📋 其他</div>
-            <div class="rs-row">
-              <div class="rs-item" v-if="todayRecord.edema_level && todayRecord.edema_level !== 'none'">
-                <span class="rs-icon">🦶</span>
-                <span>水肿 {{ edemaLabel(todayRecord.edema_level) }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.plan_text">
-                <span class="rs-icon">📌</span>
-                <span class="rs-note">{{ todayRecord.plan_text }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.habit_text">
-                <span class="rs-icon">✅</span>
-                <span>{{ todayRecord.habit_text }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.sleep_quality || todayRecord.sleep_hours">
-                <span class="rs-icon">😴</span>
-                <span>睡眠{{ todayRecord.sleep_hours ? todayRecord.sleep_hours + 'h ' : '' }}质量 {{ sleepQualityLabel(todayRecord.sleep_quality) }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.medication">
-                <span class="rs-icon">💊</span>
-                <span class="rs-note">{{ parseJsonText(todayRecord.medication) }}</span>
-              </div>
-              <div class="rs-item" v-if="todayRecord.intimacy_record || todayRecord.intimacy_note">
-                <span class="rs-icon">💑</span>
-                <span>爱爱 {{ parseJsonText(todayRecord.intimacy_record || todayRecord.intimacy_note) }}</span>
-              </div>
-            </div>
-          </template>
-        </div>
-        <div class="record-symptoms" v-if="parseSymptoms(todayRecord.symptoms).length">
-          <span class="symptom-tag" v-for="s in parseSymptoms(todayRecord.symptoms)" :key="s">{{ s }}</span>
-        </div>
-        <div class="record-note" v-if="todayRecord.note">
-          <span class="note-label">📝 备注：</span>{{ todayRecord.note }}
+          <!-- 血压 -->
+          <div class="hg-card" v-if="todayRecord.blood_pressure_systolic">
+            <span class="hg-icon">❤️</span>
+            <span class="hg-val">{{ todayRecord.blood_pressure_systolic }}/{{ todayRecord.blood_pressure_diastolic || '--' }}</span>
+            <span class="hg-label">血压</span>
+          </div>
+          <!-- 体温 -->
+          <div class="hg-card" v-if="todayRecord.body_temperature">
+            <span class="hg-icon">🌡️</span>
+            <span class="hg-val">{{ todayRecord.body_temperature }}<small>°C</small></span>
+            <span class="hg-label">体温</span>
+          </div>
+          <!-- 血糖（优先显示空腹，多值时合并） -->
+          <div class="hg-card" v-if="hasGlucose">
+            <span class="hg-icon">🩸</span>
+            <span class="hg-val">{{ glucoseDisplayText }}</span>
+            <span class="hg-label">血糖</span>
+          </div>
+          <!-- 尿酸 -->
+          <div class="hg-card" v-if="todayRecord.uric_acid != null">
+            <span class="hg-icon">🧪</span>
+            <span class="hg-val">{{ todayRecord.uric_acid }}<small>μmol/L</small></span>
+            <span class="hg-label">尿酸</span>
+          </div>
+          <!-- HCG -->
+          <div class="hg-card" v-if="todayRecord.hcg_value != null">
+            <span class="hg-icon">🧬</span>
+            <span class="hg-val">{{ todayRecord.hcg_value }}</span>
+            <span class="hg-label">HCG</span>
+          </div>
         </div>
       </div>
       <router-link v-else :to="{ path: '/record', query: { date: todayStr } }" class="empty-record">
@@ -352,6 +281,7 @@ import { reminderApi } from '@/api/reminder'
 import { wecomApi } from '@/api/wecom'
 import { markCheckupCompleted } from '@/api/checkup-schedule'
 import { checkupApi } from '@/api/checkup'
+import client from '@/api/client'
 import { calculateGestationalAge } from '@/utils/gestational'
 import dayjs from 'dayjs'
 import VChart from 'vue-echarts'
@@ -655,27 +585,6 @@ function todoIcon(item: any): string {
 
 const todayStr = dayjs().format('YYYY-MM-DD')
 
-function parseSymptoms(raw: string | null | undefined): string[] {
-  if (!raw) return []
-  try {
-    const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? arr.filter(Boolean) : []
-  } catch { return raw ? [raw] : [] }
-}
-
-function parseJsonText(raw: string | null | undefined): string {
-  if (!raw) return ''
-  try {
-    const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? arr.filter(Boolean).join('、') : raw
-  } catch { return raw }
-}
-
-function edemaLabel(level: string | undefined): string {
-  const map: Record<string, string> = { mild: '轻度', moderate: '中度', severe: '重度' }
-  return map[level || ''] || level || ''
-}
-
 function sleepQualityLabel(q: string): string {
   // 兼容小弹窗保存的中文质量值
   const zhMap: Record<string, string> = { '好': 'good', '一般': 'fair', '差': 'poor' }
@@ -683,44 +592,52 @@ function sleepQualityLabel(q: string): string {
   return normalized === 'good' ? '好' : normalized === 'poor' ? '差' : '一般'
 }
 
-// 分组可见性计算
-const hasVitals = computed(() => {
-  const r = todayRecord.value
-  return !!(r?.blood_pressure_systolic || r?.body_temperature)
-})
+// 分组可见性计算（仅保留健康数据相关）
 const hasGlucose = computed(() => {
   const r = todayRecord.value
   return !!(r?.blood_glucose_fasting || r?.blood_glucose_1h || r?.blood_glucose_2h)
 })
-const hasCheckData = computed(() => {
+
+/** 血糖显示文本：合并多值为一行 */
+const glucoseDisplayText = computed(() => {
   const r = todayRecord.value
-  return !!(r?.fetal_movement_count || r?.contraction_duration || r?.uric_acid != null || r?.hcg_value != null)
-})
-const hasOtherRecords = computed(() => {
-  const r = todayRecord.value
-  return !!((r?.edema_level && r.edema_level !== 'none') || r?.plan_text || r?.habit_text ||
-    (r?.sleep_quality && r.sleep_quality !== 'fair') || r?.medication ||
-    r?.intimacy_record || r?.intimacy_note)
+  const parts: string[] = []
+  if (r?.blood_glucose_fasting) parts.push(`空腹${r.blood_glucose_fasting}`)
+  if (r?.blood_glucose_1h) parts.push(`1h${r.blood_glucose_1h}`)
+  if (r?.blood_glucose_2h) parts.push(`2h${r.blood_glucose_2h}`)
+  return parts.join(' / ') || '--'
 })
 
 const lmpDate = computed(() => pregnancyStore.currentPregnancy?.last_period_date)
 
+/** 判断该条目是否可在首页看板直接完成（计划+手动提醒可以，产检不行） */
+function canCompleteOnDashboard(item: any): boolean {
+  const t = item.type || ''
+  // 计划项 和 手动提醒 可以在首页完成
+  if (t === 'plan' || item.id === 'plan_today') return true
+  // reminder 表的条目（无 type 或 type=manual）可以完成
+  if (!t || t === 'manual' || t === 'reminder') return true
+  // 产检相关：去产检页完成
+  return false
+}
+
 async function completeTodo(item: any) {
   try {
     const type = item.type || ''
-    if (type === 'checkup_reminder' && item.schedule_item_id) {
-      await markCheckupCompleted(item.schedule_item_id, pregnancyStore.currentPregnancy.id)
-    } else if (type === 'custom_checkup' && item.id) {
-      await checkupApi.markCustomComplete(item.id)
-    } else if (type === 'plan' || item.id === 'plan_today') {
-      message.info('计划项请在记录页完成')
-      return
-    } else if (item.id) {
-      await reminderApi.complete(item.id)
-    } else {
-      message.warning('无法完成此项')
-      return
+    // 1) 计划项 → 更新 daily_record 的 is_plan_done = 1
+    if (type === 'plan' || item.id === 'plan_today') {
+      const recordId = dashboardData.value?.today_record?.id
+      if (recordId) {
+        await client.put(`/daily-records/${recordId}`, { is_plan_done: 1 })
+      }
     }
+    // 2) 手动提醒 → 标记完成
+    else if (item.id && !type.startsWith('checkup')) {
+      await reminderApi.complete(item.id)
+    }
+    // 3) 产检类型 → 不在首页处理（去产检页完成）
+    else { return }
+
     await loadDashboard()
     message.success('已完成')
   } catch (e: any) { message.error('操作失败: ' + (e?.message || '')) }
@@ -1054,42 +971,26 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .eg-entry-arrow { font-size: 18px; color: #7c5cbf; font-weight: 700; }
 
 .record-content { display: flex; flex-direction: column; gap: 10px; }
-.record-primary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.rg-cell {
-  display: flex; flex-direction: column; align-items: center; padding: 12px 8px;
-  border-radius: 10px; background: #f8fafc; gap: 4px;
-}
-.rg-cell.primary { background: #fdf4ff; }
-.rg-icon { font-size: 20px; }
-.rg-val { font-size: 16px; font-weight: 700; color: var(--text-color, #1e293b); }
-.rg-val small { font-size: 11px; font-weight: 500; color: var(--text-hint, #94a3b8); margin-left: 1px; }
-.rg-label { font-size: 11px; color: var(--text-hint, #94a3b8); }
 
-.record-secondary { display: flex; flex-direction: column; gap: 10px; }
-.rs-group-label {
-  font-size: 11px; font-weight: 600; color: var(--text-hint, #94a3b8);
-  text-transform: uppercase; letter-spacing: 0.5px;
-  padding-bottom: 2px; border-bottom: 1px solid #f1f5f9;
+/* ====== 健康数据宫格（统一卡片样式）====== */
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
-.rs-row { display: flex; flex-wrap: wrap; gap: 6px; }
-.rs-item {
-  display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px;
-  border-radius: 8px; background: #f1f5f9; font-size: 12px; color: var(--text-color, #1e293b);
+.hg-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border-radius: 10px;
+  background: #fdf4ff;
+  gap: 4px;
 }
-.rs-icon { font-size: 13px; }
-.rs-note { font-size: 12px; color: var(--text-secondary, #64748b); }
-
-.record-symptoms { display: flex; flex-wrap: wrap; gap: 5px; }
-.symptom-tag {
-  padding: 3px 8px; border-radius: 6px; background: #fef3c7; color: #92400e;
-  font-size: 11px; font-weight: 500;
-}
-
-.record-note {
-  font-size: 12px; color: var(--text-secondary, #64748b); padding: 8px 10px;
-  background: #f8fafc; border-radius: 8px; line-height: 1.5;
-}
-.note-label { font-weight: 600; color: var(--text-color, #1e293b); }
+.hg-icon { font-size: 20px; }
+.hg-val { font-size: 16px; font-weight: 700; color: var(--text-color, #1e293b); }
+.hg-val small { font-size: 11px; font-weight: 500; color: var(--text-hint, #94a3b8); margin-left: 1px; }
+.hg-label { font-size: 11px; color: var(--text-hint, #94a3b8); text-align: center; }
 
 .empty-record {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -1118,7 +1019,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   .countdown-card { padding: 22px 16px 16px; border-radius: 14px; }
   .countdown-num { font-size: 52px; }
   .section { padding: 14px; border-radius: 12px; }
-  .record-primary { grid-template-columns: repeat(2, 1fr); }
+  .health-grid { grid-template-columns: repeat(2, 1fr); }
   .quick-add-row { flex-direction: column; }
   .core-grid {
     grid-template-columns: repeat(5, 1fr);
@@ -1132,7 +1033,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 @media (max-width: 480px) {
   .countdown-num { font-size: 44px; }
   .countdown-unit { font-size: 16px; }
-  .record-primary { grid-template-columns: repeat(2, 1fr); }
+  .health-grid { grid-template-columns: repeat(2, 1fr); }
   .dev-brief { flex-wrap: wrap; }
   .ci-week { min-width: 40px; font-size: 11px; }
   .core-grid {

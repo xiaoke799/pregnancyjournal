@@ -5,9 +5,10 @@ import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
 import { pregnancyApi } from '@/api/pregnancy'
 import { calculateGestationalAge, calculateGestationalAgeFromDueDate, type GestationalAge } from '@/utils/gestational'
+import type { Pregnancy, ApiResponse } from '@/types'
 
 export const usePregnancyStore = defineStore('pregnancy', () => {
-  const currentPregnancy = ref<any>(null)
+  const currentPregnancy = ref<Pregnancy | null>(null)
   /** 后端缓存的孕周数据（API 返回值，非实时） */
   const gestationalAge = ref<GestationalAge | null>(null)
   const loading = ref(false)
@@ -35,7 +36,7 @@ export const usePregnancyStore = defineStore('pregnancy', () => {
   async function fetchActivePregnancy() {
     loading.value = true
     try {
-      const res: any = await pregnancyApi.getActive()
+      const res = await pregnancyApi.getActive()
       if (res.code === 0 && res.data) {
         currentPregnancy.value = res.data
         await fetchGestationalAge()
@@ -50,7 +51,7 @@ export const usePregnancyStore = defineStore('pregnancy', () => {
 
   async function fetchGestationalAge() {
     try {
-      const res: any = await pregnancyApi.getGestationalAge()
+      const res = await pregnancyApi.getGestationalAge()
       if (res.code === 0 && res.data) {
         // 后端返回 snake_case，统一转 camelCase
         gestationalAge.value = {

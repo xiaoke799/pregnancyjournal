@@ -11,8 +11,8 @@ defineProps<{
   item: {
     id: string
     name: string
-    is_checked: boolean
-    is_custom: boolean
+    is_checked: number
+    is_custom: number
   }
 }>()
 

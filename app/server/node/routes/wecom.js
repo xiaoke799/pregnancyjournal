@@ -166,17 +166,17 @@ async function executeDailyPush(pregnancyId, config, sourceType, existingLogId) 
     const weekLater = dayjs().add(7, 'day').format('YYYY-MM-DD');
 
     const pregnancy = db.queryOne(
-      'SELECT lmp, edd, current_week FROM pregnancy WHERE id = ?',
+      'SELECT last_period_date, due_date, is_active FROM pregnancy WHERE id = ?',
       [pregnancyId]
     );
     if (!pregnancy) throw new Error('未找到孕期记录');
 
-    let gestationalWeek = pregnancy.current_week || '?';
+    let gestationalWeek = '?';
     let daysUntilDue = '?';
-    if (pregnancy.lmp) {
-      const lmpDay = dayjs(pregnancy.lmp);
+    if (pregnancy.last_period_date) {
+      const lmpDay = dayjs(pregnancy.last_period_date);
       gestationalWeek = Math.floor(dayjs().diff(lmpDay, 'day') / 7);
-      if (pregnancy.edd) daysUntilDue = dayjs(pregnancy.edd).diff(dayjs(), 'day');
+      if (pregnancy.due_date) daysUntilDue = dayjs(pregnancy.due_date).diff(dayjs(), 'day');
     }
 
     let dueText = typeof daysUntilDue === 'number'

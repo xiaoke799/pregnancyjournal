@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS daily_record (
   intimacy_note TEXT,
   plan_text TEXT,
   plan_date TEXT,
+  is_plan_done INTEGER DEFAULT 0,
   water_intake INTEGER,
   habit_text TEXT,
   contraction_count INTEGER,
@@ -362,6 +363,7 @@ function migrateDb() {
       intimacy_note: null,
       plan_text: null,
       plan_date: null,
+      is_plan_done: 0,
       water_intake: null,
       stool_record: null,
       habit_text: null,
@@ -474,8 +476,14 @@ async function initDb() {
   setInterval(saveDb, 30000);
 }
 
+let _savingDb = false;
+let _dbLocked = false; // 数据库锁定标志：恢复/备份等批量操作期间阻止自动保存
+
 function saveDb() {
   if (!db) return;
+  // 恢复等批量操作期间跳过自动保存，避免写入半完成状态
+  if (_savingDb || _dbLocked) return;
+  _savingDb = true;
   try {
     const data = db.export();
     const buffer = Buffer.from(data);
@@ -484,6 +492,8 @@ function saveDb() {
     fs.renameSync(tmpPath, config.DATABASE_PATH);
   } catch (e) {
     console.error('Failed to save DB:', e.message);
+  } finally {
+    _savingDb = false;
   }
 }
 
@@ -533,4 +543,7 @@ function generateId() {
   return require('crypto').randomUUID();
 }
 
-module.exports = { getDb, initDb, saveDb, queryOne, queryAll, run, generateId };
+function lockDb() { _dbLocked = true; }
+function unlockDb() { _dbLocked = false; }
+
+module.exports = { getDb, initDb, saveDb, queryOne, queryAll, run, generateId, lockDb, unlockDb };

@@ -516,7 +516,7 @@ async function handleBackup() {
   backingUp.value = true
   backupResult.value = null
   try {
-    const res: any = await exportApi.backup('')
+    const res: any = await exportApi.backup(undefined)
     if (res.code === 0) {
       const dirPath = res.data?.dir || '未知路径'
       backupResult.value = { success: true, message: `备份完成！共 ${res.data?.total_rows || 0} 条记录，${res.data?.files?.total || 0} 个文件。备份位置：${dirPath}，请手动复制该备份文件到安全位置保存。` }

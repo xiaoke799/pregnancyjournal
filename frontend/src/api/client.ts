@@ -6,6 +6,7 @@
  */
 
 import axios from 'axios'
+import type { ApiResponse } from '@/types'
 
 const client = axios.create({
   baseURL: './api/v1',
@@ -27,14 +28,14 @@ client.interceptors.request.use(
 
 // 响应拦截 - 增强错误处理
 client.interceptors.response.use(
-  (response) => {
+  <T = unknown>(response: { data: ApiResponse<T> }): ApiResponse<T> => {
     const data = response.data
     if (data && typeof data.code === 'number' && data.code !== 0) {
       return Promise.reject(new Error(data.message || '请求失败'))
     }
     return data
   },
-  (error) => {
+  (error: Error): Promise<never> => {
     if (error.response) {
       const status = error.response.status
       const data = error.response.data
