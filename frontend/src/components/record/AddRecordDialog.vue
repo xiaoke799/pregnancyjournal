@@ -81,9 +81,19 @@
               <n-time-picker v-model:formatted-value="formData.contractionEnd" format="HH:mm" placeholder="结束" style="width: 100%" />
             </div>
           </div>
-          <div class="form-group">
-            <label>间隔 (分钟)</label>
-            <n-input-number v-model:value="formData.contractionInterval" :min="0" :max="60" placeholder="间隔" style="width: 100%" />
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>间隔 (分钟)</label>
+              <n-input-number v-model:value="formData.contractionInterval" :min="0" :max="60" placeholder="间隔" style="width: 100%" />
+            </div>
+            <div class="form-group flex-1">
+              <label>疼痛程度</label>
+              <n-select v-model:value="formData.contractionPain" :options="[
+                { label: '轻微', value: '轻微' },
+                { label: '中度', value: '中度' },
+                { label: '剧烈', value: '剧烈' },
+              ]" placeholder="选择疼痛程度" style="width: 100%" />
+            </div>
           </div>
         </template>
 
@@ -230,6 +240,10 @@
             <label>HCG 值 (mIU/mL)</label>
             <n-input-number v-model:value="formData.hcgValue" :min="0" :step="1" placeholder="如：50000" style="width: 100%" />
           </div>
+          <div class="form-group">
+            <label>孕周</label>
+            <n-input-number v-model:value="formData.hcgWeeks" :min="0" :max="42" :step="0.1" placeholder="如：6.5" style="width: 100%" />
+          </div>
           <div class="form-hint">💡 孕8-10周达到峰值，之后逐渐下降</div>
         </template>
 
@@ -238,6 +252,13 @@
           <div class="form-group">
             <label>尿酸 (μmol/L)</label>
             <n-input-number v-model:value="formData.uricAcid" :min="0" :max="1000" :step="1" placeholder="如：280" style="width: 100%" />
+          </div>
+          <div class="form-group">
+            <label>时段</label>
+            <n-select v-model:value="formData.uricAcidPeriod" :options="[
+              { label: '空腹', value: '空腹' },
+              { label: '餐后2小时', value: '餐后2小时' },
+            ]" placeholder="选择时段" style="width: 100%" />
           </div>
           <div class="form-hint">💡 女性正常范围155-357 μmol/L</div>
         </template>
@@ -544,6 +565,7 @@ const formData = ref({
   contractionStart: '',
   contractionEnd: '',
   contractionInterval: null as number | null,
+  contractionPain: null as string | null,
   // 症状
   symptoms: [] as string[],
   // 用药
@@ -570,8 +592,10 @@ const formData = ref({
   bodyTemperature: null as number | null,
   // HCG
   hcgValue: null as number | null,
+  hcgWeeks: null as number | null,
   // 尿酸
   uricAcid: null as number | null,
+  uricAcidPeriod: null as string | null,
   // 营养补充
   supplementItems: [] as string[],
   // 爱爱
@@ -650,6 +674,7 @@ watch(() => props.show, (val) => {
           break
         case 'contraction':
           formData.value.contractionInterval = r.contraction_interval ?? null
+          formData.value.contractionPain = r.contraction_pain || null
           if (r.note) {
             const m = r.note.match(/(\d{2}:\d{2})~(\d{2}:\d{2})/)
             if (m) {
@@ -723,9 +748,11 @@ watch(() => props.show, (val) => {
           break
         case 'hcg':
           formData.value.hcgValue = r.hcg_value ?? null
+          formData.value.hcgWeeks = r.hcg_weeks ?? null
           break
         case 'uric_acid':
           formData.value.uricAcid = r.uric_acid ?? null
+          formData.value.uricAcidPeriod = r.uric_acid_period ?? null
           break
         case 'supplement':
           try {
@@ -844,9 +871,14 @@ async function saveRecord() {
 
   saving.value = true
   try {
+    // 强制确保 record_date 为有效 YYYY-MM-DD 格式
+    let rawDate = formData.value.recordDate
+    const recordDate = (rawDate && dayjs(rawDate, 'YYYY-MM-DD', true).isValid())
+      ? dayjs(rawDate).format('YYYY-MM-DD')
+      : dayjs().format('YYYY-MM-DD')
     const data: any = {
       pregnancy_id: props.pregnancyId,
-      record_date: formData.value.recordDate || dayjs().format('YYYY-MM-DD'),
+      record_date: recordDate,
     }
 
     switch (selectedType.value) {
@@ -872,6 +904,15 @@ async function saveRecord() {
       case 'contraction':
         data.contraction_count = formData.value.contractionStart ? 1 : 0
         data.contraction_interval = formData.value.contractionInterval || null
+        // 从开始/结束时间计算持续时间(秒)
+        if (formData.value.contractionStart && formData.value.contractionEnd) {
+          const [sh, sm] = formData.value.contractionStart.split(':').map(Number)
+          const [eh, em] = formData.value.contractionEnd.split(':').map(Number)
+          let diffSec = (eh * 60 + em) - (sh * 60 + sm)
+          if (diffSec < 0) diffSec += 60 * 60 // 跨小时（不太可能但防御性处理）
+          data.contraction_duration = Math.max(diffSec, 0)
+        }
+        if (formData.value.contractionPain) data.contraction_pain = formData.value.contractionPain
         break
       case 'symptoms':
         if (formData.value.symptoms.length === 0) { message.warning('请选择症状'); saving.value = false; return }
@@ -922,10 +963,12 @@ async function saveRecord() {
       case 'hcg':
         if (!formData.value.hcgValue) { message.warning('请输入HCG值'); saving.value = false; return }
         data.hcg_value = formData.value.hcgValue
+        if (formData.value.hcgWeeks) data.hcg_weeks = formData.value.hcgWeeks
         break
       case 'uric_acid':
         if (!formData.value.uricAcid) { message.warning('请输入尿酸值'); saving.value = false; return }
         data.uric_acid = formData.value.uricAcid
+        if (formData.value.uricAcidPeriod) data.uric_acid_period = formData.value.uricAcidPeriod
         break
       case 'supplement':
         data.supplement_record = JSON.stringify(formData.value.supplementItems.map(s => ({ name: s })))
@@ -1018,6 +1061,7 @@ function resetForm() {
     contractionStart: '',
     contractionEnd: '',
     contractionInterval: null,
+    contractionPain: null as string | null,
     symptoms: [],
     medName: '',
     medDosage: '',
@@ -1032,7 +1076,9 @@ function resetForm() {
     sleepQuality: 'fair' as 'good' | 'fair' | 'poor',
     bodyTemperature: null,
     hcgValue: null,
+    hcgWeeks: null as number | null,
     uricAcid: null,
+    uricAcidPeriod: null as string | null,
     supplementItems: [],
     intimacyNote: '',
     intimacyHappened: null as boolean | null,
