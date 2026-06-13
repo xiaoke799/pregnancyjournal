@@ -2,11 +2,12 @@
 
 import { ref, computed } from 'vue'
 import { contractionApi } from '@/api/contraction'
+import type { ContractionItem, ApiResponse } from '@/types'
 
 export function useContractionTimer() {
   const sessionId = ref<string | null>(null)
   const isRunning = ref(false)
-  const contractions = ref<any[]>([])
+  const contractions = ref<ContractionItem[]>([])
   const currentStartTime = ref<Date | null>(null)
   const lastDuration = ref<number>(0)
   const lastInterval = ref<number>(0)
@@ -15,7 +16,7 @@ export function useContractionTimer() {
   const totalCount = computed(() => contractions.value.length)
 
   async function startSession(pregnancyId: string) {
-    const res: any = await contractionApi.createSession(pregnancyId)
+    const res = await contractionApi.createSession(pregnancyId)
     if (res.code === 0 && res.data) {
       sessionId.value = res.data.id
       contractions.value = []
@@ -45,7 +46,7 @@ export function useContractionTimer() {
       }
     }
 
-    const res: any = await contractionApi.recordContraction(sessionId.value, 'end')
+    const res = await contractionApi.recordContraction(sessionId.value, 'end')
 
     contractions.value.push({
       startTime: currentStartTime.value.toISOString(),
@@ -57,7 +58,7 @@ export function useContractionTimer() {
 
     // 检查 5-1-1
     if (sessionId.value) {
-      const analysis: any = await contractionApi.analyze(sessionId.value)
+      const analysis = await contractionApi.analyze(sessionId.value)
       if (analysis.code === 0 && analysis.data) {
         alert511.value = analysis.data.is_511_met
       }
@@ -73,7 +74,7 @@ export function useContractionTimer() {
 
   async function recordManual(startTime: string, endTime: string) {
     if (!sessionId.value) return
-    const res: any = await contractionApi.recordContraction(sessionId.value, 'manual', startTime, endTime)
+    const res = await contractionApi.recordContraction(sessionId.value, 'manual', startTime, endTime)
     if (res.code === 0 && res.data) {
       const c = res.data
       contractions.value.push({

@@ -85,7 +85,7 @@
             </div>
             <div class="group-items" v-show="expandedGroups[cl.id]?.has(catName) || catName === '_none_'">
               <label
-                v-for="item in filterItems(group.items)"
+                v-for="item in filterItems(group.items, cl.id)"
                 :key="item.id"
                 class="item-row"
                 :class="{ checked: item.is_checked === 1, custom: item.is_custom === 1, mandatory: item.is_mandatory === 1 }"
@@ -112,36 +112,36 @@
 
         <!-- 筛选按钮 -->
         <div class="filter-row">
-          <button 
-            class="filter-btn" 
-            :class="{ active: filterStatus === 'all' }"
-            @click="filterStatus = 'all'"
+          <button
+            class="filter-btn"
+            :class="{ active: getChecklistFilter(cl.id).status === 'all' }"
+            @click="getChecklistFilter(cl.id).status = 'all'"
           >全部</button>
-          <button 
-            class="filter-btn mandatory-filter" 
-            :class="{ active: filterStatus === 'mandatory' }"
-            @click="filterStatus = 'mandatory'"
+          <button
+            class="filter-btn mandatory-filter"
+            :class="{ active: getChecklistFilter(cl.id).status === 'mandatory' }"
+            @click="getChecklistFilter(cl.id).status = 'mandatory'"
           >🔥 必备</button>
-          <button 
-            class="filter-btn" 
-            :class="{ active: filterStatus === 'unchecked' }"
-            @click="filterStatus = 'unchecked'"
+          <button
+            class="filter-btn"
+            :class="{ active: getChecklistFilter(cl.id).status === 'unchecked' }"
+            @click="getChecklistFilter(cl.id).status = 'unchecked'"
           >未准备</button>
-          <button 
-            class="filter-btn" 
-            :class="{ active: filterStatus === 'checked' }"
-            @click="filterStatus = 'checked'"
+          <button
+            class="filter-btn"
+            :class="{ active: getChecklistFilter(cl.id).status === 'checked' }"
+            @click="getChecklistFilter(cl.id).status = 'checked'"
           >已准备</button>
         </div>
 
         <!-- 搜索 -->
         <div class="search-row">
           <input
-            v-model="searchQuery"
+            v-model="getChecklistFilter(cl.id).search"
             placeholder="搜索物品..."
             class="search-input"
           />
-          <button v-if="searchQuery" class="clear-search" @click="searchQuery = ''">✕</button>
+          <button v-if="getChecklistFilter(cl.id).search" class="clear-search" @click="getChecklistFilter(cl.id).search = ''">✕</button>
         </div>
 
       </div>
@@ -175,6 +175,15 @@ const newItemCustomCat = reactive<Record<string, string>>({})
 const activeAddChecklistId = ref<string | null>(null)
 const searchQuery = ref('')
 const filterStatus = ref<'all' | 'checked' | 'unchecked' | 'mandatory'>('all')
+// 按清单ID独立维护的筛选状态（支持每个清单独立的搜索/筛选）
+const perChecklistFilter = reactive<Record<string, { search: string; status: 'all' | 'checked' | 'unchecked' | 'mandatory' }>>({})
+
+function getChecklistFilter(checklistId: string) {
+  if (!perChecklistFilter[checklistId]) {
+    perChecklistFilter[checklistId] = { search: '', status: 'all' }
+  }
+  return perChecklistFilter[checklistId]
+}
 
 interface ItemGroup {
   items: any[]
@@ -290,17 +299,18 @@ function toggleGroup(checklistId: string, groupName: string) {
   expandedGroups.value = { ...expandedGroups.value }
 }
 
-function filterItems(items: any[]): any[] {
+function filterItems(items: any[], checklistId: string): any[] {
+  const f = getChecklistFilter(checklistId)
   let filtered = items
-  if (filterStatus.value === 'checked') {
+  if (f.status === 'checked') {
     filtered = filtered.filter(item => item.is_checked === 1)
-  } else if (filterStatus.value === 'unchecked') {
+  } else if (f.status === 'unchecked') {
     filtered = filtered.filter(item => item.is_checked === 0)
-  } else if (filterStatus.value === 'mandatory') {
+  } else if (f.status === 'mandatory') {
     filtered = filtered.filter(item => item.is_mandatory === 1)
   }
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase()
+  if (f.search.trim()) {
+    const query = f.search.toLowerCase()
     filtered = filtered.filter(item => item.name.toLowerCase().includes(query))
   }
   return filtered
@@ -369,6 +379,8 @@ async function loadChecklists() {
   if (!pregnancyStore.currentPregnancy) return
   loading.value = true
   try {
+    // 首次加载时确保默认清单已初始化（写操作通过专用 POST 端点触发）
+    await checklistApi.ensureDefaults(pregnancyStore.currentPregnancy.id)
     const res: any = await checklistApi.list(pregnancyStore.currentPregnancy.id)
     if (res.code === 0) {
       const data = res.data

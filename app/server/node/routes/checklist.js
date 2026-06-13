@@ -172,8 +172,6 @@ router.get('/checklists/progress', (req, res) => {
     }
     logger.info('checklist', `GET /checklists/progress - pregnancy_id=${pregnancy_id}`);
 
-    _ensureDefaultChecklists(pregnancy_id);
-
     const checklists = db.queryAll(
       `SELECT c.id, c.name, c.type,
               (SELECT COUNT(*) FROM checklist_item WHERE checklist_id = c.id) as total,
@@ -242,8 +240,6 @@ router.get('/checklists', (req, res) => {
       return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
     }
     logger.info('checklist', `GET /checklists - pregnancy_id=${pregnancy_id}`);
-
-    _ensureDefaultChecklists(pregnancy_id);
 
     const checklists = db.queryAll(
       'SELECT * FROM checklist WHERE pregnancy_id = ? ORDER BY created_at',
@@ -418,6 +414,25 @@ router.delete('/checklists/items/:item_id', (req, res) => {
   }
 });
 
+router.delete('/checklists/:id', (req, res) => {
+  try {
+    logger.info('checklist', `DELETE /checklists/${req.params.id}`);
+    const existing = db.queryOne('SELECT * FROM checklist WHERE id = ?', [req.params.id]);
+    if (!existing) {
+      logger.warn('checklist', `DELETE /checklists/${req.params.id} - not found`);
+      return res.json({ code: 1001, data: null, message: '清单不存在' });
+    }
+    // 先删除关联条目（外键级联删除，但显式执行更安全）
+    db.run('DELETE FROM checklist_item WHERE checklist_id = ?', [req.params.id]);
+    db.run('DELETE FROM checklist WHERE id = ?', [req.params.id]);
+    logger.info('checklist', `DELETE /checklists/${req.params.id} - deleted`);
+    res.json({ code: 0, data: null, message: '删除成功' });
+  } catch (e) {
+    logger.error('checklist', `DELETE /checklists/:id error: ${e.message}`);
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
 router.post('/checklists/:id/init-default', (req, res) => {
   try {
     logger.info('checklist', `POST /checklists/${req.params.id}/init-default`);
@@ -430,7 +445,8 @@ router.post('/checklists/:id/init-default', (req, res) => {
       return res.json({ code: 1001, data: null, message: '清单不存在' });
     }
 
-    db.run('DELETE FROM checklist_item WHERE checklist_id = ?', [req.params.id]);
+    // 仅删除非自定义条目，保留用户手动添加的自定义物品
+    db.run('DELETE FROM checklist_item WHERE checklist_id = ? AND is_custom = 0', [req.params.id]);
 
     const defaultCl = DEFAULT_CHECKLISTS.find(c => c.type === checklist.type);
     if (!defaultCl) {
@@ -471,6 +487,20 @@ router.post('/checklists/:id/init-default', (req, res) => {
     res.json({ code: 0, data: { ...updatedChecklist, items: refreshed }, message: 'success' });
   } catch (e) {
     logger.error('checklist', `POST /checklists/:id/init-default error: ${e.message}`);
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
+// 确保默认清单已初始化（供前端首次加载时显式调用）
+router.post('/checklists/ensure-defaults', (req, res) => {
+  try {
+    const { pregnancy_id } = req.body;
+    if (!pregnancy_id) {
+      return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
+    }
+    _ensureDefaultChecklists(pregnancy_id);
+    res.json({ code: 0, data: null, message: 'success' });
+  } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
