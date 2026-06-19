@@ -120,6 +120,8 @@ const tabbarItems = computed(() => navItems.filter(i =>
   padding: 22px 16px 18px;
   position: relative;
   z-index: 1;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .logo-wrap {
@@ -128,6 +130,7 @@ const tabbarItems = computed(() => navItems.filter(i =>
   gap: 10px;
   padding: 6px 10px;
   border-radius: var(--radius-md);
+  cursor: default;
 }
 
 .logo-emoji {

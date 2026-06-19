@@ -65,7 +65,7 @@ router.post('/checkups', async (req, res) => {
     logger.info('checkup', `POST /checkups - checkup created (id=${id})`);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
-    logger.error('checkup', `POST /checkups error: ${e.message}`);
+    logger.error('checkup', `POST /checkups 异常: ${e.message}, body={date:${req.body.checkup_date},week:${req.body.gestational_week},type:${req.body.checkup_type}}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
@@ -229,12 +229,16 @@ router.post('/checkups/custom', async (req, res) => {
 router.get('/checkups/custom', async (req, res) => {
   try {
     const { pregnancy_id } = req.query;
-    logger.info('checkup', `GET /checkups/custom - pregnancy_id=${pregnancy_id}`);
+
+    // [诊断] 先查全表总数（不带过滤），确认数据是否真的存进去了
+    const allRows = await db.queryAll('SELECT id, pregnancy_id, name, checkup_date FROM custom_checkup ORDER BY created_at DESC');
+    logger.info('checkup', `GET /checkups/custom pid=${pregnancy_id || '无'} | 全表=${allRows.length}条 ${JSON.stringify(allRows.map(r => r.id + ':' + r.name))}`);
+
     let where = 'WHERE 1=1';
     const params = [];
     if (pregnancy_id) { where += ' AND pregnancy_id = ?'; params.push(pregnancy_id); }
     const rows = await db.queryAll(`SELECT * FROM custom_checkup ${where} ORDER BY created_at DESC`, params);
-    logger.info('checkup', `GET /checkups/custom - ${rows.length} records`);
+    logger.info('checkup', `GET /checkups/custom → 返回 ${rows.length} 条数据`);
     res.json({ code: 0, data: rows, message: 'success' });
   } catch (e) {
     logger.error('checkup', `GET /checkups/custom error: ${e.message}`);

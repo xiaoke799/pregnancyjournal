@@ -780,6 +780,7 @@ const mergedList = computed<MergedItem[]>(() => {
     }
   })
   const all = [...standard, ...custom]
+  console.log('[mergedList] standard=', standard.length, 'custom=', custom.length, 'total=', all.length)
   all.sort((a, b) => {
     const aWeek = a.week_start ?? 999
     const bWeek = b.week_start ?? 999
@@ -1047,7 +1048,13 @@ async function loadAll() {
       // 获取自定义产检
       try {
         const res: any = await checkupApi.listCustom(pid)
-        if (res.code === 0 && Array.isArray(res.data)) customCheckups.value = res.data
+        console.log('[loadAll] listCustom raw response:', JSON.stringify(res)?.slice(0, 300))
+        if (res.code === 0 && Array.isArray(res.data)) {
+          customCheckups.value = res.data
+          console.log('[loadAll] customCheckups assigned:', res.data.length, 'items:', res.data.map((c: any) => ({ id: c.id, name: c.name, date: c.checkup_date })))
+        } else {
+          console.warn('[loadAll] listCustom unexpected format: code=', res?.code, 'dataType=', Array.isArray(res?.data) ? 'array' : typeof res?.data)
+        }
       } catch (e) { console.warn('获取自定义产检失败:', e) }
 
       await loadScheduleDates()

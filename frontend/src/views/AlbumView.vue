@@ -80,8 +80,10 @@
     <!-- 上传对话框 -->
     <n-modal v-model:show="showUploadDialog" preset="dialog" title="上传照片/视频" positive-text="上传" negative-text="取消"
       :positive-button-props="{ disabled: !uploadFile }"
+      :style="{ '--n-content-padding': '20px', '--n-body-padding': '0', overflow: 'visible' }"
       @positive-click="handleUploadSubmit"
     >
+      <div style="overflow: visible; padding: 16px 0;">
       <n-form label-placement="left" label-width="80">
         <n-form-item label="选择文件">
           <input
@@ -101,12 +103,13 @@
           </div>
         </n-form-item>
         <n-form-item label="日期">
-          <n-date-picker v-model:formatted-value="uploadDate" type="date" value-format="yyyy-MM-dd" style="width: 100%" clearable />
+          <n-date-picker v-model:formatted-value="uploadDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" clearable />
         </n-form-item>
         <n-form-item label="描述">
           <n-input v-model:value="uploadNote" type="textarea" :rows="2" placeholder="添加描述（可选）" />
         </n-form-item>
       </n-form>
+      </div>
     </n-modal>
 
     <!-- 照片全屏查看 -->
@@ -266,6 +269,7 @@ async function handleUploadSubmit(): Promise<boolean> {
     formData.append('photo_type', uploadPhotoType.value)
     formData.append('media_type', isVideo ? 'video' : 'photo')
     if (currentWeek != null) formData.append('gestational_week', String(currentWeek))
+    if (uploadDate.value) formData.append('photo_date', uploadDate.value)
     if (uploadNote.value) formData.append('note', uploadNote.value)
 
     await photoApi.upload(formData)
