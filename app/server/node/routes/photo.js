@@ -52,8 +52,8 @@ function _getThumbnailPath(originalPath, mediaType) {
 router.post('/photos', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.json({ code: 1001, data: null, message: '请上传文件' });
-    const { pregnancy_id, photo_type, gestational_week, gestational_day, milestone_type, checkup_id, note, media_type: reqMedia } = req.body;
-    logger.info('photo', `POST /photos - file=${req.file.originalname}, size=${req.file.size}, type=${photo_type}, pregnancy_id=${pregnancy_id}`);
+    const { pregnancy_id, photo_type, gestational_week, gestational_day, milestone_type, checkup_id, note, media_type: reqMedia, photo_date } = req.body;
+    logger.info('photo', `POST /photos - file=${req.file.originalname}, size=${req.file.size}, type=${photo_type}, pregnancy_id=${pregnancy_id}, photo_date=${photo_date||'(auto)'}`);
     if (!pregnancy_id || !photo_type) {
       logger.warn('photo', 'POST /photos - missing required fields');
       try { fs.unlinkSync(req.file.path); } catch (e) {}
@@ -63,7 +63,9 @@ router.post('/photos', upload.single('file'), async (req, res) => {
     const finalMediaType = reqMedia || detectedType;
     const ext = path.extname(req.file.originalname);
     const filename = uuidv4() + ext;
-    const dateDir = _getDateDir();
+    // 使用前端传入的 photo_date（格式 YYYY-MM-DD）作为存储目录和记录日期，缺失则用今天
+    const effectiveDate = (photo_date && /^\d{4}-\d{2}-\d{2}$/.test(photo_date)) ? photo_date : new Date().toISOString().slice(0, 10);
+    const dateDir = `${effectiveDate.slice(0, 4)}/${effectiveDate.slice(5, 7)}`;
     let destPath, thumbnail_path;
     if (finalMediaType === 'video') {
       destPath = path.join(MEDIA_BASE, dateDir, filename);
@@ -77,8 +79,8 @@ router.post('/photos', upload.single('file'), async (req, res) => {
     const id = db.generateId();
     await db.run(
       `INSERT INTO pregnancy_photo (id, pregnancy_id, photo_type, file_path, thumbnail_path, gestational_week, gestational_day, milestone_type, checkup_id, note, media_type, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-      [id, pregnancy_id, photo_type, destPath, thumbnail_path, gestational_week || null, gestational_day || null, milestone_type || null, checkup_id || null, note || null, finalMediaType]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [id, pregnancy_id, photo_type, destPath, thumbnail_path, gestational_week || null, gestational_day || null, milestone_type || null, checkup_id || null, note || null, finalMediaType, effectiveDate]
     );
     const row = await db.queryOne('SELECT * FROM pregnancy_photo WHERE id = ?', [id]);
     logger.info('photo', `POST /photos - uploaded id=${id}, media_type=${finalMediaType}, path=${destPath}`);

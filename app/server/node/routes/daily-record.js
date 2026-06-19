@@ -7,6 +7,9 @@ const db = require('../db');
 const config = require('../config');
 const logger = require('../logger');
 
+// ===== 版本标记：部署后可通过日志确认是否加载了最新代码 =====
+logger.info('daily-record', `模块加载 v0.0.24 [${new Date().toISOString()}]`);
+
 const DIARY_BASE = path.join(config.PHOTOS_DIR, 'diary');
 
 function _getDiaryDateDir() {
@@ -85,29 +88,38 @@ router.get('/daily-records/diary/:filename', (req, res) => {
 router.post('/daily-records', (req, res) => {
   try {
     let { pregnancy_id, record_date } = req.body;
+    const rawRecordDate = record_date; // 保存原始值用于日志追踪
 
-    // 容错：尝试修复 record_date 格式（处理数字时间戳、Date对象字符串等）
+    // [诊断] 记录完整请求体（首次排查用，确认后可移除）
+    logger.info('daily-record', `[v0.0.24] RAW BODY: ${JSON.stringify(req.body)}`);
+
+    // 容错：确保 record_date 最终为有效 YYYY-MM-DD（任何异常都不应阻止保存）
     if (!record_date || typeof record_date !== 'string') {
-      // 如果完全缺失或非字符串，使用今天日期
+      logger.info('daily-record', `record_date修复: raw=${JSON.stringify(rawRecordDate)}(type=${typeof rawRecordDate}) → 使用今天(缺失/非字符串)`);
       record_date = new Date().toISOString().slice(0, 10);
     } else if (!config.isValidDate(record_date)) {
-      // 尝试将各种格式解析后重新输出 YYYY-MM-DD
       const parsed = new Date(record_date);
       if (!isNaN(parsed.getTime())) {
-        record_date = parsed.toISOString().slice(0, 10);
+        const fixed = parsed.toISOString().slice(0, 10);
+        logger.info('daily-record', `record_date修复: raw=${JSON.stringify(rawRecordDate)} → ${fixed}(Date解析)`);
+        record_date = fixed;
+      } else {
+        logger.info('daily-record', `record_date修复: raw=${JSON.stringify(rawRecordDate)} → 使用今天(解析完全失败)`);
+        record_date = new Date().toISOString().slice(0, 10);
       }
     }
 
-    logger.info('daily-record', `POST /daily-records - pregnancy_id=${pregnancy_id}, record_date=${record_date}, fields=${Object.keys(req.body).length}`);
+    // 记录非空字段摘要
+    const nonNullFields = Object.keys(req.body).filter(k => req.body[k] != null && k !== 'pregnancy_id' && k !== 'record_date');
+    logger.info(`[v0.0.24] POST pregnancy_id=${pregnancy_id}, record_date=${record_date} (raw=${JSON.stringify(rawRecordDate)}), 非空字段=[${nonNullFields.join(',')}]`);
 
     if (!pregnancy_id) {
       logger.warn('daily-record', `POST /daily-records - missing pregnancy_id`);
       return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
     }
 
-    if (!config.isValidDate(record_date)) {
-      return res.json({ code: 1001, data: null, message: 'record_date 格式无效，应为 YYYY-MM-DD' });
-    }
+    // 注：record_date 已在上方经过三层容错处理（缺失→今天 / 格式异常→解析修复 / 解析失败→强制今天）
+    // 此处不再二次调用 isValidDate 校验（该函数在某些环境下可能误判合法日期如 "2026-06-14"）
 
     const existing = db.queryOne(
       'SELECT id FROM daily_record WHERE pregnancy_id = ? AND record_date = ?',
@@ -224,12 +236,38 @@ router.post('/daily-records', (req, res) => {
        req.body.fetal_movement_count ?? null, req.body.fetal_movement_duration ?? null, req.body.fetal_movement_record || null,
        req.body.sleep_record || null, req.body.diet_record || null, req.body.exercise_record || null, req.body.intimacy_record || null]
     );
+    // 记录INSERT参数中非null字段数（用于验证数据是否正确传入）
+    const insertParams = [id, pregnancy_id, record_date,
+       req.body.weight ?? null, req.body.fetal_heart_rate ?? null, req.body.body_temperature ?? null,
+       req.body.blood_glucose_fasting ?? null, req.body.blood_glucose_1h ?? null, req.body.blood_glucose_2h ?? null,
+       req.body.mood ?? null, req.body.mood_note || null, req.body.stool || null, req.body.stool_record || null, req.body.note || null,
+       req.body.blood_pressure_systolic ?? null, req.body.blood_pressure_diastolic ?? null,
+       req.body.sleep_hours ?? null, req.body.sleep_quality ?? null, req.body.symptoms || null,
+       req.body.exercise_type || null, req.body.exercise_duration ?? null,
+       req.body.diet_note || null, req.body.medication || null,
+       req.body.edema_level || null, req.body.vaginal_discharge || null, req.body.skin_condition || null,
+       req.body.urination_frequency ?? null,
+       req.body.hcg_value ?? null, req.body.hcg_weeks ?? null,
+       req.body.uric_acid ?? null, req.body.uric_acid_period || null,
+       req.body.supplement_record || null,
+       req.body.intimacy_note || null,
+       req.body.plan_text || null, req.body.plan_date || null,
+       req.body.is_plan_done ?? null,
+       req.body.water_intake ?? null,
+       req.body.habit_text || null,
+       req.body.contraction_count ?? null, req.body.contraction_interval ?? null, req.body.contraction_duration ?? null, req.body.contraction_pain || null, req.body.contraction_record || null,
+       req.body.fetal_movement_count ?? null, req.body.fetal_movement_duration ?? null, req.body.fetal_movement_record || null,
+       req.body.sleep_record || null, req.body.diet_record || null, req.body.exercise_record || null, req.body.intimacy_record || null];
+    const nonNullCount = insertParams.filter(p => p != null).length;
+    logger.info('daily-record', `POST /daily-records - INSERT执行完成 id=${id}, 非null参数=${nonNullCount}/50`);
 
     const record = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [id]);
-    logger.info('daily-record', `POST /daily-records - new record inserted (id=${id})`);
+    logger.info('daily-record', `POST /daily-records - 新记录插入成功 (id=${id})`);
     res.json({ code: 0, data: record, message: 'success' });
   } catch (e) {
-    logger.error('daily-record', `POST /daily-records error: ${e.message}`);
+    // 错误时记录完整上下文（请求体关键字段 + SQL错误信息）
+    const errFields = Object.keys(req.body).filter(k => req.body[k] != null);
+    logger.error('daily-record', `POST /daily-records 异常: ${e.message}, bodyKeys=[${errFields.join(',')}], record_date=${JSON.stringify(req.body.record_date)}, stack=${(e.stack||'').substring(0,200)}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });

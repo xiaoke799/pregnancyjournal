@@ -5,8 +5,8 @@ const logger = require('../logger');
 
 router.post('/diaries', (req, res) => {
   try {
-    const { pregnancy_id, entry_date, content } = req.body;
-    logger.info('diary', `POST /diaries - pregnancy_id=${pregnancy_id}, entry_date=${entry_date}, content_len=${content?.length || 0}`);
+    const { pregnancy_id, entry_date, content, title } = req.body;
+    logger.info('diary', `POST /diaries - pregnancy_id=${pregnancy_id}, entry_date=${entry_date}, title=${title || '(无)'}, content_len=${content?.length || 0}`);
 
     if (!pregnancy_id || !entry_date || !content) {
       logger.warn('diary', `POST /diaries - missing required fields: pregnancy_id=${pregnancy_id}, entry_date=${entry_date}, content=${!!content}`);
@@ -15,9 +15,9 @@ router.post('/diaries', (req, res) => {
 
     const id = db.generateId();
     db.run(
-      `INSERT INTO diary_entry (id, pregnancy_id, entry_date, gestational_week, content, mood, image_urls)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, pregnancy_id, entry_date, req.body.gestational_week || 0, content, req.body.mood || null,
+      `INSERT INTO diary_entry (id, pregnancy_id, entry_date, gestational_week, title, content, mood, image_urls)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, pregnancy_id, entry_date, req.body.gestational_week || 0, title || null, content, req.body.mood || null,
        Array.isArray(req.body.image_urls) ? JSON.stringify(req.body.image_urls) : (req.body.image_urls || null)]
     );
 
@@ -133,7 +133,7 @@ router.put('/diaries/:id', (req, res) => {
     const updates = [];
     const params = [];
 
-    const fields = ['pregnancy_id', 'entry_date', 'gestational_week', 'content', 'mood', 'image_urls'];
+    const fields = ['pregnancy_id', 'entry_date', 'gestational_week', 'title', 'content', 'mood', 'image_urls'];
 
     for (const field of fields) {
       if (req.body[field] !== undefined) {

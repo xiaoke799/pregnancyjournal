@@ -17,6 +17,14 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// 禁止 API 响应被浏览器/代理缓存（解决 304 导致数据不刷新问题）
+app.use('/api/', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 if (config.APP_MODE === 'dev') {
   app.use(cors({ origin: true, credentials: true }));
 }
@@ -42,11 +50,29 @@ app.use(authMiddleware);
 let requestCount = 0;
 app.use((req, res, next) => {
   const start = Date.now();
-  requestCount++;
+  const reqId = ++requestCount;
+  req._reqId = reqId;
+  // POST/PUT 请求：在进入路由前记录请求体摘要（便于排查字段问题）
+  if ((req.method === 'POST' || req.method === 'PUT') && req.body && Object.keys(req.body).length > 0) {
+    const bodyKeys = Object.keys(req.body);
+    const bodyPreview = {};
+    // 记录关键字段值，大字段（如note/diet_note）只记录长度
+    for (const k of bodyKeys) {
+      const v = req.body[k];
+      if (v === null || v === undefined) bodyPreview[k] = null;
+      else if (typeof v === 'string' && v.length > 60) bodyPreview[k] = `[${v.length} chars]`;
+      else bodyPreview[k] = v;
+    }
+    log.debug('请求', `#${reqId} ${req.method} ${req.path} body=${JSON.stringify(bodyPreview)}`);
+  }
   res.on('finish', () => {
     const ms = Date.now() - start;
     if (!req.path.includes('/api/health') && !req.path.startsWith('/assets')) {
       log.request(req.method, req.path, res.statusCode, ms);
+      // 非2xx响应额外记录详情
+      if (res.statusCode >= 400) {
+        log.warn('请求', `#${reqId} ${req.method} ${req.path} → ${res.statusCode} (${ms}ms)`);
+      }
     }
   });
   next();
@@ -109,6 +135,10 @@ const indexHtmlPath = path.join(staticDir, 'index.html');
 
 function sendIndex(req, res) {
   if (fs.existsSync(indexHtmlPath)) {
+    // index.html 必须永不缓存，否则部署后浏览器仍加载旧 JS 文件名
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     return res.sendFile(indexHtmlPath);
   }
   res.status(404).json({ error: 'not_found', message: '前端未构建', static_dir: staticDir });
@@ -116,11 +146,26 @@ function sendIndex(req, res) {
 
 const assetsDir = path.join(staticDir, 'assets');
 if (fs.existsSync(assetsDir)) {
-  app.use('/assets', express.static(assetsDir));
+  app.use('/assets', express.static(assetsDir, {
+    etag: true, lastModified: true,
+    setHeaders: (res) => {
+      res.set('Cache-Control', 'no-cache'); // JS/CSS 每次部署后必须更新
+    }
+  }));
 }
 
 if (fs.existsSync(staticDir)) {
-  app.use(express.static(staticDir));
+  app.use(express.static(staticDir, {
+    etag: true, lastModified: true,
+    setHeaders: (res, filePath) => {
+      // HTML 文件不缓存，确保部署后立即生效
+      if (filePath.endsWith('.html') || filePath.endsWith('.htm')) {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      } else {
+        res.set('Cache-Control', 'max-age=86400'); // 其他静态资源缓存1天
+      }
+    }
+  }));
 }
 
 app.get('*', sendIndex);

@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS diary_entry (
   pregnancy_id TEXT NOT NULL,
   entry_date TEXT NOT NULL,
   gestational_week INTEGER DEFAULT 0,
+  title TEXT,
   content TEXT NOT NULL,
   mood TEXT,
   image_urls TEXT,

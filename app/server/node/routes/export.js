@@ -517,10 +517,13 @@ router.get('/export/backups', async (req, res) => {
 router.post('/backup', async (req, res) => {
   try {
     const { dir } = req.body || {};
+    log.info('export/备份', `POST /backup 开始, userDir=${dir||'(auto)'}`);
+
     // 确定备份目录：用户指定 > BACKUPS_DIR > DATA_DIR/backups > PHOTOS_DIR/../backups
     var backupBase;
     if (dir && typeof dir === 'string' && dir.trim()) {
       backupBase = path.resolve(dir);
+      log.info('export/备份', `使用用户指定目录: ${backupBase}`);
     } else {
       // 按优先级尝试可写目录（fnOS 上 data/ 可能无写权限，但 photos/ 可写）
       const candidates = [
@@ -660,6 +663,7 @@ router.post('/backup', async (req, res) => {
 router.post('/restore', async (req, res) => {
   try {
     const { dir } = req.body || {};
+    log.info('export/恢复', `POST /restore 开始, dir=${dir}`);
     if (!dir) return res.json({ code: 1001, data: null, message: '请指定恢复目录路径' });
     const restoreDir = path.resolve(dir);
     if (!fs.existsSync(restoreDir)) return res.json({ code: 1001, data: null, message: '目录不存在: ' + restoreDir });
@@ -1390,6 +1394,7 @@ module.exports = router;
 // ========== 一键恢复（自动查找最新备份） ==========
 router.post('/restore-latest', async (req, res) => {
   try {
+    log.info('export/恢复', `POST /restore-latest 开始（一键恢复）`);
     // 与备份保持一致：多候选目录搜索（fnOS 上 data/ 可能无写权限）
     const candidates = [
       config.BACKUPS_DIR,

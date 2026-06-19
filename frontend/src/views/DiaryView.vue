@@ -176,8 +176,16 @@ async function loadDiaries() {
     )
     console.log('[Diary] loadDiaries:', res)
     if (res.code === 0) {
-      diaries.value = (res.data?.items || res.data?.list || res.data || [])
-        .sort((a: any, b: any) => dayjs(b.entry_date || b.record_date).valueOf() - dayjs(a.entry_date || a.record_date).valueOf())
+      const raw = res.data?.items || res.data?.list || res.data || []
+      diaries.value = raw.sort((a: any, b: any) => {
+        const da = a.entry_date || a.record_date || ''
+        const db_ = b.entry_date || b.record_date || ''
+        // 有日期的排前面，空日期排最后；同按倒序（最新在前）
+        if (!da && !db_) return 0
+        if (!da) return 1
+        if (!db_) return -1
+        return dayjs(db_).valueOf() - dayjs(da).valueOf()
+      })
     }
   } catch (e) {
     console.error('[Diary] load error:', e)
