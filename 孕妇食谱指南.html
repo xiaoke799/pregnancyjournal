@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>孕妇食谱指南 — 备孕到月子科学饮食全攻略</title>
+<style>
+:root {
+  --primary: #d4789a; --primary-dark: #b8607e; --secondary: #f0a0b8;
+  --accent: #fce4ec; --bg: #fffafb; --card-bg: #ffffff;
+  --text: #4a3040; --text-light: #8a6078; --border: #f0d8e2;
+  --success: #6dbd8a; --warning: #e8b44a;
+  --baby-primary: #6db5c4; --baby-dark: #4d94a5; --baby-accent: #e0f2f5;
+  --baby-bg: #f7fcfd; --baby-border: #d0e8ed;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.8; color: var(--text); min-height: 100vh;
+}
+.preg-body { background: var(--bg); }
+.baby-body { background: var(--baby-bg); }
+.header {
+  text-align: center; color: white; padding: 44px 20px 36px;
+  box-shadow: 0 2px 24px rgba(0,0,0,0.12);
+}
+.header-preg { background: linear-gradient(135deg, #d4789a 0%, #f0a0b8 50%, #fcd0dc 100%); }
+.header-baby { background: linear-gradient(135deg, #6db5c4 0%, #85cdda 50%, #b8e6ee 100%); }
+.header h1 { font-size: 2rem; font-weight: 700; letter-spacing: 2px; margin-bottom: 8px; }
+.header p { font-size: 1rem; opacity: 0.92; max-width: 700px; margin: 0 auto; }
+.tab-nav {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px;
+  padding: 14px 10px 0; background: white; position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+.tab-btn {
+  padding: 10px 16px; border: none; background: transparent; color: var(--text-light);
+  font-size: 0.88rem; cursor: pointer; border-radius: 8px 8px 0 0;
+  transition: all 0.2s; border-bottom: 2px solid transparent; white-space: nowrap;
+}
+.tab-btn:hover { opacity: 0.8; }
+.preg-tab:hover { color: var(--primary); background: var(--accent); }
+.preg-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.baby-tab:hover { color: var(--baby-primary); background: var(--baby-accent); }
+.baby-tab.active { color: var(--baby-primary); border-bottom-color: var(--baby-primary); font-weight: 600; }
+.container { max-width: 960px; margin: 0 auto; padding: 24px 16px 60px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.card {
+  background: var(--card-bg); border-radius: 12px; padding: 26px 24px; margin-bottom: 18px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04); border: 1px solid var(--border);
+}
+.baby-card { border-color: var(--baby-border); }
+.card h2 {
+  font-size: 1.3rem; margin-bottom: 16px; padding-bottom: 10px;
+  border-bottom: 2px solid var(--accent); display: flex; align-items: center; gap: 8px;
+}
+.preg-card h2 { color: var(--primary-dark); border-color: var(--accent); }
+.baby-card h2 { color: var(--baby-dark); border-color: var(--baby-accent); }
+.card h3 { font-size: 1.08rem; margin: 20px 0 12px; color: #6a4a5a; }
+.baby-card h3 { color: #4a6a6a; }
+.card h4 { font-size: 1rem; margin: 16px 0 8px; }
+.preg-card h4 { color: var(--primary-dark); }
+.baby-card h4 { color: var(--baby-dark); }
+.stage-banner {
+  background: linear-gradient(135deg, #fef5f8, #fdf0f5); border-radius: 12px;
+  padding: 20px 24px; margin-bottom: 20px; text-align: center; border: 1px solid var(--accent);
+}
+.stage-baby { background: linear-gradient(135deg, #f5fbfc, #edf7f9); border-color: var(--baby-border); }
+.stage-banner h3 { font-size: 1.2rem; margin: 0 0 6px; }
+.preg-banner h3 { color: var(--primary-dark); }
+.baby-banner h3 { color: var(--baby-dark); }
+.stage-banner p { color: var(--text-light); font-size: 0.9rem; }
+.recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; margin: 14px 0; }
+.recipe-card {
+  background: #fff; border-radius: 10px; padding: 20px; border: 1px solid var(--border);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.baby-recipe { border-color: var(--baby-border); }
+.recipe-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.recipe-card h4 { margin: 0 0 10px; font-size: 1.02rem; }
+.preg-recipe h4 { color: var(--primary-dark); }
+.baby-recipe h4 { color: var(--baby-dark); }
+.recipe-card .label {
+  display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 0.74rem;
+  font-weight: 600; margin-bottom: 6px;
+}
+.label-preg { background: var(--accent); color: var(--primary-dark); }
+.label-baby { background: var(--baby-accent); color: var(--baby-dark); }
+.recipe-card .ingredients, .recipe-card .steps { font-size: 0.88rem; }
+.recipe-card .ingredients { margin-bottom: 6px; }
+.recipe-card .steps { color: var(--text-light); line-height: 1.6; }
+.nutrition {
+  margin-top: 10px; padding: 10px; border-radius: 6px;
+  font-size: 0.82rem; line-height: 1.5;
+}
+.nutrition-preg { background: #fff5f8; color: #8a4a60; border-left: 3px solid var(--primary); }
+.nutrition-baby { background: #f0f7f9; color: #3a6a70; border-left: 3px solid var(--baby-primary); }
+.meal-table {
+  width: 100%; border-collapse: collapse; font-size: 0.84rem; margin: 14px 0;
+}
+.meal-table th { font-weight: 600; padding: 10px 8px; text-align: left; vertical-align: top; }
+.meal-table td { padding: 10px 8px; text-align: left; vertical-align: top; }
+.meal-table-preg th { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+.meal-table-baby th { background: linear-gradient(135deg, var(--baby-primary), #85cdda); color: white; }
+.meal-table td { border: 1px solid var(--border); background: #fff; }
+.baby-table td { border-color: var(--baby-border); }
+.meal-table tr:nth-child(even) td { background: #fef5f8; }
+.baby-table tr:nth-child(even) td { background: #f5fafb; }
+.meal-table td:first-child { font-weight: 600; white-space: nowrap; }
+.meal-table-preg td:first-child { color: var(--primary-dark); background: #fef5f8; }
+.meal-table-baby td:first-child { color: var(--baby-dark); background: #f5fafb; }
+.tip-box {
+  border-radius: 6px; padding: 14px 18px; margin: 14px 0; font-size: 0.88rem;
+}
+.tip-pink { background: #fff5f8; border-left: 4px solid var(--primary); color: #8a4a60; }
+.tip-blue { background: #f0f7f9; border-left: 4px solid var(--baby-primary); color: #3a6a70; }
+.tip-yellow { background: #fffbf0; border-left: 4px solid var(--warning); color: #8a6d3b; }
+.tip-green { background: #f0faf5; border-left: 4px solid var(--success); color: #3a7050; }
+.note-list { list-style: none; padding: 0; margin: 10px 0; }
+.note-list li {
+  padding: 10px 14px; margin-bottom: 8px; background: #fef9fb; border-radius: 8px;
+  border: 1px solid #f8e8ef; font-size: 0.88rem;
+}
+.baby-list li { background: #f7fcfd; border-color: #e0f0f5; }
+.note-list li strong { color: var(--primary-dark); }
+.baby-list li strong { color: var(--baby-dark); }
+.key-points {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin: 14px 0;
+}
+.key-point {
+  padding: 14px 16px; border-radius: 10px; text-align: center; font-size: 0.85rem;
+}
+.key-preg { background: linear-gradient(135deg, #fef5f8, #fdf0f5); border: 1px solid var(--accent); }
+.key-baby { background: linear-gradient(135deg, #f5fbfc, #edf7f9); border: 1px solid var(--baby-border); }
+.key-point strong { display: block; font-size: 1rem; margin-bottom: 4px; }
+.key-preg strong { color: var(--primary-dark); }
+.key-baby strong { color: var(--baby-dark); }
+.footer {
+  text-align: center; padding: 30px 16px; color: var(--text-light);
+  font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 40px;
+}
+.baby-footer { border-color: var(--baby-border); }
+.footer a { color: var(--primary-dark); text-decoration: none; margin: 0 8px; }
+.footer a:hover { text-decoration: underline; }
+.timeline-item {
+  padding: 12px 16px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid;
+}
+@media (max-width: 768px) {
+  .recipe-grid { grid-template-columns: 1fr; }
+  .tab-btn { padding: 8px 12px; font-size: 0.78rem; }
+  .key-points { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body class="preg-body">
+<div class="header header-preg">
+<h1>🤰 孕妇食谱指南</h1>
+<p>备孕 → 孕早期 → 孕中期 → 孕晚期 → 月子 · 科学饮食全攻略<br>基于协和医院产科专家著作 & 月子中心实践方案整理</p>
+</div>
+<div class="tab-nav">
+<button class="tab-btn preg-tab active" onclick="switchTab('preconception')">🌱 备孕</button>
+<button class="tab-btn preg-tab" onclick="switchTab('early')">🌸 孕早期</button>
+<button class="tab-btn preg-tab" onclick="switchTab('mid')">🌿 孕中期</button>
+<button class="tab-btn preg-tab" onclick="switchTab('late')">🍂 孕晚期</button>
+<button class="tab-btn preg-tab" onclick="switchTab('postpartum')">🍲 月子</button>
+</div>
+<div class="container">
+
+<div id="tab-preconception" class="tab-content active">
+
+<div class="stage-banner preg-banner">
+  <h3>🌱 备孕期 · 为宝宝准备最好的土壤</h3>
+  <p>孕前3-6个月开始调整饮食，为受孕和胎儿早期发育打下坚实基础</p>
+</div>
+
+<div class="card preg-card">
+  <h2>👩 女性备孕饮食要点</h2>
+  
+  <div class="key-points">
+    <div class="key-point key-preg"><strong>叶酸</strong>孕前3个月开始，每日0.4-1mg，预防神经管畸形</div>
+    <div class="key-point key-preg"><strong>铁</strong>每日15-20mg，预防贫血，多吃动物肝脏、瘦肉</div>
+    <div class="key-point key-preg"><strong>蛋白质</strong>每日60-80g，鱼、蛋、奶、瘦肉</div>
+    <div class="key-point key-preg"><strong>黑豆</strong>补充植物雌激素，调节内分泌，提高受孕率</div>
+    <div class="key-point key-preg"><strong>酸奶</strong>调节肠道和阴道菌群，建立良好母体环境</div>
+    <div class="key-point key-preg"><strong>维生素C</strong>鲜枣、猕猴桃，帮助铁的吸收</div>
+  </div>
+
+  <div class="tip-box tip-pink">
+    <strong>🔔 特别提醒：</strong>以下三类女性需重点补充叶酸——<br>
+    ① 年龄超过35岁；② 曾有过神经管缺陷胎儿；③ 山区或高原地区饮食缺乏绿叶蔬菜的女性。
+  </div>
+
+  <h3>🥗 备孕女性推荐食物清单</h3>
+  <table class="meal-table meal-table-preg">
+    <tr><th>类别</th><th>推荐食物</th><th>作用</th></tr>
+    <tr><td>叶酸来源</td><td>动物肝脏、菠菜、生菜、芦笋、豆类、柑橘、橙子</td><td>预防神经管畸形</td></tr>
+    <tr><td>补铁食物</td><td>猪肝、鸡肝、牛肝、羊肝、菠菜、胡萝卜、南瓜</td><td>预防贫血，提高血液质量</td></tr>
+    <tr><td>蛋白质</td><td>鱼、蛋、奶、瘦肉、豆腐</td><td>调节雌激素，改善子宫内膜</td></tr>
+    <tr><td>植物雌激素</td><td>黑豆（打豆浆）、黄豆</td><td>平衡激素，提高受孕成功率</td></tr>
+    <tr><td>益生菌</td><td>酸奶（含乳酸杆菌）</td><td>调节菌群平衡</td></tr>
+    <tr><td>维生素C</td><td>鲜枣、猕猴桃、柑橘</td><td>促进铁吸收</td></tr>
+    <tr><td>动物胆固醇</td><td>猪肾、鲤鱼、猪瘦肉、牛瘦肉</td><td>促进卵巢排卵（素食者尤其注意）</td></tr>
+  </table>
+
+  <div class="tip-box tip-yellow">
+    <strong>💡 素食女性特别注意：</strong>长期素食可能导致激素分泌异常、月经紊乱。备孕期需每日摄入动物胆固醇50-300mg，蛋白质60-80g，铁15-20mg，维生素B₁₂ 3-4μg。
+  </div>
+</div>
+
+<div class="card preg-card">
+  <h2>👨 男性备孕饮食要点</h2>
+  <div class="key-points">
+    <div class="key-point key-preg"><strong>韭菜</strong>"起阳草"，补肾助阳，改善男性功能</div>
+    <div class="key-point key-preg"><strong>叶酸</strong>提高精子浓度和活力，降低染色体异常风险</div>
+    <div class="key-point key-preg"><strong>维生素</strong>时令蔬果，提高精子成活率</div>
+    <div class="key-point key-preg"><strong>戒烟戒酒</strong>烟酒直接影响精子质量和睾丸功能</div>
+  </div>
+  <div class="tip-box tip-pink">
+    <strong>⚠️ 男性也需补叶酸：</strong>叶酸不足会导致精液浓度降低、精子活力减弱。多吃动物肝、红苋菜、菠菜、生菜、芦笋、豆类、苹果、柑橘、橙子。
+  </div>
+</div>
+
+<div class="card preg-card">
+  <h2>📋 备孕饮食宜忌速查</h2>
+  <table class="meal-table meal-table-preg">
+    <tr><th>项目</th><th>✅ 宜</th><th>❌ 忌</th></tr>
+    <tr><td>主食</td><td>全谷物、糙米、小米、黑米</td><td>精制白米面过多</td></tr>
+    <tr><td>蛋白质</td><td>鱼、蛋、瘦肉、豆腐、豆类</td><td>生鱼片、未熟透的肉类</td></tr>
+    <tr><td>蔬菜</td><td>深绿色蔬菜、胡萝卜、南瓜</td><td>—</td></tr>
+    <tr><td>水果</td><td>鲜枣、猕猴桃、柑橘、苹果</td><td>—</td></tr>
+    <tr><td>饮品</td><td>酸奶、豆浆、温开水</td><td>酒精、浓茶、咖啡过量</td></tr>
+    <tr><td>习惯</td><td>铁锅烹饪、规律作息</td><td>吸烟、饮酒、熬夜</td></tr>
+  </table>
+</div>
+</div>
+
+<div id="tab-early" class="tab-content">
+
+<div class="stage-banner preg-banner">
+  <h3>🌸 孕早期（1-12周）· 安胎固本</h3>
+  <p>胎儿器官分化关键期，重点补充叶酸、DHA、碘。饮食宜清淡易消化，缓解孕吐。</p>
+</div>
+
+<div class="card preg-card">
+  <h2>🔑 孕早期关键营养素</h2>
+  <div class="key-points">
+    <div class="key-point key-preg"><strong>叶酸</strong>每日0.4-1mg，持续至孕3个月，预防神经管畸形</div>
+    <div class="key-point key-preg"><strong>DHA</strong>"脑黄金"，促进胎儿脑部发育</div>
+    <div class="key-point key-preg"><strong>碘</strong>海带、紫菜，促进大脑神经发育</div>
+    <div class="key-point key-preg"><strong>碳水化合物</strong>提供基础能量，缓解疲劳</div>
+  </div>
+
+  <h3>📋 饮食宜忌</h3>
+  <table class="meal-table meal-table-preg">
+    <tr><th>✅ 宜</th><th>❌ 忌</th></tr>
+    <tr><td>清淡易消化食物（粥、面条、蒸蛋）</td><td>油腻、辛辣刺激食物</td></tr>
+    <tr><td>富含叶酸的深绿色蔬菜</td><td>生冷食物、未煮熟肉类</td></tr>
+    <tr><td>少食多餐，缓解孕吐</td><td>暴饮暴食</td></tr>
+    <tr><td>含碘食物（海带、紫菜）</td><td>含咖啡因饮料过量</td></tr>
+    <tr><td>不必刻意大补，正常饮食即可</td><td>大补特补、过量进补</td></tr>
+  </table>
+  <div class="tip-box tip-pink">
+    <strong>💡 小贴士：</strong>漏服叶酸不需要补回来，继续正常服用即可。孕吐严重时可吃些苏打饼干、干面包片缓解。
+  </div>
+</div>
+
+<div class="card preg-card">
+  <h2>🍳 孕早期推荐食谱</h2>
+  <div class="recipe-grid">
+
+    <div class="recipe-card preg-recipe">
+      <h4>猪肚大米粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补益气血，安胎养胃</p>
+      <p class="label label-preg">适合</p>
+      <p class="steps">孕早期气血不足、食欲不振的孕妈妈</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>香菇油菜</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">增强免疫力</p>
+      <p class="label label-preg">适合</p>
+      <p class="steps">孕早期需要增强抵抗力的孕妈妈</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>番茄鸡蛋打卤面</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">缓解疲劳，补充能量</p>
+      <p class="steps">番茄富含维生素C和番茄红素，鸡蛋提供优质蛋白，面条易消化。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>韭菜炒绿豆芽</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">开胃助消化</p>
+      <p class="steps">清淡爽口，帮助缓解孕早期食欲不振。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>板栗烧白菜</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补充DHA，促进大脑发育</p>
+      <p class="steps">板栗富含不饱和脂肪酸，搭配白菜清爽可口。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>海带结烧豆腐</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">促进大脑神经发育</p>
+      <p class="steps">海带富含碘，豆腐富含植物蛋白，两者搭配营养均衡。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>葱香糯米卷</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补充碳水化合物</p>
+      <p class="steps">糯米温补，提供持久能量。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>鳕鱼豆腐羹</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">促进身体新陈代谢</p>
+      <p class="steps">鳕鱼低脂高蛋白，易消化吸收。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>麻酱花卷</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补充碳水化合物和钙</p>
+      <p class="steps">芝麻酱富含钙质和维生素E。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>猪蹄皮冻</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补充胶原蛋白</p>
+      <p class="steps">富含胶原蛋白和蛋白质，滋养皮肤和关节。</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="card preg-card">
+  <h2>🗓 孕早期一日饮食参考</h2>
+  <table class="meal-table meal-table-preg">
+    <tr><th>时间</th><th>内容</th><th>说明</th></tr>
+    <tr><td>7:00 起床</td><td>温开水一杯</td><td>补充水分</td></tr>
+    <tr><td>7:30 早餐</td><td>小米粥/面条 + 鸡蛋1个 + 蔬菜</td><td>易消化主食</td></tr>
+    <tr><td>10:00 加餐</td><td>酸奶/水果/坚果</td><td>少量补充能量</td></tr>
+    <tr><td>12:00 午餐</td><td>米饭 + 瘦肉/鱼 + 2种蔬菜</td><td>均衡营养</td></tr>
+    <tr><td>15:00 加餐</td><td>水果 + 全麦饼干</td><td>缓解饥饿</td></tr>
+    <tr><td>18:00 晚餐</td><td>粥/汤面 + 豆腐 + 蔬菜</td><td>清淡易消化</td></tr>
+    <tr><td>21:00 睡前</td><td>温牛奶一杯</td><td>帮助睡眠</td></tr>
+  </table>
+  <div class="tip-box tip-green">
+    <strong>✅ 核心原则：</strong>孕早期不需要过度进补，正常均衡饮食即可。重点补充叶酸（口服补充剂+食物），少食多餐应对孕吐。
+  </div>
+</div>
+</div>
+
+<div id="tab-mid" class="tab-content">
+
+<div class="stage-banner preg-banner">
+  <h3>🌿 孕中期（13-28周）· 快速增长期</h3>
+  <p>胎儿骨骼、肌肉、大脑快速发育。重点补铁防贫血、补钙强骨骼、补充优质蛋白和DHA。</p>
+</div>
+
+<div class="card preg-card">
+  <h2>🔑 孕中期关键营养素</h2>
+  <div class="key-points">
+    <div class="key-point key-preg"><strong>铁</strong>预防贫血，猪血、动物肝脏、红肉</div>
+    <div class="key-point key-preg"><strong>钙</strong>骨骼发育必需，牛奶、豆制品、虾皮</div>
+    <div class="key-point key-preg"><strong>蛋白质</strong>优质蛋白，鱼、蛋、瘦肉、豆腐</div>
+    <div class="key-point key-preg"><strong>DHA & 卵磷脂</strong>脑细胞发育，深海鱼、核桃、蛋黄</div>
+    <div class="key-point key-preg"><strong>膳食纤维</strong>预防便秘，蔬菜、水果、全谷物</div>
+    <div class="key-point key-preg"><strong>B族维生素</strong>缓解紧张情绪，全谷物、瘦肉</div>
+  </div>
+
+  <h3>📋 饮食宜忌</h3>
+  <table class="meal-table meal-table-preg">
+    <tr><th>✅ 宜</th><th>❌ 忌</th></tr>
+    <tr><td>多吃"完整食物"，营养更均衡</td><td>长期高脂肪饮食</td></tr>
+    <tr><td>多食用植物油烹饪</td><td>过量甜食和精制碳水</td></tr>
+    <tr><td>合理安排饮食，预防肥胖</td><td>暴饮暴食</td></tr>
+    <tr><td>多吃促进排便食物（红薯、油菜、土豆）</td><td>辛辣刺激食物</td></tr>
+    <tr><td>吃些助睡眠食物（牛奶、小米、红枣）</td><td>含咖啡因饮料</td></tr>
+  </table>
+</div>
+
+<div class="card preg-card">
+  <h2>🍳 孕中期推荐食谱</h2>
+  <div class="recipe-grid">
+
+    <div class="recipe-card preg-recipe">
+      <h4>猪血炖豆腐</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">预防贫血，补充铁和蛋白质</p>
+      <p class="steps">猪血含铁量高且吸收率好，搭配豆腐营养互补。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>水晶虾仁</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">促进宝宝大脑发育</p>
+      <p class="steps">虾仁富含优质蛋白和DHA，清淡鲜美。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>鲜奶玉米汤</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">提高钙质吸收</p>
+      <p class="steps">牛奶补钙，玉米富含膳食纤维和维生素。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>竹笋炒鸡丝</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">增强免疫力，低脂高蛋白</p>
+      <p class="steps">鸡肉优质蛋白，竹笋清爽低热量。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>芸豆卷 + 红烧冬瓜</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">开胃、利水消肿</p>
+      <p class="steps">芸豆健脾，冬瓜利水，缓解孕期水肿。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>牛奶小米粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">开胃安眠</p>
+      <p class="steps">小米养胃，牛奶助眠，适合晚餐食用。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>红枣山药粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">静心安神，健脾养胃</p>
+      <p class="steps">红枣补血，山药健脾，双补佳品。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>琥珀核桃</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">促进胎宝宝脑部发育</p>
+      <p class="steps">核桃富含卵磷脂和不饱和脂肪酸，益智健脑。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>番茄炒鸡蛋</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">健脑益智</p>
+      <p class="steps">经典搭配，番茄红素+卵磷脂双重营养。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>油菜土豆粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">缓解孕期便秘</p>
+      <p class="steps">油菜和土豆富含膳食纤维，促进肠道蠕动。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>红薯牛奶汁</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">润肠通便</p>
+      <p class="steps">红薯富含膳食纤维和胡萝卜素，搭配牛奶补充钙质。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>小米花生粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补脑益智，缓解紧张</p>
+      <p class="steps">小米安神，花生富含有益脂肪酸。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>清炒鳝鱼</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补充DHA和卵磷脂</p>
+      <p class="steps">鳝鱼富含DHA，是胎儿脑发育的优质食材。</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="card preg-card">
+  <h2>🗓 孕中期一日饮食参考</h2>
+  <table class="meal-table meal-table-preg">
+    <tr><th>时间</th><th>内容</th><th>说明</th></tr>
+    <tr><td>7:00 早餐</td><td>牛奶小米粥/全麦面包 + 鸡蛋1个 + 水果</td><td>补充钙和蛋白质</td></tr>
+    <tr><td>10:00 加餐</td><td>核桃/红枣 + 酸奶</td><td>健脑零食</td></tr>
+    <tr><td>12:00 午餐</td><td>米饭 + 猪血炖豆腐 + 炒蔬菜 + 鲜奶玉米汤</td><td>补铁补钙</td></tr>
+    <tr><td>15:00 加餐</td><td>红薯牛奶汁 + 水果</td><td>通便补钙</td></tr>
+    <tr><td>18:00 晚餐</td><td>杂粮饭 + 清蒸鱼/虾仁 + 蔬菜</td><td>补充DHA</td></tr>
+    <tr><td>21:00 睡前</td><td>红枣山药粥/温牛奶</td><td>安神助眠</td></tr>
+  </table>
+</div>
+</div>
+
+<div id="tab-late" class="tab-content">
+
+<div class="stage-banner preg-banner">
+  <h3>🍂 孕晚期（29-40周）· 冲刺待产</h3>
+  <p>胎儿迅速增重，为分娩储备能量。重点补钙、补铁、补充维生素K和锌，控制盐分防水肿。</p>
+</div>
+
+<div class="card preg-card">
+  <h2>🔑 孕晚期关键营养素</h2>
+  <div class="key-points">
+    <div class="key-point key-preg"><strong>钙</strong>牛奶是最佳来源，不爱喝奶可吃豆制品</div>
+    <div class="key-point key-preg"><strong>铁</strong>继续补铁防贫血，动物肝脏、红肉</div>
+    <div class="key-point key-preg"><strong>维生素K</strong>预防产后大出血，绿叶蔬菜</div>
+    <div class="key-point key-preg"><strong>维生素C</strong>降低分娩危险，柑橘、猕猴桃</div>
+    <div class="key-point key-preg"><strong>锌</strong>助力自然分娩，坚果、瘦肉</div>
+    <div class="key-point key-preg"><strong>亚油酸</strong>促进大脑发育，植物油、坚果</div>
+    <div class="key-point key-preg"><strong>铜</strong>预防早产，动物肝脏、坚果</div>
+    <div class="key-point key-preg"><strong>膳食纤维</strong>防止便秘，蔬菜水果全谷物</div>
+  </div>
+
+  <h3>📋 饮食宜忌</h3>
+  <table class="meal-table meal-table-preg">
+    <tr><th>✅ 宜</th><th>❌ 忌</th></tr>
+    <tr><td>食物品种多样化，营养全面</td><td>高盐饮食（防水肿和高血压）</td></tr>
+    <tr><td>吃些清淡易消化食物</td><td>油腻、不易消化食物</td></tr>
+    <tr><td>吃牛肉补益强身</td><td>暴饮暴食</td></tr>
+    <tr><td>多吃高锌食物助自然分娩</td><td>含咖啡因饮料</td></tr>
+    <tr><td>正常饮食即可，无需特殊进补</td><td>禁烟禁酒</td></tr>
+  </table>
+</div>
+
+<div class="card preg-card">
+  <h2>🍳 孕晚期推荐食谱</h2>
+  <div class="recipe-grid">
+
+    <div class="recipe-card preg-recipe">
+      <h4>小米黄豆粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">缓解孕晚期便秘</p>
+      <p class="steps">小米养胃，黄豆富含植物蛋白和膳食纤维。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>葱香花卷</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">提供充足热量</p>
+      <p class="steps">为分娩储备能量，葱香开胃。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>洋葱炒鸡蛋</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">降低血管外周压力</p>
+      <p class="steps">洋葱含前列腺素A，有助于预防妊娠期高血压。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>海带黄豆粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">抑制血压升高</p>
+      <p class="steps">海带富含碘和钾，黄豆补蛋白，预防妊娠高血压。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>清炖鲫鱼</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">预防早产，补充铜元素</p>
+      <p class="steps">鲫鱼补虚，富含优质蛋白和微量元素。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>滑炒豆腐</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">清洁肠胃，补钙</p>
+      <p class="steps">豆腐嫩滑易消化，钙含量丰富。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>南瓜牛奶大米粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补充钙质</p>
+      <p class="steps">南瓜甜糯，牛奶补钙，口感温润。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>金针肥牛</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补充优质蛋白质</p>
+      <p class="steps">肥牛富含铁和蛋白质，金针菇增加膳食纤维。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>小米粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">养血安神</p>
+      <p class="steps">产前养心安神，为分娩储备精力。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>蒜蓉空心菜</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">调整肠胃功能</p>
+      <p class="steps">空心菜清热通便，蒜蓉提味杀菌。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>金橘菠菜豆浆</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">补充维生素C，助分娩</p>
+      <p class="steps">金橘和菠菜富含VC，豆浆补充植物蛋白。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>青菜虾仁粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">增强免疫力</p>
+      <p class="steps">清淡鲜美，为分娩储备体力。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>莲子大米粥</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">静心安神</p>
+      <p class="steps">缓解产前焦虑，帮助安眠。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>芒果蜂蜜牛奶饮</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">缓和烦躁情绪</p>
+      <p class="steps">芒果香甜，牛奶安神，舒缓产前紧张。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>雪菜炒蚕豆</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">促进消化</p>
+      <p class="steps">蚕豆含锌丰富，有助于自然分娩。</p>
+    </div>
+
+    <div class="recipe-card preg-recipe">
+      <h4>松仁玉米</h4>
+      <p class="label label-preg">功效</p>
+      <p class="ingredients">缓解疲劳</p>
+      <p class="steps">松仁富含不饱和脂肪酸，玉米补充膳食纤维。</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="card preg-card">
+  <h2>🗓 孕晚期一日饮食参考</h2>
+  <table class="meal-table meal-table-preg">
+    <tr><th>时间</th><th>内容</th><th>说明</th></tr>
+    <tr><td>7:00 早餐</td><td>小米黄豆粥 + 葱香花卷 + 鸡蛋</td><td>补钙通便</td></tr>
+    <tr><td>10:00 加餐</td><td>金橘菠菜豆浆 + 坚果</td><td>补充VC和锌</td></tr>
+    <tr><td>12:00 午餐</td><td>米饭 + 清炖鲫鱼 + 蒜蓉空心菜 + 洋葱炒鸡蛋</td><td>防高血压早产</td></tr>
+    <tr><td>15:00 加餐</td><td>南瓜牛奶大米粥 + 水果</td><td>补钙</td></tr>
+    <tr><td>18:00 晚餐</td><td>杂粮饭 + 金针肥牛 + 滑炒豆腐 + 蔬菜</td><td>补铁补蛋白</td></tr>
+    <tr><td>21:00 睡前</td><td>莲子大米粥/芒果蜂蜜牛奶饮</td><td>安神助眠</td></tr>
+  </table>
+  <div class="tip-box tip-yellow">
+    <strong>⚠️ 重点提醒：</strong>孕晚期正常饮食即可，无需特殊进补。多吃高锌食物（坚果、瘦肉、蚕豆）有助于自然分娩。补充维生素K（绿叶蔬菜）可预防产后大出血。控制盐分摄入，防妊娠高血压。
+  </div>
+</div>
+</div>
+
+<div id="tab-postpartum" class="tab-content">
+
+<div class="stage-banner preg-banner">
+  <h3>🍲 科学月子餐 · 42天完整方案</h3>
+  <p>分四阶段调理：排毒修复(1-7天) → 净化调整(8-14天) → 基础进补(15-30天) → 强化进补(30-42天)</p>
+</div>
+
+<div class="card preg-card">
+  <h2>📅 第一阶段：产后 1-7 天（排毒与修复期）</h2>
+  
+  <h3>🔸 第 1-3 天（产后初期）</h3>
+  <table class="meal-table meal-table-preg">
+    <tr><th>时间</th><th>内容</th><th>营养说明</th></tr>
+    <tr><td>起床空腹 (7:00)</td><td>生化汤 50ml</td><td>帮助子宫收缩、排恶露</td></tr>
+    <tr><td>早餐 (7:30-8:00)</td><td>红豆汤一碗<br>海带粥/芝麻小米粥/八宝粥（任选）</td><td>红豆利尿消肿，小米粥养胃</td></tr>
+    <tr><td>上午加餐 (10:00)</td><td>生化汤 50ml + 水果一份</td><td>水果用开水烫一下再吃</td></tr>
+    <tr><td>上午点心</td><td>养肝汤</td><td>帮助肝脏解毒</td></tr>
+    <tr><td>午餐前</td><td>生化汤 50ml</td><td>持续调理</td></tr>
+    <tr><td>午餐 (12:00)</td><td>四神粥<br>四神猪肝/猪腰汤（任选）</td><td>健脾养胃，猪肝补血</td></tr>
+    <tr><td>下午加餐 (15:00)</td><td>生化汤 50ml + 水果一份</td><td>补充能量</td></tr>
+    <tr><td>下午点心</td><td>养肝汤</td><td>持续养肝</td></tr>
+    <tr><td>晚餐前</td><td>生化汤 50ml</td><td></td></tr>
+    <tr><td>晚餐 (18:00)</td><td>四神粥<br>四神猪肝/猪腰汤（任选）</td><td>同午餐</td></tr>
+    <tr><td>晚上加餐 (21:00)</td><td>生化汤 50ml + 水果一份</td><td></td></tr>
+    <tr><td>晚上点心</td><td>养肝汤</td><td></td></tr>
+  </table>
+
+  <div class="tip-box tip-pink">
+    <strong>💡 小贴士：</strong>产前三天喝「红枣养肝汤」，产后用米酒水代替普通水烹饪。老姜必须用胡麻油爆透至起皱皮。所有蔬菜和肉类清洗后必须沥干再烹饪。
+  </div>
+
+  <h3>🔸 第 4-7 天（净化调整期）</h3>
+  <table class="meal-table meal-table-preg">
+    <tr><th>时间</th><th>内容</th><th>说明</th></tr>
+    <tr><td>起床空腹</td><td>生化汤 50ml</td><td></td></tr>
+    <tr><td>早餐</td><td>1. 麻油猪肝<br>2. 薏仁米饭或黑白饭（任选）</td><td>麻油猪肝补血养气</td></tr>
+    <tr><td>上午加餐</td><td>生化汤 50ml + 水果</td><td></td></tr>
+    <tr><td>上午点心</td><td>红豆汤</td><td>利尿消肿</td></tr>
+    <tr><td>午餐</td><td>1. 四神粥/黑白饭（任选）<br>2. 四神猪肝/猪腰汤（任选）<br>3. 薏仁米饭或黑白饭</td><td>持续调理</td></tr>
+    <tr><td>下午加餐</td><td>生化汤 50ml + 水果</td><td></td></tr>
+    <tr><td>下午点心</td><td>甜糯米桂圆粥或银耳莲子羹</td><td>滋阴润燥</td></tr>
+    <tr><td>晚餐</td><td>1. 四神粥/黑白饭<br>2. 四神猪肝/猪腰汤（任选）<br>3. 素菜：莲藕/莴笋/海带/毛豆/芦笋/豆腐（任选）</td><td>加入蔬菜，补充纤维</td></tr>
+    <tr><td>晚上加餐</td><td>生化汤 50ml + 水果</td><td></td></tr>
+    <tr><td>晚上点心</td><td>养肝汤 + 红豆汤</td><td></td></tr>
+  </table>
+
+  <div class="tip-box tip-pink">
+    <strong>⚠️ 重要：</strong>产后第一周全天饮料包括：红枣养肝汤（肝脏解毒，吃到第15天）、坐月子妇宝饮料（桂圆枸杞）、止渴饮（山楂肉/观音串/荔枝壳煮制）。
+  </div>
+</div>
+
+<div class="card preg-card">
+  <h2>📅 第二阶段：产后第 2 周（8-14天 · 净化与调整）</h2>
+  <table class="meal-table meal-table-preg">
+    <tr><th>时间</th><th>内容</th><th>说明</th></tr>
+    <tr><td>起床空腹</td><td>生化汤 50ml</td><td>持续排恶露</td></tr>
+    <tr><td>早餐</td><td>1. 糯米桂圆粥/花生粥/红薯粥/银耳莲子羹（任选）<br>2. 蔬菜（海带）</td><td>多样化粥品</td></tr>
+    <tr><td>上午点心</td><td>1. 红豆汤<br>2. 糯米桂圆粥/花生粥/红薯粥/银耳莲子羹（任选）</td><td>滋补养身</td></tr>
+    <tr><td>午餐</td><td>1. 海带汤/莲子红枣乌鸡汤/猪肝汤（任选）<br>2. 素菜：莲藕/莴笋/海带/毛豆/芦笋/豆腐（任选）<br>3. 薏仁米饭或黑白饭</td><td>开始加入乌鸡等高蛋白食材</td></tr>
+    <tr><td>下午点心</td><td>1. 红豆汤<br>2. 糯米桂圆粥/花生粥/红薯粥/银耳莲子羹（任选）</td><td></td></tr>
+    <tr><td>晚餐</td><td>1. 腐竹山药百合瘦肉汤或淮山香菇炖鸡（任选）<br>2. 素菜：莲藕/莴笋/海带/毛豆/芦笋/豆腐（任选）<br>3. 薏仁米饭或黑白饭</td><td>增加滋补汤品</td></tr>
+    <tr><td>晚上加餐</td><td>水果一份 + 热鲜牛奶</td><td></td></tr>
+    <tr><td>晚上点心</td><td>红豆汤</td><td></td></tr>
+  </table>
+  <div class="tip-box tip-pink"><strong>⚠️ 第2周特别要求：</strong>每餐配合生化汤吃杜仲粉一钱，有助于腰肾功能恢复。</div>
+</div>
+
+<div class="card preg-card">
+  <h2>📅 第三阶段：产后第 3-4 周（15-30天 · 基础进补）</h2>
+  <table class="meal-table meal-table-preg">
+    <tr><th>时间</th><th>内容</th></tr>
+    <tr><td>起床空腹</td><td>生化汤 50ml</td></tr>
+    <tr><td>早餐</td><td>1. 薏仁米饭/鸡汤面/虾米粥/瑶柱粥/莲子粥/糯米桂圆粥/花生粥/红薯粥/芝麻粥（任选）<br>2. 鲜鱼汤/猪肚汤/骨头汤/鸡汤/猪脚汤（任选）</td></tr>
+    <tr><td>上午点心</td><td>红豆汤 + 姜丝麻油煎蛋</td></tr>
+    <tr><td>午餐</td><td>1. 麻油杜仲猪腰/黑豆排骨汤/莲子红枣鸡汤/海带豆腐汤/排骨汤/竹荪鸡汤/清蒸鲈鱼/排骨莲藕汤（任选）<br>2. 素菜：莲藕/莴笋/海带/毛豆/芦笋/豆腐（任选）<br>3. 荤菜：腰花/虾仁/翅中/毛豆/牛肉/鱼/蛋（任选）<br>4. 薏仁米饭/五谷杂粮饭（任选）</td></tr>
+    <tr><td>下午点心</td><td>薏仁米饭/鸡汤面/虾米粥/瑶柱粥/莲子粥/糯米桂圆粥/花生粥/红薯粥/芝麻粥（任选）</td></tr>
+    <tr><td>晚餐</td><td>1. 薏仁米饭或黑白饭<br>2. 麻油杜仲猪腰/黑豆排骨汤/莲子红枣鸡汤/海带豆腐汤/清蒸鲈鱼（任选）<br>3. 素菜：莲藕/莴笋/海带/毛豆/芦笋（任选）<br>4. 荤菜：腰花/虾仁/翅中/毛豆/牛肉/鱼/蛋（任选）</td></tr>
+    <tr><td>晚上加餐</td><td>水果一份 + 热鲜牛奶</td></tr>
+    <tr><td>晚上点心</td><td>红豆汤 + 红枣燕窝</td></tr>
+  </table>
+  <div class="tip-box tip-green"><strong>💡 第三周开始：</strong>水果可吃哈密瓜、猕猴桃、葡萄。鸡汤可用黄精、黄芪、当归、党参、虫草等烹饪，必须用全鸡。</div>
+</div>
+
+<div class="card preg-card">
+  <h2>📅 第四阶段：产后第 5-6 周（30-42天 · 强化进补）</h2>
+  <p style="margin-bottom:12px;color:var(--text-light)">与第三阶段饮食方案基本相同，继续保持高营养高蛋白摄入，根据身体恢复情况逐步过渡到正常饮食。</p>
+  <table class="meal-table meal-table-preg">
+    <tr><th>时间</th><th>内容</th></tr>
+    <tr><td>早餐</td><td>薏仁米饭/鸡汤面/虾米粥/瑶柱粥/莲子粥/糯米桂圆粥/花生粥/红薯粥/芝麻粥（任选）<br>鲜鱼汤/猪肚汤/骨头汤/鸡汤/猪脚汤（任选）</td></tr>
+    <tr><td>点心</td><td>红豆汤 + 姜丝麻油煎蛋</td></tr>
+    <tr><td>午餐</td><td>鲜鱼汤/猪肚汤/骨头汤/鸡汤/猪脚汤（任选）<br>素菜：莲藕/莴笋/海带/毛豆/芦笋/豆腐（任选）<br>荤菜：腰花/虾仁/翅中/毛豆/牛肉/鱼/蛋（任选）<br>薏仁米饭/五谷杂粮饭（任选）</td></tr>
+    <tr><td>点心</td><td>薏仁米饭/鸡汤面/虾米粥/瑶柱粥/莲子粥/糯米桂圆粥/花生粥/红薯粥/芝麻粥（任选）</td></tr>
+    <tr><td>晚餐</td><td>薏仁米饭/五谷杂粮饭（任选）+ 鲜鱼汤/猪肚汤/骨头汤/鸡汤/猪脚汤（任选）<br>素菜：莲藕/莴笋/海带/毛豆/芦笋/豆腐（任选）<br>荤菜：腰花/虾仁/翅中/毛豆/牛肉/鱼/蛋（任选）</td></tr>
+    <tr><td>晚上</td><td>红枣燕窝</td></tr>
+  </table>
+</div>
+
+<div class="card preg-card">
+  <h2>🍲 核心月子食谱 · 详细做法</h2>
+  
+  <div class="tip-box tip-yellow" style="margin-bottom:16px;">
+    <h4>🧪 生化汤（每日份）</h4>
+    <p><strong>原料：</strong>当归40克，川芎30克，桃仁（去心）25克，烤老姜25克，灸草（蜜甘草）25克，月子米酒水1050毫升</p>
+    <p><strong>做法：</strong>① 米酒水700ml加入配料，砂锅大火煮沸转小火加盖煮60分钟，约剩200ml药酒倒出备用。② 再加米酒水350ml，大火煮沸转小火煮60分钟约剩100ml。③ 两次药酒合并共300ml。每次餐前饮用1口，一天分六次喝完。顺产连服7天，剖腹产可服14贴。</p>
+  </div>
+  
+  <div class="tip-box tip-yellow" style="margin-bottom:16px;">
+    <h4>🍵 养肝汤（每日份）</h4>
+    <p><strong>原料：</strong>红枣7粒，热开水（产后改用月子米酒水）300毫升</p>
+    <p><strong>做法：</strong>米酒洗净红枣，划开长口。保鲜盒内用热开水冲泡，加盖泡8小时。用蒸器蒸，沸腾后小火蒸1小时。红枣去皮及核，一天中随时可食；汤汁当茶分数次喝完。</p>
+  </div>
+  
+  <div class="tip-box tip-yellow" style="margin-bottom:16px;">
+    <h4>🍚 四神粥</h4>
+    <p><strong>原料：</strong>薏仁100克、通心莲50克、茨实10克（洗净浸泡4-6小时以上）、新鲜山药50克</p>
+    <p><strong>做法：</strong>所有材料熬成粥，产前3天产后3天吃。健脾养胃，是月子餐的基础粥品。</p>
+  </div>
+
+  <div class="tip-box tip-yellow" style="margin-bottom:16px;">
+    <h4>🍡 甜糯米粥（每日份）</h4>
+    <p><strong>原料：</strong>糯米50克，月子米酒水1220毫升，桂圆5粒，红糖30克</p>
+    <p><strong>做法：</strong>糯米与去皮桂圆肉放入米酒水中，电饭锅加盖煮40分钟。熄火后加入红糖搅拌。糯米有粘肠功能，帮助增强肠道蠕动，预防便秘和肠胃下垂。（糯米难消化，不可一次吃太多）</p>
+  </div>
+
+  <div class="tip-box tip-yellow" style="margin-bottom:16px;">
+    <h4>🫘 红豆汤（每日份）</h4>
+    <p><strong>原料：</strong>红豆70克，带皮老姜10克，月子米酒水1220毫升，红糖30克</p>
+    <p><strong>做法：</strong>红豆放入米酒水加盖泡8小时。老姜切丝放入。高压锅大火煮沸转小火25-35分钟至红豆开花。加入红糖约剩600ml。分两次吃：早上10点和下午3点。</p>
+  </div>
+</div>
+
+<div class="card preg-card">
+  <h2>🩺 剖宫产月子餐注意事项</h2>
+  <ul class="note-list">
+    <li><strong>产后6小时内：</strong>禁食禁水，平卧休息</li>
+    <li><strong>产后6-24小时：</strong>可少量饮水，无腹胀后可进少量流食（如米汤、萝卜汤，帮助排气）</li>
+    <li><strong>排气后：</strong>可进半流食，如稀粥、烂面、蒸蛋羹</li>
+    <li><strong>排便后：</strong>可恢复正常月子餐，但仍需避免产气食物（牛奶、豆浆、甜食等）</li>
+    <li><strong>伤口护理期：</strong>多吃富含蛋白质和维生素C的食物，促进伤口愈合</li>
+  </ul>
+</div>
+
+<div class="card preg-card">
+  <h2>📋 月子餐总体原则</h2>
+  <div class="tip-box tip-pink">
+    <strong>🔔 核心原则：</strong>
+    <ul style="margin:8px 0 0 16px;">
+      <li>所有菜不得放盐、酱油和醋</li>
+      <li>忌吃：韭菜、辣椒、大蒜、胡椒、凉水等</li>
+      <li>产后可吃水果：草莓、橘子、奇异果、榴莲、苹果、木瓜、橄榄、葡萄、菠萝、香蕉、龙眼、山楂（开水烫后再吃）</li>
+      <li>绑缚带：产后1-3天不绑，4-7天24小时绑，之后白天绑</li>
+      <li>第二周起每餐配合生化汤吃杜仲粉一钱（助腰肾恢复）</li>
+    </ul>
+  </div>
+</div>
+</div>
+</div>
+<div class="footer">
+  <p>📖 数据来源：协和医院产科专家著作《备孕怀孕营养胎教全书》+ 月子中心42天月子餐实践方案</p>
+  <p>⚠️ 本指南仅供参考，具体饮食请遵医嘱。<a href="孕期到辅食综合指南.html">返回综合指南</a></p>
+</div>
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  const content = document.getElementById('tab-' + name);
+  if (content) content.classList.add('active');
+  const btns = document.querySelectorAll('.tab-btn[onclick*="' + name + '"]');
+  btns.forEach(b => b.classList.add('active'));
+}
+</script>
+</body>
+</html>

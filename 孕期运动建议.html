@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>孕期运动建议 — 协和医院产科专家</title>
+<style>
+  :root {
+    --primary: #e8627a;
+    --primary-light: #fce8ec;
+    --secondary: #4a9b7f;
+    --secondary-light: #e8f5f0;
+    --accent: #f4a261;
+    --accent-light: #fef3e8;
+    --blue: #3a86c8;
+    --blue-light: #e8f2fb;
+    --purple: #7c5cbf;
+    --purple-light: #f0ebfb;
+    --bg: #fdf8f5;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --muted: #777;
+    --border: #eed9d0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── Header ── */
+  .hero {
+    background: linear-gradient(135deg, #e8627a 0%, #f4a261 50%, #4a9b7f 100%);
+    color: #fff;
+    text-align: center;
+    padding: 52px 24px 44px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .hero-icon { font-size: 56px; margin-bottom: 12px; }
+  .hero h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; position: relative; }
+  .hero p  { font-size: 15px; opacity: .88; position: relative; }
+  .hero .source { margin-top: 10px; font-size: 13px; opacity: .7; background: rgba(255,255,255,.15); display: inline-block; padding: 4px 14px; border-radius: 20px; }
+
+  /* ── Nav ── */
+  .toc {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+    padding: 20px 16px; background: #fff; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+  .toc a {
+    padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    text-decoration: none; transition: all .2s;
+  }
+  .toc a:nth-child(1) { background: var(--accent-light);  color: var(--accent);  }
+  .toc a:nth-child(2) { background: var(--secondary-light); color: var(--secondary); }
+  .toc a:nth-child(3) { background: var(--blue-light);    color: var(--blue);    }
+  .toc a:nth-child(4) { background: var(--purple-light);  color: var(--purple);  }
+  .toc a:nth-child(5) { background: var(--primary-light); color: var(--primary); }
+  .toc a:nth-child(6) { background: #fff8e1; color: #e67e00; }
+  .toc a:hover { filter: brightness(.92); transform: translateY(-1px); }
+
+  /* ── Container ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 32px 16px 60px; }
+
+  /* ── Section header ── */
+  .section-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 20px 24px; border-radius: 14px 14px 0 0;
+    margin-bottom: 0; margin-top: 40px;
+  }
+  .section-header .icon { font-size: 32px; }
+  .section-header h2 { font-size: 20px; font-weight: 700; color: #fff; }
+  .section-header p  { font-size: 13px; color: rgba(255,255,255,.85); margin-top: 2px; }
+
+  /* color themes */
+  .theme-orange  { background: linear-gradient(135deg, #f4a261, #e8835a); }
+  .theme-green   { background: linear-gradient(135deg, #4a9b7f, #2e7d61); }
+  .theme-blue    { background: linear-gradient(135deg, #3a86c8, #1f6aa8); }
+  .theme-purple  { background: linear-gradient(135deg, #7c5cbf, #5e3d9e); }
+  .theme-pink    { background: linear-gradient(135deg, #e8627a, #c94465); }
+  .theme-yellow  { background: linear-gradient(135deg, #f0b429, #d4950a); }
+
+  /* ── Cards container ── */
+  .cards-wrap {
+    background: #fff; border-radius: 0 0 14px 14px;
+    border: 1px solid var(--border); border-top: none;
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.06);
+  }
+
+  /* ── Phase cards ── */
+  .phase-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .phase-card {
+    border-radius: 12px; padding: 18px 20px;
+    border-left: 4px solid;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .phase-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+  .phase-card.orange { background: var(--accent-light);  border-color: var(--accent); }
+  .phase-card.green  { background: var(--secondary-light); border-color: var(--secondary); }
+  .phase-card.blue   { background: var(--blue-light);    border-color: var(--blue); }
+  .phase-card.purple { background: var(--purple-light);  border-color: var(--purple); }
+  .phase-card.pink   { background: var(--primary-light); border-color: var(--primary); }
+  .phase-card.yellow { background: #fff8e1; border-color: #f0b429; }
+
+  .phase-card .phase-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    margin-bottom: 6px; opacity: .7;
+  }
+  .phase-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+  .phase-card ul { list-style: none; }
+  .phase-card ul li {
+    padding: 4px 0 4px 20px; position: relative; font-size: 14px;
+    border-bottom: 1px solid rgba(0,0,0,.05);
+  }
+  .phase-card ul li:last-child { border-bottom: none; }
+  .phase-card ul li::before {
+    content: '✦'; position: absolute; left: 0; font-size: 10px; top: 7px; opacity: .6;
+  }
+
+  /* ── Exercise cards ── */
+  .exercise-card {
+    background: #fff; border-radius: 12px; padding: 20px;
+    border: 1px solid var(--border); margin-bottom: 14px;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .exercise-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.09); }
+  .exercise-card .ex-head {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  }
+  .exercise-card .ex-icon {
+    width: 44px; height: 44px; border-radius: 12px; display: flex;
+    align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+  }
+  .exercise-card h3 { font-size: 16px; font-weight: 700; }
+  .exercise-card .ex-tag {
+    font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 10px; margin-left: 8px;
+  }
+  .exercise-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .exercise-card .steps { margin-top: 10px; }
+  .exercise-card .steps li {
+    font-size: 13.5px; padding: 4px 0 4px 22px; position: relative;
+    border-bottom: 1px solid #f5f0eb;
+  }
+  .exercise-card .steps li:last-child { border-bottom: none; }
+  .exercise-card .steps li::before {
+    content: attr(data-n); position: absolute; left: 0; width: 18px; height: 18px;
+    background: var(--accent); color: #fff; border-radius: 50%;
+    font-size: 11px; font-weight: 700; display: flex; align-items: center;
+    justify-content: center; top: 5px;
+  }
+
+  /* ── Warning / Tip boxes ── */
+  .tip-box {
+    border-radius: 10px; padding: 14px 18px; margin: 12px 0;
+    display: flex; gap: 12px; align-items: flex-start;
+    font-size: 14px;
+  }
+  .tip-box.warn  { background: #fff3e0; border-left: 4px solid #ff9800; }
+  .tip-box.info  { background: var(--blue-light); border-left: 4px solid var(--blue); }
+  .tip-box.good  { background: var(--secondary-light); border-left: 4px solid var(--secondary); }
+  .tip-box.danger { background: #fce8ec; border-left: 4px solid var(--primary); }
+  .tip-box .tip-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .tip-box .tip-text { line-height: 1.6; }
+  .tip-box strong { display: block; font-size: 13px; margin-bottom: 2px; }
+
+  /* ── Forbid grid ── */
+  .forbid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .forbid-item {
+    background: #fce8ec; border: 1px solid #f3b8c3; border-radius: 10px;
+    padding: 12px 14px; text-align: center;
+  }
+  .forbid-item .f-icon { font-size: 28px; margin-bottom: 6px; }
+  .forbid-item p { font-size: 13px; font-weight: 600; color: var(--primary); }
+  .forbid-item small { font-size: 12px; color: var(--muted); display: block; margin-top: 4px; }
+
+  /* ── Pilates steps ── */
+  .steps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .step-block {
+    background: var(--blue-light); border-radius: 10px; padding: 16px;
+    border: 1px solid #c5def5;
+  }
+  .step-block .sb-head { font-weight: 700; font-size: 15px; margin-bottom: 8px; color: var(--blue); }
+  .step-block ol { padding-left: 18px; font-size: 13.5px; }
+  .step-block ol li { margin-bottom: 5px; }
+
+  /* ── Timeline / Quick overview ── */
+  .overview-table {
+    width: 100%; border-collapse: collapse; font-size: 14px;
+  }
+  .overview-table th {
+    background: linear-gradient(135deg, #4a9b7f, #2e7d61);
+    color: #fff; padding: 12px 16px; text-align: left; font-size: 13px;
+  }
+  .overview-table th:first-child { border-radius: 8px 0 0 0; }
+  .overview-table th:last-child  { border-radius: 0 8px 0 0; }
+  .overview-table td { padding: 11px 16px; border-bottom: 1px solid #e8f5f0; }
+  .overview-table tr:nth-child(even) td { background: #f4fbf8; }
+  .overview-table tr:last-child td:first-child { border-radius: 0 0 0 8px; }
+  .overview-table tr:last-child td:last-child  { border-radius: 0 0 8px 0; }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; margin: 1px 2px;
+  }
+  .badge-o { background: var(--accent-light);  color: var(--accent); }
+  .badge-g { background: var(--secondary-light); color: var(--secondary); }
+  .badge-b { background: var(--blue-light);    color: var(--blue); }
+  .badge-p { background: var(--primary-light); color: var(--primary); }
+
+  /* ── Signal indicators ── */
+  .signal-list { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; }
+  .signal-list li {
+    background: #fce8ec; border: 1px solid #f3b8c3; border-radius: 8px;
+    padding: 8px 14px; font-size: 13.5px; font-weight: 600; color: var(--primary);
+  }
+  .signal-list li::before { content: '⚠ '; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center; padding: 32px 16px; background: #fff;
+    border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-icon">🤸‍♀️</div>
+  <h1>孕期运动建议全指南</h1>
+  <p>科学运动，助力顺产 · 备孕期 → 孕早期 → 孕中期 → 孕晚期 → 临产前</p>
+  <span class="source">📖 来源：协和医院产科专家 · 备孕怀孕营养胎教全书 · 马良坤</span>
+</div>
+
+<!-- Nav -->
+<nav class="toc">
+  <a href="#overview">总览速查</a>
+  <a href="#early">孕早期运动</a>
+  <a href="#mid">孕中期运动</a>
+  <a href="#late">孕晚期运动</a>
+  <a href="#prepartum">临产前运动</a>
+  <a href="#forbid">运动禁忌</a>
+</nav>
+
+<div class="container">
+
+  <!-- ══ 总览速查 ══ -->
+  <div id="overview">
+    <div class="section-header theme-green">
+      <span class="icon">📊</span>
+      <div>
+        <h2>孕期各阶段运动总览</h2>
+        <p>一张表了解全程运动方案</p>
+      </div>
+    </div>
+    <div class="cards-wrap">
+      <table class="overview-table">
+        <thead>
+          <tr>
+            <th>阶段</th>
+            <th>推荐运动</th>
+            <th>运动原则</th>
+            <th>注意事项</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>备孕期</strong></td>
+            <td>
+              <span class="badge badge-o">散步</span>
+              <span class="badge badge-o">跑步</span>
+              <span class="badge badge-o">游泳</span>
+              <span class="badge badge-o">盆腔运动</span>
+            </td>
+            <td>增强体质、出汗排毒</td>
+            <td>跑步不要太快，以身体出汗为宜</td>
+          </tr>
+          <tr>
+            <td><strong>孕早期<br><small>1~3月</small></strong></td>
+            <td>
+              <span class="badge badge-g">缓慢散步</span>
+              <span class="badge badge-g">运动胎教</span>
+            </td>
+            <td>以缓慢为主，避免激烈</td>
+            <td>避免剧烈震动，控制体重从孕早期开始</td>
+          </tr>
+          <tr>
+            <td><strong>孕中期<br><small>4~7月</small></strong></td>
+            <td>
+              <span class="badge badge-b">游泳</span>
+              <span class="badge badge-b">散步</span>
+              <span class="badge badge-b">普拉提</span>
+              <span class="badge badge-b">有氧操</span>
+              <span class="badge badge-b">瑜伽</span>
+            </td>
+            <td>胎儿稳定，可适度增加</td>
+            <td>不宜蝶泳，避免拉伤；每天下午4～5点散步最佳</td>
+          </tr>
+          <tr>
+            <td><strong>孕晚期<br><small>8~9月</small></strong></td>
+            <td>
+              <span class="badge badge-p">普拉提</span>
+              <span class="badge badge-p">凯格尔</span>
+              <span class="badge badge-p">散步</span>
+              <span class="badge badge-p">提肛练习</span>
+            </td>
+            <td>减轻水肿、锻炼盆底</td>
+            <td>不走太远、不站太久；运动后立即停止若头晕</td>
+          </tr>
+          <tr>
+            <td><strong>临产前<br><small>孕10月</small></strong></td>
+            <td>
+              <span class="badge badge-o">爬楼梯</span>
+              <span class="badge badge-o">爬山</span>
+              <span class="badge badge-o">散步</span>
+              <span class="badge badge-o">腹式呼吸</span>
+            </td>
+            <td>促进入盆，助力顺产</td>
+            <td>必须有家人陪同；身边随时可就医</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ 孕早期 ══ -->
+  <div id="early">
+    <div class="section-header theme-orange">
+      <span class="icon">🌱</span>
+      <div>
+        <h2>孕早期运动（1~3个月）</h2>
+        <p>以缓慢为主，打好基础</p>
+      </div>
+    </div>
+    <div class="cards-wrap">
+      <div class="tip-box info">
+        <span class="tip-icon">💡</span>
+        <div class="tip-text">
+          <strong>原则</strong>
+          孕早期胚胎着床未稳，受精卵与母体结合约需2个月，此期运动以"缓慢、低强度"为主。不适合激烈运动，避免腹部震动。
+        </div>
+      </div>
+
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:var(--accent-light)">🚶‍♀️</div>
+          <div>
+            <h3>散步 <span class="ex-tag" style="background:var(--accent-light);color:var(--accent)">首选运动</span></h3>
+          </div>
+        </div>
+        <p>孕早期最安全的运动方式。步伐放缓，不要走过快或爬坡太多，保持心跳平稳。每次15~30分钟即可，饭后稍作休息再进行。</p>
+      </div>
+
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:#fff3e0">🎵</div>
+          <div>
+            <h3>运动胎教 <span class="ex-tag" style="background:#fff3e0;color:#e67e00">同步胎教</span></h3>
+          </div>
+        </div>
+        <p>从孕8周开始，可进行运动胎教。孕妈妈轻柔活动身体的同时，通过羊水传递运动感，刺激胎宝宝感官发育。也可结合音乐胎教共同进行。</p>
+      </div>
+
+      <div class="tip-box warn">
+        <span class="tip-icon">⚠️</span>
+        <div class="tip-text">
+          <strong>孕早期运动注意</strong>
+          避免剧烈跑跳、仰卧起坐、腹部用力等高强度动作；若有流产迹象（出血、腹痛）应立即停止一切运动并就医。
+        </div>
+      </div>
+
+      <div class="tip-box good">
+        <span class="tip-icon">⚖️</span>
+        <div class="tip-text">
+          <strong>从孕早期开始控制体重</strong>
+          整个孕期体重增加以12～14千克为宜。孕早期通过适当运动配合饮食控制，避免体重过快增加，是整个孕期体重管理的基础。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 孕中期 ══ -->
+  <div id="mid">
+    <div class="section-header theme-blue">
+      <span class="icon">🏊‍♀️</span>
+      <div>
+        <h2>孕中期运动（4~7个月）</h2>
+        <p>胎儿稳定，运动黄金期</p>
+      </div>
+    </div>
+    <div class="cards-wrap">
+      <div class="tip-box good">
+        <span class="tip-icon">✅</span>
+        <div class="tip-text">
+          <strong>孕5月起可主动参加适度运动</strong>
+          胎宝宝状况已比较稳定，孕妈妈可以主动参加适度运动——控制体重、提高抵抗力、改善妊娠不适、加强骨盆腰部肌肉，使宝宝在分娩时容易娩出。
+        </div>
+      </div>
+
+      <!-- 游泳 -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:var(--blue-light)">🏊‍♀️</div>
+          <div>
+            <h3>游泳 <span class="ex-tag" style="background:var(--blue-light);color:var(--blue)">最佳全身运动</span></h3>
+          </div>
+        </div>
+        <p>游泳能锻炼全身，减轻脚腕膝盖负担，缓解腿部水肿和腰部疼痛，放松子宫，锻炼肌肉并强化心肺功能，<strong>可提高顺产概率</strong>。宝宝在羊水中也会随之变换舒服姿势，变得平静。</p>
+        <ul class="steps">
+          <li data-n="①">下水前用温暖的水淋浴，做基础体操运动，让身体放松</li>
+          <li data-n="②">先向两侧做分腿和弯曲动作，同时练习"呼、哈"分娩呼吸法</li>
+          <li data-n="③">用自由行走或轻轻跳跃的方法使脉搏渐渐加快</li>
+          <li data-n="④">结束后伸展胳膊、肩膀和跟腱，做一套简单体操收尾</li>
+        </ul>
+        <div class="tip-box danger" style="margin-top:12px">
+          <span class="tip-icon">🚫</span>
+          <div class="tip-text"><strong>禁止蝶泳</strong> 蝶泳会使后背下部严重拱起，拉伤肩膀，孕期严禁进行。</div>
+        </div>
+      </div>
+
+      <!-- 散步 -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:#e8f5f0">🌿</div>
+          <div>
+            <h3>散步 <span class="ex-tag" style="background:#e8f5f0;color:#4a9b7f">每日必做</span></h3>
+          </div>
+        </div>
+        <p>每天坚持散步，有利于全身血液循环，能有效预防静脉曲张。建议<strong>每天下午4～5点</strong>外出散步，此时阳光适宜，草木释放氧气最强。进入孕中后期，多走动走动更有利于顺产。</p>
+        <div class="tip-box info" style="margin-top:10px">
+          <span class="tip-icon">👨‍👩‍👧</span>
+          <div class="tip-text">外出散步时必须有家人陪同，不方便行动时有人扶持，发生意外时可及时处理。</div>
+        </div>
+      </div>
+
+      <!-- 有氧操 -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:#fff3e0">💃</div>
+          <div>
+            <h3>有氧操 <span class="ex-tag" style="background:#fff3e0;color:#e67e00">改善情绪</span></h3>
+          </div>
+        </div>
+        <p>做有氧操能一扫烦躁情绪，通过身体活动释放压力，促进血清素分泌。适合孕中期身体条件允许时进行，动作以舒展为主，不要大幅度跳跃。</p>
+      </div>
+
+      <!-- 缓解背肩疼痛的运动 -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:var(--purple-light)">🤸‍♀️</div>
+          <div>
+            <h3>缓解背部和肩部疼痛的运动 <span class="ex-tag" style="background:var(--purple-light);color:var(--purple)">对症运动</span></h3>
+          </div>
+        </div>
+        <p>孕中期韧带疼痛、背肩不适是常见问题。通过专项拉伸运动、肩颈活动，可有效缓解腰背酸胀，保持身体灵活性。保持平和心态，不要强迫身体完成动作。</p>
+      </div>
+
+      <!-- 普拉提（孕中期） -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:var(--blue-light)">🧘‍♀️</div>
+          <div>
+            <h3>孕中期普拉提 — 伸展四肢 <span class="ex-tag" style="background:var(--blue-light);color:var(--blue)">书中动作</span></h3>
+          </div>
+        </div>
+        <p>平躺，配合腹式呼吸，交替互换四肢姿势，锻炼核心肌群，重复5～10次。具体做法：</p>
+        <ul class="steps">
+          <li data-n="1">平躺，左腿伸直，右腿屈膝，右臂向上伸出，左臂自然放在身体左侧</li>
+          <li data-n="2">开始腹式呼吸，长长吸入一口气</li>
+          <li data-n="3">呼出时，双臂和双腿的姿势分别互换</li>
+          <li data-n="4">重复5～10次</li>
+        </ul>
+      </div>
+
+      <!-- 瑜伽/太极 -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:#e8f5f0">🌸</div>
+          <div>
+            <h3>孕妇瑜伽 / 太极拳 <span class="ex-tag" style="background:#e8f5f0;color:#4a9b7f">降压放松</span></h3>
+          </div>
+        </div>
+        <p>散步、太极拳、孕妇瑜伽等运动可使全身肌肉放松，对妊娠期高血压的孕妈妈尤其有益，促进血压下降。也有助于缓解孕期紧张情绪，改善睡眠质量。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 孕晚期 ══ -->
+  <div id="late">
+    <div class="section-header theme-purple">
+      <span class="icon">🧘‍♀️</span>
+      <div>
+        <h2>孕晚期运动（8~9个月）</h2>
+        <p>减轻水肿，锻炼盆底，备战分娩</p>
+      </div>
+    </div>
+    <div class="cards-wrap">
+      <div class="tip-box warn">
+        <span class="tip-icon">⚠️</span>
+        <div class="tip-text">
+          <strong>孕晚期运动原则</strong>
+          不走太远的路，站立时间不要过长。进行运动要保证"不疲劳、不剧烈"为前提，一旦出现头晕、气短等不适，应立即停止并就医。
+        </div>
+      </div>
+
+      <!-- 普拉提（孕晚期） -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:var(--purple-light)">🦵</div>
+          <div>
+            <h3>孕晚期普拉提运动 <span class="ex-tag" style="background:var(--purple-light);color:var(--purple)">减轻水肿</span></h3>
+          </div>
+        </div>
+        <p>孕晚期呼吸不畅、手或脚腕水肿时，推荐做以下普拉提运动：</p>
+        <div class="steps-grid" style="margin-top:12px">
+          <div class="step-block">
+            <div class="sb-head">① 靠墙抬腿</div>
+            <ol>
+              <li>用垫子垫住头部，臀部尽量贴近墙壁，背部处于舒适状态</li>
+              <li>双腿自然伸至墙的上端，保持5分钟</li>
+              <li>双腿向两侧分开至感到拉伸效果，再保持5分钟</li>
+              <li>注意不要太过吃力</li>
+            </ol>
+          </div>
+          <div class="step-block">
+            <div class="sb-head">② 抬腿拉伸</div>
+            <ol>
+              <li>靠墙而坐，两腿向前伸直，右腿下垫两个枕头</li>
+              <li>左脚贴地屈膝，慢慢完全伸直右腿</li>
+              <li>保持脚趾向上并对脚后跟用力，拉伸后放松</li>
+              <li>重复10次后换另一条腿</li>
+            </ol>
+          </div>
+          <div class="step-block">
+            <div class="sb-head">③ 骨盆转动</div>
+            <ol>
+              <li>呼气时弯曲双膝，让膝关节放松</li>
+              <li>吸气时将髋关节由右向左转动，重心随之自然转换</li>
+              <li>进行6～10圈的转动</li>
+              <li>用同样方法进行反方向练习</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- 凯格尔 -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:var(--primary-light)">💪</div>
+          <div>
+            <h3>凯格尔运动（盆底肌锻炼）<span class="ex-tag" style="background:var(--primary-light);color:var(--primary)">改善漏尿</span></h3>
+          </div>
+        </div>
+        <p>进行规律的盆底肌锻炼，有利于改善盆底血液循环，减少痔疮不适，预防漏尿。需要<strong>长期坚持</strong>才能收到良好效果。</p>
+        <ul class="steps">
+          <li data-n="1">全身放松，夹紧臀部和大腿</li>
+          <li data-n="2">做深呼吸：吸气时提收肛门</li>
+          <li data-n="3">呼气时放松，一提一松为一次</li>
+          <li data-n="4">每次做20～30次，每日做3～5次</li>
+        </ul>
+      </div>
+
+      <!-- 缩紧阴道分腿助产运动 -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:#fff3e0">🤱</div>
+          <div>
+            <h3>缩紧阴道 + 分腿助产运动 <span class="ex-tag" style="background:#fff3e0;color:#e67e00">临产助力</span></h3>
+          </div>
+        </div>
+        <p>孕晚期骨盆疼痛、会阴部压迫感时，通过此运动可降低尿失禁发生概率。</p>
+        <div class="steps-grid" style="margin-top:12px">
+          <div class="step-block">
+            <div class="sb-head">● 缩紧阴道</div>
+            <ol>
+              <li>平躺，吸气，从肛门尽量用力紧缩阴道</li>
+              <li>注意不要把力量分散到其他部位</li>
+              <li>呼气，慢慢放松。吸气时数到8</li>
+              <li>重复5次后改向一侧躺下休息</li>
+            </ol>
+          </div>
+          <div class="step-block">
+            <div class="sb-head">● 分腿运动</div>
+            <ol>
+              <li>在平躺的姿势下将膝盖向上举</li>
+              <li>用嘴慢慢呼气的同时，按住膝盖并抬起上半身</li>
+              <li>动作缓慢，不要用力过猛</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- 散步 + 瑜伽 -->
+      <div class="exercise-card">
+        <div class="ex-head">
+          <div class="ex-icon" style="background:#e8f5f0">🌳</div>
+          <div>
+            <h3>散步 + 瑜伽（缓解腿抽筋）</h3>
+          </div>
+        </div>
+        <p>白天适当多运动：散步、做做瑜伽等，促进血液循环。同时避免站太久或走太多路。伏案工作的职场孕妈妈，每工作1小时适当活动5分钟，双脚可以抬高缓解腿部疲劳。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 临产前 ══ -->
+  <div id="prepartum">
+    <div class="section-header theme-pink">
+      <span class="icon">🏃‍♀️</span>
+      <div>
+        <h2>临产前运动（孕10月）</h2>
+        <p>促进入盆，助力顺产</p>
+      </div>
+    </div>
+    <div class="cards-wrap">
+      <div class="tip-box good">
+        <span class="tip-icon">🎯</span>
+        <div class="tip-text">
+          <strong>孕10月尚未入盆？多运动！</strong>
+          孕10月胎宝宝还没有入盆的情况并不少见，孕妈妈不要惊慌，在医生建议下多运动，有利于胎宝宝入盆。
+        </div>
+      </div>
+
+      <div class="phase-grid" style="margin-top: 16px">
+        <div class="phase-card orange">
+          <div class="phase-label">推荐动作</div>
+          <h3>🏗️ 爬楼梯</h3>
+          <ul>
+            <li>锻炼大腿和臀部肌肉群</li>
+            <li>帮助胎宝宝入盆</li>
+            <li>使第一产程尽快到来</li>
+            <li>可爬单元楼内楼梯</li>
+          </ul>
+        </div>
+        <div class="phase-card green">
+          <div class="phase-label">推荐动作</div>
+          <h3>⛰️ 爬小山包</h3>
+          <ul>
+            <li>午后14～16点草木释放氧气最强</li>
+            <li>借爬山进行充氧</li>
+            <li>感到累要及时休息</li>
+            <li>下山时注意安全</li>
+          </ul>
+        </div>
+        <div class="phase-card blue">
+          <div class="phase-label">推荐动作</div>
+          <h3>🚶 散步 + 上下楼梯</h3>
+          <ul>
+            <li>过了预产期仍可促进分娩</li>
+            <li>促进催产素分泌</li>
+            <li>轻微运动也有利于分娩</li>
+            <li>不适合整天卧床</li>
+          </ul>
+        </div>
+        <div class="phase-card purple">
+          <div class="phase-label">分娩技能</div>
+          <h3>🌬️ 腹式呼吸法</h3>
+          <ul>
+            <li>脊背挺直靠椅背</li>
+            <li>双膝和地面成90度</li>
+            <li>用鼻子吸气至腹部鼓起</li>
+            <li>呼气比吸气更缓慢且用力</li>
+          </ul>
+        </div>
+        <div class="phase-card pink">
+          <div class="phase-label">分娩技能</div>
+          <h3>🤲 拉梅兹呼吸法</h3>
+          <ul>
+            <li>第一阶段：胸部呼吸法（宫缩5~20分钟一次）</li>
+            <li>第二阶段：嘶嘶轻浅式呼吸</li>
+            <li>第三阶段：喘息呼吸法（转移注意力）</li>
+            <li>第四阶段：哈气运动（防止撕裂）</li>
+          </ul>
+        </div>
+        <div class="phase-card yellow">
+          <div class="phase-label">分娩球操</div>
+          <h3>⚽ 分娩球大步走</h3>
+          <ul>
+            <li>吸气弓步，双手举球向上伸展</li>
+            <li>吐气挺胸，双手放球落于大腿</li>
+            <li>连续做5次，共做3组</li>
+            <li>打开骨盆腔空间，减少盆底下坠感</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tip-box warn" style="margin-top:20px">
+        <span class="tip-icon">👨</span>
+        <div class="tip-text">
+          <strong>准爸爸注意</strong>
+          孕妈妈外出爬楼梯、爬山、散步时，<strong>必须有家人陪同</strong>，随时确保安全。如果发生紧急情况，可立即送医。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 运动禁忌 ══ -->
+  <div id="forbid">
+    <div class="section-header theme-yellow">
+      <span class="icon">🚫</span>
+      <div>
+        <h2>运动禁忌 &amp; 停止运动信号</h2>
+        <p>这些情况必须立即停止运动</p>
+      </div>
+    </div>
+    <div class="cards-wrap">
+
+      <div style="font-weight:700; font-size:15px; margin-bottom:12px; color:var(--primary)">⛔ 出现以下症状，立即停止运动并就医：</div>
+      <ul class="signal-list" style="margin-bottom:24px">
+        <li>头晕</li>
+        <li>气短</li>
+        <li>腹部疼痛</li>
+        <li>阴道出血</li>
+        <li>羊水破裂</li>
+        <li>胸痛</li>
+        <li>肌肉无力</li>
+        <li>小腿疼痛 / 肿胀</li>
+      </ul>
+
+      <div style="font-weight:700; font-size:15px; margin-bottom:12px">🏥 需要完全卧床、避免运动的情况：</div>
+      <div class="forbid-grid">
+        <div class="forbid-item">
+          <div class="f-icon">🩸</div>
+          <p>前置胎盘出血</p>
+          <small>必须卧床，禁止任何活动</small>
+        </div>
+        <div class="forbid-item">
+          <div class="f-icon">💉</div>
+          <p>子痫前期</p>
+          <small>高血压危重情况需静卧</small>
+        </div>
+        <div class="forbid-item">
+          <div class="f-icon">💧</div>
+          <p>过早破水</p>
+          <small>立即平躺，垫高臀部就医</small>
+        </div>
+        <div class="forbid-item">
+          <div class="f-icon">🔒</div>
+          <p>子宫颈闭锁不全</p>
+          <small>需要卧床静养</small>
+        </div>
+        <div class="forbid-item">
+          <div class="f-icon">🦋</div>
+          <p>蝶泳（全程禁止）</p>
+          <small>拉伤肩膀和后背下部</small>
+        </div>
+        <div class="forbid-item">
+          <div class="f-icon">🏋️</div>
+          <p>剧烈运动（全程）</p>
+          <small>造成子宫收缩、流产风险</small>
+        </div>
+        <div class="forbid-item">
+          <div class="f-icon">🦶</div>
+          <p>脚底按摩</p>
+          <small>泡脚时禁止，导致腹部不适</small>
+        </div>
+        <div class="forbid-item">
+          <div class="f-icon">🤰</div>
+          <p>仰卧时间过长</p>
+          <small>压迫血管，影响血液循环</small>
+        </div>
+      </div>
+
+      <div class="tip-box info" style="margin-top:20px">
+        <span class="tip-icon">💡</span>
+        <div class="tip-text">
+          <strong>养胎不必整天卧床</strong>
+          长期卧床会导致孕期抑郁、加重便秘、下肢血液不畅，甚至引发静脉血栓、肌肉萎缩。除非有以上明确禁忌，否则都应进行适量运动。运动要保证母婴健康为前提。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 额外：住高楼运动提示 ══ -->
+  <div style="margin-top:40px">
+    <div class="section-header theme-green">
+      <span class="icon">🏙️</span>
+      <div>
+        <h2>特殊场景运动建议</h2>
+        <p>职场、高楼、高血压孕妈妈的专属建议</p>
+      </div>
+    </div>
+    <div class="cards-wrap">
+      <div class="phase-grid">
+        <div class="phase-card blue">
+          <div class="phase-label">住高楼</div>
+          <h3>🏢 增加运动量</h3>
+          <ul>
+            <li>住高楼的孕妈妈需注意增加日常运动量</li>
+            <li>电梯与楼梯结合使用</li>
+            <li>孕晚期可尝试爬楼梯助入盆</li>
+          </ul>
+        </div>
+        <div class="phase-card green">
+          <div class="phase-label">职场孕妈</div>
+          <h3>💼 办公间隙运动</h3>
+          <ul>
+            <li>每工作1小时活动5分钟</li>
+            <li>将双脚抬高缓解水肿</li>
+            <li>坐时两腿避免交叠</li>
+            <li>不要长时间保持一个姿势</li>
+          </ul>
+        </div>
+        <div class="phase-card orange">
+          <div class="phase-label">妊娠高血压</div>
+          <h3>❤️‍🩹 降压运动</h3>
+          <ul>
+            <li>散步、太极拳、孕妇瑜伽</li>
+            <li>使全身肌肉放松，促进血压下降</li>
+            <li>避免激烈活动导致血压波动</li>
+          </ul>
+        </div>
+        <div class="phase-card pink">
+          <div class="phase-label">预防便秘</div>
+          <h3>🌿 促进肠道蠕动</h3>
+          <ul>
+            <li>适当户外运动促进肠道蠕动</li>
+            <li>养成定时排便的习惯</li>
+            <li>配合高膳食纤维饮食</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>📖 内容来源：《协和医院产科专家：备孕怀孕营养胎教全书》· 马良坤 著 · 化学工业出版社 2016</p>
+  <p style="margin-top:6px; color:#aaa">仅供参考，具体运动方案请遵医嘱 · 如有任何不适请立即停止并就医</p>
+</footer>
+
+</body>
+</html>

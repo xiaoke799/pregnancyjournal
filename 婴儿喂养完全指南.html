@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>婴儿喂养完全指南 - 从新生儿母乳到12个月辅食</title>
+<style>
+:root {
+  --primary: #5B9BD5;
+  --primary-dark: #3A7CC3;
+  --accent: #FF8C69;
+  --bg: #F5F9FF;
+  --card-bg: #FFFFFF;
+  --text: #2D3748;
+  --text-light: #718096;
+  --border: #E2E8F0;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --radius: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+/* Header */
+.header {
+  background: linear-gradient(135deg, #5B9BD5 0%, #4A90D9 40%, #3A7CC3 100%);
+  color: white;
+  padding: 48px 20px 36px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 400px; height: 400px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 50%;
+}
+.header h1 { font-size: 2rem; font-weight: 700; position: relative; z-index: 1; }
+.header .subtitle { font-size: 1rem; opacity: 0.9; margin-top: 8px; position: relative; z-index: 1; }
+.header .badge-row { display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; position: relative; z-index: 1; }
+.header .badge { background: rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; }
+
+/* Tabs */
+.tabs { display: flex; flex-wrap: wrap; background: white; border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+.tab-btn {
+  flex: 1; min-width: 80px; padding: 14px 8px; border: none; background: transparent;
+  font-size: 0.88rem; font-weight: 600; color: var(--text-light); cursor: pointer;
+  transition: all 0.25s; position: relative; white-space: nowrap;
+}
+.tab-btn:hover { color: var(--primary); background: #F0F6FF; }
+.tab-btn.active { color: var(--primary); }
+.tab-btn.active::after {
+  content: ''; position: absolute; bottom: -2px; left: 10%; right: 10%;
+  height: 3px; background: var(--primary); border-radius: 2px 2px 0 0;
+}
+.tab-content { display: none; max-width: 960px; margin: 0 auto; padding: 28px 20px 60px; }
+.tab-content.active { display: block; }
+
+/* Cards */
+.card { background: var(--card-bg); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.card h3 { font-size: 1.2rem; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.card h3 .icon { font-size: 1.4rem; }
+.highlight-box { background: #FFF8F0; border-left: 4px solid var(--accent); padding: 16px 20px; border-radius: 0 var(--radius) var(--radius) 0; margin: 16px 0; }
+
+/* Recipe Card */
+.recipe-card { background: var(--card-bg); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; border: 1px solid #E8F0FE; }
+.recipe-card .r-name { font-size: 1.05rem; font-weight: 700; color: #2D3748; margin-bottom: 6px; }
+.recipe-card .r-tag { display: inline-block; background: #E8F0FE; color: var(--primary); padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; margin-right: 6px; margin-bottom: 4px; }
+.recipe-card .r-info { color: var(--text-light); font-size: 0.85rem; margin: 6px 0; }
+.recipe-card .r-steps { color: #555; font-size: 0.9rem; margin-top: 6px; line-height: 1.6; }
+
+/* Q&A */
+.qa-item { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.qa-item:last-child { border-bottom: none; }
+.qa-q { font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+.qa-a { color: #555; font-size: 0.92rem; line-height: 1.7; }
+
+/* Schedule Table */
+.sched-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
+.sched-table th { background: #E8F0FE; color: var(--primary); padding: 10px 12px; text-align: left; font-weight: 600; }
+.sched-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.sched-table tr:hover td { background: #FAFCFF; }
+
+/* Two-col */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+/* Alert */
+.alert { padding: 14px 18px; border-radius: 8px; margin: 12px 0; font-size: 0.9rem; }
+.alert-info { background: #E8F4FD; border: 1px solid #B8D8F0; color: #2B6CB0; }
+.alert-warn { background: #FFF5F0; border: 1px solid #FED7C3; color: #C05621; }
+.alert-success { background: #F0FFF4; border: 1px solid #C6F6D5; color: #276749; }
+
+/* Phase timeline */
+.timeline { position: relative; padding-left: 28px; margin: 16px 0; }
+.timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 3px; background: var(--border); border-radius: 2px; }
+.tl-item { position: relative; margin-bottom: 20px; }
+.tl-item::before { content: ''; position: absolute; left: -22px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); border: 2px solid white; box-shadow: 0 0 0 2px var(--primary); }
+.tl-item .tl-title { font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+.tl-item .tl-desc { color: #555; font-size: 0.9rem; }
+
+/* Tips list */
+.tips-list { list-style: none; padding: 0; }
+.tips-list li { padding: 8px 0; padding-left: 24px; position: relative; border-bottom: 1px solid #f0f0f0; }
+.tips-list li::before { content: '✦'; position: absolute; left: 0; color: var(--primary); }
+.tips-list li:last-child { border-bottom: none; }
+
+/* Positions illustration */
+.pos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0; }
+@media (max-width: 640px) { .pos-grid { grid-template-columns: 1fr; } }
+.pos-card { background: #F8FBFF; border: 1px solid #E0ECF8; border-radius: var(--radius); padding: 18px; text-align: center; }
+.pos-card .pos-icon { font-size: 2.5rem; margin-bottom: 8px; }
+.pos-card .pos-name { font-weight: 700; color: var(--primary-dark); margin-bottom: 6px; }
+.pos-card .pos-desc { font-size: 0.82rem; color: #666; line-height: 1.5; }
+
+.footer { text-align: center; padding: 24px; color: var(--text-light); font-size: 0.82rem; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>👶 婴儿喂养完全指南</h1>
+  <p class="subtitle">从新生儿母乳喂养 · 到12个月辅食添加 · 一站式科学喂养</p>
+  <div class="badge-row">
+    <span class="badge">🏥 协和专家指导</span>
+    <span class="badge">🍼 40个母乳常见问答</span>
+    <span class="badge">🥣 50+道辅食食谱</span>
+    <span class="badge">📅 0-12月全阶段</span>
+    <span class="badge">🍲 30+催奶偏方</span>
+  </div>
+</div>
+
+<div class="tabs" id="tabNav">
+  <button class="tab-btn active" onclick="switchTab('newborn')">👶 新生儿<br>0-1月</button>
+  <button class="tab-btn" onclick="switchTab('early')">🍼 1-3月<br>哺乳进阶</button>
+  <button class="tab-btn" onclick="switchTab('transition')">🥄 4-6月<br>辅食初添</button>
+  <button class="tab-btn" onclick="switchTab('growing')">🥣 7-8月<br>辅食丰富</button>
+  <button class="tab-btn" onclick="switchTab('advanced')">🍗 9-12月<br>辅食升级</button>
+  <button class="tab-btn" onclick="switchTab('faq')">📋 母乳<br>40问答</button>
+  <button class="tab-btn" onclick="switchTab('boost')">🥘 催奶<br>食谱大全</button>
+</div>
+
+<!-- TAB 1: 新生儿 0-1月 -->
+<div class="tab-content active" id="tab-newborn">
+
+<div class="card">
+  <h3><span class="icon">🤱</span>母乳 — 宝宝最珍贵的"第一口"</h3>
+  <p>母乳含有婴儿生长发育所需要的各种营养物质。尽管科学家与营养学家不遗余力地改良乳制品，使其营养价值尽量接近母乳，但<strong>始终无法取代母乳的地位</strong>。</p>
+
+  <div class="highlight-box">
+    <strong>🌟 初乳 — 不可错过的"液体黄金"</strong><br>
+    新妈妈在产后12天内（尤其前3天）分泌的乳汁叫<strong>初乳</strong>，呈水样黄色。它含有丰富的蛋白质、各种酶类、碳水化合物及较低的脂肪，<strong>能极大提高宝宝的免疫能力</strong>。千万不要让宝宝错过初乳！
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">⏰</span>开奶 — 越早越好！</h3>
+  <ul class="tips-list">
+    <li><strong>产后30分钟内</strong>即可开奶，让新生儿尽早吸吮乳房</li>
+    <li>新生儿与妈妈<strong>同室同床</strong>，以不定时、不定量的<strong>按需喂养</strong>原则哺乳</li>
+    <li>即使妈妈身心疲惫、乳房还不胀，也要<strong>及早让宝宝吸吮</strong>，以免失去最佳时机</li>
+    <li>健康的足月新生儿一般<strong>2-3小时喂奶一次</strong>，最初每次吸吮时间不超过5分钟，然后逐渐增长</li>
+    <li>新生宝宝每天大概需要喂<strong>10-12次</strong></li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🤱</span>三种哺乳姿势</h3>
+  <div class="pos-grid">
+    <div class="pos-card">
+      <div class="pos-icon">🤗</div>
+      <div class="pos-name">摇篮式（坐姿）</div>
+      <div class="pos-desc">在有扶手的椅子上坐直，把宝宝抱在怀里，胳膊肘弯曲，宝宝后背靠着妈妈前臂，手掌托着头颈部。另一只手呈"U形"支撑乳房。适合公开场合喂奶，是早期最理想的方式。</div>
+    </div>
+    <div class="pos-card">
+      <div class="pos-icon">😴</div>
+      <div class="pos-name">侧卧式</div>
+      <div class="pos-desc">妈妈侧卧在床上，让宝宝面对乳房，一只手揽着宝宝身体，另一只手将奶头送到宝宝嘴里。适合疲倦时喂奶、剖宫产妈妈。注意别压着宝宝的手臂。</div>
+    </div>
+    <div class="pos-card">
+      <div class="pos-icon">⚽</div>
+      <div class="pos-name">抱足球式</div>
+      <div class="pos-desc">把宝宝抱在身体一侧，胳膊肘弯曲托着身体和头部，让宝宝面对乳房。妈妈腿上可放垫子。适合剖宫产、乳房较大、宝宝体型较小的妈妈。</div>
+    </div>
+  </div>
+  <div class="alert alert-info">💡 <strong>喂完奶后</strong>：将宝宝抱起趴在妈妈肩上，轻轻拍后背让宝宝打出奶嗝，有效避免吐奶、溢奶。</div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">📋</span>母乳喂养八项黄金建议</h3>
+  <ol class="tips-list">
+    <li><strong>分娩后尽早开奶</strong>：产后30分钟即可开奶，新生儿与妈妈同室同床，按需喂养</li>
+    <li><strong>保持心情舒畅</strong>：焦虑情绪会影响乳汁分泌，家人要及时宽慰，妈妈要学会自我调节</li>
+    <li><strong>学会了解宝宝</strong>：宝宝哭不一定饿了——可能想要怀抱、尿布湿了、太热/太冷、肚子进了气等</li>
+    <li><strong>不要拘泥于时间表</strong>：新生儿应"按需哺喂"而非"定时哺喂"，母乳比奶粉容易消化，吃奶次数更频繁</li>
+    <li><strong>耐心等待</strong>：乳汁分泌因人而异，有些妈妈持续几天受抑制激素影响。坚持让宝宝吸吮，几天就会有奶</li>
+    <li><strong>营养睡眠两不误</strong>：母体日摄入能量≥5000焦耳，多喝催乳汤（排骨汤、鸡汤、猪蹄汤、豆腐汤等）</li>
+    <li><strong>母乳不是万能的</strong>：母乳是最好的，但宝宝长得慢不一定是母乳的错，要细心观察找原因</li>
+    <li><strong>不要过于担心</strong>：新生儿吃奶时睡着是正常的，当他逐渐吃饱后会减慢吸奶速度</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h3><span class="icon">✅</span>判断母乳是否充足 — 五点法</h3>
+  <table class="sched-table">
+    <tr><th width="40">#</th><th>判断标准</th><th>具体说明</th></tr>
+    <tr><td>1</td><td><strong>涨奶感</strong></td><td>妈妈要有涨奶的感觉</td></tr>
+    <tr><td>2</td><td><strong>吞咽声</strong></td><td>宝宝吃奶时能听到咕咚咕咚的吞咽声音</td></tr>
+    <tr><td>3</td><td><strong>睡眠时长</strong></td><td>吃饱后宝宝一般能睡2小时左右</td></tr>
+    <tr><td>4</td><td><strong>尿量</strong></td><td>一天换纸尿裤5-6次，尿量约300毫升</td></tr>
+    <tr><td>5</td><td><strong>体重增长</strong></td><td>一周增加150-250克</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🍽️</span>判断宝宝是否吃饱 — 五大经验</h3>
+  <table class="sched-table">
+    <tr><th>方法</th><th>判断标准</th></tr>
+    <tr><td><strong>听吞咽声</strong></td><td>平均每吸吮2-3次听到咕咚下咽声，5-10分钟差不多吸空一侧，换另一侧，连续15分钟就差不多了</td></tr>
+    <tr><td><strong>看表情</strong></td><td>喂饱后宝宝对你笑、不哭了或睡着了。如果吃完还哭闹（非大小便原因），说明没吃饱</td></tr>
+    <tr><td><strong>数大小便</strong></td><td>母乳喂养婴儿每天尿6-12次，大便1-4次，呈金黄色稠状</td></tr>
+    <tr><td><strong>测体重</strong></td><td>小月龄每天增长25克，一个月长720-750克，第2个月增加600克</td></tr>
+    <tr><td><strong>别让撑着</strong></td><td>母乳一次喂15-30分钟，每2-3小时一次。吃完还哭先拍嗝，不行再补喂</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🚫</span>哪些情况不适合母乳喂养？</h3>
+  <div class="alert alert-warn">
+    <strong>母亲患以下疾病时不宜哺乳：</strong><br>
+    活动性肺结核（需与婴儿隔离）· 传染性强的乙型肝炎 · 严重心脏病/肾脏病 · 急性乳腺炎（乳汁中有脓液）· 严重感染性疾病发热 · 癌症/精神病 · HIV阳性
+  </div>
+  <div class="alert alert-info">
+    <strong>母亲服药时需注意：</strong>糖尿病、甲亢治疗期间不要哺乳。使用抗生素需在医生指导下用药，避免听神经损伤类药物。吸烟、喝酒、吸毒绝对禁止。
+  </div>
+</div>
+</div>
+
+<!-- TAB 2: 1-3月 哺乳进阶 -->
+<div class="tab-content" id="tab-early">
+
+<div class="card">
+  <h3><span class="icon">📈</span>1-3个月宝宝喂养要点</h3>
+  <table class="sched-table">
+    <tr><th>月龄</th><th>每日喂奶次数</th><th>间隔</th><th>每次时长</th><th>夜间喂养</th></tr>
+    <tr><td>新生儿</td><td>10-12次</td><td>2-3小时</td><td>5-15分钟</td><td>按需（3-4小时）</td></tr>
+    <tr><td>1-2个月</td><td>8-10次</td><td>2.5-3小时</td><td>10-20分钟</td><td>按需</td></tr>
+    <tr><td>2-3个月</td><td>6-8次</td><td>3-4小时</td><td>15-20分钟</td><td>可逐步减少</td></tr>
+    <tr><td>6个月以上</td><td>约5次</td><td>4-5小时</td><td>20-30分钟</td><td>尽量不喂</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="icon">💪</span>优质母乳这样来</h3>
+  <div class="two-col">
+    <div>
+      <h4 style="color:var(--accent); margin-bottom:8px;">🥗 吃出来</h4>
+      <ul class="tips-list">
+        <li><strong>充足碳水</strong>：米、面、杂粮、土豆、番薯</li>
+        <li><strong>优质蛋白</strong>：鱼、禽、肉、蛋、奶、豆制品</li>
+        <li><strong>适量脂肪</strong>：参与宝宝大脑发育</li>
+        <li><strong>足够矿物质</strong>：瘦肉补铁、牛奶补钙、海带补碘</li>
+        <li><strong>必须维生素</strong>：深绿黄红蔬菜补维生素A，适当晒太阳补维生素D</li>
+      </ul>
+    </div>
+    <div>
+      <h4 style="color:var(--accent); margin-bottom:8px;">😊 笑出来 + 🏃 动出来</h4>
+      <ul class="tips-list">
+        <li>情绪直接影响乳汁质量和产量，生气时体内产生"毒素"</li>
+        <li>压力、焦虑、抑郁会减少泌乳</li>
+        <li>适量运动可<strong>提高乳糖含量</strong></li>
+        <li>运动可<strong>提高脂肪质量</strong>（脑细胞发育关键）</li>
+        <li>运动可<strong>提高钙含量</strong>（骨骼吸收率提升）</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">⚠️</span>哺乳妈妈需要当心的食物</h3>
+  <table class="sched-table">
+    <tr><th>食物类别</th><th>可能症状</th><th>专家点评</th></tr>
+    <tr><td><strong>圆白菜、洋葱、大蒜、黄瓜</strong></td><td>宝宝打嗝、情绪易怒，持续1天以上</td><td>含膳食纤维，婴儿肠胃不完善，但适量蔬菜对乳母有好处</td></tr>
+    <tr><td><strong>牛奶制品、鸡蛋、海鲜、花生</strong></td><td>腹泻、皮疹、咳嗽、局部充血等过敏症状</td><td>有家族过敏史的新生儿妈妈应避免；无过敏史可适量摄入</td></tr>
+    <tr><td><strong>橙子、柚子、桔子</strong></td><td>可能导致呕吐、腹泻、皮疹</td><td>富含维生素C，刺激性因人而异</td></tr>
+    <tr><td><strong>巧克力</strong></td><td>可能腹泻、易怒</td><td>可可碱可能伤害婴儿神经系统，影响睡眠</td></tr>
+    <tr><td><strong>辛辣、咖啡、浓茶、酒</strong></td><td>刺激宝宝肠胃</td><td>哺乳期内应忌吃</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🔍</span>奶水不足的判断与补救</h3>
+  <div class="two-col">
+    <div>
+      <h4 style="color:#C05621; margin-bottom:8px;">⚠️ 奶水不足的5个信号</h4>
+      <ul class="tips-list">
+        <li>自我感觉乳房空空</li>
+        <li>宝宝吃奶时间长，听不到连续吞咽声，突然放开乳头大哭</li>
+        <li>宝宝睡不沉，吃过奶不久又哭闹找乳头</li>
+        <li>宝宝大小便次数少、量也少</li>
+        <li>宝宝体重不增或增长缓慢</li>
+      </ul>
+    </div>
+    <div>
+      <h4 style="color:#276749; margin-bottom:8px;">✅ 补救的5个措施</h4>
+      <ul class="tips-list">
+        <li>频繁哺喂，24小时内喂12次以上</li>
+        <li>安排几天让宝宝不离身，一有机会就喂，坚持3天见效</li>
+        <li>喂完一侧换另一侧继续喂，不要急着给奶粉</li>
+        <li>若已混合喂养，逐渐减少奶粉次数，让宝宝有几顿纯粹吃母乳</li>
+        <li>顶住压力相信自己，放松心情</li>
+      </ul>
+    </div>
+  </div>
+  <div class="alert alert-info">💡 <strong>补授法</strong>：每次先喂母乳再喂奶粉，喂奶粉时用仿真乳头（吸吮费力，跟母乳感觉接近）。保证每天吮吸母乳次数足够，乳汁才会越来越多。</div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🟡</span>关于母乳性黄疸</h3>
+  <p>母乳性黄疸发生率1-2%，一般分为早发型（出生后2-3天出现，4-6天最明显）和迟发型（出生后7-14天出现）。</p>
+  <div class="highlight-box">
+    <strong>处理原则：</strong>一般不必停母乳，预后良好。轻时继续吃母乳；重时停母乳改用配方奶3-5天。暂停期间用吸奶器吸出乳汁保证分泌。随月龄增长黄疸可逐渐消退，影响不大。
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🧴</span>乳房自我护理要点</h3>
+  <ul class="tips-list">
+    <li>选戴合身舒适的棉质哺乳文胸，根据尺寸变化变换型号</li>
+    <li>每天更换干净文胸，使用防溢乳垫</li>
+    <li>每次喂奶前洗净双手、乳头及乳晕</li>
+    <li>喂奶后用温水清洗，暴露几分钟保持干燥</li>
+    <li>不要让宝宝含着乳头睡觉，防止乳头破损和乳腺口堵塞</li>
+    <li>乳头皲裂可用鱼肝油软膏涂抹，严重时使用乳头保护器</li>
+    <li>预防乳腺炎：按需哺乳，吸空一侧再吸另一侧，吃不完用吸奶器吸空</li>
+  </ul>
+</div>
+</div>
+
+<!-- TAB 3: 4-6月 辅食初添 -->
+<div class="tab-content" id="tab-transition">
+
+<div class="card">
+  <h3><span class="icon">📅</span>奶量 + 辅食喂养时间表</h3>
+  <table class="sched-table">
+    <tr><th>月龄</th><th>母乳/配方奶</th><th>辅食</th><th>喂养安排</th></tr>
+    <tr><td><strong>4个月</strong></td><td>800-1000ml/天<br>5-6次</td><td>初尝（可选）<br>稀糊状</td><td>6:00 奶 → 10:00 奶 → 14:00 奶 → 18:00 奶 → 22:00 奶</td></tr>
+    <tr><td><strong>5个月</strong></td><td>800-1000ml/天<br>5次</td><td>米粉/菜泥<br>1次/天</td><td>6:00 奶 → 10:00 奶 → 12:00 辅食 → 14:00 奶 → 18:00 奶</td></tr>
+    <tr><td><strong>6个月</strong></td><td>700-900ml/天<br>4-5次</td><td>1-2次/天<br>泥糊状</td><td>6:00 奶 → 10:00 辅食 → 12:00 奶 → 14:00 奶 → 18:00 辅食 → 22:00 奶</td></tr>
+  </table>
+  <div class="alert alert-info">📌 <strong>辅食添加信号</strong>：宝宝能靠坐、对大人吃饭感兴趣、推舌反射消失、体重达到出生2倍以上（约6kg）。最早不早于4个月，最晚不晚于6个月。</div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🥄</span>4个月宝宝辅食（初尝期）</h3>
+  <div class="recipe-card">
+    <div class="r-name">🍚 米粉糊</div>
+    <div class="r-tag">4M+</div><div class="r-tag">第一口辅食</div>
+    <div class="r-info">食材：婴儿米粉1勺、温水适量</div>
+    <div class="r-steps">做法：将米粉用温水调成稀糊状，初次从1勺开始，观察宝宝反应，逐渐加量。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥕 胡萝卜汁</div>
+    <div class="r-tag">4M+</div><div class="r-tag">补充维生素A</div>
+    <div class="r-info">食材：胡萝卜1根</div>
+    <div class="r-steps">做法：胡萝卜洗净切小块，加水煮烂，用纱布过滤取汁，加适量温水稀释后喂食。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🍎 苹果汁</div>
+    <div class="r-tag">4M+</div>
+    <div class="r-info">食材：新鲜苹果半个</div>
+    <div class="r-steps">做法：苹果洗净去皮去核切小块，用榨汁机或研磨器榨汁，1:1加温水稀释。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥬 油菜水</div>
+    <div class="r-tag">4M+</div>
+    <div class="r-info">食材：嫩油菜叶20克</div>
+    <div class="r-steps">做法：油菜叶洗净切碎，放入沸水中煮2分钟，滤出菜水，放温后喂食。</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🥣</span>5个月宝宝辅食</h3>
+  <div class="recipe-card">
+    <div class="r-name">🥬 油菜泥</div>
+    <div class="r-tag">5M+</div>
+    <div class="r-info">食材：油菜嫩叶50g、米粉适量</div>
+    <div class="r-steps">做法：油菜叶洗净焯水至软，捞出捣成泥或用研磨器磨细，与调好的米粉混合即可。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥔 土豆泥</div>
+    <div class="r-tag">5M+</div>
+    <div class="r-info">食材：土豆半个</div>
+    <div class="r-steps">做法：土豆去皮切小块蒸熟，用勺子压成细腻泥状，加少量温水或母乳调稀。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥕 胡萝卜泥</div>
+    <div class="r-tag">5M+</div>
+    <div class="r-info">食材：胡萝卜半根</div>
+    <div class="r-steps">做法：胡萝卜去皮切小块蒸烂，用研磨器磨成泥，可加几滴核桃油促进吸收。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥚 蛋黄泥</div>
+    <div class="r-tag">5M+</div><div class="r-tag">注意过敏</div>
+    <div class="r-info">食材：鸡蛋1个</div>
+    <div class="r-steps">做法：鸡蛋煮熟取蛋黄，用勺子碾碎加少量温水调成糊。初次只喂1/8个蛋黄，观察3天无过敏再缓慢加量。</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🥗</span>6个月宝宝辅食</h3>
+  <div class="recipe-card">
+    <div class="r-name">🥕 胡萝卜汁</div>
+    <div class="r-tag">6M+</div>
+    <div class="r-info">食材：胡萝卜1根</div>
+    <div class="r-steps">做法：将胡萝卜洗净切成小块，加水炖烂。将胡萝卜块捣碎，在锅中放少许油（利于胡萝卜素吸收）翻炒，加适量水煮成糊状。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🎃 南瓜汁</div>
+    <div class="r-tag">6M+</div>
+    <div class="r-info">食材：南瓜100克</div>
+    <div class="r-steps">做法：南瓜去皮切成小丁蒸熟，用勺子将蒸熟的南瓜压成泥。在南瓜泥中加适量开水稀释调匀，放在干净的细漏勺上过滤取汁。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🍅 番茄汁</div>
+    <div class="r-tag">6M+</div>
+    <div class="r-info">食材：番茄1个</div>
+    <div class="r-steps">做法：将熟透的番茄在开水中烫2-3分钟，剥皮切碎。用干净的纱布把切碎的番茄包裹后挤出汁水，加适量温水稀释。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥬 油菜泥</div>
+    <div class="r-tag">6M+</div>
+    <div class="r-info">食材：油菜嫩叶50克</div>
+    <div class="r-steps">做法：油菜洗净焯水至软，捞出用刀剁碎或研磨，拌入米粉或粥中食用。</div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 4: 7-8月 辅食丰富 -->
+<div class="tab-content" id="tab-growing">
+
+<div class="card">
+  <h3><span class="icon">📅</span>7-8个月喂养时间表</h3>
+  <table class="sched-table">
+    <tr><th>月龄</th><th>母乳/配方奶</th><th>辅食</th><th>喂养安排</th></tr>
+    <tr><td><strong>7个月</strong></td><td>600-800ml/天<br>4次</td><td>2次/天<br>泥糊→碎末</td><td>6:00 奶 → 10:00 辅食+奶 → 14:00 奶 → 18:00 辅食+奶 → 22:00 奶</td></tr>
+    <tr><td><strong>8个月</strong></td><td>600-700ml/天<br>3-4次</td><td>2-3次/天<br>碎末状</td><td>6:00 奶 → 10:00 辅食 → 14:00 奶 → 18:00 辅食 → 22:00 奶</td></tr>
+  </table>
+  <div class="alert alert-info">📌 此阶段可开始添加<strong>蛋黄、鱼泥、肉泥、肝泥</strong>等，食物质地从泥糊状向碎末过渡。注意每次只添加一种新食物，观察3-5天无过敏再换下一种。</div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🍲</span>7个月宝宝食谱</h3>
+  <div class="recipe-card">
+    <div class="r-name">🐟 鲜鱼泥</div>
+    <div class="r-tag">7M+</div><div class="r-tag">优质蛋白</div>
+    <div class="r-info">食材：新鲜鱼肉30克（鳕鱼/鲈鱼）</div>
+    <div class="r-steps">做法：鱼肉去皮去刺洗净，放入碗中隔水蒸熟，取出后用勺子压成泥状，可加入少量米汤调稀。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥩 肝泥</div>
+    <div class="r-tag">7M+</div><div class="r-tag">补铁</div>
+    <div class="r-info">食材：新鲜猪肝/鸡肝20克</div>
+    <div class="r-steps">做法：肝洗净去筋膜切成小块，加水煮熟捞出，用勺子压碎过筛成泥，拌入米粉或粥食用。每周不超过2次。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥬 蔬菜粥</div>
+    <div class="r-tag">7M+</div>
+    <div class="r-info">食材：大米30克、青菜叶20克</div>
+    <div class="r-steps">做法：大米洗净加水煮成烂粥。青菜叶焯水切碎末，拌入粥中再煮2分钟即可。</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🍜</span>8个月宝宝食谱</h3>
+  <div class="recipe-card">
+    <div class="r-name">🥚 蛋黄羹</div>
+    <div class="r-tag">8M+</div>
+    <div class="r-info">食材：鸡蛋1个、温水适量</div>
+    <div class="r-steps">做法：取蛋黄打散，加入1.5倍温水搅匀，过筛去泡沫。盖保鲜膜扎孔，水开后上锅小火蒸8-10分钟。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🍗 鸡肉泥</div>
+    <div class="r-tag">8M+</div>
+    <div class="r-info">食材：鸡胸肉30克</div>
+    <div class="r-steps">做法：鸡胸肉洗净去筋膜，放入锅中加姜片煮熟。捞出用刀剁成肉末，加少量汤调成泥状。可拌入米粉或烂粥。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥣 山药红枣粥</div>
+    <div class="r-tag">8M+</div>
+    <div class="r-info">食材：山药30克、红枣3颗、大米30克</div>
+    <div class="r-steps">做法：山药去皮切小丁，红枣去核切碎，与大米一起加水煮至软烂（约40分钟），用勺子略微压碎即可喂食。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🐟 鱼肉松粥</div>
+    <div class="r-tag">8M+</div>
+    <div class="r-info">食材：大米30克、鱼肉松15克、菠菜叶10克</div>
+    <div class="r-steps">做法：大米煮成烂粥，菠菜焯水切碎末。将鱼肉松和菠菜末加入粥中，搅匀稍煮即可。</div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 5: 9-12月 辅食升级 -->
+<div class="tab-content" id="tab-advanced">
+
+<div class="card">
+  <h3><span class="icon">📅</span>9-12个月喂养时间表</h3>
+  <table class="sched-table">
+    <tr><th>月龄</th><th>母乳/配方奶</th><th>辅食</th><th>喂养安排</th></tr>
+    <tr><td><strong>9-10个月</strong></td><td>500-600ml/天<br>3次</td><td>3次/天<br>碎丁状</td><td>7:00 奶 → 10:00 辅食 → 12:30 辅食 → 15:30 奶 → 18:30 辅食 → 21:00 奶</td></tr>
+    <tr><td><strong>11-12个月</strong></td><td>400-500ml/天<br>2-3次</td><td>3餐+点心<br>小块状</td><td>7:00 奶+早餐 → 11:30 午餐 → 15:00 奶/点心 → 18:00 晚餐 → 21:00 奶</td></tr>
+  </table>
+  <div class="alert alert-info">📌 此阶段<strong>辅食逐渐成为主食</strong>，食物可以是碎丁、小块状。可以开始尝试<strong>手指食物</strong>（蒸软的胡萝卜条、西兰花等），锻炼自主进食。</div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🍲</span>9个月宝宝食谱</h3>
+  <div class="recipe-card">
+    <div class="r-name">🍜 疙瘩汤</div>
+    <div class="r-tag">9M+</div><div class="r-tag">主食</div>
+    <div class="r-info">食材：面粉50克、鸡蛋1个、青菜叶20克、清水适量</div>
+    <div class="r-steps">做法：面粉加少量水搅成小面疙瘩。水开后下入面疙瘩煮3-5分钟，打入蛋花，加入切碎的青菜叶，再煮2分钟即可。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥬 碧菠浓汤</div>
+    <div class="r-tag">9M+</div>
+    <div class="r-info">食材：菠菜50克、土豆半个、清水适量</div>
+    <div class="r-steps">做法：菠菜焯水去草酸后切碎，土豆去皮蒸熟压成泥。将土豆泥和菠菜碎放入锅中，加少量水煮成浓汤即可。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🍠 红薯粥</div>
+    <div class="r-tag">9M+</div>
+    <div class="r-info">食材：红薯半个、大米30克</div>
+    <div class="r-steps">做法：红薯去皮切小丁，与大米同煮至软烂（约40分钟），用勺子略微压碎让粥更浓稠。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🌰 栗子枣泥小米粥</div>
+    <div class="r-tag">9M+</div>
+    <div class="r-info">食材：小米30克、栗子5颗、红枣3颗</div>
+    <div class="r-steps">做法：栗子煮熟去壳压碎，红枣去核蒸熟压泥。小米加水煮20分钟后加入栗子碎和枣泥，再煮10分钟至软烂。</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🍛</span>10个月宝宝食谱</h3>
+  <div class="recipe-card">
+    <div class="r-name">🐟 鱼丝烩粟米</div>
+    <div class="r-tag">10M+</div>
+    <div class="r-info">食材：鱼肉50克、嫩玉米粒30克、鸡蛋半个</div>
+    <div class="r-steps">做法：鱼肉蒸熟撕成细丝，玉米粒煮熟切碎。锅中加少量水放入鱼丝和玉米碎，煮沸后淋入蛋液搅成蛋花。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥩 豌豆牛肉粥</div>
+    <div class="r-tag">10M+</div>
+    <div class="r-info">食材：牛肉末20克、豌豆20克、大米30克</div>
+    <div class="r-steps">做法：豌豆煮烂去皮压泥。大米煮粥至八成熟，加入牛肉末搅散煮熟，最后拌入豌豆泥。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🥚 小猪鸡蛋羹</div>
+    <div class="r-tag">10M+</div>
+    <div class="r-info">食材：鸡蛋1个、清水适量、肉末10克</div>
+    <div class="r-steps">做法：鸡蛋打散加1.5倍温水搅匀，过筛。将炒熟的肉末撒入蛋液，盖上保鲜膜扎孔，小火蒸10分钟。</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="icon">🍱</span>11个月宝宝食谱</h3>
+  <div class="recipe-card">
+    <div class="r-name">🐟 清蒸鱼饼</div>
+    <div class="r-tag">11M+</div>
+    <div class="r-info">食材：鱼肉80克、鸡蛋半个、面粉少许</div>
+    <div class="r-steps">做法：鱼肉去皮去刺剁成泥，加入蛋液和少量面粉搅拌上劲。做成小饼状，放入盘中隔水蒸12-15分钟。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🧀 奶酪鲜蔬泥</div>
+    <div class="r-tag">11M+</div>
+    <div class="r-info">食材：奶酪10克、西兰花30克、胡萝卜20克</div>
+    <div class="r-steps">做法：西兰花和胡萝卜焯水至软，切碎末。将蔬菜碎放入小碗，上面放奶酪碎，隔水蒸至奶酪融化搅匀即可。</div>
+  </div>
+  <div class="recipe-card">
+    <div class="r-name">🍝 番茄肉末面</div>
+    <div class="r-tag">11M+</div>
+    <div class="r-info">食材：婴儿面条30克、番茄半个、猪肉末20克</div>
+    <div class="r-steps">做法：番茄去皮切碎。锅中少许油炒散肉末，加入番茄碎炒出汁，加水煮开下面条煮至软烂。</div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 6: 母乳40问答 -->
+<div class="tab-content" id="tab-faq">
+
+<div class="card">
+  <h3><span class="icon">❓</span>母乳喂养40个最常见难题</h3>
+
+  <div class="qa-item"><div class="qa-q">Q1：初乳的量不多，颜色也不好，是否需要喂给宝宝？</div><div class="qa-a"><strong>必须喂！</strong>初乳含有丰富的蛋白质、酶类、碳水化合物，能提高宝宝免疫能力，千万不要错过。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q2：哺乳前需要做什么准备？</div><div class="qa-a">穿宽松衣服，使用哺乳胸罩。喂奶前洗净双手，用温湿毛巾擦拭乳房和乳头，用手按摩使乳腺充分扩张。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q3：正确的喂养姿势怎么做？</div><div class="qa-a">坐姿（白天）或卧姿（晚上）。坐位环抱式：肘部内侧托住宝宝颈背部，四指托臀部。让宝宝嘴和下颌紧贴乳房，含住乳头和大部分乳晕。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q4：母乳喂养应该进行到什么时候？</div><div class="qa-a">世界卫生组织建议<strong>纯母乳喂至6个月，母乳喂养至少12个月、最好到2岁</strong>。母乳喂得越久，宝宝日后患癌、脑膜炎、骨质疏松、糖尿病和哮喘的几率越低。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q5：奶水不多，越来越少怎么办？</div><div class="qa-a">加强营养，多吃下奶食物，多喝汤水，空闲时按摩乳房，让宝宝多吮吸刺激乳汁分泌。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q6：乳房总是变硬肿胀怎么办？</div><div class="qa-a">涨奶常见于产后1周，是因为乳汁没有完全吸空。检查吮吸方法是否正确，让宝宝持续吸奶，喂奶时用食指在硬块处顺时针揉。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q7：老是漏奶怎么办？</div><div class="qa-a">漏奶时用手指压住乳头轻揉缓解喷乳反射。外出使用一次性防溢乳垫。可以用奶瓶接住备用（避免用奶嘴防乳头混淆）。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q8：乳房很小，奶水会不会很少？</div><div class="qa-a"><strong>不会！</strong>乳房大小只是脂肪量的区别，奶水量不取决于乳房大小。营养充足+多吮吸=乳汁充足。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q9：经常乳管堵塞怎么办？</div><div class="qa-a">多喝水，饮食清淡（少吃高蛋白高脂肪），保持规律喂养，勤吮吸。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q10：乳头皲裂，能不能暂停哺乳？</div><div class="qa-a">哺乳前用温热毛巾热敷，哺乳后用乳汁涂抹在乳头并暴露几分钟保持干燥。可用不含酒精的蜂胶。疼痛难忍时戴<strong>乳头保护器</strong>继续喂。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q11：乳头有脓肿，是不是乳腺炎？</div><div class="qa-a">乳腺炎多发于初产妇，因乳头皲裂、乳汁淤积引起。初期按乳头皲裂护理。有脓肿时<strong>暂时不能亲喂</strong>，需将母乳吸出。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q12：一个乳房产奶多、一个少，可以只喂多的一侧吗？</div><div class="qa-a"><strong>不可以！</strong>先让宝宝吮吸奶水少的一侧，再吸另一侧。单侧吮吸5-10分钟，不够才导致产奶少。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q13：奶水过稀，会不会不够营养？</div><div class="qa-a">每个妈妈乳汁颜色和营养含量不同（饮食差异），不必互相比较。只要哺乳期营养均衡就可以。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q14：奶水不够宝宝吃不饱怎么办？</div><div class="qa-a">心情愉快最关键！其次常吸奶（产量和吮吸次数成正比）。最后注意饮食：喝原味蔬菜汤、豆制品及坚果。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q15：母乳挤出来放冰箱能存多久？</div>
+  <div class="qa-a">
+    <table class="sched-table"><tr><th>储存温度</th><th>储存时间</th></tr>
+    <tr><td>室温15℃</td><td>24小时</td></tr><tr><td>室温19-22℃</td><td>10小时</td></tr>
+    <tr><td>室温25℃</td><td>6小时</td></tr><tr><td>冷藏0-4℃</td><td>8天</td></tr>
+    <tr><td>冷冻（单门冰箱）</td><td>14天</td></tr><tr><td>冷冻（双门冰箱）</td><td>3-4个月</td></tr></table>
+  </div></div>
+
+  <div class="qa-item"><div class="qa-q">Q16：哺乳期间乳房怎么清洁？</div><div class="qa-a">每次喂奶前用温水清洁乳头和乳晕，喂奶后温水擦拭，暴露几分钟干燥。<strong>不要用香皂和酒精</strong>等刺激性物品。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q20：第一次吮吸是什么时候？</div><div class="qa-a"><strong>越早越好！</strong>顺产妈妈在宝宝出生后半小时即可开始，剖腹产妈妈适当延迟1-2小时。越早吮吸越有助于乳汁分泌。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q23：每天需要喂几次？</div><div class="qa-a">新生宝宝每天约10-12次，2个月后约6-7次，6个月后每天约5次。以按需喂养为原则。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q24：两次喂奶间隔多久合适？</div><div class="qa-a">按需喂养原则下，每隔2-3小时喂一次。晚上每隔3-4小时。6个月左右夜间尽量不喂（除非宝宝饿醒）。猛长期可能每小时都吃。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q26：怎么让宝宝打嗝？</div><div class="qa-a">三种姿势：(1)宝宝趴在肩上轻拍后背；(2)宝宝坐在膝上用指托下颌，另一只手拍背；(3)宝宝趴在膝上头偏一侧，轻拍后背。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q34：夜间如何喂奶？</div><div class="qa-a"><strong>新生宝宝一定要坚持坐着喂！</strong>不当卧姿可能使乳房堵住婴儿鼻孔或导致呛奶窒息。宝宝大一些后可采取卧姿。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q36：可以用奶嘴代替母乳吗？</div><div class="qa-a"><strong>不可以！</strong>奶嘴会让宝宝产生乳头错觉——奶嘴比母乳好吸，宝宝吃过奶嘴后会因母乳费力而烦躁。除非母乳不够需补配方奶（也要用勺子不要用奶瓶），坚决不让宝宝尝试奶嘴。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q39：母乳喂养的宝宝需要额外补水吗？</div><div class="qa-a">纯母乳喂养的宝宝在<strong>4个月前都不用额外补水</strong>。6个月后因添加辅食，可在两餐之间补充水分。</div></div>
+
+  <div class="qa-item"><div class="qa-q">Q40：没开奶时宝宝吃什么？</div><div class="qa-a">如果无法及时喂母乳，医院会建议人工喂养，注意：(1)<strong>千万不能用奶瓶喂</strong>，用量杯或专用小勺；(2)一定让宝宝至少每两小时吮吸一次；(3)一旦有涨奶感就停止喂配方奶。</div></div>
+</div>
+</div>
+
+<!-- TAB 7: 催奶食谱大全 -->
+<div class="tab-content" id="tab-boost">
+
+<div class="card">
+  <h3><span class="icon">🥘</span>催奶食谱大全 — 30+道经典催奶方</h3>
+  <p>以下食谱全部来自真实产妇经验与中医经典配方，按食材类型分类整理。</p>
+
+  <h4 style="color:var(--accent); margin:20px 0 12px;">🐷 猪蹄系列（最经典催奶食材）</h4>
+
+  <div class="recipe-card">
+    <div class="r-name">猪蹄黄豆汤</div>
+    <div class="r-tag">经典催乳</div>
+    <div class="r-info">食材：猪蹄1只、黄豆60克、黄花菜30克</div>
+    <div class="r-steps">做法：猪蹄洗净剁块，与黄豆、黄花菜共煮烂，入油盐调味。分数次吃完，2-3日一剂，连服3剂。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">花生猪蹄汤</div>
+    <div class="r-tag">补血下奶</div>
+    <div class="r-info">食材：花生200克、猪蹄2只、黄酒、葱、姜、盐适量</div>
+    <div class="r-steps">做法：猪蹄净毛刮洗净劈开斩块，加足水放入花生和调料，水沸后小火炖2小时至猪蹄烂熟。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">猪蹄通草汤</div>
+    <div class="r-tag">通乳下奶</div>
+    <div class="r-info">食材：猪蹄1只、通草10克、水1500ml、葱/盐/黄酒</div>
+    <div class="r-steps">做法：所有食材放在一起，大火煮开后小火煮1-2小时至猪蹄酥烂。喝汤吃肉，每天一次，连服3-5天。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">酸菜猪手煲</div>
+    <div class="r-tag">开胃催乳</div>
+    <div class="r-info">食材：猪手1只、川酸菜、花生及调味料</div>
+    <div class="r-steps">做法：猪手斩开焯水5分钟捞出。煲中加冷水和所有原料，大火煮30分钟后改小火慢炖1小时。</div>
+  </div>
+
+  <h4 style="color:var(--accent); margin:20px 0 12px;">🐟 鱼类系列</h4>
+
+  <div class="recipe-card">
+    <div class="r-name">鲫鱼炖木瓜</div>
+    <div class="r-tag">催乳圣品</div>
+    <div class="r-info">食材：鲫鱼1条、木瓜半个、红枣10颗、姜片、料酒</div>
+    <div class="r-steps">做法：鲫鱼去鳞去内脏洗净。锅内倒油煸香姜片，鲫鱼略煎去腥。另起锅加水烧开，加入鲫鱼、木瓜、红枣、料酒，小火煲2小时。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">丝瓜鲫鱼汤</div>
+    <div class="r-tag">清热解毒通乳</div>
+    <div class="r-info">食材：活鲫鱼500克、丝瓜200克</div>
+    <div class="r-steps">做法：鲫鱼洗净背上剖十字花刀，略煎两面后烹黄酒，加清水、姜葱小火焖炖20分钟。丝瓜切片投入鱼汤，旺火煮至汤呈乳白色，加盐再煮3分钟。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">归芪鲫鱼汤</div>
+    <div class="r-tag">益气养血催乳</div>
+    <div class="r-info">食材：鲫鱼1尾、当归10克、黄芪15克</div>
+    <div class="r-steps">做法：鲫鱼去内脏和鱼鳞，与当归、黄芪同煮至熟。饮汤食鱼，每日一剂。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">赤豆鲫鱼汤</div>
+    <div class="r-tag">产前安胎产后通乳</div>
+    <div class="r-info">食材：鲫鱼1条(约500克)、赤小豆50克</div>
+    <div class="r-steps">做法：赤小豆淘洗浸泡2小时，清水煮至七成熟。鲫鱼去鳞鳃内脏洗净切块，加入锅中文火煮至烂熟，不加调料食肉饮汤。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">乌鱼通草汤</div>
+    <div class="r-tag">通经下乳</div>
+    <div class="r-info">食材：乌鱼1条、通草3克、葱/盐/黄酒</div>
+    <div class="r-steps">做法：乌鱼去鳞及内脏洗净，加通草、葱、盐、黄酒、水共炖熟。吃鱼喝汤，每日一次。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">冬瓜鲫鱼汤</div>
+    <div class="r-tag">利水通乳</div>
+    <div class="r-info">食材：鲫鱼1-2尾、冬瓜、葱、姜、盐少许</div>
+    <div class="r-steps">做法：鲫鱼认真清洗，下冷水锅大火烧开加葱姜，改小火慢炖。汤汁奶白色时下冬瓜片调味稍煮即可。注意不能过咸。</div>
+  </div>
+
+  <h4 style="color:var(--accent); margin:20px 0 12px;">🐔 禽肉类系列</h4>
+
+  <div class="recipe-card">
+    <div class="r-name">黄芪炖鸡汤</div>
+    <div class="r-tag">产后5-7天后食用</div>
+    <div class="r-info">食材：黄芪50克、枸杞15克、红枣10个、母鸡1只(1000克)</div>
+    <div class="r-steps">做法：黄芪、枸杞、姜片放滤袋内。母鸡洗净焯水切块，与红枣一起放锅内加清水，小火炖焖1小时加盐、米酒。宜在产后5-7天后食用。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">母鸡炖山药</div>
+    <div class="r-tag">脾胃虚弱少乳</div>
+    <div class="r-info">食材：母鸡1只、黄芪30克、党参15克、山药15克、红枣15克、黄酒50克</div>
+    <div class="r-steps">做法：药材置入鸡肚，浇黄酒，隔水蒸熟。1-2天内吃完。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">清炖乌骨鸡汤</div>
+    <div class="r-tag">产后虚弱乳汁不足</div>
+    <div class="r-info">食材：乌骨鸡肉1000克、党参15克、黄芪25克、枸杞15克</div>
+    <div class="r-steps">做法：鸡肉洗净切碎，与葱、姜、盐、酒拌匀，上铺药材隔水蒸20分钟。</div>
+  </div>
+
+  <h4 style="color:var(--accent); margin:20px 0 12px;">🥜 素食/谷物系列</h4>
+
+  <div class="recipe-card">
+    <div class="r-name">木瓜花生大枣汤</div>
+    <div class="r-tag">显著增加乳汁</div>
+    <div class="r-info">食材：木瓜750克、花生150克、大枣5粒、片糖3/2块</div>
+    <div class="r-steps">做法：木瓜去皮去核切块。木瓜、花生、大枣和8碗水放入煲内，加片糖，水滚后文火煲2小时。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">黑芝麻粥</div>
+    <div class="r-tag">补肝肾通乳</div>
+    <div class="r-info">食材：黑芝麻25克、大米适量</div>
+    <div class="r-steps">做法：黑芝麻捻碎，大米洗净，加水适量煮成粥。每日2-3次，或经常佐餐食用。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">豆腐煮红糖</div>
+    <div class="r-tag">简单有效</div>
+    <div class="r-info">食材：豆腐120克、红糖30克、黄酒一小杯</div>
+    <div class="r-steps">做法：豆腐红糖加水一碗半，文火煮成一碗，加黄酒调服。5-7次有效。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">酒酿蛋花汤</div>
+    <div class="r-tag">益气生津活血</div>
+    <div class="r-info">食材：酒酿1块、鸡蛋1个</div>
+    <div class="r-steps">做法：酒酿加水煮开，打入鸡蛋煮成蛋花状，趁热服用。</div>
+  </div>
+
+  <h4 style="color:var(--accent); margin:20px 0 12px;">🌿 中药类催奶方</h4>
+
+  <div class="recipe-card">
+    <div class="r-name">通草猪蹄方</div>
+    <div class="r-tag">效果明显</div>
+    <div class="r-info">食材：丝瓜衣、通草各3克，或加猪蹄煮汤</div>
+    <div class="r-steps">做法：煎水喝。若效果不大，用北芪6克、当归9克、白芷3克、穿山甲6克与丝瓜子3克炖猪蹄，饮汤吃肉。</div>
+  </div>
+
+  <div class="recipe-card">
+    <div class="r-name">通乳中药方</div>
+    <div class="r-tag">主治产后缺乳</div>
+    <div class="r-info">食材：党参、黄芪各30克、当归、路路通各18克、柴胡、青皮、陈皮、穿山甲、王不留各12克、香附15克、通草、漏芦各10克</div>
+    <div class="r-steps">做法：每日一剂，水煎服。一般服药2-3剂见效。</div>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <h4 style="color:var(--accent); margin-bottom:12px;">🌿 催奶宜食与忌食速查</h4>
+    <div class="two-col">
+      <div>
+        <strong style="color:#276749;">✅ 宜食物品：</strong>
+        <ul class="tips-list">
+          <li>猪蹄、羊肉、鲫鱼、鲇鱼、章鱼、乌贼鱼、虾子、泥鳅</li>
+          <li>鸡肉（黑雌鸡尤佳）、牛乳、鸡蛋、猪瘦肉</li>
+          <li>花生、黑芝麻、豌豆、赤小豆、南瓜子、豆腐</li>
+          <li>茭白、莴苣、丝瓜、番薯藤、萝卜缨、无花果</li>
+          <li>金针菜（黄花菜）、木瓜、桂圆、大枣、胡桃</li>
+          <li>党参、黄芪、当归、通草</li>
+        </ul>
+      </div>
+      <div>
+        <strong style="color:#C05621;">❌ 忌食物品：</strong>
+        <ul class="tips-list">
+          <li><strong>大麦芽</strong>：有回乳作用，哺乳期忌食</li>
+          <li><strong>韭菜、辣椒、桂皮、大蒜、花椒</strong>等刺激性食物</li>
+          <li><strong>香烟、烈酒、咖啡、浓茶</strong></li>
+          <li><strong>冰镇冷饮、苦瓜、西瓜、生黄瓜</strong>等性寒大凉食品</li>
+          <li><strong>柿子、螃蟹、田螺</strong>等寒性食物</li>
+          <li>香菜（可能导致乳汁不足）</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="footer">
+  <p>📖 数据来源：协和医院专家孕期指南 · 母乳喂养攻略 · 宝宝100种辅食做法 · 产后月子催奶食谱大全</p>
+  <p>⚠️ 本指南仅供参考，具体请遵医嘱 | 生成时间 2026年6月</p>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+</script>
+</body>
+</html>
