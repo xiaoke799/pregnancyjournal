@@ -1,0 +1,51 @@
+FPK: 17.8 MB
+
+Outer: 3624 entries
+app.tgz found: app.tgz
+app.tgz decompressed: 38.2 MB
+
+total entries: 3600
+
+By top-level dir:
+  ./: 3595 files
+    every,
+  forEach,
+  reduce,
+  toArray,
+  some,
+  find
+}
+/: 2 files
+  l, err)
+      }
+    }
+  }
+  return d
+}
+/: 2 files
+  e: true,
+    enumerable: true
+  }
+})
+/: 1 files
+
+Critical checks:
+  server/node/server.js: NO
+  server/node/db.js: NO
+  server/node/package.json: NO
+  server/node/routes/daily-record.js: NO
+  server/node/node_modules/express: NO
+  ui/index.cgi: NO
+  ui/index.html: NO
+  ui/config: NO
+
+Server code (non-nm): 0 files
+
+UI: 0 files
+
+node_modules/express samples: 20
+  ./server/node/node_modules/express/
+  ./server/node/node_modules/express/History.md
+  ./server/node/node_modules/express/index.js
+  ./server/node/node_modules/express/lib/
+  ./server/node/node_modules/express/LICENSE

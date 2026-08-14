@@ -1,0 +1,61 @@
+# ===========================================
+# 孕程记 (pregnancy-journal) gitignore
+# 排除第三方项目、构建产物、敏感数据
+# ===========================================
+
+# ---- 第三方项目/子仓库（非本仓库内容，避免合规风险） ----
+fnnas-docs-main/
+已上架项目/
+.trae-cn/
+pregnancyjournal/
+
+# ---- 构建产物与打包 ----
+*.fpk
+app.tgz
+_fpk_work/
+_verify_extract/
+build/
+
+# ---- 数据库与运行时数据 ----
+data/*.duckdb
+data/*.db
+data/backups/
+data/photos/
+data/thumbnails/
+
+# ---- Node / 前端依赖 ----
+node_modules/
+pregnancyjournal/frontend/node_modules/
+
+# ---- Python ----
+.venv/
+__pycache__/
+*.pyc
+paddleocr-env/
+
+# ---- 日志 ----
+*.log
+日志/
+
+# ---- 临时验证脚本（可选保留） ----
+# _check_old3.js
+# _compare_fpk.js
+# _inject_nm.js
+# _list_outer.js
+# _verify_fpk.js
+# _verify_old.js
+# _verify_old2.js
+# _verify_output.txt
+# _verify.js
+
+# ---- 系统文件 ----
+.DS_Store
+Thumbs.db
+
+# ---- 环境配置 ----
+.env
+.env.local
+
+# ---- IDE ----
+.vscode/
+.idea/
