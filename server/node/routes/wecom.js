@@ -80,11 +80,11 @@ async function sendWebhookMessage(webhookUrl, textContent) {
 /**
  * 记录推送日志到 push_log 表
  */
-async function recordPushLog(pushType, content, status, errorMsg) {
+function recordPushLog(pushType, content, status, errorMsg) {
   try {
     const id = uuidv4();
-    await db.run(
-      'INSERT INTO push_log (id, push_type, push_content, status, error_message, pushed_at, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime(\'now\'))',
+    db.run(
+      'INSERT INTO push_log (id, push_type, push_content, status, error_message, pushed_at) VALUES (?, ?, ?, ?, ?, ?)',
       [id, pushType, content || '', status, errorMsg || null, new Date().toISOString()]
     );
     return id;
@@ -116,7 +116,7 @@ function startScheduler() {
       if (!config.enabled || !config.webhook_url || !config.push_time || config.push_daily === false) return;
 
       const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const today = now.toISOString().slice(0, 10);
       const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
       // 检查是否到了推送时间（精确到分钟）
@@ -158,7 +158,7 @@ function startScheduler() {
  * @param {string|null} existingLogId - 重试时复用已有日志ID，避免创建重复记录
  */
 async function executeDailyPush(pregnancyId, config, sourceType, existingLogId) {
-  const logId = existingLogId || await recordPushLog('daily', `每日看板推送(${sourceType})`, 'pending', null);
+  const logId = existingLogId || recordPushLog('daily', `每日看板推送(${sourceType})`, 'pending', null);
 
   try {
     const today = dayjs().format('YYYY-MM-DD');
@@ -263,10 +263,10 @@ async function executeDailyPush(pregnancyId, config, sourceType, existingLogId) 
     await sendWebhookMessage(config.webhook_url, messageText);
 
     // 更新日志为成功
-    if (logId) await db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), logId]);
+    if (logId) db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), logId]);
     return { success: true };
   } catch (e) {
-    if (logId) await db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [e.message, logId]);
+    if (logId) db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [e.message, logId]);
     throw e;
   }
 }
@@ -378,13 +378,13 @@ router.post('/wecom/send-test', async (req, res) => {
     if (!config.webhook_url) {
       return res.json({ code: 1001, data: null, message: '请先配置Webhook地址' });
     }
-    const logId = await recordPushLog('test', '测试消息', 'pending', null);
+    const logId = recordPushLog('test', '测试消息', 'pending', null);
     try {
       await sendWebhookMessage(config.webhook_url, '🤰 孕程记 测试消息\n\n这是一条测试消息，如果您收到说明推送功能正常！');
-      if (logId) await db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), logId]);
+      if (logId) db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), logId]);
       res.json({ code: 0, data: null, message: '测试消息已发送' });
     } catch (sendErr) {
-      if (logId) await db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [sendErr.message, logId]);
+      if (logId) db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [sendErr.message, logId]);
       res.json({ code: 1002, data: null, message: sendErr.message });
     }
   } catch (e) {
@@ -407,13 +407,13 @@ router.post('/wecom/send-checkup-reminder', async (req, res) => {
     if (checkup_date) content += `计划日期: ${checkup_date}\n`;
     if (items) content += `检查项目: ${items}\n`;
 
-    const logId = await recordPushLog('checkup', `产检提醒: ${checkup_name}`, 'pending', null);
+    const logId = recordPushLog('checkup', `产检提醒: ${checkup_name}`, 'pending', null);
     try {
       await sendWebhookMessage(config.webhook_url, content);
-      if (logId) await db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), logId]);
+      if (logId) db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), logId]);
       res.json({ code: 0, data: null, message: '提醒已发送' });
     } catch (sendErr) {
-      if (logId) await db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [sendErr.message, logId]);
+      if (logId) db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [sendErr.message, logId]);
       res.json({ code: 1002, data: null, message: sendErr.message });
     }
   } catch (e) {
@@ -484,7 +484,7 @@ router.post('/wecom/retry/:id', async (req, res) => {
     }
 
     // 更新为 pending 重试
-    await db.run("UPDATE push_log SET status='pending', error_message=NULL, pushed_at=NULL WHERE id=?", [req.params.id]);
+    db.run("UPDATE push_log SET status='pending', error_message=NULL, pushed_at=NULL WHERE id=?", [req.params.id]);
 
     // 根据类型重新执行
     if (logEntry.push_type === 'daily') {
@@ -495,12 +495,12 @@ router.post('/wecom/retry/:id', async (req, res) => {
     } else {
       // 非daily类型的简单重试
       await sendWebhookMessage(config.webhook_url, logEntry.push_content || '(重试)');
-      await db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), req.params.id]);
+      db.run("UPDATE push_log SET status='success', pushed_at=? WHERE id=?", [new Date().toISOString(), req.params.id]);
     }
 
     res.json({ code: 0, data: null, message: '重试成功' });
   } catch (e) {
-    await db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [e.message, req.params.id]);
+    db.run("UPDATE push_log SET status='failed', error_message=? WHERE id=?", [e.message, req.params.id]);
     res.json({ code: 1002, data: null, message: e.message });
   }
 });

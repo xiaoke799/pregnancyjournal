@@ -10,7 +10,6 @@ router.post('/habit-checkins', async (req, res) => {
       return res.json({ code: 1001, data: null, message: '缺少必要参数pregnancy_id或date' });
     }
 
-    db.getDb().run('BEGIN IMMEDIATE TRANSACTION');
     const existing = await db.queryOne(
       'SELECT id FROM habit_checkin WHERE pregnancy_id = ? AND date = ?',
       [pregnancy_id, date]
@@ -23,7 +22,6 @@ router.post('/habit-checkins', async (req, res) => {
         'UPDATE habit_checkin SET items = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [itemsJson, note || '', existing.id]
       );
-      db.getDb().run('COMMIT');
       res.json({ code: 0, data: { id: existing.id, updated: true }, message: '更新成功' });
     } else {
       const id = db.generateId();
@@ -31,11 +29,9 @@ router.post('/habit-checkins', async (req, res) => {
         'INSERT INTO habit_checkin (id, pregnancy_id, date, items, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
         [id, pregnancy_id, date, itemsJson, note || '']
       );
-      db.getDb().run('COMMIT');
       res.json({ code: 0, data: { id, created: true }, message: '创建成功' });
     }
   } catch (error) {
-    try { db.getDb().run('ROLLBACK'); } catch {}
     res.json({ code: 1001, data: null, message: error.message });
   }
 });
@@ -155,7 +151,7 @@ router.put('/habit-checkins/:id', async (req, res) => {
       params.push(JSON.stringify(items));
     }
     if (note !== undefined) {
-      updates.push('notes = ?');
+      updates.push('note = ?');
       params.push(note);
     }
 

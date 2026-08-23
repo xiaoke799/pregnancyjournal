@@ -161,14 +161,15 @@ router.put('/pregnancies/:id', (req, res) => {
   }
 });
 
-router.put('/pregnancies/:id/activate', async (req, res) => {
+router.put('/pregnancies/:id/activate', (req, res) => {
   try {
     const existing = db.queryOne('SELECT * FROM pregnancy WHERE id = ?', [req.params.id]);
     if (!existing) {
       return res.json({ code: 1001, data: null, message: '孕期档案不存在' });
     }
 
-    await db.run(`UPDATE pregnancy SET is_active = CASE WHEN id = ? THEN 1 ELSE 0 END, updated_at = CASE WHEN id = ? THEN datetime('now') ELSE updated_at END`, [req.params.id, req.params.id]);
+    db.run("UPDATE pregnancy SET is_active = 0");
+    db.run("UPDATE pregnancy SET is_active = 1, updated_at = datetime('now') WHERE id = ?", [req.params.id]);
 
     const activated = db.queryOne('SELECT * FROM pregnancy WHERE id = ?', [req.params.id]);
     res.json({ code: 0, data: activated, message: 'success' });
