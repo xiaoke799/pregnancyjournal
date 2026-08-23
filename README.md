@@ -1,7 +1,7 @@
 # 孕程记 / Pregnancy Journal
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-FnOS-8c8c8c.svg)](https://www.fnos.com/)
+[![Platform](https://img.shields.io/badge/platform-FnOS%20x86--64-8c8c8c.svg)](https://www.fnos.com/)
 [![Version](https://img.shields.io/badge/version-0.0.26-green.svg)](manifest)
 
 > 飞牛 OS 原生应用 · 数据 100% 本地存储 · 零上云
@@ -30,7 +30,7 @@
 
 - **系统**: 飞牛 OS >= 0.9.21 / FnOS >= 0.9.21
 - **运行时**: Node.js v22（应用中心自动安装）
-- **平台**: x86-64 NAS
+- **平台**: x86-64（暂不支持 ARM / ARM64）
 
 ### 安装方式 / Installation
 
