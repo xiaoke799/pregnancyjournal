@@ -1,40 +1,40 @@
-孕程记 软件许可及用户协议
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
 
-版权所有 © 2026 xiaoke799
+   Copyright 2026 xiaoke799
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-## 软件许可
+       http://www.apache.org/licenses/LICENSE-2.0
 
-在遵守以下条件的前提下，免费授权任何人使用和分发本软件：
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 
-1. 本软件供个人非商业用途使用
-2. 分发时须完整保留本协议及版权声明
-3. 不得用于任何违法活动
-4. 不得移除或修改软件中的版权标识
+   ---
 
-## 隐私保护承诺
+   Appendix: How to apply the Apache License to your work
 
-孕程记是一款**完全本地运行**的孕期管理应用：
+   To apply the Apache License to your work, attach the following
+   boilerplate notice, with the fields enclosed by brackets "{}"
+   replaced with your own identifying information. (Don't include
+   the brackets!)
 
-🔒 数据完全本地存储 — 所有孕期数据仅保存在您的 NAS 设备上
-🔒 零上云 — 不收集、不上传、不同步任何个人数据至任何云端服务器
-🔒 零追踪 — 不含任何分析SDK、广告SDK或用户行为追踪代码
-🔒 零第三方 — 不向任何第三方传输或共享数据
-🔒 您拥有 — 所有数据由您完全掌控，可通过备份功能随时导出
+   Copyright 2026 xiaoke799
 
-## 免责声明
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-本软件提供孕期健康数据的记录和参考功能，但：
+       http://www.apache.org/licenses/LICENSE-2.0
 
-1. 不提供医疗诊断 — 所有健康建议仅供参考，不能替代专业医疗意见
-2. 不保证数据准确性 — 用户应自行核实所有记录数据
-3. 不承担健康责任 — 任何健康决策请咨询专业医生
-
-本软件按"原样"提供，不提供任何明示或暗示的保证。在任何情况下，
-作者均不对因使用本软件而产生的任何损失承担责任。
-
-## 开源声明
-
-本项目为开源学习项目，参考了市面上同类孕期管理软件的功能设计理念，
-所有代码均为独立原创编写，未复制或搬运任何第三方受版权保护的代码。
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
