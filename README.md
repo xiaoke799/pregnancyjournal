@@ -1,26 +1,50 @@
 # 孕程记 / Pregnancy Journal
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-FnOS-8c8c8c.svg)](https://www.fnos.com/)
+[![Version](https://img.shields.io/badge/version-0.0.26-green.svg)](manifest)
 
-> 数据 100% 本地存储 · 零上云 · 隐私优先的孕期管理应用
+> 飞牛 OS 原生应用 · 数据 100% 本地存储 · 零上云
 >
-> 100% Local Data Storage · Zero Cloud Upload · Privacy-First Pregnancy Management
+> FnOS Native App · 100% Local Data Storage · Zero Cloud Upload
 
 ---
 
 ## 简介 / Introduction
 
-**孕程记**是一款完全本地运行的孕期管理应用，所有数据仅保存在您的个人设备（NAS/电脑）上，不收集、不上传、不同步任何个人数据至任何云端服务器。
+**孕程记**是[飞牛 OS](https://www.com)（fnOS）上的一款原生应用，可一键从飞牛应用中心安装。所有数据保存在你的 NAS 本地，不收集、不上传、不同步任何个人数据至任何云端。
 
-**Pregnancy Journal** is a fully local-run pregnancy management app. All data is stored only on your personal device (NAS/PC). It does NOT collect, upload, or sync any personal data to any cloud server.
+**Pregnancy Journal** is a native app for [FnOS](https://www.fnos.com/) (Feiou OS), installable directly from the FnOS App Center. All data stays on your NAS — no collection, no upload, no sync to any cloud server.
 
 ### 隐私承诺 / Privacy Promise
 
-- 🔒 **数据完全本地存储** — All data stored locally
+- 🔒 **数据完全本地存储** — All data stored locally on NAS
 - 🔒 **零上云** — Zero cloud upload
 - 🔒 **零追踪** — No analytics, ads, or tracking SDKs
 - 🔒 **零第三方数据传输** — No third-party data sharing
 - 🔒 **您完全掌控数据** — You own your data, export anytime
+
+---
+
+## 安装要求 / Requirements
+
+- **系统**: 飞牛 OS >= 0.9.21 / FnOS >= 0.9.21
+- **运行时**: Node.js v22（应用中心自动安装）
+- **平台**: x86-64 NAS
+
+### 安装方式 / Installation
+
+**方式 1：应用中心一键安装（推荐）**
+
+直接在飞牛 OS 应用中心搜索"孕程记"安装。
+
+Install directly from the FnOS App Center by searching "孕程记".
+
+**方式 2：手动安装 .fpk 包**
+
+从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `.fpk` 文件，在飞牛 OS 中手动上传安装。
+
+Download the `.fpk` package from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) and upload it in FnOS.
 
 ---
 
@@ -44,89 +68,86 @@
 
 ---
 
-## 技术栈 / Tech Stack
+## 技术架构 / Architecture
 
-### 前端 / Frontend
-
-- **框架**: Vue 3 + TypeScript
-- **构建**: Vite 5
-- **UI**: Naive UI + Tailwind CSS
-- **图表**: ECharts + vue-echarts
-- **编辑器**: TipTap (富文本)
-- **状态**: Pinia
-- **路由**: Vue Router 4
-
-### 后端 / Backend
-
-- **运行时**: Node.js
-- **数据库**: SQLite
-- **架构**: RESTful API (Express-like routing)
-
----
-
-## 安装与使用 / Installation & Usage
-
-### 环境要求 / Requirements
-
-- Node.js >= 18
-- 支持的平台：Windows / Linux (NAS)
-
-### 快速开始 / Quick Start
-
-```bash
-# 克隆项目 / Clone the repository
-git clone https://github.com/xiaoke799/pregnancyjournal.git
-cd pregnancyjournal
-
-# 安装后端依赖 / Install backend dependencies
-cd app/server/node
-npm install
-
-# 安装前端依赖 / Install frontend dependencies
-cd ../../../frontend
-npm install
-
-# 开发模式前端 / Frontend dev mode
-npm run dev
-
-# 构建前端 / Build frontend
-npm run build
-
-# 启动后端服务 / Start backend service
-cd ../app/server/node
-node server.js
-```
-
-###  FnOS 应用包 / FnOS App Package
-
-本项目也可打包为 FnOS NAS 应用（`.fpk` 格式），直接从 FnOS 应用中心安装。
-
-This project can also be packaged as a FnOS NAS app (`.fpk` format) for direct installation from the FnOS App Center.
-
----
-
-## 项目结构 / Project Structure
+### 飞牛 OS 应用结构 / FnOS App Structure
 
 ```
 pregnancyjournal/
+├── manifest                # 飞牛 OS 应用清单 / FnOS app manifest
+├── cmd/                    # 应用生命周期脚本 / Lifecycle scripts
+│   ├── install_init        #   安装前 / Pre-install
+│   ├── install_callback    #   安装回调 / Install callback
+│   ├── config_init         #   配置初始化 / Config init
+│   ├── config_callback     #   配置回调 / Config callback
+│   ├── uninstall_init      #   卸载前 / Pre-uninstall
+│   └── upgrade_callback    #   升级回调 / Upgrade callback
+├── wizard/                 # 安装向导 / Installation wizard
+├── config/                 # 应用权限与资源限制 / App privilege & resource
 ├── app/
-│   ├── server/node/        # 后端服务 / Backend service
-│   │   ├── routes/         # API 路由 / API routes
-│   │   ├── data/           # 静态数据 / Static data
-│   │   └── ...
-│   └── ui/                 # 前端构建输出 / Frontend build output
+│   ├── server/node/        # 后端服务 / Backend service (Node.js)
+│   │   ├── routes/         #   API 路由 / API routes
+│   │   ├── services/       #   业务逻辑 / Business logic
+│   │   ├── data/           #   静态数据 / Static data
+│   │   ├── db.js           #   SQLite 数据库 / SQLite database
+│   │   └── server.js       #   服务入口 / Server entry
+│   └── ui/                 # 前端界面 / Frontend (FnOS embedded)
+├── server/node/            # 运行时代码（重构版）/ Runtime (refactored)
 ├── frontend/               # 前端源码 / Frontend source
 │   └── src/
 │       ├── api/            # API 客户端 / API client
 │       ├── components/     # 组件 / Components
 │       ├── views/          # 页面 / Views
-│       └── ...
-├── server/node/            # 重构后端 / Refactored backend
-├── data/                   # 运行时数据 / Runtime data (gitignored)
+│       └── stores/         # 状态管理 / State management
+├── data/                   # 用户数据目录 / User data (gitignored)
 ├── docs/                   # 文档 / Documentation
-├── manifest                # 应用清单 / App manifest
-└── LICENSE                 # 许可证 / License
+└── *.fpk                   # 打包产物 / Build artifact (gitignored)
 ```
+
+### 技术栈 / Tech Stack
+
+- **前端**: Vue 3 + TypeScript + Vite + Naive UI + ECharts + TipTap
+- **后端**: Node.js + Express-like routing + SQLite
+- **打包**: fnpack（FnOS 应用打包工具 / FnOS packaging tool）
+
+---
+
+## 开发构建 / Development & Build
+
+### 环境要求 / Requirements
+
+- Node.js >= 18
+- 飞牛 OS 开发环境（用于 .fpk 打包）
+
+### 本地开发 / Local Development
+
+```bash
+git clone https://github.com/xiaoke799/pregnancyjournal.git
+cd pregnancyjournal
+
+# 后端 / Backend
+cd app/server/node
+npm install
+node server.js
+
+# 前端 / Frontend (独立开发)
+cd ../../../frontend
+npm install
+npm run dev
+```
+
+### 打包 .fpk / Package FnOS App
+
+```bash
+# 1. Build 前端 / Build frontend
+cd frontend && npm run build
+
+# 2. 使用 fnpack 打包成 .fpk / Package with fnpack
+cd ..
+fnpack pack -o pregnancyjournal.fpk
+```
+
+打包后的 `.fpp` 文件可直接拖入飞牛 OS 安装。
 
 ---
 
@@ -160,10 +181,14 @@ This software provides pregnancy health data recording and reference functions, 
 
 **项目主页**: https://github.com/xiaoke799/pregnancyjournal
 
+**应用中心**: 飞牛 OS 应用中心（搜索"孕程记"）
+
 **致谢**: 本项目为开源学习项目，所有代码均为独立原创编写。
 
 Author: xiaoke799
 
 Homepage: https://github.com/xiaoke799/pregnancyjournal
+
+App Center: FnOS App Center (search "孕程记")
 
 Acknowledgment: This project is an open-source learning initiative. All code is independently written.
