@@ -24,8 +24,10 @@ if (!fs.existsSync(DIARY_BASE)) {
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      if (!fs.existsSync(DIARY_BASE)) fs.mkdirSync(DIARY_BASE, { recursive: true });
-      cb(null, DIARY_BASE);
+      const dateDir = _getDiaryDateDir();
+      const dir = path.join(DIARY_BASE, dateDir);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
     },
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname);

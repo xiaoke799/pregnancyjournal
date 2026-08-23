@@ -1,0 +1,4809 @@
+{
+  "metadata": {
+    "version": "3.1",
+    "last_updated": "2026-06-04",
+    "data_source": "基于以下权威指南综合整理",
+    "references": [
+      "中国营养学会. 中国备孕妇女膳食指南（2022）. 人民卫生出版社.",
+      "中国营养学会. 中国孕妇膳食指南（2022）. 人民卫生出版社.",
+      "国家卫生健康委员会. 食品安全国家标准 孕妇及乳母膳食指南 (GB 31605-2022).",
+      "美国FDA. Fish Choice Guide for Pregnancy. 2023.",
+      "世界卫生组织. 食品安全手册（孕期分册）. 2022."
+    ],
+    "safety_level_definitions": {
+      "safe": "可正常食用，注意适量和卫生",
+      "caution": "需谨慎食用，建议控制频率或分量",
+      "avoid": "不建议食用，存在明确风险",
+      "limit": "限制食用量，避免过量摄入"
+    },
+    "disclaimer": "本数据仅供参考，具体饮食请遵医嘱。个体差异较大，过敏体质者需特别注意。"
+  },
+  "categories": [
+    {
+      "name": "蔬菜类",
+      "icon": "🥬",
+      "items": [
+        {
+          "name": "菠菜",
+          "safety": "safe",
+          "note": "富含叶酸和铁，建议焯水去草酸后食用",
+          "evidence_level": "A级（多国指南一致推荐）",
+          "references": [
+            "中国居民膳食指南（2022）孕产妇分册"
+          ],
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "caution",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "胡萝卜",
+          "safety": "safe",
+          "note": "全孕期可食，富含胡萝卜素和维生素A",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "番茄",
+          "safety": "safe",
+          "note": "全孕期可食，富含番茄红素",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "caution",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "南瓜",
+          "safety": "safe",
+          "note": "全孕期可食，富含维生素A和膳食纤维",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "冬瓜",
+          "safety": "safe",
+          "note": "利水消肿，孕晚期可食适宜",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芹菜",
+          "safety": "safe",
+          "note": "富含膳食纤维，有助降压",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "白菜",
+          "safety": "safe",
+          "note": "全孕期可食，营养丰富",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "生菜",
+          "safety": "safe",
+          "note": "注意清洗干净，避免细菌",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "caution",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "油菜",
+          "safety": "safe",
+          "note": "富含叶酸和钙",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "空心菜",
+          "safety": "safe",
+          "note": "富含叶酸和铁",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "油麦菜",
+          "safety": "safe",
+          "note": "富含叶酸，清爽不油腻",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "茼蒿",
+          "safety": "safe",
+          "note": "富含维生素A和叶酸",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "caution",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "韭菜",
+          "safety": "caution",
+          "note": "物性偏温，不宜多食",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "caution",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "香菜",
+          "safety": "safe",
+          "note": "适量调味，增加食欲",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "茴香",
+          "safety": "caution",
+          "note": "性温，少量食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "香椿",
+          "safety": "caution",
+          "note": "含亚硝酸盐，需焯水，少量食用",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "caution",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "豆芽",
+          "safety": "safe",
+          "note": "富含维生素C，注意新鲜",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "绿豆芽",
+          "safety": "safe",
+          "note": "全孕期可食，清爽可口",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "黄豆芽",
+          "safety": "safe",
+          "note": "富含蛋白质和维生素",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "豌豆苗",
+          "safety": "safe",
+          "note": "富含维生素C和叶酸",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "蒜苗",
+          "safety": "safe",
+          "note": "适量食用，增强食欲",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "青椒",
+          "safety": "safe",
+          "note": "富含维生素C，促进铁吸收",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "红椒",
+          "safety": "safe",
+          "note": "富含维生素C，全孕期可食",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "彩椒",
+          "safety": "safe",
+          "note": "富含维生素C和胡萝卜素",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "茄子",
+          "safety": "safe",
+          "note": "营养丰富，适量食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "黄瓜",
+          "safety": "safe",
+          "note": "全孕期可食，清热解暑",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "丝瓜",
+          "safety": "safe",
+          "note": "全孕期可食，清热利水",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "苦瓜",
+          "safety": "caution",
+          "note": "性寒，少量食用",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "caution",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "西葫芦",
+          "safety": "safe",
+          "note": "西葫芦热量低、水分足，富含维生素C和钾，清淡易消化，适合孕期炒食或做汤，有助于缓解水肿",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "瓠瓜",
+          "safety": "safe",
+          "note": "瓠瓜性凉味甘，水分含量高且热量低，全孕期均可食用，有助于清热利尿和缓解孕期水肿",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "佛手瓜",
+          "safety": "safe",
+          "note": "佛手瓜富含维生素C、叶酸和多种矿物质，热量低且口感清脆，有助于增强免疫力和促进胎儿神经管发育",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "秋葵",
+          "safety": "safe",
+          "note": "富含黏蛋白和维生素",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芦笋",
+          "safety": "safe",
+          "note": "富含叶酸，适合全孕期",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "竹笋",
+          "safety": "caution",
+          "note": "草酸较高，需焯水",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "caution",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "莴笋",
+          "safety": "safe",
+          "note": "富含钾和叶酸",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "caution",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "洋葱",
+          "safety": "safe",
+          "note": "全孕期可食，有助消化",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "大蒜",
+          "safety": "safe",
+          "note": "适量，增强免疫力",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "生姜",
+          "safety": "safe",
+          "note": "缓解孕吐，适量",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "大葱",
+          "safety": "safe",
+          "note": "大葱含有挥发性精油和大蒜素，具有杀菌消炎作用，作为调味品少量使用可增进食欲，但不宜过量以免刺激肠胃",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芋头",
+          "safety": "safe",
+          "note": "富含淀粉和维生素",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "山药",
+          "safety": "safe",
+          "note": "山药富含黏液蛋白和淀粉酶，具有健脾养胃、补肺益肾的功效，对孕妇有安胎和改善消化的作用，可煮粥或蒸食",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "红薯",
+          "safety": "safe",
+          "note": "缓解便秘，{ALL}",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "紫薯",
+          "safety": "safe",
+          "note": "花青素抗氧化",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "地瓜",
+          "safety": "safe",
+          "note": "地瓜富含膳食纤维和β-胡萝卜素，有助于缓解孕期便秘，促进胎儿视力发育，可蒸煮或烤制食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "土豆",
+          "safety": "caution",
+          "note": "发芽变绿的含龙葵素不可食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "莲藕",
+          "safety": "safe",
+          "note": "补血，{ALL}",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "荸荠",
+          "safety": "caution",
+          "note": "性寒，建议煮熟食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "菱角",
+          "safety": "caution",
+          "note": "性寒，少量食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "茭白",
+          "safety": "safe",
+          "note": "富含膳食纤维",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "魔芋",
+          "safety": "safe",
+          "note": "低热量高纤维，适量",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "紫甘蓝",
+          "safety": "safe",
+          "note": "紫甘蓝含有丰富的花青素和维生素C，具有强抗氧化作用，有助于增强孕妇免疫力，促进铁质吸收",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "羽衣甘蓝",
+          "safety": "safe",
+          "note": "超强营养蔬菜",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芥蓝",
+          "safety": "safe",
+          "note": "富含钙质和叶酸",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "娃娃菜",
+          "safety": "safe",
+          "note": "全孕期可食，鲜嫩可口",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "小白菜",
+          "safety": "safe",
+          "note": "富含叶酸和钙",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "菜心",
+          "safety": "safe",
+          "note": "全孕期可食，清淡",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芥菜",
+          "safety": "caution",
+          "note": "芥菜性温味辛，含有硫代葡萄糖苷，孕期应少量食用，过量可能引起上火或肠胃不适，适量食用可补充胡萝卜素",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "雪里红",
+          "safety": "caution",
+          "note": "腌制后高盐，鲜食为佳",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "大头菜",
+          "safety": "safe",
+          "note": "大头菜即球茎甘蓝，富含维生素C和膳食纤维，口感爽脆，适量食用有助于促进消化和补充孕期所需营养",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "萝卜",
+          "safety": "safe",
+          "note": "消食，{ALL}",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "白萝卜",
+          "safety": "safe",
+          "note": "白萝卜性凉味甘辛，含有丰富的维生素C和消化酶，有助于消食化痰、促进肠胃蠕动，缓解孕期胀气",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "樱桃萝卜",
+          "safety": "safe",
+          "note": "樱桃萝卜个头小巧、口感脆嫩，富含维生素C和膳食纤维，全孕期均可生食或凉拌，有助开胃消食",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "心里美",
+          "safety": "safe",
+          "note": "心里美萝卜外皮绿白、内瓤紫红，富含花青素和维生素C，口感脆甜多汁，适合凉拌食用，有助开胃消食",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "苤蓝",
+          "safety": "safe",
+          "note": "富含维生素C",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "甜菜根",
+          "safety": "safe",
+          "note": "富含叶酸和铁",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "牛皮菜",
+          "safety": "safe",
+          "note": "牛皮菜又叫厚皮菜，富含维生素A和膳食纤维，口感柔嫩，适量食用有助于补充孕期营养和促进肠道蠕动",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "穿心莲",
+          "safety": "caution",
+          "note": "穿心莲性寒味苦，具有清热解毒功效，但孕期体质偏寒者应少量食用，以免加重寒凉导致腹泻或子宫不适",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "马齿苋",
+          "safety": "caution",
+          "note": "性寒滑利，孕早期慎用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "蒲公英",
+          "safety": "caution",
+          "note": "蒲公英性寒，虽然富含维生素A和铁质，但孕期大量食用可能引起腹泻或子宫收缩，应少量入菜或泡茶饮用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "鱼腥草",
+          "safety": "avoid",
+          "note": "含马兜铃内酰胺，孕期避免",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "caution",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "薄荷",
+          "safety": "caution",
+          "note": "少量调味可，大量避免",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "caution",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "紫苏",
+          "safety": "safe",
+          "note": "缓解孕吐，适量",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "罗勒",
+          "safety": "safe",
+          "note": "罗勒又名九层塔，含有挥发性芳香精油，作为调味品少量使用可增添风味和促进食欲，全孕期适量安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "迷迭香",
+          "safety": "caution",
+          "note": "迷迭香含有樟脑等挥发性成分，具有较强刺激性，孕期应少量用作调味，大量使用可能引起子宫收缩，需谨慎",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "百里香",
+          "safety": "safe",
+          "note": "百里香气味芳香，含有百里香酚等有益成分，少量作为调味品使用可增添菜肴风味，全孕期适量安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "牛至",
+          "safety": "safe",
+          "note": "牛至又名披萨草，含有丰富的抗氧化物质，作为调味品适量使用可增添风味，全孕期均可安全食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "艾草",
+          "safety": "caution",
+          "note": "少量食用可，不宜多",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "车前草",
+          "safety": "caution",
+          "note": "车前草性寒，具有利尿通淋功效，但孕期大量食用可能导致腹泻或加重体寒，应在医生指导下少量使用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "马兰头",
+          "safety": "safe",
+          "note": "马兰头是春季时令野菜，富含维生素C和胡萝卜素，口感清香，适量食用有助于清热解毒和补充营养",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "蕨菜",
+          "safety": "avoid",
+          "note": "含原蕨苷，孕期避免",
+          "safety_by_stage": {
+            "mid": "avoid",
+            "early": "avoid",
+            "nursing": "avoid",
+            "preparing": "avoid",
+            "late": "avoid"
+          }
+        },
+        {
+          "name": "折耳根",
+          "safety": "caution",
+          "note": "折耳根即鱼腥草，含有鱼腥草素等挥发性成分，具有一定药理活性，孕期体质敏感者应谨慎食用，避免过量",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "caution",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "水芹",
+          "safety": "safe",
+          "note": "水芹富含膳食纤维和多种维生素，口感清脆鲜嫩，适量食用有助于促进消化和补充孕期所需营养，需确保来源清洁",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "旱芹",
+          "safety": "safe",
+          "note": "旱芹富含膳食纤维、维生素K和钾元素，适量食用有助于降压安神，促进肠道蠕动，缓解孕期便秘",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "西洋菜",
+          "safety": "safe",
+          "note": "全孕期可食，清润",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "豆瓣菜",
+          "safety": "safe",
+          "note": "豆瓣菜又名西洋菜，富含维生素C、钙质和叶酸，口感清脆微辣，适量食用有助于增强免疫力和促进骨骼健康",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芝麻菜",
+          "safety": "safe",
+          "note": "芝麻菜具有独特的芝麻香味，富含叶酸和维生素C，适量食用有助于促进胎儿神经管发育和增强免疫力",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "冰菜",
+          "safety": "safe",
+          "note": "冰菜表面覆有晶莹的泡状细胞，富含天然植物盐和多种矿物质，口感清爽，有助于补充孕期电解质",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "苦菊",
+          "safety": "safe",
+          "note": "苦菊味苦性凉，含有丰富的维生素和矿物质，具有清热解毒功效，适量食用有助于开胃消食，脾胃虚寒者少食",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "红苋菜",
+          "safety": "safe",
+          "note": "富含铁质和叶酸",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "绿苋菜",
+          "safety": "safe",
+          "note": "绿苋菜富含铁质和钙质，叶酸含量也较高，有助于预防孕期贫血和促进胎儿骨骼发育，可炒食或做汤",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "紫苏叶",
+          "safety": "safe",
+          "note": "调味，缓解孕吐",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "鱼腥草根",
+          "safety": "avoid",
+          "note": "鱼腥草根含有鱼腥草素等活性成分，药性较强，孕期应避免食用，以免刺激子宫或引起过敏反应",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "caution",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "野苋菜",
+          "safety": "safe",
+          "note": "野苋菜富含铁质、钙质和维生素，营养价值较高，适量食用有助于补充孕期营养和预防缺铁性贫血",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "灰灰菜",
+          "safety": "caution",
+          "note": "野菜，确保来源干净",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "面条菜",
+          "safety": "safe",
+          "note": "野菜，适量食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "枸杞叶",
+          "safety": "safe",
+          "note": "枸杞叶富含甜菜碱和多种维生素，具有清热明目、养肝护肾的功效，适量食用有助于缓解孕期眼睛疲劳",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "红薯叶",
+          "safety": "safe",
+          "note": "红薯叶营养价值极高，富含维生素A、维生素C和膳食纤维，有助于增强免疫力和促进肠道健康，适合清炒或蒜蓉炒",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "辣椒叶",
+          "safety": "safe",
+          "note": "辣椒叶富含维生素C和钙质，口感柔嫩，适量食用有助于补充孕期营养，但孕晚期应避免辛辣刺激",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "萝卜苗",
+          "safety": "safe",
+          "note": "萝卜苗属于芽苗菜，含有丰富的维生素C和膳食纤维，热量低且口感清爽，适合凉拌或加入沙拉中食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "花生芽",
+          "safety": "caution",
+          "note": "确保新鲜无霉变",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "香椿芽",
+          "safety": "caution",
+          "note": "香椿芽含有亚硝酸盐，食用前必须焯水处理，孕期少量食用安全，但不宜过量，且必须确保新鲜和充分加热",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "caution",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "花椒芽",
+          "safety": "safe",
+          "note": "花椒芽是花椒树的嫩芽，带有轻微麻香，少量作为调味使用可增添风味，全孕期适量食用安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "龙须菜",
+          "safety": "safe",
+          "note": "龙须菜又名芦笋尖，富含膳食纤维和叶酸，有助于促进肠道蠕动和胎儿神经管发育，适合清炒或凉拌",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "四棱豆",
+          "safety": "safe",
+          "note": "四棱豆蛋白质含量在蔬菜中名列前茅，同时富含叶酸和铁质，有助于补充孕期蛋白质需求和预防贫血",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "刀豆",
+          "safety": "caution",
+          "note": "必须充分煮熟",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "荷包豆",
+          "safety": "caution",
+          "note": "荷包豆含有天然毒素皂苷，必须彻底煮熟方可食用，未煮熟可能引起恶心呕吐，孕期烹饪时务必确保全熟",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "多花菜豆",
+          "safety": "caution",
+          "note": "多花菜豆含有凝集素等天然毒素，必须充分煮熟后才能食用，生食或半生食可能导致食物中毒，孕期需格外注意",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "小青豆",
+          "safety": "safe",
+          "note": "小青豆即嫩豌豆，富含蛋白质、膳食纤维和维生素B族，口感清甜，适量食用有助于补充孕期营养",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "甜豆",
+          "safety": "safe",
+          "note": "荷兰豆的一种",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "荷兰豆",
+          "safety": "safe",
+          "note": "荷兰豆口感脆嫩，富含维生素C、膳食纤维和叶酸，有助于促进消化和预防孕期便秘，可清炒或焯水凉拌",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "蚕豆苗",
+          "safety": "caution",
+          "note": "蚕豆苗是蚕豆的嫩茎叶，含有一定量的蚕豆嘧啶核苷，G6PD缺乏症（蚕豆病）孕妇应避免食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "藜蒿",
+          "safety": "safe",
+          "note": "藜蒿又名芦蒿，具有独特的清香味，富含膳食纤维和维生素，适量食用有助于促进消化和增进食欲",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "番杏",
+          "safety": "safe",
+          "note": "番杏又名新西兰菠菜，富含维生素A和铁质，口感嫩滑，适量食用有助于补充孕期营养和增强免疫力",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "菊苣",
+          "safety": "safe",
+          "note": "菊苣含有丰富的菊粉和膳食纤维，有助于促进肠道益生菌生长和改善消化功能，适合凉拌或炒食",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "菊芋",
+          "safety": "safe",
+          "note": "菊芋又名洋姜，富含菊粉和膳食纤维，有助于调节血糖和促进肠道健康，可腌制或炒食，全孕期适量安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "洋姜",
+          "safety": "safe",
+          "note": "洋姜口感爽脆，富含菊粉类膳食纤维，有助于稳定血糖水平和促进肠道蠕动，适合腌制或清炒食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "宝塔菜",
+          "safety": "safe",
+          "note": "宝塔菜外形独特似宝塔，富含维生素C和矿物质，口感清脆，适量食用有助于补充孕期营养",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "甘露子",
+          "safety": "safe",
+          "note": "甘露子又名草石蚕，口感脆嫩，富含水苏糖等益生元，有助于促进肠道健康，适量食用安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "草石蚕",
+          "safety": "safe",
+          "note": "草石蚕即甘露子，富含水苏糖等碳水化合物，有助于调节肠道菌群，口感脆嫩适合炒食或腌制",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "百合",
+          "safety": "safe",
+          "note": "鲜百合富含淀粉、蛋白质和秋水仙碱，具有润肺止咳、清心安神的功效，适量食用有助于改善孕期睡眠质量",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "黄花菜",
+          "safety": "caution",
+          "note": "鲜黄花菜需焯水",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "avoid",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "金针菜",
+          "safety": "caution",
+          "note": "金针菜即干制黄花菜，含有秋水仙碱，必须充分泡发和加热煮熟后才能食用，生食或半生食可能引起中毒",
+          "safety_by_stage": {
+            "mid": "caution",
+            "early": "avoid",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "caution"
+          }
+        },
+        {
+          "name": "霸王花",
+          "safety": "safe",
+          "note": "霸王花又名剑花，适合煲汤食用，富含多种氨基酸和胶质，有助于滋润养颜，全孕期适量饮用花汤安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "夜香花",
+          "safety": "safe",
+          "note": "夜香花气味清香，常用于煲汤或清炒，口感鲜嫩，适量食用有助于增添食欲和补充植物营养素",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "木槿花",
+          "safety": "safe",
+          "note": "木槿花可食用，含有丰富的花粉和维生素C，少量食用有助于清热凉血，但因其性凉，孕妇不宜大量食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "南瓜花",
+          "safety": "safe",
+          "note": "南瓜花富含蛋白质和多种维生素，口感鲜嫩，适合裹面糊油炸或做汤，适量食用有助于补充孕期营养",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "丝瓜花",
+          "safety": "safe",
+          "note": "丝瓜花性凉味甘，可入菜煲汤，适量食用有助于清热解毒，但因其性偏寒凉，孕妇不宜过量食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "韭菜花",
+          "safety": "safe",
+          "note": "韭菜花是韭菜的花蕾，含有硫化物和维生素C，味道辛香，适量调味使用可增进食欲，但不宜过量以免上火",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "蒜薹",
+          "safety": "safe",
+          "note": "蒜薹含有丰富的大蒜素和膳食纤维，具有天然抗菌作用，适量食用有助于增强免疫力和促进消化",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "大白菜",
+          "safety": "safe",
+          "note": "大白菜水分充足、热量低，富含维生素C和膳食纤维，炖煮后软烂易消化，是孕期安全又营养的蔬菜选择",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "小白口",
+          "safety": "safe",
+          "note": "小白口即小白菜的一种，口感细嫩，富含钙质和维生素C，有助于促进胎儿骨骼发育，适合清炒或做汤",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "圆白菜",
+          "safety": "safe",
+          "note": "圆白菜又名卷心菜，富含维生素C、维生素K和膳食纤维，有助于增强免疫力和促进消化，可炒食或凉拌",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "包菜",
+          "safety": "safe",
+          "note": "包菜即卷心菜，含有丰富的维生素U，有助于保护胃黏膜，口感爽脆，全孕期均可安全食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "卷心菜",
+          "safety": "safe",
+          "note": "卷心菜富含维生素C、叶酸和膳食纤维，有助于促进胎儿神经管发育和增强孕妇免疫力，全孕期均可食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "甘蓝",
+          "safety": "safe",
+          "note": "蔬菜中的营养王",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "抱子甘蓝",
+          "safety": "safe",
+          "note": "抱子甘蓝是迷你型卷心菜，富含维生素C、维生素K和叶酸，营养价值高，适量食用有助于补充孕期关键营养素",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "孢子甘蓝",
+          "safety": "safe",
+          "note": "孢子甘蓝又名抱子甘蓝，富含维生素C和膳食纤维，口感紧实微苦，烤制后风味独特，全孕期适量安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芥菜头",
+          "safety": "safe",
+          "note": "芥菜头是芥菜的根茎部分，富含维生素C和膳食纤维，腌制后风味独特，但腌制品含盐高应少量食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芜菁",
+          "safety": "safe",
+          "note": "芜菁又名蔓菁，富含维生素C和膳食纤维，口感介于萝卜和大头菜之间，适量食用有助于消化和营养补充",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芜菁甘蓝",
+          "safety": "safe",
+          "note": "芜菁甘蓝是芜菁与甘蓝的杂交品种，富含维生素C和膳食纤维，口感清甜，适量食用有助于补充孕期营养",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "甜菜",
+          "safety": "safe",
+          "note": "甜菜根富含天然糖分、叶酸和铁质，具有补血功效，有助于预防孕期贫血，可榨汁或烤食，血糖高者注意控量",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "根芹",
+          "safety": "safe",
+          "note": "根芹富含膳食纤维和多种矿物质，口感清甜，可煲汤或炒食，有助于促进消化和补充孕期所需营养",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "欧芹",
+          "safety": "safe",
+          "note": "欧芹富含维生素K和维生素C，作为装饰和调味品少量使用可增添风味，同时有助于骨骼健康和铁质吸收",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "洋香菜",
+          "safety": "safe",
+          "note": "洋香菜即欧芹，富含维生素K和叶酸，少量作为装饰和调味使用可增添菜肴色泽和风味，全孕期安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "细香葱",
+          "safety": "safe",
+          "note": "细香葱气味温和，含有硫化物和维生素K，作为调味品使用可增添菜肴香气，适量食用安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "韭葱",
+          "safety": "safe",
+          "note": "韭葱口感介于大葱和韭菜之间，富含维生素A和维生素C，适量食用有助于增强免疫力和促进消化",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "芦蒿",
+          "safety": "safe",
+          "note": "芦蒿又名藜蒿，具有独特的清香味，富含膳食纤维和胡萝卜素，适量食用有助于开胃消食和补充营养",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "婆罗门参",
+          "safety": "safe",
+          "note": "婆罗门参富含菊粉和膳食纤维，口感类似牡蛎，有助于促进肠道健康和稳定血糖，可煲汤或炒食",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "黑皮冬瓜",
+          "safety": "safe",
+          "note": "黑皮冬瓜水分含量高，富含钾元素和维生素C，具有清热利尿、消肿的功效，有助于缓解孕期水肿",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "caution",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "节瓜",
+          "safety": "safe",
+          "note": "节瓜是冬瓜的小型品种，口感细嫩、水分充足，具有利尿消肿功效，适合煲汤或清炒，全孕期均可食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "蛇瓜",
+          "safety": "safe",
+          "note": "蛇瓜外形细长似蛇，口感清淡，富含水分和维生素，适量食用有助于清热利湿，全孕期均可安全食用",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "砍瓜",
+          "safety": "safe",
+          "note": "砍瓜是南瓜的一个变种，口感清甜软糯，富含β-胡萝卜素和膳食纤维，适量食用有助于补充维生素A",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "金丝瓜",
+          "safety": "safe",
+          "note": "金丝瓜又名鱼翅瓜，瓜肉呈丝状，富含膳食维生素和矿物质，口感独特，适量食用有助于促进消化",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "鱼翅瓜",
+          "safety": "safe",
+          "note": "鱼翅瓜煮熟后瓜肉自然成丝，富含膳食纤维和维生素C，口感清爽，适合煲汤或凉拌，全孕期安全",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        },
+        {
+          "name": "飞碟瓜",
+          "safety": "safe",
+          "note": "飞碟瓜外形似飞碟，口感介于南瓜和西葫芦之间，富含维生素A和膳食纤维，适量食用有助于营养均衡",
+          "safety_by_stage": {
+            "mid": "safe",
+            "early": "safe",
+            "nursing": "safe",
+            "preparing": "safe",
+            "late": "safe"
+          }
+        }
+      ]
+    },
+    {
+      "name": "水果类",
+      "icon": "🍎",
+      "items": [
+        {
+          "name": "苹果",
+          "safety": "safe",
+          "note": "富含膳食纤维和维生素C，全孕期可食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "梨",
+          "safety": "safe",
+          "note": "润肺止咳，注意性凉孕早期适量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "桃子",
+          "safety": "safe",
+          "note": "富含铁和维生素，注意去皮防过敏",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "葡萄",
+          "safety": "safe",
+          "note": "补铁补血，糖分较高需控量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "西瓜",
+          "safety": "safe",
+          "note": "利尿解暑，性寒孕早期及晚期适量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "safe",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "香蕉",
+          "safety": "safe",
+          "note": "富含钾和镁，缓解腿抽筋和便秘",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "橙子",
+          "safety": "safe",
+          "note": "富含维生素C，促进铁吸收",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "柚子",
+          "safety": "safe",
+          "note": "富含叶酸和维生素C",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "橘子",
+          "safety": "safe",
+          "note": "富含维生素C，注意不要过量上火",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "柠檬",
+          "safety": "safe",
+          "note": "泡水饮用缓解孕吐效果好",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "草莓",
+          "safety": "safe",
+          "note": "富含维生素C和叶酸，注意清洗干净",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "樱桃",
+          "safety": "safe",
+          "note": "补铁佳品，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "蓝莓",
+          "safety": "safe",
+          "note": "抗氧化作用强，富含花青素",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "芒果",
+          "safety": "caution",
+          "note": "热性水果，过敏体质慎食，孕早期适量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "菠萝",
+          "safety": "caution",
+          "note": "含蛋白酶易过敏，建议盐水浸泡后少量食用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "火龙果",
+          "safety": "safe",
+          "note": "富含膳食纤维，缓解便秘",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "猕猴桃",
+          "safety": "safe",
+          "note": "维生素C之王，注意过敏",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "木瓜",
+          "safety": "avoid",
+          "note": "青木瓜含番木瓜碱可能引起宫缩，孕期建议避免",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "山楂",
+          "safety": "avoid",
+          "note": "可能引起子宫收缩，孕早期及有先兆流产者禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "桂圆",
+          "safety": "avoid",
+          "note": "性温热易上火助胎热，孕期不宜食用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "荔枝",
+          "safety": "caution",
+          "note": "性温热，过量易上火，每天不超过5颗",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "榴莲",
+          "safety": "limit",
+          "note": "热量极高糖分大，妊娠糖尿病慎食",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "椰子",
+          "safety": "safe",
+          "note": "椰子水补充电解质，椰肉适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "杏",
+          "safety": "safe",
+          "note": "富含胡萝卜素，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "李子",
+          "safety": "safe",
+          "note": "适量食用，胃酸者注意",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "红枣",
+          "safety": "safe",
+          "note": "补铁补血佳品，每天不超过5颗",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "柿子",
+          "safety": "caution",
+          "note": "勿空腹食用，不与高蛋白食物同食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "石榴",
+          "safety": "safe",
+          "note": "富含维生素C和抗氧化物质",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "无花果",
+          "safety": "safe",
+          "note": "富含膳食纤维，缓解便秘",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "哈密瓜",
+          "safety": "safe",
+          "note": "富含维生素A和C",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "甜瓜",
+          "safety": "safe",
+          "note": "解渴生津，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "杨梅",
+          "safety": "caution",
+          "note": "酸性较强，胃酸者少食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "百香果",
+          "safety": "safe",
+          "note": "富含维生素，可制饮品",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        }
+      ]
+    },
+    {
+      "name": "肉禽类",
+      "icon": "🥩",
+      "items": [
+        {
+          "name": "猪肉",
+          "safety": "safe",
+          "note": "优质蛋白来源，选择瘦肉为佳",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "牛肉",
+          "safety": "safe",
+          "note": "富含铁和锌，预防孕期贫血",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "羊肉",
+          "safety": "safe",
+          "note": "性温补气血，冬季适宜",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鸡肉",
+          "safety": "safe",
+          "note": "高蛋白低脂肪，孕期理想肉类",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鸭肉",
+          "safety": "safe",
+          "note": "性凉适合孕期燥热，富含B族维生素",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鹅肉",
+          "safety": "safe",
+          "note": "蛋白质含量高，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "兔肉",
+          "safety": "safe",
+          "note": "高蛋白低脂肪低胆固醇",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "火鸡肉",
+          "safety": "safe",
+          "note": "低脂高蛋白",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "排骨",
+          "safety": "safe",
+          "note": "补钙佳品，可炖汤食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "猪蹄",
+          "safety": "safe",
+          "note": "富含胶原蛋白，孕晚期适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "猪肝",
+          "safety": "limit",
+          "note": "富铁富叶酸但维生素A极高，每周不超过50g",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "鸡肝",
+          "safety": "limit",
+          "note": "维生素A含量高，每周不超过1次",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "鹅肝",
+          "safety": "limit",
+          "note": "维生素A过量风险，孕期严格限量",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "鸭肝",
+          "safety": "limit",
+          "note": "维生素A较高，孕期限量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "猪腰",
+          "safety": "caution",
+          "note": "可能含激素残留，孕期慎食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "猪血",
+          "safety": "safe",
+          "note": "补铁效果好，注意来源卫生",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鸭血",
+          "safety": "safe",
+          "note": "补铁佳品，需充分煮熟",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "香肠",
+          "safety": "limit",
+          "note": "含亚硝酸盐和盐分高，限量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "火腿",
+          "safety": "limit",
+          "note": "加工肉制品，钠和添加剂多",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "培根",
+          "safety": "caution",
+          "note": "李斯特菌风险，需彻底煮熟食用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "热狗",
+          "safety": "caution",
+          "note": "加工肉制品，需充分加热",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "腊肉",
+          "safety": "limit",
+          "note": "高盐高亚硝酸盐，严格限量",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "腊肠",
+          "safety": "limit",
+          "note": "加工腌制品，少食为宜",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "烟熏肉",
+          "safety": "caution",
+          "note": "可能含致癌物，孕期慎食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "罐头肉",
+          "safety": "caution",
+          "note": "添加剂多，新鲜肉更佳",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        }
+      ]
+    },
+    {
+      "name": "水产海鲜",
+      "icon": "🐟",
+      "items": [
+        {
+          "name": "鲈鱼",
+          "safety": "safe",
+          "note": "高蛋白富含DHA，孕期推荐",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鲫鱼",
+          "safety": "safe",
+          "note": "低汞优质蛋白，催乳佳品",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鲤鱼",
+          "safety": "safe",
+          "note": "安胎催乳，孕期适宜",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "草鱼",
+          "safety": "safe",
+          "note": "蛋白质丰富，性温暖胃",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "三文鱼",
+          "safety": "safe",
+          "note": "富含DHA和Omega-3，每周2次",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鳕鱼",
+          "safety": "safe",
+          "note": "优质蛋白低脂肪，DHA含量高",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "龙利鱼",
+          "safety": "safe",
+          "note": "刺少肉嫩，适合孕期食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "带鱼",
+          "safety": "safe",
+          "note": "富含DHA和卵磷脂",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "黄花鱼",
+          "safety": "safe",
+          "note": "富含蛋白质和微量元素",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "比目鱼",
+          "safety": "safe",
+          "note": "低汞鱼类，富含蛋白质",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "金枪鱼",
+          "safety": "limit",
+          "note": "含汞较高，每周不超过170g",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "剑鱼",
+          "safety": "avoid",
+          "note": "汞含量极高，孕期禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "鲨鱼",
+          "safety": "avoid",
+          "note": "汞含量极高，孕期禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "马林鱼",
+          "safety": "avoid",
+          "note": "汞含量极高，孕期禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "方头鱼",
+          "safety": "avoid",
+          "note": "汞含量极高，孕期禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "鲶鱼",
+          "safety": "safe",
+          "note": "低汞经济实惠的鱼类",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "罗非鱼",
+          "safety": "safe",
+          "note": "低汞高蛋白",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鳗鱼",
+          "safety": "safe",
+          "note": "富含DHA维生素A，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "虾",
+          "safety": "safe",
+          "note": "低汞高蛋白补钙佳品",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "基围虾",
+          "safety": "safe",
+          "note": "低汞富含蛋白质，需彻底煮熟",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "龙虾",
+          "safety": "safe",
+          "note": "富含蛋白质，过敏体质慎食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "皮皮虾",
+          "safety": "safe",
+          "note": "富含蛋白质，注意彻底煮熟",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "螃蟹",
+          "safety": "avoid",
+          "note": "性寒可能引起宫缩，蟹爪尤甚，孕早期禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "大闸蟹",
+          "safety": "avoid",
+          "note": "性寒易致宫缩，孕期不建议食用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "蛤蜊",
+          "safety": "caution",
+          "note": "需充分煮熟，避免寄生虫",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "扇贝",
+          "safety": "safe",
+          "note": "富含蛋白质和锌，需煮熟",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "生蚝",
+          "safety": "caution",
+          "note": "生食有诺如病毒风险，必须熟食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "牡蛎",
+          "safety": "caution",
+          "note": "富含锌但需彻底煮熟",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "鲍鱼",
+          "safety": "safe",
+          "note": "富含蛋白质，价格较高适量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "海参",
+          "safety": "safe",
+          "note": "富含胶原蛋白，孕中晚期适宜",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "墨鱼",
+          "safety": "safe",
+          "note": "富含蛋白质和铁",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鱿鱼",
+          "safety": "safe",
+          "note": "低脂高蛋白，注意彻底煮熟",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "章鱼",
+          "safety": "safe",
+          "note": "富含蛋白质和牛磺酸",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "海带",
+          "safety": "safe",
+          "note": "富含碘和膳食纤维，每周2-3次",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "紫菜",
+          "safety": "safe",
+          "note": "富含碘和优质蛋白",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "海蜇",
+          "safety": "caution",
+          "note": "可能含明矾，孕期不建议多食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "生鱼片",
+          "safety": "avoid",
+          "note": "寄生虫和细菌风险，孕期禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "刺身",
+          "safety": "avoid",
+          "note": "生食有李斯特菌风险，孕期禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "寿司",
+          "safety": "caution",
+          "note": "熟食寿司可吃，生鱼寿司禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "烟熏三文鱼",
+          "safety": "caution",
+          "note": "低温加工有李斯特菌风险，建议加热后食用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        }
+      ]
+    },
+    {
+      "name": "蛋奶类",
+      "icon": "🥛",
+      "items": [
+        {
+          "name": "鸡蛋",
+          "safety": "safe",
+          "note": "优质蛋白来源，需充分煮熟",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鸭蛋",
+          "safety": "safe",
+          "note": "富含蛋白质和铁，需煮熟食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鹅蛋",
+          "safety": "safe",
+          "note": "蛋白质含量高，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鹌鹑蛋",
+          "safety": "safe",
+          "note": "小巧营养丰富，孕期理想零食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "皮蛋",
+          "safety": "limit",
+          "note": "含铅风险，孕期严格限量或不吃",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "咸鸭蛋",
+          "safety": "limit",
+          "note": "钠含量极高，孕期限量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "生鸡蛋",
+          "safety": "avoid",
+          "note": "沙门氏菌风险，孕期禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "溏心蛋",
+          "safety": "caution",
+          "note": "半熟蛋黄有细菌风险，孕期建议全熟",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "牛奶",
+          "safety": "safe",
+          "note": "补钙佳品，每天300-500ml",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "酸奶",
+          "safety": "safe",
+          "note": "益生菌助消化，每天1-2杯",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "巴氏奶",
+          "safety": "safe",
+          "note": "低温灭菌保留营养，孕期推荐",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "生牛奶",
+          "safety": "avoid",
+          "note": "未经巴氏消毒，李斯特菌风险",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "奶粉",
+          "safety": "safe",
+          "note": "可选孕妇奶粉补充营养",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "奶酪",
+          "safety": "caution",
+          "note": "硬质奶酪安全，软质未消毒奶酪禁食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "软奶酪",
+          "safety": "caution",
+          "note": "布里、卡门贝尔等软奶酪需确认巴氏消毒",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "奶油",
+          "safety": "safe",
+          "note": "适量食用，注意热量和糖分",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "黄油",
+          "safety": "safe",
+          "note": "适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "炼乳",
+          "safety": "limit",
+          "note": "糖分极高，限量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        }
+      ]
+    },
+    {
+      "name": "豆类制品",
+      "icon": "🫘",
+      "items": [
+        {
+          "name": "豆腐",
+          "safety": "safe",
+          "note": "植物蛋白补钙佳品",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "豆浆",
+          "safety": "safe",
+          "note": "补充优质蛋白，需彻底煮沸",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "豆皮",
+          "safety": "safe",
+          "note": "蛋白质浓缩品，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "千张",
+          "safety": "safe",
+          "note": "高蛋白食材",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "腐竹",
+          "safety": "safe",
+          "note": "蛋白质含量高，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "豆干",
+          "safety": "safe",
+          "note": "便携高蛋白零食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "纳豆",
+          "safety": "safe",
+          "note": "富含维生素K和益生菌",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "毛豆",
+          "safety": "safe",
+          "note": "富含蛋白质和叶酸",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "黄豆",
+          "safety": "safe",
+          "note": "高蛋白优质植物来源",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "黑豆",
+          "safety": "safe",
+          "note": "补肾益气，富含花青素",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "红豆",
+          "safety": "safe",
+          "note": "利水消肿，孕晚期适宜",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "绿豆",
+          "safety": "safe",
+          "note": "清热解暑，性凉孕早期适量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "芸豆",
+          "safety": "safe",
+          "note": "富含蛋白质和铁",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "扁豆",
+          "safety": "caution",
+          "note": "必须彻底煮熟，否则有毒",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "四季豆",
+          "safety": "caution",
+          "note": "必须彻底煮熟，否则含皂素中毒",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "豇豆",
+          "safety": "safe",
+          "note": "富含蛋白质和维生素",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        }
+      ]
+    },
+    {
+      "name": "谷物主食",
+      "icon": "🍚",
+      "items": [
+        {
+          "name": "大米",
+          "safety": "safe",
+          "note": "主食基础，全孕期可食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "糯米",
+          "safety": "safe",
+          "note": "黏性高，消化稍慢，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "小米",
+          "safety": "safe",
+          "note": "养胃健脾，孕早期缓解孕吐",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "燕麦",
+          "safety": "safe",
+          "note": "富含膳食纤维，预防便秘",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "薏米",
+          "safety": "avoid",
+          "note": "可能引起子宫收缩，孕期建议避免",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "玉米",
+          "safety": "safe",
+          "note": "富含B族维生素和膳食纤维",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "荞麦",
+          "safety": "safe",
+          "note": "低GI主食，适合妊娠糖尿病",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "藜麦",
+          "safety": "safe",
+          "note": "完全蛋白主食，营养丰富",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "糙米",
+          "safety": "safe",
+          "note": "富含B族维生素和膳食纤维",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "黑米",
+          "safety": "safe",
+          "note": "补血佳品，富含花青素",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "面粉",
+          "safety": "safe",
+          "note": "主食基础",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "面条",
+          "safety": "safe",
+          "note": "易消化的主食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "馒头",
+          "safety": "safe",
+          "note": "中式主食，全孕期可食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "面包",
+          "safety": "safe",
+          "note": "注意选择全麦或低糖产品",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "意大利面",
+          "safety": "safe",
+          "note": "低GI主食，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "年糕",
+          "safety": "limit",
+          "note": "黏性大消化慢，妊娠糖尿病慎食",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "粽子",
+          "safety": "limit",
+          "note": "糯米难消化，适量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "汤圆",
+          "safety": "limit",
+          "note": "糖油馅料高热量，限量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "八宝粥",
+          "safety": "safe",
+          "note": "营养均衡的孕期主食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        }
+      ]
+    },
+    {
+      "name": "坚果干果",
+      "icon": "🥜",
+      "items": [
+        {
+          "name": "核桃",
+          "safety": "safe",
+          "note": "Omega-3丰富，促进胎儿大脑发育，每天1-2个",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "杏仁",
+          "safety": "safe",
+          "note": "富含维生素E和健康脂肪",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "巴旦木",
+          "safety": "safe",
+          "note": "富含蛋白质和维生素E",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "腰果",
+          "safety": "safe",
+          "note": "富含锌和铁，注意过敏",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "开心果",
+          "safety": "safe",
+          "note": "富含蛋白质和健康脂肪",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "夏威夷果",
+          "safety": "safe",
+          "note": "健康脂肪含量高，每天5-6颗",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "松子",
+          "safety": "safe",
+          "note": "富含矿物质，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "花生",
+          "safety": "safe",
+          "note": "富含蛋白质和叶酸，过敏者禁食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "瓜子",
+          "safety": "safe",
+          "note": "富含维生素E，注意盐分",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "葵花籽",
+          "safety": "safe",
+          "note": "富含维生素E和叶酸",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "芝麻",
+          "safety": "safe",
+          "note": "补钙补铁佳品",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "栗子",
+          "safety": "safe",
+          "note": "富含淀粉和维生素，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "葡萄干",
+          "safety": "safe",
+          "note": "便携补铁零食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "蔓越莓干",
+          "safety": "safe",
+          "note": "预防尿路感染，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "龙眼干",
+          "safety": "caution",
+          "note": "性温热易上火，孕期不宜多食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "桂圆干",
+          "safety": "caution",
+          "note": "性温热助胎热，孕期慎食",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        }
+      ]
+    },
+    {
+      "name": "调味品",
+      "icon": "🧂",
+      "items": [
+        {
+          "name": "食盐",
+          "safety": "safe",
+          "note": "每日不超过6g，妊娠高血压减半",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "酱油",
+          "safety": "safe",
+          "note": "适量使用调味",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "醋",
+          "safety": "safe",
+          "note": "开胃助消化，缓解孕吐",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "白糖",
+          "safety": "limit",
+          "note": "控制添加糖摄入，妊娠糖尿病严格限制",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "红糖",
+          "safety": "safe",
+          "note": "富含矿物质，适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "冰糖",
+          "safety": "safe",
+          "note": "适量食用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "蜂蜜",
+          "safety": "safe",
+          "note": "一岁以下婴儿禁食，孕妇适量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "味精",
+          "safety": "safe",
+          "note": "适量使用，过量不利于钙吸收",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鸡精",
+          "safety": "safe",
+          "note": "适量调味使用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "料酒",
+          "safety": "safe",
+          "note": "烹饪用酒精挥发后无害",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "八角",
+          "safety": "caution",
+          "note": "少量调味可以，孕期避免大量",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "花椒",
+          "safety": "caution",
+          "note": "少量调味，避免过量上火",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "辣椒",
+          "safety": "caution",
+          "note": "少量可以，过量易便秘上火",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "胡椒",
+          "safety": "caution",
+          "note": "性热少量调味",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "五香粉",
+          "safety": "caution",
+          "note": "少量调味",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "十三香",
+          "safety": "caution",
+          "note": "少量调味",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "咖喱粉",
+          "safety": "caution",
+          "note": "少量调味，注意辛辣",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "芥末",
+          "safety": "caution",
+          "note": "辛辣刺激，孕期慎食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "番茄酱",
+          "safety": "safe",
+          "note": "适量调味使用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "沙拉酱",
+          "safety": "limit",
+          "note": "高热量，限量使用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        }
+      ]
+    },
+    {
+      "name": "饮品类",
+      "icon": "☕",
+      "items": [
+        {
+          "name": "白开水",
+          "safety": "safe",
+          "note": "孕期最佳饮品，每日1500-1700ml",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "矿泉水",
+          "safety": "safe",
+          "note": "补充水分和矿物质",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "纯净水",
+          "safety": "safe",
+          "note": "日常饮用安全",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "椰子水",
+          "safety": "safe",
+          "note": "天然电解质，补充水分",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "鲜榨果汁",
+          "safety": "safe",
+          "note": "不加糖适量饮用，最佳吃水果本身",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "瓶装果汁",
+          "safety": "limit",
+          "note": "含糖量高，建议少喝",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "咖啡",
+          "safety": "caution",
+          "note": "每日咖啡因不超过200mg（约1杯）",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "浓咖啡",
+          "safety": "avoid",
+          "note": "咖啡因含量过高，孕期不建议",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "速溶咖啡",
+          "safety": "caution",
+          "note": "每日不超过1杯",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "奶茶",
+          "safety": "caution",
+          "note": "含咖啡因和高糖，每周不超过1次",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "红茶",
+          "safety": "caution",
+          "note": "含咖啡因，每日不超过1杯淡茶",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "绿茶",
+          "safety": "caution",
+          "note": "影响铁吸收，每日不超过1杯淡茶",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "乌龙茶",
+          "safety": "caution",
+          "note": "含咖啡因，孕期少饮",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "普洱茶",
+          "safety": "caution",
+          "note": "含咖啡因，孕期少量饮用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "花茶",
+          "safety": "caution",
+          "note": "部分花茶有活血作用，需咨询医生",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "菊花茶",
+          "safety": "safe",
+          "note": "清热降火，适量饮用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "玫瑰花茶",
+          "safety": "caution",
+          "note": "活血化瘀，孕期建议避免",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "决明子茶",
+          "safety": "caution",
+          "note": "有滑肠作用，孕期不宜",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "藏红花",
+          "safety": "avoid",
+          "note": "强活血作用，孕期严禁",
+          "safety_by_stage": {
+            "preparing": "unsafe",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "薏米水",
+          "safety": "avoid",
+          "note": "可能引起宫缩，孕期不建议",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "可乐",
+          "safety": "caution",
+          "note": "含咖啡因和高糖，孕期少喝",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "雪碧",
+          "safety": "limit",
+          "note": "高糖碳酸饮料，限量饮用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "汽水",
+          "safety": "limit",
+          "note": "高糖碳酸饮料，孕期少喝",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "能量饮料",
+          "safety": "avoid",
+          "note": "高咖啡因高糖，孕期禁饮",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "白酒",
+          "safety": "avoid",
+          "note": "酒精致畸，孕期及哺乳期严禁",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "unsafe"
+          }
+        },
+        {
+          "name": "啤酒",
+          "safety": "avoid",
+          "note": "含酒精，孕期及哺乳期严禁",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "unsafe"
+          }
+        },
+        {
+          "name": "红酒",
+          "safety": "avoid",
+          "note": "含酒精，孕期及哺乳期严禁",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "unsafe"
+          }
+        },
+        {
+          "name": "黄酒",
+          "safety": "avoid",
+          "note": "含酒精，孕期严禁",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "unsafe"
+          }
+        },
+        {
+          "name": "米酒",
+          "safety": "avoid",
+          "note": "含酒精，孕期建议避免",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "鸡尾酒",
+          "safety": "avoid",
+          "note": "含酒精，孕期及哺乳期严禁",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "unsafe"
+          }
+        },
+        {
+          "name": "热巧克力",
+          "safety": "caution",
+          "note": "含咖啡因和糖，适量饮用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        }
+      ]
+    },
+    {
+      "name": "加工食品",
+      "icon": "🥫",
+      "items": [
+        {
+          "name": "方便面",
+          "safety": "limit",
+          "note": "高钠高脂，孕期偶尔食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "火腿肠",
+          "safety": "limit",
+          "note": "加工肉制品，限量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "罐头水果",
+          "safety": "caution",
+          "note": "含糖浆和防腐剂，新鲜水果更佳",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "罐头肉",
+          "safety": "caution",
+          "note": "加工肉制品，孕期慎食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "咸菜",
+          "safety": "caution",
+          "note": "高盐含亚硝酸盐，少量食用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "泡菜",
+          "safety": "caution",
+          "note": "高盐发酵食品，限量食用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "酸菜",
+          "safety": "caution",
+          "note": "高盐含亚硝酸盐，限量",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "腌菜",
+          "safety": "caution",
+          "note": "高盐高亚硝酸盐，孕期少食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "薯片",
+          "safety": "limit",
+          "note": "高油高盐零食，限量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "糖果",
+          "safety": "limit",
+          "note": "高糖空热量，妊娠糖尿病禁食",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "巧克力",
+          "safety": "limit",
+          "note": "含咖啡因和糖，每天不超过30g",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "冰淇淋",
+          "safety": "caution",
+          "note": "冷食过量易宫缩，慎食生奶冰淇淋",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "果冻",
+          "safety": "caution",
+          "note": "含添加剂，营养价值低",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "蛋糕",
+          "safety": "limit",
+          "note": "高糖高脂，限量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "饼干",
+          "safety": "safe",
+          "note": "选择全麦低糖产品",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "果脯蜜饯",
+          "safety": "limit",
+          "note": "高糖含添加剂，限量食用",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "膨化食品",
+          "safety": "limit",
+          "note": "高油高盐，孕期少食",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "油炸食品",
+          "safety": "limit",
+          "note": "高油高热量，孕期限量",
+          "safety_by_stage": {
+            "preparing": "limit",
+            "early": "limit",
+            "mid": "limit",
+            "late": "limit",
+            "nursing": "limit"
+          }
+        },
+        {
+          "name": "烧烤食品",
+          "safety": "caution",
+          "note": "可能含致癌物，孕期少食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "麻辣烫",
+          "safety": "caution",
+          "note": "辛辣刺激高盐，孕期慎食",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "caution"
+          }
+        }
+      ]
+    }
+  ]
+}

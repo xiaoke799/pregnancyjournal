@@ -46,7 +46,10 @@ client.interceptors.response.use(
           console.error('请求参数错误:', data?.message || error.message)
           break
         case 401:
-          console.warn('未授权，继续当前会话')
+          console.warn('未授权，清除会话')
+          // 清除本地存储的用户状态
+          localStorage.removeItem('pregnancy_data')
+          // 不自动跳转（单用户NAS应用无登录页），但清除缓存数据
           break
         case 403:
           console.error('无权限访问:', data?.message || '操作被拒绝')

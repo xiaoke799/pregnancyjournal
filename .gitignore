@@ -26,6 +26,10 @@ app/ui/assets/
 app/ui/index.html
 app/ui/favicon.png
 app/ui/images/
+ui/assets/
+ui/index.html
+ui/favicon.png
+ui/images/
 
 # 模板截图
 muban.png

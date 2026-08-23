@@ -3,16 +3,15 @@ const router = express.Router();
 const db = require('../db');
 const config = require('../config');
 
-router.post('/habit-checkins', async (req, res) => {
+router.post('/supplement-checkins', async (req, res) => {
   try {
     const { pregnancy_id, date, items, note } = req.body;
     if (!pregnancy_id || !date) {
       return res.json({ code: 1001, data: null, message: '缺少必要参数pregnancy_id或date' });
     }
 
-    db.getDb().run('BEGIN IMMEDIATE TRANSACTION');
     const existing = await db.queryOne(
-      'SELECT id FROM habit_checkin WHERE pregnancy_id = ? AND date = ?',
+      'SELECT id FROM supplement_checkin WHERE pregnancy_id = ? AND date = ?',
       [pregnancy_id, date]
     );
 
@@ -20,27 +19,24 @@ router.post('/habit-checkins', async (req, res) => {
 
     if (existing) {
       await db.run(
-        'UPDATE habit_checkin SET items = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        'UPDATE supplement_checkin SET items = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [itemsJson, note || '', existing.id]
       );
-      db.getDb().run('COMMIT');
       res.json({ code: 0, data: { id: existing.id, updated: true }, message: '更新成功' });
     } else {
       const id = db.generateId();
       await db.run(
-        'INSERT INTO habit_checkin (id, pregnancy_id, date, items, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+        'INSERT INTO supplement_checkin (id, pregnancy_id, date, items, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
         [id, pregnancy_id, date, itemsJson, note || '']
       );
-      db.getDb().run('COMMIT');
       res.json({ code: 0, data: { id, created: true }, message: '创建成功' });
     }
   } catch (error) {
-    try { db.getDb().run('ROLLBACK'); } catch {}
     res.json({ code: 1001, data: null, message: error.message });
   }
 });
 
-router.get('/habit-checkins', async (req, res) => {
+router.get('/supplement-checkins', async (req, res) => {
   try {
     const { pregnancy_id, start_date, end_date, page = 1, page_size = 20 } = req.query;
     if (!pregnancy_id) {
@@ -61,12 +57,12 @@ router.get('/habit-checkins', async (req, res) => {
     }
 
     const totalResult = await db.queryOne(
-      `SELECT COUNT(*) as total FROM habit_checkin ${whereClause}`, params
+      `SELECT COUNT(*) as total FROM supplement_checkin ${whereClause}`, params
     );
     const total = totalResult.total;
 
     const list = await db.queryAll(
-      `SELECT * FROM habit_checkin ${whereClause} ORDER BY date DESC LIMIT ? OFFSET ?`,
+      `SELECT * FROM supplement_checkin ${whereClause} ORDER BY date DESC LIMIT ? OFFSET ?`,
       [...params, parseInt(page_size), offset]
     );
 
@@ -94,7 +90,7 @@ router.get('/habit-checkins', async (req, res) => {
   }
 });
 
-router.get('/habit-checkins/by-date/:date', async (req, res) => {
+router.get('/supplement-checkins/by-date/:date', async (req, res) => {
   try {
     const { date } = req.params;
     const { pregnancy_id } = req.query;
@@ -104,7 +100,7 @@ router.get('/habit-checkins/by-date/:date', async (req, res) => {
     }
 
     const record = await db.queryOne(
-      'SELECT * FROM habit_checkin WHERE pregnancy_id = ? AND date = ?',
+      'SELECT * FROM supplement_checkin WHERE pregnancy_id = ? AND date = ?',
       [pregnancy_id, date]
     );
 
@@ -118,10 +114,10 @@ router.get('/habit-checkins/by-date/:date', async (req, res) => {
   }
 });
 
-router.get('/habit-checkins/:id', async (req, res) => {
+router.get('/supplement-checkins/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const record = await db.queryOne('SELECT * FROM habit_checkin WHERE id = ?', [id]);
+    const record = await db.queryOne('SELECT * FROM supplement_checkin WHERE id = ?', [id]);
 
     if (!record) {
       return res.json({ code: 1001, data: null, message: '记录不存在' });
@@ -137,12 +133,12 @@ router.get('/habit-checkins/:id', async (req, res) => {
   }
 });
 
-router.put('/habit-checkins/:id', async (req, res) => {
+router.put('/supplement-checkins/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { items, note } = req.body;
 
-    const existing = await db.queryOne('SELECT id FROM habit_checkin WHERE id = ?', [id]);
+    const existing = await db.queryOne('SELECT id FROM supplement_checkin WHERE id = ?', [id]);
     if (!existing) {
       return res.json({ code: 1001, data: null, message: '记录不存在' });
     }
@@ -155,14 +151,14 @@ router.put('/habit-checkins/:id', async (req, res) => {
       params.push(JSON.stringify(items));
     }
     if (note !== undefined) {
-      updates.push('notes = ?');
+      updates.push('note = ?');
       params.push(note);
     }
 
     updates.push('updated_at = CURRENT_TIMESTAMP');
     params.push(id);
 
-    await db.run(`UPDATE habit_checkin SET ${updates.join(', ')} WHERE id = ?`, params);
+    await db.run(`UPDATE supplement_checkin SET ${updates.join(', ')} WHERE id = ?`, params);
 
     res.json({ code: 0, data: { id, updated: true }, message: '更新成功' });
   } catch (error) {
@@ -170,16 +166,16 @@ router.put('/habit-checkins/:id', async (req, res) => {
   }
 });
 
-router.delete('/habit-checkins/:id', async (req, res) => {
+router.delete('/supplement-checkins/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const existing = await db.queryOne('SELECT id FROM habit_checkin WHERE id = ?', [id]);
+    const existing = await db.queryOne('SELECT id FROM supplement_checkin WHERE id = ?', [id]);
     if (!existing) {
       return res.json({ code: 1001, data: null, message: '记录不存在' });
     }
 
-    await db.run('DELETE FROM habit_checkin WHERE id = ?', [id]);
+    await db.run('DELETE FROM supplement_checkin WHERE id = ?', [id]);
 
     res.json({ code: 0, data: { id, deleted: true }, message: '删除成功' });
   } catch (error) {

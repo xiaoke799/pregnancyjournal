@@ -419,7 +419,7 @@
     </div>
 
     <template #action>
-      <n-button @click="visible = false">取消</n-button>
+      <n-button @click="handleCancel">取消</n-button>
       <n-button type="primary" :loading="saving" @click="saveRecord">保存</n-button>
     </template>
   </n-modal>
@@ -782,8 +782,14 @@ watch(() => props.show, (val) => {
         case 'diary': {
           const html = r.note || ''
           formData.value.diaryContent = html
+          // 净化 HTML：移除 script 标签和危险属性
+          let safeHtml = html || ''
+          safeHtml = safeHtml.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          safeHtml = safeHtml.replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+          safeHtml = safeHtml.replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+          safeHtml = safeHtml.replace(/javascript:/gi, '')
           nextTick(() => {
-            editor.value?.commands.setContent(html)
+            editor.value?.commands.setContent(safeHtml)
           })
           break
         }
@@ -904,13 +910,14 @@ async function saveRecord() {
       case 'contraction':
         data.contraction_count = formData.value.contractionStart ? 1 : 0
         data.contraction_interval = formData.value.contractionInterval || null
-        // 从开始/结束时间计算持续时间(秒)
+        // 从开始/结束时间计算持续时间(分钟)
         if (formData.value.contractionStart && formData.value.contractionEnd) {
           const [sh, sm] = formData.value.contractionStart.split(':').map(Number)
           const [eh, em] = formData.value.contractionEnd.split(':').map(Number)
-          let diffSec = (eh * 60 + em) - (sh * 60 + sm)
-          if (diffSec < 0) diffSec += 60 * 60 // 跨小时（不太可能但防御性处理）
-          data.contraction_duration = Math.max(diffSec, 0)
+          let diffMin = (eh * 60 + em) - (sh * 60 + sm)
+          if (diffMin < 0) diffMin += 60 // 跨小时（不太可能但防御性处理）
+          if (diffMin < 0) return // 仍然为负则不保存
+          data.contraction_duration = diffMin
         }
         if (formData.value.contractionPain) data.contraction_pain = formData.value.contractionPain
         break
@@ -1021,31 +1028,32 @@ async function saveRecord() {
 
     const isEdit = !!props.editRecord?.id
 
-    // 乐观更新：立即关闭弹窗，后台异步保存
-    visible.value = false
-    resetForm()
-    emit('saved')
-
     const apiCall = isEdit
       ? dailyRecordApi.update(props.editRecord.id, data)
       : dailyRecordApi.upsert(data)
 
-    apiCall.then((res: any) => {
-      if (res.code === 0) {
-        message.success(isEdit ? '记录已更新' : '记录已保存')
-      } else {
-        message.error(res.message || '保存失败，请刷新页面确认')
-      }
-    }).catch((err: any) => {
-      const errMsg = err?.message || err?.response?.data?.message || '网络异常，记录可能未保存'
-      console.error('保存记录失败:', err)
-      message.error(errMsg)
-    })
+    try {
+      await apiCall
+      visible.value = false
+      resetForm()
+      emit('saved')
+      message.success(isEdit ? '更新成功' : '保存成功')
+    } catch (error: any) {
+      message.error('保存失败: ' + (error.message || '请重试'))
+      // 不关闭弹窗，不重置表单，让用户可以重试
+    } finally {
+      saving.value = false
+    }
   } catch (err: any) {
     message.error(err?.message || '保存失败')
   } finally {
     saving.value = false
   }
+}
+
+const handleCancel = () => {
+  visible.value = false
+  resetForm()
 }
 
 function resetForm() {

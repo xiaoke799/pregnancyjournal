@@ -172,8 +172,7 @@ app.get('*', sendIndex);
 
 app.use((err, req, res, next) => {
   log.error('异常', `${req.method} ${req.path}`, { error: err.message, stack: err.stack?.substring(0, 200) });
-  const message = config.APP_MODE === 'dev' ? err.message : '服务器内部错误';
-  res.status(500).json({ code: 1001, data: null, message });
+  res.status(500).json({ code: 1001, data: null, message: '服务器内部错误' });
 });
 
 async function start() {

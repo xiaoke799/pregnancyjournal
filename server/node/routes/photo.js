@@ -8,18 +8,7 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../logger');
 
-const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
-const upload = multer({
-  dest: 'uploads/',
-  limits: { fileSize: 100 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (ALLOWED_MIMES.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('不支持的文件类型'));
-    }
-  }
-});
+const upload = multer({ dest: 'uploads/', limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
 
 const VIDEO_EXTS = new Set([
   'mp4', 'webm', 'mov', 'avi', 'ogg', 'mkv', 'flv', 'wmv', 'm4v',
@@ -205,12 +194,7 @@ router.get('/photos/:id/thumbnail', async (req, res) => {
     const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.heic': 'image/heic', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime' };
     const ext = path.extname(thumbPath).toLowerCase();
     res.setHeader('Content-Type', mimeMap[ext] || 'image/jpeg');
-    const allowedDirs = [path.resolve(config.PHOTOS_DIR), path.resolve(config.MEDIA_DIR)];
-    const resolvedPath = path.resolve(thumbPath);
-    if (!allowedDirs.some(d => resolvedPath === d || resolvedPath.startsWith(d + path.sep))) {
-      return res.status(403).json({ code: 1001, data: null, message: '不允许访问该文件' });
-    }
-    res.sendFile(resolvedPath);
+    res.sendFile(path.resolve(thumbPath));
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
   }
