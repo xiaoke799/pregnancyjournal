@@ -34,17 +34,9 @@
 
 ### 安装方式 / Installation
 
-**方式 1：应用中心一键安装（推荐）**
+从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.26.fpk`（约 40MB），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
 
-直接在飞牛 OS 应用中心搜索"孕程记"安装。
-
-Install directly from the FnOS App Center by searching "孕程记".
-
-**方式 2：手动安装 .fpk 包**
-
-从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `.fpk` 文件，在飞牛 OS 中手动上传安装。
-
-Download the `.fpk` package from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) and upload it in FnOS.
+Download the `.fpk` package (≈40MB) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
 
 ---
 
@@ -181,7 +173,7 @@ This software provides pregnancy health data recording and reference functions, 
 
 **项目主页**: https://github.com/xiaoke799/pregnancyjournal
 
-**应用中心**: 飞牛 OS 应用中心（搜索"孕程记"）
+**应用中心**: 即将上架，敬请期待 / Coming soon to FnOS App Center
 
 **致谢**: 本项目为开源学习项目，所有代码均为独立原创编写。
 
