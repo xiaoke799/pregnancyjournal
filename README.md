@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-FnOS%20x86--64%20%2F%20ARM64-8c8c8c.svg)](https://www.fnos.com/)
-[![Version](https://img.shields.io/badge/version-0.0.26-green.svg)](manifest)
+[![Version](https://img.shields.io/badge/version-0.0.27-green.svg)](manifest)
 
 > 飞牛 OS 原生应用 · 数据 100% 本地存储 · 零上云
 >
@@ -12,9 +12,9 @@
 
 ## 简介 / Introduction
 
-**孕程记**是[飞牛 OS](https://www.com)（fnOS）上的一款原生应用，可一键从飞牛应用中心安装。所有数据保存在你的 NAS 本地，不收集、不上传、不同步任何个人数据至任何云端。
+**孕程记**是[飞牛 OS](https://www.fnos.com/)（fnOS）上的一款原生应用，可一键从飞牛应用中心安装。所有数据保存在你的 NAS 本地，不收集、不上传、不同步任何个人数据至任何云端。
 
-**Pregnancy Journal** is a native app for [FnOS](https://www.fnos.com/) (Feiou OS), installable directly from the FnOS App Center. All data stays on your NAS — no collection, no upload, no sync to any cloud server.
+**Pregnancy Journal** is a native app for [FnOS](https://www.fnos.com/) (Feiniu OS), installable directly from the FnOS App Center. All data stays on your NAS — no collection, no upload, no sync to any cloud server.
 
 ### 隐私承诺 / Privacy Promise
 
@@ -28,15 +28,19 @@
 
 ## 安装要求 / Requirements
 
-- **系统**: 飞牛 OS >= 0.9.21 / FnOS >= 0.9.21
-- **运行时**: Node.js v22（应用中心自动安装）
+- **系统**: 飞牛 OS >= 1.1.3100 / FnOS >= 1.1.3100
+- **运行时**: Node.js v22（应用中心自动安装 / auto-installed by App Center）
 - **平台**: x86-64 / ARM64
+- **架构**: 飞牛统一网关模式（FnOS unified gateway, app.sock）
 
 ### 安装方式 / Installation
 
-从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.26.fpk`（约 40MB），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
+从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.27.fpk`（约 14.6MB），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
 
-Download the `.fpk` package (≈40MB) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
+Download `pregnancyjournal_v0.0.27.fpk` (≈14.6MB) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
+
+> 应用依赖已完整内置在安装包中，安装后无需联网下载任何组件。
+> All dependencies are bundled in the package — no network download needed after install.
 
 ---
 
@@ -44,7 +48,7 @@ Download the `.fpk` package (≈40MB) from [Releases](https://github.com/xiaoke7
 
 | 功能 / Feature | 说明 / Description |
 |---|---|
-| 📋 产检记录 | 产检日程管理、报告上传、指标追踪 / Checkup scheduling, report upload, indicator tracking |
+| 📋 产检记录 | 产检日程管理、自定义产检、报告上传、指标追踪 / Checkup scheduling, custom checkups, report upload & tracking |
 | 📈 体重曲线 | 孕期体重变化可视化 / Weight change visualization |
 | ⏱️ 宫缩计时 | 宫缩频率与持续时间记录 / Contraction timing & duration |
 | 📷 相册分类 | 孕期照片按阶段分类管理 / Photo management by pregnancy stage |
@@ -52,9 +56,10 @@ Download the `.fpk` package (≈40MB) from [Releases](https://github.com/xiaoke7
 | ✅ 待产清单 | 待产包与入院准备清单 / Hospital bag & preparation checklist |
 | 📝 日记功能 | 富文本孕期日记 / Rich-text pregnancy diary |
 | 👶 胎动计数 | 胎动记录与统计 / Fetal movement counting & statistics |
-| 💊 补充剂打卡 | 孕期维生素与补充剂提醒 / Supplement reminders & check-in |
-| 📊 数据看板 | 综合统计仪表盘 / Dashboard with comprehensive stats |
+| 🩺 每日健康记录 | HCG、尿酸、睡眠、运动、饮食、服药习惯等 / Daily logs: HCG, uric acid, sleep, exercise, diet & habits |
+| 🏷️ 日历标签 | 日历视图自定义标签标记 / Custom calendar tags & labels |
 | 🔔 提醒推送 | 产检、补充剂、自定义提醒 / Checkup, supplement & custom reminders |
+| 📊 数据看板 | 综合统计仪表盘 / Dashboard with comprehensive stats |
 | 📤 数据导出 | 备份与恢复、PDF导出 / Backup, restore & PDF export |
 | 🔗 企业微信 | 消息推送集成 / WeCom message integration |
 
@@ -83,24 +88,36 @@ pregnancyjournal/
 │   │   ├── data/           #   静态数据 / Static data
 │   │   ├── db.js           #   SQLite 数据库 / SQLite database
 │   │   └── server.js       #   服务入口 / Server entry
-│   └── ui/                 # 前端界面 / Frontend (FnOS embedded)
+│   └── ui/                 # 前端构建产物 / Frontend build output (gitignored)
 ├── server/node/            # 运行时代码（重构版）/ Runtime (refactored)
 ├── frontend/               # 前端源码 / Frontend source
+│   ├── public/config       #   网关配置（构建时自动复制）/ Gateway config (copied at build)
 │   └── src/
 │       ├── api/            # API 客户端 / API client
 │       ├── components/     # 组件 / Components
 │       ├── views/          # 页面 / Views
 │       └── stores/         # 状态管理 / State management
-├── data/                   # 用户数据目录 / User data (gitignored)
+├── ui/                     # 前端构建产物同步 / Frontend build sync target
 ├── docs/                   # 文档 / Documentation
-└── *.fpk                   # 打包产物 / Build artifact (gitignored)
+└── build.ps1               # 一键打包脚本 / One-click packaging script
 ```
+
+### 统一网关模式 / Unified Gateway Mode
+
+自 v0.0.27 起，应用接入飞牛统一网关，不再占用 TCP 端口：
+
+Since v0.0.27, the app integrates with the FnOS unified gateway instead of binding a TCP port:
+
+- 前端通过 `gatewaySocket: app.sock` + `gatewayPrefix: /app/pregnancyjournal` 接入
+- 后端监听 Unix Socket（`FNOS_SOCKET_PATH`），自动剥离网关前缀
+- 认证基于网关注入的 `X-Trim-Userid` / `X-Trim-Isadmin` / `X-Trim-Username` 请求头
+- 启动脚本 `cmd/main` 使用 `setsid` 会话脱离进程，并验证 socket 就绪后才返回
 
 ### 技术栈 / Tech Stack
 
 - **前端**: Vue 3 + TypeScript + Vite + Naive UI + ECharts + TipTap
-- **后端**: Node.js + Express-like routing + SQLite
-- **打包**: fnpack（FnOS 应用打包工具 / FnOS packaging tool）
+- **后端**: Node.js + Express + SQLite (sql.js) + WebSocket
+- **打包**: fnpack（FnOS 应用打包工具 / FnOS packaging tool）+ PowerShell 一键脚本
 
 ---
 
@@ -109,7 +126,8 @@ pregnancyjournal/
 ### 环境要求 / Requirements
 
 - Node.js >= 18
-- 飞牛 OS 开发环境（用于 .fpk 打包）
+- PowerShell 7（一键打包脚本需要 / required by the packaging script）
+- 飞牛 OS 开发环境与 fnpack（用于 .fpk 打包 / for .fpk packaging）
 
 ### 本地开发 / Local Development
 
@@ -130,16 +148,26 @@ npm run dev
 
 ### 打包 .fpk / Package FnOS App
 
-```bash
-# 1. Build 前端 / Build frontend
-cd frontend && npm run build
-
-# 2. 使用 fnpack 打包成 .fpk / Package with fnpack
-cd ..
-fnpack pack -o pregnancyjournal.fpk
+```powershell
+# 一键打包：清理冗余assets -> 构建校验 -> 安装生产依赖 -> 规范cmd编码 -> 组装stage -> fnpack打包 -> 解包验证
+pwsh ./build.ps1
 ```
 
-打包后的 `.fpp` 文件可直接拖入飞牛 OS 安装。
+手动流程 / Manual steps:
+
+```bash
+# 1. 构建前端（输出到 ../app/ui，注意 vite base 为 /app/pregnancyjournal/）
+cd frontend && npm install && npm run build
+
+# 2. 用 fnpack 打包 / Package with fnpack
+fnpack pack --directory .
+```
+
+> 注意：`frontend/public/config` 为网关配置源文件，构建时会自动复制到 `app/ui/config`，
+> 请勿手工修改 `app/ui/config`，保持三处（public/app\ui/ui）一致。
+>
+> Note: `frontend/public/config` is the source of truth for the gateway config.
+> Vite copies it to `app/ui/config` during build — keep all three copies in sync.
 
 ---
 
@@ -173,14 +201,10 @@ This software provides pregnancy health data recording and reference functions, 
 
 **项目主页**: https://github.com/xiaoke799/pregnancyjournal
 
-**应用中心**: 即将上架，敬请期待 / Coming soon to FnOS App Center
-
 **致谢**: 本项目为开源学习项目，所有代码均为独立原创编写。
 
 Author: xiaoke799
 
 Homepage: https://github.com/xiaoke799/pregnancyjournal
-
-App Center: FnOS App Center (search "孕程记")
 
 Acknowledgment: This project is an open-source learning initiative. All code is independently written.
