@@ -1,0 +1,34 @@
+#!/bin/bash
+# 孕程记 - 升级后回调：运行数据库迁移 + 安装依赖
+
+LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancyjournal-upgrade.log}"
+mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}" 2>/dev/null
+}
+
+log_msg "Upgrade callback started"
+
+NODE_BIN="/var/apps/nodejs_v22/target/bin"
+export PATH=${NODE_BIN}:$PATH
+
+NODE_DIR="${TRIM_APPDEST}/server/node"
+
+if [ -d "${NODE_DIR}" ]; then
+    log_msg "Installing/updating Node.js dependencies..."
+    cd "${NODE_DIR}" || { log_msg "WARNING: cannot cd to ${NODE_DIR}"; }
+    npm install --production >> "${LOG_FILE}" 2>&1 && log_msg "npm install completed" || log_msg "WARNING: npm install failed"
+fi
+
+APP_DIR="${TRIM_APPDEST}/server/backend"
+
+if [ -d "${APP_DIR}" ]; then
+    log_msg "INFO: Python backend directory exists but is deprecated, skipping"
+fi
+
+log_msg "Upgrade callback completed"
+# 注意：不要在回调里重启服务。从回调上下文启动的进程会在升级任务
+# 结束后被系统清理，导致进程无声死亡（网关表现为"拒绝连接"）。
+# 服务的停止/启动由应用中心在升级流程中统一管理。
+exit 0

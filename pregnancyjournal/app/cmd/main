@@ -1,0 +1,103 @@
+#!/bin/bash
+# 孕程记 - 应用主启动脚本
+# 用法：main start|stop|restart
+
+LOG_FILE="${TRIM_APPDEST:-/tmp}/pregnancyjournal.log"
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}" 2>/dev/null
+    echo "$1"
+}
+
+# Node.js 路径
+NODE_BIN="/var/apps/nodejs_v22/target/bin"
+export PATH="${NODE_BIN}:${PATH}"
+
+# 应用目录
+APP_DIR="${TRIM_APPDEST:-/var/apps/pregnancyjournal}"
+NODE_DIR="${APP_DIR}/server/node"
+STATIC_DIR="${APP_DIR}/ui"
+
+# 进程PID文件
+PIDFILE="${APP_DIR}/pregnancyjournal.pid"
+
+start_app() {
+    log_msg "==== 启动孕程记 v0.0.27 ===="
+    
+    if [ -f "${PIDFILE}" ]; then
+        OLD_PID=$(cat "${PIDFILE}")
+        if kill -0 "${OLD_PID}" 2>/dev/null; then
+            log_msg "服务已运行 (PID: ${OLD_PID})，先停止"
+            stop_app
+        else
+            rm -f "${PIDFILE}"
+        fi
+    fi
+    
+    if [ ! -d "${NODE_DIR}" ]; then
+        log_msg "ERROR: Node.js目录不存在: ${NODE_DIR}"
+        exit 1
+    fi
+    
+    cd "${NODE_DIR}" || exit 1
+    
+    export STATIC_DIR="${STATIC_DIR}"
+    export NODE_ENV="${NODE_ENV:-production}"
+    export PORT="${PORT:-3000}"
+    export APP_DATA_DIR="${APP_DIR}/data"
+    
+    mkdir -p "${APP_DATA_DIR}" 2>/dev/null
+    mkdir -p "${APP_DATA_DIR}/photos" 2>/dev/null
+    mkdir -p "${APP_DATA_DIR}/thumbnails" 2>/dev/null
+    mkdir -p "${APP_DATA_DIR}/backups" 2>/dev/null
+    
+    log_msg "启动 Node.js 服务器..."
+    nohup node server.js >> "${LOG_FILE}" 2>&1 &
+    echo $! > "${PIDFILE}"
+    log_msg "服务已启动 (PID: $(cat "${PIDFILE}"))"
+}
+
+stop_app() {
+    log_msg "==== 停止孕程记 ===="
+    
+    if [ -f "${PIDFILE}" ]; then
+        PID=$(cat "${PIDFILE}")
+        if kill -0 "${PID}" 2>/dev/null; then
+            kill "${PID}" 2>/dev/null
+            sleep 1
+            if kill -0 "${PID}" 2>/dev/null; then
+                kill -9 "${PID}" 2>/dev/null
+            fi
+            log_msg "进程已停止 (PID: ${PID})"
+        fi
+        rm -f "${PIDFILE}"
+    fi
+    
+    # 清理可能残留的进程
+    pkill -f "node.*pregnancyjournal.*server.js" 2>/dev/null || true
+    sleep 0.5
+}
+
+restart_app() {
+    stop_app
+    sleep 1
+    start_app
+}
+
+case "${1}" in
+    start)
+        start_app
+        ;;
+    stop)
+        stop_app
+        ;;
+    restart)
+        restart_app
+        ;;
+    *)
+        log_msg "用法: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+
+exit 0
