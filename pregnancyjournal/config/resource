@@ -1,4 +1,1 @@
-{
-  "memory": "256MB",
-  "cpu": "1"
-}
+{"data-share": {"shares": [{"name": "pregnancyjournal", "permission": {"rw": ["pregnancyjournal"]}}]}}

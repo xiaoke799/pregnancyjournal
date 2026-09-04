@@ -1,0 +1,123 @@
+sequenceDiagram
+    title 孕程记 V1.0 — 核心业务序列图
+
+    participant User as 用户 (浏览器)
+    participant Router as Vue Router
+    participant View as 页面视图
+    participant Store as Pinia Store
+    participant API as Axios Client
+    participant MW as AuthMiddleware
+    participant Router_BE as FastAPI Router
+    participant DB as SQLite (aiosqlite)
+
+    %% ===== 1. 应用启动 & 设置检查 =====
+    rect rgb(230, 245, 255)
+        Note over User,DB: 1. 应用启动 — 设置向导检查
+        User->>Router: 访问任意页面
+        Router->>API: GET /app-config/setup_status
+        API->>Router_BE: HTTP GET /api/v1/app-config/setup_status
+        Router_BE->>MW: 认证检查 (白名单放行)
+        Router_BE->>DB: SELECT AppConfig WHERE key='setup_completed'
+        DB-->>Router_BE: setup_flag
+        Router_BE-->>API: {code:0, data:{is_setup_complete:bool}}
+        API-->>Router: setup status
+        alt 未完成设置
+            Router->>User: 重定向到 /setup (SetupWizardView)
+        else 已完成设置
+            Router->>User: 正常进入目标页面
+        end
+    end
+
+    %% ===== 2. 创建孕期档案 =====
+    rect rgb(255, 245, 230)
+        Note over User,DB: 2. 创建孕期档案
+        User->>View: 填写末次月经/预产期
+        View->>API: pregnancyApi.create(data)
+        API->>Router_BE: POST /api/v1/pregnancies
+        Router_BE->>Router_BE: 计算预产期 (calculate_due_date_from_lmp)
+        Router_BE->>DB: INSERT INTO pregnancy
+        DB-->>Router_BE: Pregnancy 对象
+        Router_BE-->>API: ApiResponse[PregnancyResponse]
+        API-->>View: {code:0, data:{id, due_date, ...}}
+        View-->>User: 创建成功，跳转首页
+    end
+
+    %% ===== 3. 首页 Dashboard 加载 =====
+    rect rgb(230, 255, 230)
+        Note over User,DB: 3. 首页 Dashboard 聚合查询
+        User->>View: 进入首页
+        View->>API: dashboardApi.get()
+        API->>Router_BE: GET /api/v1/dashboard
+        Router_BE->>DB: SELECT active Pregnancy
+        Router_BE->>DB: SELECT today DailyRecord
+        Router_BE->>DB: SELECT upcoming Reminders (7天内)
+        Router_BE->>DB: SELECT last PrenatalCheckup
+        Router_BE->>DB: SELECT Checklist + ChecklistItem progress
+        Router_BE->>Router_BE: 加载 fetal_development.json
+        Router_BE->>Router_BE: 加载 checkup_schedule.json
+        Router_BE-->>API: 聚合 Dashboard 数据
+        API-->>View: {code:0, data:{gestational_age, today_record, ...}}
+        View-->>User: 渲染首页概览
+    end
+
+    %% ===== 4. 每日记录 Upsert =====
+    rect rgb(255, 230, 255)
+        Note over User,DB: 4. 每日记录 (按日期 Upsert)
+        User->>View: 点击记录图标 (如体重)
+        View->>View: 弹出 RecordIconGrid / WeightDialog
+        User->>View: 输入数据
+        View->>API: dailyRecordApi.upsert({pregnancy_id, record_date, weight})
+        API->>Router_BE: POST /api/v1/daily-records
+        Router_BE->>DB: SELECT DailyRecord WHERE pregnancy_id+record_date
+        alt 已存在
+            Router_BE->>DB: UPDATE DailyRecord
+        else 不存在
+            Router_BE->>DB: INSERT DailyRecord
+        end
+        DB-->>Router_BE: DailyRecord 对象
+        Router_BE-->>API: ApiResponse[DailyRecordResponse]
+        API-->>View: {code:0, data:{weight, ...}}
+        View-->>User: 更新成功提示
+    end
+
+    %% ===== 5. 宫缩计时 =====
+    rect rgb(230, 230, 255)
+        Note over User,DB: 5. 宫缩计时 — 5-1-1 分析
+        User->>View: 进入宫缩计时页面
+        View->>API: contractionApi.createSession(pregnancyId)
+        API->>Router_BE: POST /api/v1/contractions/sessions
+        Router_BE->>DB: INSERT ContractionSession
+        DB-->>Router_BE: session
+        Router_BE-->>API: ApiResponse[ContractionSessionResponse]
+        
+        loop 每次宫缩
+            User->>View: 点击"宫缩开始"
+            View->>API: contractionApi.recordContraction(sessionId, 'start')
+            API->>Router_BE: POST /contractions/sessions/{id}/contractions {action:"start"}
+            Router_BE->>DB: INSERT Contraction (start_time)
+            Router_BE->>DB: 自动结束上一未完成宫缩
+        end
+        
+        User->>View: 结束会话
+        View->>API: contractionApi.endSession(id)
+        Router_BE->>DB: UPDATE session (end_time, avg_duration, avg_interval)
+        View->>API: contractionApi.analyze(sessionId)
+        Router_BE->>Router_BE: contraction_analyzer.analyze() → 5-1-1 判断
+        Router_BE-->>API: {is_511_met, recommendation}
+        API-->>View: 显示分析结果和建议
+    end
+
+    %% ===== 6. PDF 导出 =====
+    rect rgb(255, 255, 230)
+        Note over User,DB: 6. 数据导出 — PDF 纪念册
+        User->>View: 设置页 → 导出
+        View->>API: exportApi.generatePdf(pregnancyId)
+        API->>Router_BE: POST /api/v1/export/pdf
+        Router_BE->>DB: SELECT pregnancy + checkups + diaries + photos
+        DB-->>Router_BE: 全部数据
+        Router_BE->>Router_BE: pdf_generator.generate_pregnancy_book()
+        Router_BE-->>API: {task_id, download_url}
+        API-->>View: 下载链接
+        View->>API: GET /export/pdf/{task_id}/download
+        Router_BE-->>User: 下载 PDF 文件
+    end
