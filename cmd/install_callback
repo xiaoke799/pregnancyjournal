@@ -8,15 +8,20 @@ log_msg() {
 
 log_msg "Installation callback started"
 
-NODE_BIN="/var/apps/nodejs_v24/target/bin"
+NODE_BIN="/var/apps/nodejs_v22/target/bin"
 export PATH=${NODE_BIN}:$PATH
 
 NODE_DIR="${TRIM_APPDEST}/server/node"
 
 if [ -d "${NODE_DIR}" ]; then
-    log_msg "Installing Node.js dependencies in ${NODE_DIR}..."
-    cd "${NODE_DIR}" || { log_msg "ERROR: cannot cd to ${NODE_DIR}"; exit 0; }
-    npm install --production >> "${LOG_FILE}" 2>&1 && log_msg "npm install completed" || log_msg "WARNING: npm install failed or skipped"
+    # 检查核心依赖是否已存在，已安装则跳过npm install，大幅加快安装速度
+    if [ -d "${NODE_DIR}/node_modules/express" ] && [ -d "${NODE_DIR}/node_modules/sql.js" ]; then
+        log_msg "Node.js dependencies already exist, skipping npm install"
+    else
+        log_msg "Installing Node.js dependencies in ${NODE_DIR}..."
+        cd "${NODE_DIR}" || { log_msg "ERROR: cannot cd to ${NODE_DIR}"; exit 0; }
+        npm install --production --prefer-offline >> "${LOG_FILE}" 2>&1 && log_msg "npm install completed" || log_msg "WARNING: npm install failed or skipped"
+    fi
 else
     log_msg "WARNING: Node.js directory not found at ${NODE_DIR}"
 fi

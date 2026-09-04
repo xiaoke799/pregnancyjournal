@@ -1,18 +1,19 @@
 appname               = pregnancyjournal
-version               = 0.0.26
+version               = 0.0.27
+sub_version           = 0.0.27.0
 display_name          = 孕程记
 desc                  = 数据100%本地存储，零上云。支持产检记录、体重曲线、宫缩计时、相册分类、饮食推荐、食物安全查询、待产清单、日记等完整孕期功能。隐私保障：不收集任何数据、不含任何追踪代码。
-platform              = x86
+platform              = all
 source                = thirdparty
 maintainer            = xiaoke799
 maintainer_url        = https://github.com/xiaoke799
 distributor           = xiaoke799
-os_min_version        = 0.9.21
+os_min_version        = 1.1.3100
 desktop_uidir         = ui
 desktop_applaunchname = pregnancyjournal.APPLICATION
 install_dep_apps      = nodejs_v22
-service_port          = 3867
 checkport             = false
-disable_authorization_path = true
+disable_authorization_path = false
+ctl_stop              = true
 distributor_url       = https://github.com/xiaoke799
-changelog             = V0.0.10: 重大UI重构-导航切换优化/记录页单列布局+独立滚动+数据预览/添加记录拆分为10种独立小弹窗(体重血压血糖等)/日历记录点修复
+changelog             = V0.0.28: 修复manifest高危字段disable_authorization_path=true导致应用中心启用异常的问题，补充ctl_stop字段，统一全链路版本号

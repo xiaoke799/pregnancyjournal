@@ -73,6 +73,7 @@ router.post('/fetal-movements/sessions/:id/kicks', async (req, res) => {
     if (!session) return res.json({ code: 1001, data: null, message: '会话不存在' });
     const timestamp = new Date().toISOString();
     const id = db.generateId();
+    db.getDb().run('BEGIN TRANSACTION');
     await db.run(
       `INSERT INTO fetal_movement (id, session_id, timestamp, created_at)
        VALUES (?, ?, ?, datetime('now'))`,
@@ -82,9 +83,11 @@ router.post('/fetal-movements/sessions/:id/kicks', async (req, res) => {
       `UPDATE fetal_movement_session SET total_count = total_count + 1 WHERE id = ?`,
       [req.params.id]
     );
+    db.getDb().run('COMMIT');
     const row = await db.queryOne('SELECT * FROM fetal_movement WHERE id = ?', [id]);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
+    try { db.getDb().run('ROLLBACK'); } catch {}
     res.json({ code: 1001, data: null, message: e.message });
   }
 });

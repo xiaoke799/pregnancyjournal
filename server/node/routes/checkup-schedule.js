@@ -236,7 +236,7 @@ router.put('/checkup-schedule/:item_id/complete', async (req, res) => {
     if (existing) {
       // 更新已有记录
       try {
-        db.run(
+        await db.run(
           'UPDATE prenatal_checkup SET is_completed = 1, updated_at = ? WHERE id = ?',
           [nowStr, checkupId]
         );
@@ -248,7 +248,7 @@ router.put('/checkup-schedule/:item_id/complete', async (req, res) => {
     } else {
       // 新建记录 - 使用JS计算的日期避免sql.js兼容问题
       try {
-        db.run(
+        await db.run(
           "INSERT INTO prenatal_checkup (id, pregnancy_id, checkup_date, gestational_week, gestational_day, checkup_type, notes, is_completed, is_recommended, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?, 1, 1, ?, ?)",
           [
             checkupId,

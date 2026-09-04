@@ -24,10 +24,8 @@ if (!fs.existsSync(DIARY_BASE)) {
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      const dateDir = _getDiaryDateDir();
-      const dir = path.join(DIARY_BASE, dateDir);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      cb(null, dir);
+      if (!fs.existsSync(DIARY_BASE)) fs.mkdirSync(DIARY_BASE, { recursive: true });
+      cb(null, DIARY_BASE);
     },
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname);
@@ -111,7 +109,7 @@ router.post('/daily-records', (req, res) => {
 
     // 记录非空字段摘要
     const nonNullFields = Object.keys(req.body).filter(k => req.body[k] != null && k !== 'pregnancy_id' && k !== 'record_date');
-    logger.info(`[v0.0.24] POST pregnancy_id=${pregnancy_id}, record_date=${record_date} (raw=${JSON.stringify(rawRecordDate)}), 非空字段=[${nonNullFields.join(',')}]`);
+    logger.info('daily-record', `[v0.0.24] POST pregnancy_id=${pregnancy_id}, record_date=${record_date} (raw=${JSON.stringify(rawRecordDate)}), 非空字段=[${nonNullFields.join(',')}]`);
 
     if (!pregnancy_id) {
       logger.warn('daily-record', `POST /daily-records - missing pregnancy_id`);

@@ -9,7 +9,7 @@ const log = require('./logger');
 
 if (config.DATABASE_PATH) {
   const logDir = path.dirname(config.DATABASE_PATH);
-  log.setLogFile(path.join(logDir, 'info.log'));
+  log.init(path.join(logDir, 'logs'));
 }
 
 const app = express();
@@ -29,18 +29,17 @@ if (config.APP_MODE === 'dev') {
   app.use(cors({ origin: true, credentials: true }));
 }
 
-// CGI 路径剥离中间件：网关直接转发模式会携带完整 CGI 路径前缀
-// 将 /cgi/ThirdParty/pregnancyjournal/index.cgi/api/v1/... → /api/v1/...
-// 将 /cgi/ThirdParty/pregnancyjournal/index.cgi/assets/... → /assets/...
-// 将 /cgi/ThirdParty/pregnancyjournal/index.cgi/ → /
+// 网关前缀处理：
+// 1. 裸前缀 /app/pregnancyjournal → 301 到带尾斜杠形式，
+//    否则浏览器相对路径解析会丢掉前缀（./api → /app/api）
+// 2. 带前缀的请求剥离前缀后再匹配路由
 app.use((req, res, next) => {
-  const CGI_PREFIX = '/cgi/ThirdParty/pregnancyjournal/index.cgi';
-  if (req.url.startsWith(CGI_PREFIX)) {
-    const stripped = req.url.slice(CGI_PREFIX.length);
-    const url = stripped || '/';
-    req.url = url;
-    req.originalUrl = url;
-    req.path = url.split('?')[0];
+  const GW_PREFIX = '/app/pregnancyjournal';
+  if (req.url === GW_PREFIX) {
+    return res.redirect(301, GW_PREFIX + '/');
+  }
+  if (req.url.startsWith(GW_PREFIX + '/')) {
+    req.url = req.url.slice(GW_PREFIX.length) || '/';
   }
   next();
 });
@@ -52,71 +51,30 @@ app.use((req, res, next) => {
   const start = Date.now();
   const reqId = ++requestCount;
   req._reqId = reqId;
+  const userId = req.headers['x-trim-username'] || req.headers['x-trim-userid'] || '';
+
   // POST/PUT 请求：在进入路由前记录请求体摘要（便于排查字段问题）
   if ((req.method === 'POST' || req.method === 'PUT') && req.body && Object.keys(req.body).length > 0) {
     const bodyKeys = Object.keys(req.body);
     const bodyPreview = {};
-    // 记录关键字段值，大字段（如note/diet_note）只记录长度
     for (const k of bodyKeys) {
       const v = req.body[k];
       if (v === null || v === undefined) bodyPreview[k] = null;
       else if (typeof v === 'string' && v.length > 60) bodyPreview[k] = `[${v.length} chars]`;
       else bodyPreview[k] = v;
     }
-    log.debug('请求', `#${reqId} ${req.method} ${req.path} body=${JSON.stringify(bodyPreview)}`);
+    log.debug('HTTP', `${req.method} ${req.path}`, { reqId, body: bodyPreview });
   }
+
   res.on('finish', () => {
     const ms = Date.now() - start;
     if (!req.path.includes('/api/health') && !req.path.startsWith('/assets')) {
-      log.request(req.method, req.path, res.statusCode, ms);
-      // 非2xx响应额外记录详情
-      if (res.statusCode >= 400) {
-        log.warn('请求', `#${reqId} ${req.method} ${req.path} → ${res.statusCode} (${ms}ms)`);
-      }
+      log.request({ id: reqId, method: req.method, path: req.path, status: res.statusCode, ms, userId });
     }
   });
   next();
 });
 
-const routes = [
-  './routes/pregnancy',
-  './routes/checkup',
-  './routes/lab_result',
-  './routes/daily-record',
-  './routes/contraction',
-  './routes/photo',
-  './routes/diary',
-  './routes/checklist',
-  './routes/reminder',
-  './routes/fetal_movement',
-  './routes/reference',
-  './routes/dashboard',
-  './routes/export',
-  './routes/habit-checkin',
-  './routes/supplement-checkin',
-  './routes/app-config',
-  './routes/diet',
-  './routes/checkup-schedule',
-  './routes/wecom',
-  './routes/logs',
-];
-
-let loadedRoutes = 0;
-let failedRoutes = 0;
-
-routes.forEach(routePath => {
-  try {
-    const router = require(routePath);
-    app.use('/api/v1', router);
-    loadedRoutes++;
-    log.info('路由', `加载成功: ${routePath}`);
-  } catch (e) {
-    failedRoutes++;
-    log.error('路由', `加载失败: ${routePath}`, { error: e.message });
-  }
-});
-
-log.startup(`路由加载完成: ${loadedRoutes}/${routes.length} 成功, ${failedRoutes} 失败`);
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -168,11 +126,17 @@ if (fs.existsSync(staticDir)) {
   }));
 }
 
-app.get('*', sendIndex);
+// 模块级变量记录加载成功的路由数
+let loadedRoutes = 0;
 
 app.use((err, req, res, next) => {
-  log.error('异常', `${req.method} ${req.path}`, { error: err.message, stack: err.stack?.substring(0, 200) });
-  res.status(500).json({ code: 1001, data: null, message: '服务器内部错误' });
+  log.error('中间件', `${req.method} ${req.path} 未捕获异常`, {
+    reqId: req._reqId,
+    error: err.message,
+    stack: err.stack?.substring(0, 300),
+  });
+  const message = config.APP_MODE === 'dev' ? err.message : '服务器内部错误';
+  res.status(500).json({ code: 1001, data: null, message });
 });
 
 async function start() {
@@ -180,11 +144,68 @@ async function start() {
   await initDb();
   log.startup('数据库初始化完成');
 
-  const port = parseInt(config.TRIM_SERVICE_PORT) || 3867;
+  // 路由加载必须在数据库初始化之后，否则调度器会在 DB 就绪前执行
+  const routes = [
+    './routes/pregnancy',
+    './routes/checkup',
+    './routes/lab_result',
+    './routes/daily-record',
+    './routes/contraction',
+    './routes/photo',
+    './routes/diary',
+    './routes/checklist',
+    './routes/reminder',
+    './routes/fetal_movement',
+    './routes/reference',
+    './routes/dashboard',
+    './routes/export',
+    './routes/habit-checkin',
+    './routes/supplement-checkin',
+    './routes/app-config',
+    './routes/diet',
+    './routes/checkup-schedule',
+    './routes/wecom',
+    './routes/logs',
+  ];
 
-  app.listen(port, '0.0.0.0', () => {
-    log.startup('服务启动成功 (TCP)', {
-      port: port,
+  loadedRoutes = 0;
+  let failedRoutes = 0;
+
+  routes.forEach(routePath => {
+    try {
+      const router = require(routePath);
+      app.use('/api/v1', router);
+      loadedRoutes++;
+      log.info('路由', `加载成功: ${routePath}`);
+    } catch (e) {
+      failedRoutes++;
+      log.error('路由', `加载失败: ${routePath}`, { error: e.message });
+    }
+  });
+
+  // 所有/api/v1路由加载完成后，再注册catch-all路由，避免拦截API请求
+  app.get('*', sendIndex);
+
+  log.startup(`路由加载完成: ${loadedRoutes}/${routes.length} 成功, ${failedRoutes} 失败`);
+
+  // 确定 Socket 路径：优先 FNOS_SOCKET_PATH（cmd/main 导出），对标模板 ${TRIM_APPDEST}/app.sock
+  const socketPath = config.FNOS_SOCKET_PATH || path.join(
+    config.TRIM_APPDEST || '/var/apps/pregnancyjournal',
+    'app.sock'
+  );
+
+  // 清理已存在的 socket 文件（不抛异常 — 无权限的旧 socket 由 cmd/main 处理）
+  try {
+    if (fs.existsSync(socketPath)) fs.rmSync(socketPath, { force: true });
+  } catch (e) {
+    log.startup(`清理旧 socket 失败: ${e.message}`);
+  }
+
+  const server = app.listen(socketPath, () => {
+    // 确保网关反向代理（可能以不同用户运行）可连接
+    try { fs.chmodSync(socketPath, 0o666); } catch (e) { log.startup('chmod socket 失败:', e.message); }
+    log.startup('服务启动成功 (Unix Socket / 统一网关)', {
+      socket: socketPath,
       mode: config.APP_MODE,
       database: config.DATABASE_PATH,
       static: staticDir,
@@ -194,6 +215,18 @@ async function start() {
       pid: process.pid,
     });
   });
+
+  // WebSocket 服务（FnOS 统一网关模式）
+  // 复用同一 HTTP Server + 同一 Unix Socket
+  // 前端通过 wss://<host>/app/pregnancyjournal/ws 连接
+  try {
+    const { attachWebSocketServer } = require('./websocket');
+    attachWebSocketServer(server, '/ws');
+  } catch (e) {
+    log.warn('WebSocket', `初始化失败（桌面通信不可用）: ${e.message}`);
+  }
+
+  return server;
 }
 
 process.on('uncaughtException', (err) => {
@@ -206,23 +239,43 @@ process.on('unhandledRejection', (reason) => {
   log.error('进程', 'unhandledRejection', { reason: String(reason) });
 });
 
-// ========== 企业微信每日定时推送 ==========
+// 优雅退出：被系统停止（SIGTERM）或中断（SIGINT）时记录日志
+process.on('SIGTERM', () => {
+  log.startup('收到 SIGTERM，进程退出', { pid: process.pid, uptime: Math.floor(process.uptime()) });
+  process.exit(0);
+});
+process.on('SIGINT', () => {
+  log.startup('收到 SIGINT，进程退出', { pid: process.pid, uptime: Math.floor(process.uptime()) });
+  process.exit(0);
+});
+
+// ============ 网关用户身份读取（仅在 FNOS_SOCKET_PATH 存在时信任 X-Trim-* Header） ============
+function getGatewayUser(req) {
+  const hasGateway = !!config.FNOS_SOCKET_PATH;
+  return {
+    authenticated: hasGateway && !!req.headers['x-trim-userid'],
+    uid: hasGateway ? (req.headers['x-trim-userid'] || '') : '',
+    isAdmin: hasGateway && req.headers['x-trim-isadmin'] === 'true',
+    username: hasGateway ? (req.headers['x-trim-username'] || '') : '',
+  };
+}
+// 暴露给路由模块使用
+app.getGatewayUser = getGatewayUser;
+
+// ============ 每日推送调度器（使用 Unix Socket 自调用） ============
 const WECOM_CONFIG_FILE = path.join(__dirname, 'data', 'wecom.json');
 const DAILY_PUSH_STATE_FILE = path.join(__dirname, 'data', 'daily_push_state.json');
 
-/** 每日推送调度器：每晚21:00推送次日待办 */
-function startDailyPushScheduler() {
-  // 每30分钟检查一次是否到推送时间
+function startDailyPushScheduler(server) {
   const CHECK_INTERVAL = 30 * 60 * 1000;
-  const PUSH_HOUR = 21; // 晚上9点推送次日预览
+  const PUSH_HOUR = 21;
+  const socketPath = server.address();
 
   setInterval(async () => {
     try {
       const now = new Date();
-      // 检查是否在推送时间窗口内（PUSH_HOUR点 到 PUSH_HOUR+1点）
       if (now.getHours() !== PUSH_HOUR) return;
 
-      // 读取状态，避免同一天重复推送
       let state = { lastPushDate: null };
       try {
         if (fs.existsSync(DAILY_PUSH_STATE_FILE)) {
@@ -231,9 +284,8 @@ function startDailyPushScheduler() {
       } catch { /* ignore */ }
 
       const todayStr = now.toISOString().slice(0, 10);
-      if (state.lastPushDate === todayStr) return; // 今天已推过
+      if (state.lastPushDate === todayStr) return;
 
-      // 检查企业微信是否配置
       let wecomConfig = null;
       try {
         if (fs.existsSync(WECOM_CONFIG_FILE)) {
@@ -243,20 +295,16 @@ function startDailyPushScheduler() {
 
       if (!wecomConfig || !wecomConfig.webhook_url || !wecomConfig.configured) return;
 
-      // 获取所有活跃孕期
       const db = require('./db');
       const pregnancies = await db.queryAll("SELECT id FROM pregnancy WHERE status = 'active' LIMIT 10");
       if (!pregnancies || pregnancies.length === 0) return;
 
-      // 对每个孕期发送每日看板
       for (const p of pregnancies) {
         try {
-          // 内部调用 daily-push 接口（模拟请求）
           const http = require('http');
           const postData = JSON.stringify({ pregnancy_id: p.id });
           const req = http.request({
-            hostname: '127.0.0.1',
-            port: parseInt(process.env.TRIM_SERVICE_PORT) || 3867,
+            socketPath: socketPath,
             path: '/api/v1/wecom/daily-push',
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
@@ -275,7 +323,6 @@ function startDailyPushScheduler() {
         }
       }
 
-      // 记录已推送
       state.lastPushDate = todayStr;
       fs.writeFileSync(DAILY_PUSH_STATE_FILE, JSON.stringify(state), 'utf-8');
       log.info('企业微信', `每日看板推送触发成功, 共${pregnancies.length}个孕期`);
@@ -288,8 +335,8 @@ function startDailyPushScheduler() {
   log.info('企业微信', `每日推送调度器已启动 (每天 ${PUSH_HOUR}:00 触发)`);
 }
 
-start().then(() => {
-  startDailyPushScheduler(); // 启动后开始调度
+start().then((server) => {
+  startDailyPushScheduler(server);
 }).catch(err => {
   log.error('进程', '启动失败', { error: err.message });
   process.exit(1);

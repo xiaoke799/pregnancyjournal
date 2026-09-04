@@ -142,6 +142,14 @@ router.put('/photos/:id', async (req, res) => {
     for (const f of fields) {
       if (req.body[f] !== undefined) { sets.push(`${f} = ?`); params.push(req.body[f]); }
     }
+    // 支持修改照片日期（映射到 created_at 列）
+    if (req.body.photo_date) {
+      const d = new Date(req.body.photo_date);
+      if (!isNaN(d.getTime())) {
+        sets.push("created_at = ?");
+        params.push(d.toISOString().replace('T', ' ').slice(0, 19));
+      }
+    }
     sets.push("updated_at = datetime('now')");
     params.push(req.params.id);
     await db.run(`UPDATE pregnancy_photo SET ${sets.join(', ')} WHERE id = ?`, params);

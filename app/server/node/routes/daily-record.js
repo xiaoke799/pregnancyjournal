@@ -109,7 +109,7 @@ router.post('/daily-records', (req, res) => {
 
     // 记录非空字段摘要
     const nonNullFields = Object.keys(req.body).filter(k => req.body[k] != null && k !== 'pregnancy_id' && k !== 'record_date');
-    logger.info(`[v0.0.24] POST pregnancy_id=${pregnancy_id}, record_date=${record_date} (raw=${JSON.stringify(rawRecordDate)}), 非空字段=[${nonNullFields.join(',')}]`);
+    logger.info('daily-record', `[v0.0.24] POST pregnancy_id=${pregnancy_id}, record_date=${record_date} (raw=${JSON.stringify(rawRecordDate)}), 非空字段=[${nonNullFields.join(',')}]`);
 
     if (!pregnancy_id) {
       logger.warn('daily-record', `POST /daily-records - missing pregnancy_id`);

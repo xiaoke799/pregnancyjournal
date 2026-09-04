@@ -8,9 +8,21 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../logger');
 
-const upload = multer({ dest: 'uploads/', limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
+const ALLOWED_PHOTO_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'application/pdf'];
+const upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_PHOTO_MIMES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('不支持的文件类型，仅允许 JPG/PNG/WebP/GIF/HEIC/PDF'));
+    }
+  }
+});
 const CHECKUP_BASE = path.join(config.PHOTOS_DIR, 'checkups');
 const NAS_WHITELIST = ['/vol1', '/vol2', '/vol3', '/home', '/share'];
+const UUID_REGEX = /^[a-f0-9-]{8,}$/;
 const schedule_dates_file = path.join(config.DATA_DIR, 'schedule_dates.json');
 
 function _deleteReportFile(filePath) {
@@ -150,6 +162,9 @@ router.delete('/checkups/:id', async (req, res) => {
 
 router.post('/checkups/:id/photos', upload.single('file'), async (req, res) => {
   try {
+    if (!UUID_REGEX.test(req.params.id)) {
+      return res.json({ code: 1001, data: null, message: '无效的ID格式' });
+    }
     logger.info('checkup', `POST /checkups/${req.params.id}/photos - file=${req.file?.originalname}`);
     if (!req.file) return res.json({ code: 1001, data: null, message: '请上传文件' });
     const ext = path.extname(req.file.originalname);
@@ -308,6 +323,9 @@ const REPORTS_DIR = path.join(CHECKUP_BASE, 'reports');
 
 router.post('/checkups/:id/reports', upload.single('file'), async (req, res) => {
   try {
+    if (!UUID_REGEX.test(req.params.id)) {
+      return res.json({ code: 1001, data: null, message: '无效的ID格式' });
+    }
     if (!req.file) return res.json({ code: 1001, data: null, message: '请上传文件' });
     if (!ALLOWED_REPORT_MIMES.includes(req.file.mimetype)) {
       try { fs.unlinkSync(req.file.path); } catch (e) {}
@@ -447,6 +465,10 @@ router.post('/checkups/:id/reports/from-nas', async (req, res) => {
 
 router.get('/checkup-schedule/:pregnancy_id/dates', async (req, res) => {
   try {
+    const safeKeys = ['__proto__', 'constructor', 'prototype'];
+    if (safeKeys.includes(req.params.pregnancy_id) || safeKeys.includes(req.params.schedule_id)) {
+      return res.json({ code: 1001, data: null, message: '无效的参数' });
+    }
     const allDates = _readScheduleDates();
     const userDates = allDates[req.params.pregnancy_id] || {};
     res.json({ code: 0, data: userDates, message: 'success' });
@@ -461,6 +483,10 @@ router.put('/checkup-schedule/:pregnancy_id/dates/:schedule_id', async (req, res
     if (!date_str) return res.json({ code: 1001, data: null, message: '缺少date_str字段' });
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date_str)) return res.json({ code: 1001, data: null, message: '日期格式应为YYYY-MM-DD' });
+    const safeKeys = ['__proto__', 'constructor', 'prototype'];
+    if (safeKeys.includes(req.params.pregnancy_id) || safeKeys.includes(req.params.schedule_id)) {
+      return res.json({ code: 1001, data: null, message: '无效的参数' });
+    }
     const allDates = _readScheduleDates();
     if (!allDates[req.params.pregnancy_id]) allDates[req.params.pregnancy_id] = {};
     allDates[req.params.pregnancy_id][req.params.schedule_id] = date_str;
