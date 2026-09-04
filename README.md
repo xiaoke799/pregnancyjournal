@@ -171,6 +171,13 @@ fnpack pack --directory .
 
 ---
 
+## 文档 / Documentation
+
+- [系统设计](docs/system_design.md) / System design
+- [开发日志](docs/DEVLOG.md) / Dev log
+
+---
+
 ## 许可证 / License
 
 本项目采用 [Apache License 2.0](LICENSE) 开源协议。
