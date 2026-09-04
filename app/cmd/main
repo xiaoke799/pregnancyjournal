@@ -1,0 +1,192 @@
+#!/bin/bash
+# 孕程记 - 飞牛 OS 原生应用启动脚本
+# 对标官方 fnos-app-template/scripts/prepare-package.mjs 生成的 cmd/main
+
+LOG_FILE="${TRIM_PKGVAR}/info.log"
+PID_FILE="${TRIM_PKGVAR}/app.pid"
+
+# 关键路径（设备上的真实部署路径：/vol1/@appcenter/pregnancyjournal/server/node/）
+NODE_DIR="${TRIM_APPDEST}/server/node"
+SERVER_ENTRY="${NODE_DIR}/server.js"
+SOCKET_PATH="${TRIM_APPDEST}/app.sock"
+LOG_DIR="${TRIM_PKGVAR}/data/logs"
+STORAGE_DIR="${TRIM_PKGVAR}/data"
+
+# Node 运行时路径
+NODE_BIN="/var/apps/nodejs_v22/target/bin"
+export PATH="${NODE_BIN}:${PATH}"
+
+# 确保基础目录存在
+mkdir -p "${TRIM_PKGVAR}" 2>/dev/null
+mkdir -p "${LOG_DIR}" 2>/dev/null
+mkdir -p "${STORAGE_DIR}" 2>/dev/null
+mkdir -p "${NODE_DIR}/data" 2>/dev/null
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}" 2>/dev/null
+    echo "$1"
+}
+
+report_error() {
+    log_msg "ERROR: $1"
+    if [ -n "${TRIM_TEMP_LOGFILE:-}" ]; then
+        printf "%s\n" "$1" > "${TRIM_TEMP_LOGFILE}"
+    fi
+}
+
+read_pid() {
+    [ -r "${PID_FILE}" ] || return 1
+    local pid="$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')"
+    case "${pid}" in
+        ""|*[!0-9]*) return 1 ;;
+    esac
+    printf "%s" "${pid}"
+}
+
+is_running() {
+    local pid="$(read_pid)" || return 1
+    kill -0 "${pid}" 2>/dev/null
+}
+
+status_app() {
+    if is_running; then
+        return 0
+    fi
+    rm -f "${PID_FILE}" "${SOCKET_PATH}"
+    return 1
+}
+
+start_app() {
+    # 先杀干净所有旧进程，保证只有一个实例运行
+    log_msg "启动前清理旧进程..."
+    stop_app >/dev/null 2>&1
+
+    log_msg "==== 启动孕程记 v0.0.27 ===="
+    log_msg "NODE_DIR: ${NODE_DIR}"
+    log_msg "SERVER_ENTRY: ${SERVER_ENTRY}"
+    log_msg "SOCKET_PATH: ${SOCKET_PATH}"
+    log_msg "LOG_FILE: ${LOG_FILE}"
+    log_msg "STORAGE_DIR: ${STORAGE_DIR}"
+
+    # 诊断：Node 是否可用
+    if ! command -v node >/dev/null 2>&1; then
+        report_error "Node.js 未找到！${NODE_BIN}/node 不存在"
+        return 1
+    fi
+    log_msg "Node 版本: $(node -v 2>/dev/null)"
+
+    # 诊断：server.js 是否存在
+    if [ ! -f "${SERVER_ENTRY}" ]; then
+        report_error "server.js 不存在: ${SERVER_ENTRY}"
+        log_msg "列目录: $(ls -la "${NODE_DIR}" 2>&1 || echo 'cannot ls')"
+        return 1
+    fi
+
+    # 按需安装依赖（express 等）
+    if [ ! -d "${NODE_DIR}/node_modules/express" ]; then
+        log_msg "正在安装 npm 依赖（express 缺失）..."
+        cd "${NODE_DIR}" && timeout 180 npm install --production >> "${LOG_FILE}" 2>&1 || true
+        if [ -d "${NODE_DIR}/node_modules/express" ]; then
+            log_msg "npm install 完成"
+        else
+            log_msg "npm install 失败，见日志"
+        fi
+    else
+        log_msg "node_modules 完整"
+    fi
+
+    # 清理旧 socket
+    rm -f "${SOCKET_PATH}" || true
+
+    # 显式指定前端静态目录，避免node相对路径找错
+    export STATIC_DIR="${TRIM_APPDEST}/ui"
+    log_msg "STATIC_DIR: ${STATIC_DIR}"
+
+    # ⚠️ 关键：必须先 cd 到 NODE_DIR，再执行 node
+    # 对标模板的模式：cd '${APP_DIR}' && node '${SERVER_ENTRY}'
+    # 否则 node 的 __dirname 和相对 require 会解析错误
+    cd "${NODE_DIR}" || { report_error "无法进入目录: ${NODE_DIR}"; return 1; }
+
+    log_msg "启动 node 进程..."
+
+    setsid bash -c "
+        export FNOS_SOCKET_PATH='${SOCKET_PATH}'
+        export APP_NAME='pregnancyjournal'
+        export APP_TITLE='孕程记'
+        export GATEWAY_PREFIX='/app/pregnancyjournal'
+        export LOG_DIR='${LOG_DIR}'
+        export STORAGE_DIR='${STORAGE_DIR}'
+        export APP_MODE='fnos'
+        export DATABASE_PATH='${STORAGE_DIR}/pregnancyjournal.db'
+        export TRIM_APPDEST='${TRIM_APPDEST}'
+        export TRIM_PKGVAR='${TRIM_PKGVAR}'
+        export TRIM_DATA_SHARE_PATHS='${TRIM_DATA_SHARE_PATHS:-}'
+        export TRIM_SERVICE_PORT='3867'
+        node '${SERVER_ENTRY}'
+    " >> "${LOG_FILE}" 2>&1 < /dev/null &
+
+    printf "%s" "$!" > "${PID_FILE}"
+    log_msg "进程已启动, PID: $!"
+
+    # 等待并验证
+    sleep 2
+
+    if ! is_running; then
+        report_error "进程启动后立即退出，查看上方日志"
+        return 1
+    fi
+
+    if [ ! -S "${SOCKET_PATH}" ]; then
+        log_msg "警告: socket 文件未生成，等待 3s..."
+        sleep 3
+        if [ ! -S "${SOCKET_PATH}" ]; then
+            report_error "socket 文件未能在 5 秒内创建"
+            return 1
+        fi
+    fi
+
+    log_msg "✓ 启动成功, socket 已就绪"
+    return 0
+}
+
+stop_app() {
+    log_msg "停止服务..."
+
+    # 直接按进程匹配杀所有实例，不依赖PID文件
+    local process_pattern="${TRIM_APPDEST}/server/node/server.js"
+    local pids=$(pgrep -f "${process_pattern}" 2>/dev/null | tr '\n' ' ')
+    
+    if [ -z "${pids}" ]; then
+        rm -f "${PID_FILE}" "${SOCKET_PATH}"
+        log_msg "没有运行中的进程, 已清理"
+        return 0
+    fi
+
+    log_msg "找到运行中的进程 PID: ${pids}，发送 TERM 信号"
+    pkill -TERM -f "${process_pattern}" 2>/dev/null || true
+
+    # 等待进程退出，最多等10秒
+    local count=0
+    while pgrep -f "${process_pattern}" >/dev/null 2>&1 && [ "${count}" -lt 10 ]; do
+        sleep 1
+        count=$((count + 1))
+    done
+
+    # 强制清理残留进程
+    if pgrep -f "${process_pattern}" >/dev/null 2>&1; then
+        log_msg "强制终止残留进程"
+        pkill -KILL -f "${process_pattern}" 2>/dev/null || true
+        sleep 1
+    fi
+
+    rm -f "${PID_FILE}" "${SOCKET_PATH}"
+    log_msg "所有进程已停止，清理完成"
+    return 0
+}
+
+case "${1:-}" in
+    start)    start_app ; exit $? ;;
+    stop)     stop_app ; exit $? ;;
+    status)   status_app && exit 0 || exit 3 ;;
+    *)        echo "用法: $0 {start|stop|status}" ; exit 1 ;;
+esac

@@ -47,10 +47,7 @@ function attachWebSocketServer(server, wsPath) {
     }
 
     // --- 认证：upgrade 事件绕过 Express authMiddleware，需在此处校验 ---
-    // 对标模板 gatewayUser.ts 的 FNOS_SOCKET_PATH 校验模式
-    if (!config.FNOS_SOCKET_PATH) {
-      // 非网关模式（本地开发），放行
-    } else if (config.APP_MODE === 'fnos') {
+    if (config.APP_MODE === 'fnos') {
       const uid = (request.headers['x-trim-userid'] || '').trim();
       if (!uid) {
         socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');

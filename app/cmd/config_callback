@@ -1,0 +1,11 @@
+#!/bin/bash
+# 孕程记 - 配置变更后回调
+# 文件夹权限变更后无需重启，新权限立即生效
+
+LOG_FILE="${TRIM_PKGVAR:-/tmp}/info.log"
+mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
+
+log_msg() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}" 2>/dev/null; }
+
+log_msg "Config callback: folder permission updated, no restart needed"
+exit 0

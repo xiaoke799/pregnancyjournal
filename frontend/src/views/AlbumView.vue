@@ -71,6 +71,10 @@
             <div class="card-text">
               <div class="card-date">{{ formatDate(item.created_at) }} · 孕{{ item.gestational_week || '?' }}周</div>
               <div v-if="item.note" class="card-note">{{ item.note }}</div>
+              <div class="card-actions">
+                <button class="card-action-btn" @click.stop="editPhoto(item)">✏️ 编辑</button>
+                <button class="card-action-btn card-action-del" @click.stop="confirmDeletePhoto(item)">🗑️ 删除</button>
+              </div>
             </div>
           </div>
         </div>
@@ -78,43 +82,61 @@
     </div>
 
     <!-- 上传对话框 -->
-    <n-modal v-model:show="showUploadDialog" preset="dialog" title="上传照片/视频" positive-text="上传" negative-text="取消"
-      :positive-button-props="{ disabled: !uploadFile }"
-      :style="{ '--n-content-padding': '20px', '--n-body-padding': '0', overflow: 'visible' }"
-      @positive-click="handleUploadSubmit"
+    <n-modal
+      v-model:show="showUploadDialog"
+      preset="card"
+      title="上传照片/视频"
+      style="max-width: 480px; width: 95vw;"
+      :mask-closable="true"
     >
-      <div style="overflow: visible; padding: 16px 0;">
-      <n-form label-placement="left" label-width="80">
-        <n-form-item label="选择文件">
-          <input
-            ref="fileInputRef"
-            type="file"
-            accept="image/*,video/*"
-            class="file-input"
-            @change="onFileSelect"
-          />
-          <div v-if="uploadFile" class="file-name">{{ uploadFile.name }}</div>
-        </n-form-item>
-        <n-form-item label="分类">
-          <div class="photo-type-select">
-            <span v-for="pt in photoTypeOptions" :key="pt.key"
-              class="pt-option" :class="{ selected: uploadPhotoType === pt.key }"
-              @click="uploadPhotoType = pt.key">{{ pt.icon }} {{ pt.label }}</span>
-          </div>
-        </n-form-item>
-        <n-form-item label="日期">
-          <n-date-picker v-model:formatted-value="uploadDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" clearable />
-        </n-form-item>
-        <n-form-item label="描述">
-          <n-input v-model:value="uploadNote" type="textarea" :rows="2" placeholder="添加描述（可选）" />
-        </n-form-item>
-      </n-form>
+      <div style="padding: 8px 0;">
+        <n-form label-placement="top">
+          <n-form-item label="选择文件">
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept="image/*,video/*"
+              class="file-input"
+              @change="onFileSelect"
+            />
+            <div v-if="uploadFile" class="file-name">{{ uploadFile.name }}</div>
+          </n-form-item>
+          <n-form-item label="分类">
+            <div class="photo-type-select">
+              <span v-for="pt in photoTypeOptions" :key="pt.key"
+                class="pt-option" :class="{ selected: uploadPhotoType === pt.key }"
+                @click="uploadPhotoType = pt.key">{{ pt.icon }} {{ pt.label }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item label="日期">
+            <input
+              type="date"
+              class="album-date-input"
+              :value="uploadDate"
+              @input="uploadDate = ($event.target as HTMLInputElement).value"
+            />
+          </n-form-item>
+          <n-form-item label="描述">
+            <n-input v-model:value="uploadNote" type="textarea" :rows="2" placeholder="添加描述（可选）" />
+          </n-form-item>
+        </n-form>
       </div>
+      <template #action>
+        <n-button @click="showUploadDialog = false">取消</n-button>
+        <n-button type="primary" :disabled="!uploadFile" :loading="uploading" @click="handleUploadSubmit">上传</n-button>
+      </template>
     </n-modal>
 
-    <!-- 照片全屏查看 -->
+    <!-- 照片/视频全屏预览 -->
     <n-modal v-model:show="showImagePreview" preset="card" :style="{ maxWidth: '90vw', maxHeight: '90vh' }" :closable="true">
-      <img :src="previewImageUrl" style="width: 100%; max-height: 80vh; object-fit: contain;" />
+      <div style="text-align: center;">
+        <img :src="previewImageUrl" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px;" />
+        <div v-if="previewItemData" style="margin-top: 16px; text-align: left; padding: 12px; background: #f8fafc; border-radius: 8px;">
+          <div style="font-weight: 600; margin-bottom: 8px;">{{ previewItemData.dateText }} · 孕{{ previewItemData.week || '?' }}周</div>
+          <div v-if="previewItemData.note" style="color: #64748b; font-size: 14px; line-height: 1.6;">{{ previewItemData.note }}</div>
+          <div style="color: #94a3b8; font-size: 12px; margin-top: 8px;">{{ previewItemData.typeLabel }}</div>
+        </div>
+      </div>
     </n-modal>
 
     <!-- 视频播放弹窗 -->
@@ -126,6 +148,42 @@
         autoplay
         style="width: 100%; max-height: 80vh;"
       ></video>
+    </n-modal>
+
+    <!-- 编辑照片/视频对话框 -->
+    <n-modal
+      v-model:show="showEditDialog"
+      preset="card"
+      title="✏️ 编辑照片信息"
+      style="max-width: 480px; width: 95vw;"
+      :mask-closable="true"
+    >
+      <div style="padding: 8px 0;">
+        <n-form label-placement="top">
+          <n-form-item label="日期">
+            <input
+              type="date"
+              class="album-date-input"
+              :value="editDate"
+              @input="editDate = ($event.target as HTMLInputElement).value"
+            />
+          </n-form-item>
+          <n-form-item label="分类">
+            <div class="photo-type-select">
+              <span v-for="pt in photoTypeOptions" :key="pt.key"
+                class="pt-option" :class="{ selected: editPhotoType === pt.key }"
+                @click="editPhotoType = pt.key">{{ pt.icon }} {{ pt.label }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item label="描述">
+            <n-input v-model:value="editNote" type="textarea" :rows="2" placeholder="修改描述..." />
+          </n-form-item>
+        </n-form>
+      </div>
+      <template #action>
+        <n-button @click="showEditDialog = false">取消</n-button>
+        <n-button type="primary" @click="handleEditSave">保存</n-button>
+      </template>
     </n-modal>
   </div>
 </template>
@@ -166,7 +224,7 @@ const loading = ref(false)
 const showUploadDialog = ref(false)
 const uploadFile = ref<File | null>(null)
 const uploadNote = ref('')
-const uploadDate = ref<string | null>(null)
+const uploadDate = ref<string>(dayjs().format('YYYY-MM-DD'))
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 // 照片预览
@@ -176,6 +234,16 @@ const showVideoPreview = ref(false)
 const previewVideoUrl = ref('')
 const activeAlbumTab = ref('all')
 const uploadPhotoType = ref('belly')
+
+// 编辑照片
+const showEditDialog = ref(false)
+const editingPhoto = ref<PhotoItem | null>(null)
+const editDate = ref('')
+const editNote = ref('')
+const editPhotoType = ref('belly')
+
+// 预览信息
+const previewItemData = ref<{ dateText: string; week: number | null; note: string; typeLabel: string } | null>( null)
 
 const albumTabs = [
   { key: 'all', icon: '📷', label: '全部' },
@@ -241,6 +309,59 @@ function previewItem(item: PhotoItem) {
   } else {
     previewImageUrl.value = fileUrl(item.id)
     showImagePreview.value = true
+  }
+  // 同时填充预览信息面板
+  const typeMap: Record<string, string> = { maternity: '🤰 孕妇照', belly: '🫄 孕肚照', baby: '👶 婴儿照' }
+  previewItemData.value = {
+    dateText: dayjs(item.created_at).format('YYYY年MM月DD日'),
+    week: item.gestational_week,
+    note: item.note || '',
+    typeLabel: typeMap[item.photo_type] || item.photo_type
+  }
+}
+
+/** 编辑照片 */
+function editPhoto(item: PhotoItem) {
+  editingPhoto.value = item
+  editDate.value = item.created_at.slice(0, 10)
+  editNote.value = item.note || ''
+  editPhotoType.value = item.photo_type
+  showEditDialog.value = true
+}
+
+/** 保存编辑 */
+async function handleEditSave(): Promise<boolean> {
+  if (!editingPhoto.value) return false
+  try {
+    await photoApi.update(editingPhoto.value.id, {
+      photo_date: editDate.value,
+      note: editNote.value,
+      photo_type: editPhotoType.value,
+    })
+    message.success('保存成功')
+    showEditDialog.value = false
+    await loadPhotos()
+    return true
+  } catch {
+    message.error('保存失败')
+    return false
+  }
+}
+
+/** 确认删除照片 */
+function confirmDeletePhoto(item: PhotoItem) {
+  if (!confirm(`确定要删除这张${item.media_type === 'video' ? '视频' : '照片'}吗？`)) return
+  deletePhoto(item)
+}
+
+/** 执行删除照片 */
+async function deletePhoto(item: PhotoItem) {
+  try {
+    await photoApi.delete(item.id)
+    message.success('删除成功')
+    await loadPhotos()
+  } catch {
+    message.error('删除失败')
   }
 }
 
@@ -556,10 +677,57 @@ onMounted(async () => {
   margin-bottom: 8px;
 }
 
+.album-date-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+}
+.album-date-input:focus {
+  border-color: var(--primary-color, #c44680);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(196, 70, 128, 0.12);
+}
+
 .file-name {
   font-size: 13px;
   color: var(--text-secondary, #64748b);
   margin-top: 4px;
+}
+
+/* 卡片操作按钮 */
+.card-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.card-action-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 16px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-secondary, #64748b);
+}
+.card-action-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.card-action-del:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+/* 日期选择器在弹窗中的 z-index 修复 */
+:deep(.n-date-picker) {
+  z-index: 1000;
 }
 
 /* 响应式 */

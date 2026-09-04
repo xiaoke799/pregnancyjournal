@@ -922,9 +922,20 @@ function scrollToCurrent() { if (currentEl.value) currentEl.value.scrollIntoView
 async function markComplete(item: MergedItem) {
   if (!pregnancyStore.currentPregnancy) { message.warning('请先设置孕期信息'); return }
   try {
-    if (item._type === 'custom') { await checkupApi.markCustomComplete(item.id) }
-    else { await markCheckupCompleted(item.id, pregnancyStore.currentPregnancy.id) }
-    message.success('已标记完成'); await loadAll()
+    if (item._type === 'custom') {
+      await checkupApi.markCustomComplete(item.id)
+      // 立即更新自定义产检的响应式状态
+      const c = customCheckups.value.find(c => c.id === item.id)
+      if (c) c.is_completed = 1
+    } else {
+      await markCheckupCompleted(item.id, pregnancyStore.currentPregnancy.id)
+      // 立即更新标准产检的响应式状态
+      const s = schedule.value.find(s => s.id === item.id)
+      if (s) s.is_completed = true
+    }
+    message.success('已标记完成')
+    // 后台同步后端状态（不阻塞 UI 更新）
+    loadAll().catch(() => {})
   } catch (e: any) { message.error(e.message || '操作失败，请重试') }
 }
 

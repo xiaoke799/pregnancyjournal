@@ -29,6 +29,7 @@
       <div v-for="diary in diaries" :key="diary.id" class="diary-card" @click="viewDiary(diary)">
         <div class="diary-date-header">
           <span class="date-text">{{ formatFullDate(diary.entry_date || diary.record_date) }}</span>
+          <span v-if="diary.mood" class="diary-mood-emoji" :title="getMoodLabel(diary.mood)">{{ getMoodEmoji(diary.mood) }}</span>
           <span class="week-text">孕{{ getWeekInfo(diary.entry_date || diary.record_date) }}周</span>
           <span v-if="diary.title" class="diary-title-inline">{{ diary.title }}</span>
         </div>
@@ -298,6 +299,17 @@ function getWeekInfo(dateStr: string): string {
   return String(age.weeks)
 }
 
+const moodEmojis: Record<string | number, string> = { 1: '😢', 2: '😔', 3: '😐', 4: '😊', 5: '😄' }
+const moodLabels: Record<string | number, string> = { 1: '很差', 2: '不好', 3: '一般', 4: '不错', 5: '很好' }
+
+function getMoodEmoji(mood: string | number): string {
+  return moodEmojis[mood] || '😐'
+}
+
+function getMoodLabel(mood: string | number): string {
+  return moodLabels[mood] || ''
+}
+
 onMounted(async () => {
   if (!pregnancyStore.currentPregnancy) {
     await pregnancyStore.fetchActivePregnancy()
@@ -426,6 +438,12 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.diary-mood-emoji {
+  font-size: 20px;
+  margin-left: 6px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
 }
 
 .diary-content-preview {

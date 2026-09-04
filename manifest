@@ -16,4 +16,4 @@ checkport             = false
 disable_authorization_path = false
 ctl_stop              = true
 distributor_url       = https://github.com/xiaoke799
-changelog             = V0.0.28: 修复manifest高危字段disable_authorization_path=true导致应用中心启用异常的问题，补充ctl_stop字段，统一全链路版本号
+changelog             = V0.0.27: 接入飞牛统一网关模式(app.sock)，修复应用打开拒绝连接问题；适配x86-64/ARM64双架构；修复日历标签错位与相册日期显示；优化进程管理与安装速度

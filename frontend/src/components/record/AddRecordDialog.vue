@@ -334,7 +334,7 @@
           </div>
           <div class="form-group">
             <label>计划日期（可选）</label>
-            <n-date-picker v-model:formatted-value="formData.planDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+            <n-date-picker v-model:formatted-value="formData.planDate" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
           </div>
         </template>
 
@@ -413,7 +413,7 @@
         <!-- 日期 -->
         <div class="form-group">
           <label>记录日期</label>
-          <n-date-picker v-model:formatted-value="formData.recordDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="formData.recordDate" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
       </div>
     </div>
