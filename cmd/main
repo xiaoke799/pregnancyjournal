@@ -1,141 +1,103 @@
 #!/bin/bash
+# 孕程记 - 应用主启动脚本
+# 用法：main start|stop|restart
 
-LOG_FILE="${TRIM_PKGVAR:-/tmp}/info.log"
-PID_FILE="${TRIM_PKGVAR:-/tmp}/app.pid"
-mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
-mkdir -p "$(dirname "${PID_FILE}")" 2>/dev/null
-
-NODE_BIN="/var/apps/nodejs_v22/target/bin"
-export PATH=${NODE_BIN}:$PATH
-
-DATA_DIR="${TRIM_DATA_SHARE_PATHS%%:*}"
-APP_DIR="${TRIM_APPDEST}/server"
-NODE_DIR="${APP_DIR}/node"
+LOG_FILE="${TRIM_APPDEST:-/tmp}/pregnancyjournal.log"
 
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}" 2>/dev/null
+    echo "$1"
 }
 
-start_process() {
-    if status; then
-        log_msg "Application already running"
-        return 0
-    fi
+# Node.js 路径
+NODE_BIN="/var/apps/nodejs_v22/target/bin"
+export PATH="${NODE_BIN}:${PATH}"
 
-    log_msg "Starting pregnancyjournal (Node.js) ..."
-    log_msg "Node: $(which node) $(node -v 2>/dev/null || echo 'NOT FOUND')"
-    log_msg "Port: ${TRIM_SERVICE_PORT:-3867}"
-    log_msg "AppDir: ${TRIM_APPDEST}"
-    log_msg "DataDir: ${DATA_DIR}"
-    log_msg "PkgVar: ${TRIM_PKGVAR}"
+# 应用目录
+APP_DIR="${TRIM_APPDEST:-/var/apps/pregnancyjournal}"
+NODE_DIR="${APP_DIR}/server/node"
+STATIC_DIR="${APP_DIR}/ui"
 
-    mkdir -p "${DATA_DIR}/photos" >> "${LOG_FILE}" 2>&1
-    mkdir -p "${DATA_DIR}/thumbnails" >> "${LOG_FILE}" 2>&1
-    mkdir -p "${DATA_DIR}/media" >> "${LOG_FILE}" 2>&1
-    mkdir -p "${DATA_DIR}/backups" >> "${LOG_FILE}" 2>&1
+# 进程PID文件
+PIDFILE="${APP_DIR}/pregnancyjournal.pid"
 
-    if [ ! -d "${NODE_DIR}/node_modules" ]; then
-        log_msg "node_modules not found, running npm install..."
-        cd "${NODE_DIR}" && timeout 120 npm install --production >> "${LOG_FILE}" 2>&1 || log_msg "WARNING: npm install failed or timed out"
-    fi
-
-    CMD="cd \"${NODE_DIR}\" && \
-DATABASE_PATH=${TRIM_PKGVAR}/pregnancyjournal.db \
-PHOTOS_DIR=${DATA_DIR}/photos \
-THUMBNAILS_DIR=${DATA_DIR}/thumbnails \
-MEDIA_DIR=${DATA_DIR}/media \
-BACKUPS_DIR=${DATA_DIR}/backups \
-DATA_DIR=${NODE_DIR}/data \
-STATIC_DIR=${TRIM_APPDEST}/ui \
-TRIM_APPDEST=${TRIM_APPDEST} \
-TRIM_PKGVAR=${TRIM_PKGVAR} \
-TRIM_DATA_SHARE_PATHS=${TRIM_DATA_SHARE_PATHS} \
-TRIM_SERVICE_PORT=${TRIM_SERVICE_PORT:-3867} \
-APP_MODE=fnos \
-node server.js"
-
-    bash -c "${CMD}" >> "${LOG_FILE}" 2>&1 &
-    printf "%s" "$!" > "${PID_FILE}"
-    log_msg "Process started (pid=$!)"
-    return 0
-}
-
-stop_process() {
-    log_msg "Stopping pregnancyjournal ..."
-
-    if [ -r "${PID_FILE}" ]; then
-        pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
-        log_msg "pid=${pid}"
-
-        if ! check_process "${pid}"; then
-            rm -f "${PID_FILE}"
-            log_msg "Process not running, cleaned pid file"
-            return 0
-        fi
-
-        log_msg "Sending TERM signal to PID:${pid}..."
-        kill -TERM ${pid} >> "${LOG_FILE}" 2>&1
-
-        local count=0
-        while check_process "${pid}" && [ $count -lt 10 ]; do
-            sleep 1
-            count=$((count + 1))
-            log_msg "Waiting for process to terminate ... (${count}s/10s)"
-        done
-
-        if check_process "${pid}"; then
-            log_msg "Sending KILL signal to PID:${pid}..."
-            kill -KILL "${pid}"
-            sleep 1
-        fi
-
-        rm -f "${PID_FILE}"
-        log_msg "Process stopped"
-    else
-        log_msg "No pid file found"
-    fi
-
-    return 0
-}
-
-check_process() {
-    local pid=$1
-    if kill -0 "${pid}" 2>/dev/null; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-status() {
-    if [ -f "${PID_FILE}" ]; then
-        pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
-        if check_process "${pid}"; then
-            return 0
+start_app() {
+    log_msg "==== 启动孕程记 v0.0.27 ===="
+    
+    if [ -f "${PIDFILE}" ]; then
+        OLD_PID=$(cat "${PIDFILE}")
+        if kill -0 "${OLD_PID}" 2>/dev/null; then
+            log_msg "服务已运行 (PID: ${OLD_PID})，先停止"
+            stop_app
         else
-            rm -f "${PID_FILE}"
+            rm -f "${PIDFILE}"
         fi
     fi
-    return 1
+    
+    if [ ! -d "${NODE_DIR}" ]; then
+        log_msg "ERROR: Node.js目录不存在: ${NODE_DIR}"
+        exit 1
+    fi
+    
+    cd "${NODE_DIR}" || exit 1
+    
+    export STATIC_DIR="${STATIC_DIR}"
+    export NODE_ENV="${NODE_ENV:-production}"
+    export PORT="${PORT:-3000}"
+    export APP_DATA_DIR="${APP_DIR}/data"
+    
+    mkdir -p "${APP_DATA_DIR}" 2>/dev/null
+    mkdir -p "${APP_DATA_DIR}/photos" 2>/dev/null
+    mkdir -p "${APP_DATA_DIR}/thumbnails" 2>/dev/null
+    mkdir -p "${APP_DATA_DIR}/backups" 2>/dev/null
+    
+    log_msg "启动 Node.js 服务器..."
+    nohup node server.js >> "${LOG_FILE}" 2>&1 &
+    echo $! > "${PIDFILE}"
+    log_msg "服务已启动 (PID: $(cat "${PIDFILE}"))"
 }
 
-case $1 in
-start)
-    start_process
-    exit $?
-    ;;
-stop)
-    stop_process
-    exit $?
-    ;;
-status)
-    if status; then
-        exit 0
-    else
-        exit 3
+stop_app() {
+    log_msg "==== 停止孕程记 ===="
+    
+    if [ -f "${PIDFILE}" ]; then
+        PID=$(cat "${PIDFILE}")
+        if kill -0 "${PID}" 2>/dev/null; then
+            kill "${PID}" 2>/dev/null
+            sleep 1
+            if kill -0 "${PID}" 2>/dev/null; then
+                kill -9 "${PID}" 2>/dev/null
+            fi
+            log_msg "进程已停止 (PID: ${PID})"
+        fi
+        rm -f "${PIDFILE}"
     fi
-    ;;
-*)
-    exit 1
-    ;;
+    
+    # 清理可能残留的进程
+    pkill -f "node.*pregnancyjournal.*server.js" 2>/dev/null || true
+    sleep 0.5
+}
+
+restart_app() {
+    stop_app
+    sleep 1
+    start_app
+}
+
+case "${1}" in
+    start)
+        start_app
+        ;;
+    stop)
+        stop_app
+        ;;
+    restart)
+        restart_app
+        ;;
+    *)
+        log_msg "用法: $0 {start|stop|restart}"
+        exit 1
+        ;;
 esac
+
+exit 0

@@ -236,6 +236,7 @@ CREATE TABLE IF NOT EXISTS reminder (
   id TEXT PRIMARY KEY,
   pregnancy_id TEXT NOT NULL,
   title TEXT NOT NULL,
+  priority TEXT DEFAULT 'medium',
   trigger_date TEXT,
   trigger_time TEXT,
   reminder_type TEXT DEFAULT 'custom',
@@ -317,98 +318,14 @@ function getDb() {
 }
 
 function migrateDb() {
+  // 仅保留真正不在 SCHEMA 中的列（大多数列已在 CREATE TABLE 中定义）
+  // 老库升级时执行 ADD COLUMN；新库因 SCHEMA 已包含则跳过
   const tableCols = {
     prenatal_checkup: {
-      fundal_height: null,
-      abdominal_circumference: null,
-      hospital: null,
-      is_recommended: "0",
-      schedule_item_id: null,
+      schedule_item_id: null,      // 老库可能缺失（不在 SCHEMA 中）
     },
-    checkup_report: {
-      sub_item: null,
-      mime_type: null,
-    },
-    custom_checkup: {
-      items: null,
-      name: null,
-      notes: null,
-    },
-    app_config: {
-      created_at: null,
-      updated_at: null,
-      description: null,
-    },
-    pregnancy: {
-      conception_date: null,
-      is_active: "1",
-      baby_name: null,
-    },
-    daily_record: {
-      blood_pressure_systolic: null,
-      blood_pressure_diastolic: null,
-      sleep_hours: null,
-      sleep_quality: null,
-      symptoms: null,
-      exercise_type: null,
-      exercise_duration: null,
-      diet_note: null,
-      medication: null,
-      edema_level: null,
-      vaginal_discharge: null,
-      skin_condition: null,
-      urination_frequency: null,
-      hcg_value: null,
-      uric_acid: null,
-      supplement_record: null,
-      intimacy_note: null,
-      plan_text: null,
-      plan_date: null,
-      is_plan_done: 0,
-      water_intake: null,
-      stool_record: null,
-      habit_text: null,
-      hcg_weeks: null,
-      uric_acid_period: null,
-      contraction_count: null,
-      contraction_interval: null,
-      contraction_duration: null,
-      contraction_pain: null,
-      fetal_movement_count: null,
-      fetal_movement_duration: null,
-      sleep_record: null,
-      diet_record: null,
-      exercise_record: null,
-      fetal_movement_record: null,
-      contraction_record: null,
-      intimacy_record: null,
-    },
-    diary_entry: {
-      title: null,
-      gestational_week: null,
-      mood: null,
-      image_urls: null,
-    },
-    contraction_session: {
-      pregnancy_id: null,
-      avg_duration: null,
-      avg_interval: null,
-    },
-    fetal_movement_session: {
-      pregnancy_id: null,
-    },
-    pregnancy_photo: {
-      updated_at: null,
-      checkup_id: null,
-      milestone_type: null,
-      gestational_day: "0",
-    },
-    checklist_item: {
-      description: null,
-      is_mandatory: "0",
-    },
-    lab_result: {
-      updated_at: null,
+    reminder: {
+      priority: "medium",          // dashboard 提醒事件优先级（HIGH/MEDIUM/LOW）
     },
   };
 
@@ -468,8 +385,20 @@ async function initDb() {
     log.db('创建新数据库');
   }
 
-  db.run(SCHEMA);
-  log.db('Schema 初始化完成');
+  // SCHEMA 含多条语句，逐条执行（run() 只支持单条）
+  // 每条独立 try/catch，防止单条失败阻断后续表创建
+  const statements = SCHEMA.split(';').map(s => s.trim()).filter(s => s.length > 0);
+  let schemaOk = 0, schemaFail = 0;
+  for (const stmt of statements) {
+    try {
+      db.run(stmt);
+      schemaOk++;
+    } catch (e) {
+      schemaFail++;
+      console.error('[db] Schema 语句失败:', e.message, '| 语句:', stmt.substring(0, 80));
+    }
+  }
+  log.db(`Schema 执行完成: ${schemaOk} 成功, ${schemaFail} 失败`);
   migrateDb();
   saveDb();
   log.db('数据库就绪');

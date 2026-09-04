@@ -10,7 +10,7 @@ log_msg() {
 
 log_msg "Upgrade callback started"
 
-NODE_BIN="/var/apps/nodejs_v24/target/bin"
+NODE_BIN="/var/apps/nodejs_v22/target/bin"
 export PATH=${NODE_BIN}:$PATH
 
 NODE_DIR="${TRIM_APPDEST}/server/node"
@@ -28,4 +28,7 @@ if [ -d "${APP_DIR}" ]; then
 fi
 
 log_msg "Upgrade callback completed"
+# 注意：不要在回调里重启服务。从回调上下文启动的进程会在升级任务
+# 结束后被系统清理，导致进程无声死亡（网关表现为"拒绝连接"）。
+# 服务的停止/启动由应用中心在升级流程中统一管理。
 exit 0

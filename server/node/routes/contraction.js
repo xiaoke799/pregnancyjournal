@@ -199,8 +199,20 @@ router.get('/contractions/sessions/:id/analysis', async (req, res) => {
     }
     const avg_duration = total_count > 0 ? Math.round(total_duration / total_count) : 0;
     const avg_interval = interval_count > 0 ? Math.round(total_interval / interval_count) : 0;
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toTimeString().slice(0, 8);
-    const last_hour_contractions = contractions.filter(c => c.start_time >= oneHourAgo);
+    const oneHourAgo = Date.now() - 3600000;
+    const sessionDate = session.session_date;
+    const sessionStartTs = session.start_time
+      ? new Date(sessionDate + 'T' + session.start_time).getTime()
+      : null;
+    const last_hour_contractions = contractions.filter(c => {
+      if (!c.start_time) return false;
+      let ts = new Date(sessionDate + 'T' + c.start_time).getTime();
+      // 处理跨午夜：若宫缩时间早于会话开始时间，说明已跨到次日
+      if (sessionStartTs !== null && ts < sessionStartTs) {
+        ts += 24 * 60 * 60 * 1000;
+      }
+      return ts >= oneHourAgo;
+    });
     const last_hour_count = last_hour_contractions.length;
     let is_511_met = false;
     if (last_hour_count >= 12) {

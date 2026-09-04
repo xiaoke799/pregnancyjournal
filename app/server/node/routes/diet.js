@@ -218,12 +218,14 @@ router.post('/diet/spin', (req, res) => {
 router.get('/diet/food-safety', (req, res) => {
   try {
     const category = req.query.category;
+    logger.info('diet', `GET /food-safety - category=${category || 'all'}`);
     const foodSafetyData = loadFoodSafety();
     const allCategories = foodSafetyData.categories || [];
 
     if (category) {
       const cat = allCategories.find(c => c.name === category);
       if (!cat) {
+        logger.warn('diet', `GET /food-safety - category "${category}" not found`);
         return res.json({ code: 1001, data: null, message: '未找到该分类' });
       }
       const itemsWithStage = (cat.items || []).map(item => ({
@@ -232,6 +234,7 @@ router.get('/diet/food-safety', (req, res) => {
         note: item.note || '',
         image: item.image || null,
       }));
+      logger.info('diet', `GET /food-safety - returned category "${cat.name}" with ${itemsWithStage.length} items`);
       return res.json({
         code: 0,
         data: [{ name: cat.name, icon: cat.icon, items: itemsWithStage }],
@@ -250,8 +253,10 @@ router.get('/diet/food-safety', (req, res) => {
       })),
     }));
 
+    logger.info('diet', `GET /food-safety - returned all ${result.length} categories`);
     res.json({ code: 0, data: result, message: 'success' });
   } catch (error) {
+    logger.error('diet', `GET /food-safety error: ${error.message}`);
     res.json({ code: 1001, data: null, message: error.message });
   }
 });
@@ -259,7 +264,9 @@ router.get('/diet/food-safety', (req, res) => {
 router.get('/diet/food-safety/search', (req, res) => {
   try {
     const keyword = (req.query.keyword || '').trim();
+    logger.info('diet', `GET /food-safety/search - keyword="${keyword}"`);
     if (!keyword) {
+      logger.warn('diet', 'GET /food-safety/search - empty keyword');
       return res.json({ code: 1001, data: null, message: '请输入搜索关键词' });
     }
 
@@ -279,8 +286,10 @@ router.get('/diet/food-safety/search', (req, res) => {
       });
     });
 
+    logger.info('diet', `GET /food-safety/search - found ${results.length} results for keyword="${keyword}"`);
     res.json({ code: 0, data: results, message: 'success' });
   } catch (error) {
+    logger.error('diet', `GET /food-safety/search error: ${error.message}`);
     res.json({ code: 1001, data: null, message: error.message });
   }
 });

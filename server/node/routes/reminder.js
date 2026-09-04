@@ -36,7 +36,9 @@ router.post('/reminders', (req, res) => {
 router.get('/reminders', (req, res) => {
   try {
     const { pregnancy_id } = req.query;
+    logger.info('reminder', `GET /reminders - pregnancy_id=${pregnancy_id}`);
     if (!pregnancy_id) {
+      logger.warn('reminder', 'GET /reminders - missing pregnancy_id');
       return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
     }
 
@@ -45,8 +47,10 @@ router.get('/reminders', (req, res) => {
       [pregnancy_id]
     );
 
+    logger.info('reminder', `GET /reminders - returned ${reminders.length} reminders for pregnancy_id=${pregnancy_id}`);
     res.json({ code: 0, data: reminders, message: 'success' });
   } catch (e) {
+    logger.error('reminder', `GET /reminders error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
@@ -54,7 +58,9 @@ router.get('/reminders', (req, res) => {
 router.get('/reminders/upcoming', (req, res) => {
   try {
     const { pregnancy_id, days = 7 } = req.query;
+    logger.info('reminder', `GET /reminders/upcoming - pregnancy_id=${pregnancy_id}, days=${days}`);
     if (!pregnancy_id) {
+      logger.warn('reminder', 'GET /reminders/upcoming - missing pregnancy_id');
       return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
     }
 
@@ -74,20 +80,26 @@ router.get('/reminders/upcoming', (req, res) => {
       [pregnancy_id, today, futureStr]
     );
 
+    logger.info('reminder', `GET /reminders/upcoming - returned ${reminders.length} upcoming reminders for pregnancy_id=${pregnancy_id}`);
     res.json({ code: 0, data: reminders, message: 'success' });
   } catch (e) {
+    logger.error('reminder', `GET /reminders/upcoming error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
 
 router.get('/reminders/:id', (req, res) => {
   try {
-    const reminder = db.queryOne('SELECT * FROM reminder WHERE id = ?', [req.params.id]);
+    const id = req.params.id;
+    logger.info('reminder', `GET /reminders/${id}`);
+    const reminder = db.queryOne('SELECT * FROM reminder WHERE id = ?', [id]);
     if (!reminder) {
+      logger.warn('reminder', `GET /reminders/${id} - not found`);
       return res.json({ code: 1001, data: null, message: '提醒不存在' });
     }
     res.json({ code: 0, data: reminder, message: 'success' });
   } catch (e) {
+    logger.error('reminder', `GET /reminders/:id error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });

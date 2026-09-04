@@ -8,7 +8,18 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../logger');
 
-const upload = multer({ dest: 'uploads/', limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
+const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
+const upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_MIMES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('不支持的文件类型'));
+    }
+  }
+});
 
 const VIDEO_EXTS = new Set([
   'mp4', 'webm', 'mov', 'avi', 'ogg', 'mkv', 'flv', 'wmv', 'm4v',
@@ -131,6 +142,14 @@ router.put('/photos/:id', async (req, res) => {
     for (const f of fields) {
       if (req.body[f] !== undefined) { sets.push(`${f} = ?`); params.push(req.body[f]); }
     }
+    // 支持修改照片日期（映射到 created_at 列）
+    if (req.body.photo_date) {
+      const d = new Date(req.body.photo_date);
+      if (!isNaN(d.getTime())) {
+        sets.push("created_at = ?");
+        params.push(d.toISOString().replace('T', ' ').slice(0, 19));
+      }
+    }
     sets.push("updated_at = datetime('now')");
     params.push(req.params.id);
     await db.run(`UPDATE pregnancy_photo SET ${sets.join(', ')} WHERE id = ?`, params);
@@ -194,7 +213,12 @@ router.get('/photos/:id/thumbnail', async (req, res) => {
     const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.heic': 'image/heic', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime' };
     const ext = path.extname(thumbPath).toLowerCase();
     res.setHeader('Content-Type', mimeMap[ext] || 'image/jpeg');
-    res.sendFile(path.resolve(thumbPath));
+    const allowedDirs = [path.resolve(config.PHOTOS_DIR), path.resolve(config.MEDIA_DIR)];
+    const resolvedPath = path.resolve(thumbPath);
+    if (!allowedDirs.some(d => resolvedPath === d || resolvedPath.startsWith(d + path.sep))) {
+      return res.status(403).json({ code: 1001, data: null, message: '不允许访问该文件' });
+    }
+    res.sendFile(resolvedPath);
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
   }

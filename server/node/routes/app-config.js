@@ -212,6 +212,37 @@ router.post('/app-config/check-path', (req, res) => {
       return res.json({ code: 1001, data: null, message: '缺少path参数' });
     }
 
+    const resolvedPath = path.resolve(checkPath);
+    // 兼容两种 TRIM_DATA_SHARE_PATHS 格式：冒号分隔字符串（fnOS标准）和 JSON 数组
+    const allowedRoots = [];
+    const rawPaths = process.env.TRIM_DATA_SHARE_PATHS || '';
+    if (rawPaths) {
+      // 尝试 JSON 解析（app-config/paths 接口使用此格式）
+      try {
+        const parsed = JSON.parse(rawPaths);
+        if (Array.isArray(parsed)) {
+          for (const p of parsed) {
+            allowedRoots.push(typeof p === 'string' ? p : (p.path || ''));
+          }
+        }
+      } catch {
+        // JSON 解析失败，按冒号分隔处理（export.js 使用此格式）
+        for (const p of rawPaths.split(':')) {
+          if (p.trim()) allowedRoots.push(p.trim());
+        }
+      }
+    }
+    // 也允许应用数据目录
+    allowedRoots.push(path.join(process.cwd(), 'data'));
+    const isAllowed = allowedRoots.some(root => {
+      if (!root) return false;
+      const resolvedRoot = path.resolve(root);
+      return resolvedPath === resolvedRoot || resolvedPath.startsWith(resolvedRoot + path.sep);
+    });
+    if (!isAllowed) {
+      return res.json({ code: 1001, data: null, message: '不允许访问该路径，超出授权范围' });
+    }
+
     const exists = fs.existsSync(checkPath);
     let isWritable = false;
     let errorMsg = null;
@@ -233,7 +264,6 @@ router.post('/app-config/check-path', (req, res) => {
         fs.writeFileSync(testFile, 'test');
         fs.unlinkSync(testFile);
         isWritable = true;
-        fs.rmdirSync(checkPath);
       } catch (e) {
         isWritable = false;
         errorMsg = e.message;
