@@ -1,0 +1,300 @@
+classDiagram
+    title 孕程记 V1.0 — 数据模型类图
+
+    %% ──────────── 核心模型 ────────────
+
+    class Pregnancy {
+        +String id
+        +Date last_period_date
+        +Date conception_date
+        +Date due_date
+        +Integer is_active
+        +String baby_name
+        +DateTime created_at
+        +DateTime updated_at
+        --
+        +list checkups
+        +list daily_records
+        +list contraction_sessions
+        +list fetal_movement_sessions
+        +list photos
+        +list diaries
+        +list checklists
+        +list reminders
+        +list habit_checkins
+        +list supplement_checkins
+    }
+
+    class DailyRecord {
+        +String id
+        +String pregnancy_id FK
+        +Date record_date
+        +Float weight
+        +Integer fetal_heart_rate
+        +Float body_temperature
+        +Float blood_glucose_fasting
+        +Float blood_glucose_1h
+        +Float blood_glucose_2h
+        +Integer mood
+        +String mood_note
+        +String stool
+        +Text note
+        +String blood_pressure_systolic
+        +String blood_pressure_diastolic
+        +Float sleep_hours
+        +String sleep_quality
+        +Text symptoms
+        +String exercise_type
+        +Integer exercise_duration
+        +Text diet_note
+        +Text medication
+        +String edema_level
+        +String vaginal_discharge
+        +String skin_condition
+        +String urination_frequency
+        +Float hcg_value
+        +Float uric_acid
+        +Text supplement_record
+        +Text intimacy_note
+        +Text plan_text
+        +Date plan_date
+        +Integer water_intake
+        +Integer contraction_count
+        +Integer contraction_interval
+        +Integer fetal_movement_count
+        +Integer fetal_movement_duration
+        +Text stool_record
+        +DateTime created_at
+        +DateTime updated_at
+    }
+
+    class PrenatalCheckup {
+        +String id
+        +String pregnancy_id FK
+        +Date checkup_date
+        +Integer gestational_week
+        +Integer gestational_day
+        +String checkup_type
+        +Float weight
+        +String blood_pressure
+        +Integer fetal_heart_rate
+        +Float fundal_height
+        +Text notes
+        +Integer is_completed
+        +Integer is_recommended
+        +DateTime created_at
+        +DateTime updated_at
+        --
+        +list photos
+        +list lab_results
+    }
+
+    class CheckupPhoto {
+        +String id
+        +String checkup_id FK
+        +String file_path
+        +String thumbnail_path
+        +Text note
+        +DateTime created_at
+    }
+
+    class CustomCheckup {
+        +String id
+        +String pregnancy_id
+        +String name
+        +Date checkup_date
+        +Text notes
+        +Integer is_completed
+        +DateTime created_at
+        +DateTime updated_at
+    }
+
+    class CheckupReport {
+        +String id
+        +String checkup_id
+        +String checkup_type
+        +String filename
+        +String file_path
+        +String file_type
+        +Integer file_size
+        +String report_category
+        +DateTime created_at
+    }
+
+    class LabResult {
+        +String id
+        +String checkup_id FK
+        +String category
+        +String item_name
+        +Float value
+        +String unit
+        +Float reference_min
+        +Float reference_max
+        +String status
+        +DateTime created_at
+    }
+
+    %% ──────────── 计时/计数会话 ────────────
+
+    class ContractionSession {
+        +String id
+        +String pregnancy_id FK
+        +Date session_date
+        +DateTime start_time
+        +DateTime end_time
+        +Integer total_count
+        +Float avg_duration
+        +Float avg_interval
+        +Integer alert_triggered
+        +Text notes
+        +DateTime created_at
+        --
+        +list contractions
+    }
+
+    class Contraction {
+        +String id
+        +String session_id FK
+        +DateTime start_time
+        +DateTime end_time
+        +Float duration
+        +Float interval_from_prev
+    }
+
+    class FetalMovementSession {
+        +String id
+        +String pregnancy_id FK
+        +Date session_date
+        +String start_time
+        +String end_time
+        +Integer total_count
+        +Text notes
+        +DateTime created_at
+        --
+        +list movements
+    }
+
+    class FetalMovement {
+        +String id
+        +String session_id FK
+        +DateTime timestamp
+    }
+
+    %% ──────────── 内容模块 ────────────
+
+    class DiaryEntry {
+        +String id
+        +String pregnancy_id FK
+        +Date entry_date
+        +Integer gestational_week
+        +Text content
+        +Text photo_ids
+        +DateTime created_at
+        +DateTime updated_at
+    }
+
+    class PregnancyPhoto {
+        +String id
+        +String pregnancy_id FK
+        +String checkup_id FK
+        +String photo_type
+        +Integer gestational_week
+        +Integer gestational_day
+        +String milestone_type
+        +String file_path
+        +String thumbnail_path
+        +Text note
+        +String media_type
+        +DateTime created_at
+    }
+
+    class Checklist {
+        +String id
+        +String pregnancy_id FK
+        +String type
+        +String name
+        +DateTime created_at
+        +DateTime updated_at
+        --
+        +list items
+    }
+
+    class ChecklistItem {
+        +String id
+        +String checklist_id FK
+        +String name
+        +String category
+        +Integer is_checked
+        +Integer is_custom
+        +Integer sort_order
+    }
+
+    class Reminder {
+        +String id
+        +String pregnancy_id FK
+        +String reminder_type
+        +String title
+        +Date trigger_date
+        +String trigger_time
+        +Integer advance_days
+        +String repeat_rule
+        +Integer is_enabled
+        +Integer is_triggered
+        +DateTime created_at
+        +DateTime updated_at
+    }
+
+    class HabitCheckin {
+        +String id
+        +String pregnancy_id FK
+        +Date date
+        +Text items
+        +Text notes
+        +DateTime created_at
+        +DateTime updated_at
+    }
+
+    class SupplementCheckin {
+        +String id
+        +String pregnancy_id FK
+        +Date date
+        +Text items
+        +Text notes
+        +DateTime created_at
+        +DateTime updated_at
+    }
+
+    class AppConfig {
+        +String id
+        +String key
+        +Text value
+        +String description
+        +DateTime updated_at
+    }
+
+    %% ──────────── 关系 ────────────
+
+    Pregnancy "1" --> "*" DailyRecord : daily_records
+    Pregnancy "1" --> "*" PrenatalCheckup : checkups
+    Pregnancy "1" --> "*" ContractionSession : contraction_sessions
+    Pregnancy "1" --> "*" FetalMovementSession : fetal_movement_sessions
+    Pregnancy "1" --> "*" PregnancyPhoto : photos
+    Pregnancy "1" --> "*" DiaryEntry : diaries
+    Pregnancy "1" --> "*" Checklist : checklists
+    Pregnancy "1" --> "*" Reminder : reminders
+    Pregnancy "1" --> "*" HabitCheckin : habit_checkins
+    Pregnancy "1" --> "*" SupplementCheckin : supplement_checkins
+
+    PrenatalCheckup "1" --> "*" CheckupPhoto : photos
+    PrenatalCheckup "1" --> "*" LabResult : lab_results
+    PrenatalCheckup "1" --> "*" CheckupReport : reports (via checkup_id)
+
+    ContractionSession "1" --> "*" Contraction : contractions
+    FetalMovementSession "1" --> "*" FetalMovement : movements
+
+    Checklist "1" --> "*" ChecklistItem : items
+
+    %% CustomCheckup 非 FK 关联 PrenatalCheckup（通过 pregnancy_id）
+
+    %% ──────────── 图例 ────────────
+    note for DailyRecord "⚠️ 字段名问题: Model 用 body_temperature, Schema Response 用 body_temp"

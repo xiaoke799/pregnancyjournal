@@ -1,0 +1,12 @@
+{
+  ".url": {
+    "pregnancyjournal.APPLICATION": {
+      "title": "孕程记",
+      "icon": "images/icon_{0}.png",
+      "type": "iframe",
+      "protocol": "http",
+      "port": "3867",
+      "allUsers": true
+    }
+  }
+}
