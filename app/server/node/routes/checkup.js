@@ -100,8 +100,10 @@ router.get('/checkups', async (req, res) => {
   }
 });
 
-router.get('/checkups/:id', async (req, res) => {
+router.get('/checkups/:id', async (req, res, next) => {
   try {
+    // 非UUID的id（如 /checkups/custom）放行给后面注册的具名路由，避免被 :id 遮蔽
+    if (!UUID_REGEX.test(req.params.id)) return next();
     logger.info('checkup', `GET /checkups/${req.params.id}`);
     const row = await db.queryOne('SELECT * FROM prenatal_checkup WHERE id = ?', [req.params.id]);
     if (!row) return res.json({ code: 1001, data: null, message: '记录不存在' });

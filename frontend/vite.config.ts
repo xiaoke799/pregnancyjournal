@@ -22,7 +22,7 @@ export default defineConfig({
       },
     },
   },
-  base: '',
+  base: '/app/pregnancyjournal/',
   build: {
     outDir: '../app/ui',
     emptyOutDir: false,

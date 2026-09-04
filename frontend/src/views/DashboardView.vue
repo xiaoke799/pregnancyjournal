@@ -60,7 +60,7 @@
         <n-date-picker
           v-model:formatted-value="newTodoDate"
           type="date"
-          value-format="YYYY-MM-DD"
+          value-format="yyyy-MM-dd"
           size="small"
           style="width: 130px"
         />
@@ -68,8 +68,8 @@
           v-model:value="newTodoTime"
           :options="timeOptions"
           size="small"
-          style="width: 100px"
-          placeholder="--:--"
+          style="width: 110px; flex-shrink: 0"
+          placeholder="时间"
           clearable
         />
         <n-button type="primary" size="small" :loading="adding" @click="quickAddReminder" :disabled="!newTodoTitle.trim()">添加</n-button>

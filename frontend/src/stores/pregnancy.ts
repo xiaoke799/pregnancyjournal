@@ -44,6 +44,10 @@ export const usePregnancyStore = defineStore('pregnancy', () => {
         currentPregnancy.value = null
         gestationalAge.value = null
       }
+    } catch {
+      // 没有活跃档案等情况：置空即可，不应让异常冒泡炸掉页面
+      currentPregnancy.value = null
+      gestationalAge.value = null
     } finally {
       loading.value = false
     }

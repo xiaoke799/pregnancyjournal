@@ -162,7 +162,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="weightForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="weightForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-group">
           <label>体重 (kg)</label>
@@ -191,7 +191,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="bpForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="bpForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-row">
           <div class="qf-group flex1">
@@ -226,7 +226,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="glucoseForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="glucoseForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-group">
           <label>测量时段</label>
@@ -263,7 +263,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="fhrForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="fhrForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-group">
           <label>胎心率 (bpm)</label>
@@ -293,7 +293,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="stoolForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="stoolForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-group">
           <label>排便次数</label>
@@ -331,7 +331,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="moodForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="moodForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-group">
           <label>今天心情如何？</label>
@@ -366,7 +366,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="noteForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="noteForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-group">
           <label>日记内容</label>
@@ -391,7 +391,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="symptomForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="symptomForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-group">
           <label>选择症状（可多选）</label>
@@ -422,7 +422,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="supplementForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="supplementForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-group">
           <label>今日补充（可多选）</label>
@@ -453,7 +453,7 @@
       <div class="quick-form">
         <div class="qf-group">
           <label>日期</label>
-          <n-date-picker v-model:formatted-value="habitForm.date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          <n-date-picker v-model:formatted-value="habitForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
         </div>
         <div class="qf-group">
           <label>今日完成的好习惯</label>
@@ -469,7 +469,7 @@
     <!-- 体温弹窗 -->
     <n-modal v-model:show="showTempModal" preset="card" title="🌡️ 记录体温" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetTempForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="tempForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="tempForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>体温 (°C)</label><n-input-number v-model:value="tempForm.value" :min="35" :max="42" :step="0.1" placeholder="36.5" style="width:100%" /></div>
         <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="tempForm.note" placeholder="可选" /></div>
       </div>
@@ -479,7 +479,7 @@
     <!-- 睡眠弹窗 -->
     <n-modal v-model:show="showSleepModal" preset="card" title="😴 记录睡眠" style="max-width:420px;width:92vw;" :mask-closable="true" @after-leave="resetSleepForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="sleepForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="sleepForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
           <div class="qf-group flex1"><label>入睡时间</label><n-select v-model:value="sleepForm.bedtime" :options="timeOptions" placeholder="选择" filterable style="width:100%" /></div>
           <div class="qf-group flex1"><label>起床时间</label><n-select v-model:value="sleepForm.waketime" :options="timeOptions" placeholder="选择" filterable style="width:100%" /></div>
@@ -493,7 +493,7 @@
     <!-- 饮水弹窗 -->
     <n-modal v-model:show="showWaterModal" preset="card" title="💧 记录饮水" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetWaterForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="waterForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="waterForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>饮水量 (ml)</label><n-input-number v-model:value="waterForm.value" :min="0" :max="5000" :step="50" placeholder="今日总饮水量" style="width:100%" /></div>
         <div class="form-hint-text">💡 建议孕期每日饮水 1700-2300ml</div>
         <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="waterForm.note" placeholder="可选" /></div>
@@ -504,7 +504,7 @@
     <!-- 饮食弹窗 -->
     <n-modal v-model:show="showDietModal" preset="card" title="🍎 记录饮食" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetDietForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="dietForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="dietForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>餐次</label><n-radio-group v-model:value="dietForm.meal" size="small"><n-radio-button value="早餐">早餐</n-radio-button><n-radio-button value="午餐">午餐</n-radio-button><n-radio-button value="晚餐">晚餐</n-radio-button><n-radio-button value="加餐">加餐</n-radio-button></n-radio-group></div>
         <div class="qf-group"><label>饮食内容</label><n-input v-model:value="dietForm.content" type="textarea" :rows="3" placeholder="记录吃了什么..." /></div>
       </div>
@@ -514,7 +514,7 @@
     <!-- 运动弹窗 -->
     <n-modal v-model:show="showExerciseModal" preset="card" title="🏃 记录运动" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetExerciseForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="exerciseForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="exerciseForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
           <div class="qf-group flex1"><label>运动类型</label><n-select v-model:value="exerciseForm.type" :options="exerciseTypeOptions" placeholder="选择运动类型" style="width:100%" /></div>
           <div class="qf-group flex1"><label>时长(分钟)</label><n-input-number v-model:value="exerciseForm.duration" :min="0" :max="300" :step="5" placeholder="分钟" style="width:100%" /></div>
@@ -528,7 +528,7 @@
     <!-- 胎动弹窗 -->
     <n-modal v-model:show="showFmModal" preset="card" title="🦶 记录胎动" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetFmForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="fmForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="fmForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
           <div class="qf-group flex1"><label>胎动次数</label><n-input-number v-model:value="fmForm.count" :min="0" :max="200" placeholder="次数" style="width:100%" /></div>
           <div class="qf-group flex1"><label>用时(分钟)</label><n-input-number v-model:value="fmForm.duration" :min="0" :max="180" :step="5" placeholder="分钟" style="width:100%" /></div>
@@ -542,7 +542,7 @@
     <!-- 宫缩弹窗 -->
     <n-modal v-model:show="showContrModal" preset="card" title="⏱️ 记录宫缩" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetContrForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="contrForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="contrForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
           <div class="qf-group flex1"><label>持续时间(秒)</label><n-input-number v-model:value="contrForm.duration" :min="0" :max="300" placeholder="秒" style="width:100%" /></div>
           <div class="qf-group flex1"><label>间隔时间(分钟)</label><n-input-number v-model:value="contrForm.interval" :min="0" :max="60" :step="0.5" placeholder="分钟" style="width:100%" /></div>
@@ -556,7 +556,7 @@
     <!-- 计划弹窗 -->
     <n-modal v-model:show="showPlanModal" preset="card" title="📌 记录计划" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetPlanForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="planForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="planForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>计划内容</label><n-input v-model:value="planForm.text" type="textarea" :rows="3" placeholder="今天计划做什么..." /></div>
       </div>
       <template #action><n-button @click="showPlanModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="savePlan">保存</n-button></template>
@@ -565,7 +565,7 @@
     <!-- 爱爱弹窗 -->
     <n-modal v-model:show="showIntimacyModal" preset="card" title="💑 记录爱爱" style="max-width:420px;width:94vw;" :mask-closable="true" @after-leave="resetIntimacyForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="intimacyForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="intimacyForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>次数</label><n-input-number v-model:value="intimacyForm.count" :min="0" :max="10" placeholder="次数" style="width:100%" /></div>
         <div class="qf-group"><label>是否有避孕措施</label><n-radio-group v-model:value="intimacyForm.hasProtection" size="small"><n-radio-button value="yes">有措施</n-radio-button><n-radio-button value="no">无措施</n-radio-button></n-radio-group></div>
         <div class="qf-group" v-if="intimacyForm.hasProtection === 'yes'"><label>措施类型</label><n-radio-group v-model:value="intimacyForm.protectionType" size="small"><n-radio-button value="condom">避孕套</n-radio-button><n-radio-button value="pill">口服避孕药</n-radio-button><n-radio-button value="other">其他</n-radio-button></n-radio-group></div>
@@ -577,7 +577,7 @@
     <!-- HCG 专业记录弹窗 -->
     <n-modal v-model:show="showHcgModal" preset="card" title="🧬 HCG 记录" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetHcgForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="hcgForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="hcgForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>HCG 值 (mIU/mL)</label><n-input-number v-model:value="hcgForm.value" :min="0" :max="1000000" :step="100" placeholder="如：50000" style="width:100%" /></div>
         <div class="qf-group"><label>孕周（可选，用于参考范围）</label><n-input-number v-model:value="hcgForm.weeks" :min="3" :max="15" :step="1" placeholder="如：6" style="width:100%" /></div>
         <div class="form-hint-text">💡 孕3-4周: 50-500 | 孕4-5周: 100-5000 | 孕5-6周: 1000-50000 | 孕6-8周达峰值后逐渐下降</div>
@@ -589,7 +589,7 @@
     <!-- 尿酸专业记录弹窗 -->
     <n-modal v-model:show="showUaModal" preset="card" title="🧪 尿酸记录" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetUaForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="uaForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></div>
+        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="uaForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
           <div class="qf-group flex1"><label>尿酸值 (μmol/L)</label><n-input-number v-model:value="uaForm.value" :min="100" :max="800" :step="10" placeholder="如：350" style="width:100%" /></div>
           <div class="qf-group flex1"><label>测量时段</label><n-select v-model:value="uaForm.period" :options="uaPeriodOptions" placeholder="选择" style="width:100%" /></div>
@@ -681,7 +681,7 @@ const moodOptions = [
   { value: 4, emoji: '😊', label: '不错' },
   { value: 5, emoji: '😄', label: '很好' },
 ]
-const moodForm = ref({ date: '', value: 3, note: '' })
+const moodForm = ref({ date: dayjs().format('YYYY-MM-DD'), value: 3, note: '' })
 // 日记
 const noteForm = ref({ date: '', content: '' })
 // 症状
@@ -957,12 +957,16 @@ async function saveStool() {
 }
 
 async function saveMood() {
+  const date = moodForm.value.date || dayjs().format('YYYY-MM-DD')
   const ok = await doUpsert({
-    record_date: moodForm.value.date,
-    mood: String(moodForm.value.value),
+    record_date: date,
+    mood: String(moodForm.value.value ?? 3),
     mood_note: moodForm.value.note || undefined,
   })
-  if (ok) showMoodModal.value = false
+  if (ok) {
+    showMoodModal.value = false
+    message.success('心情已保存')
+  }
 }
 
 async function saveNote() {
@@ -1007,7 +1011,7 @@ function resetBpForm() { bpForm.value = { date: '', systolic: null, diastolic: n
 function resetGlucoseForm() { glucoseForm.value = { date: '', period: 'fasting', value: null, note: '' } }
 function resetFhrForm() { fhrForm.value = { date: '', value: null, note: '' } }
 function resetStoolForm() { stoolForm.value = { date: '', count: null, consistency: 'normal', note: '' } }
-function resetMoodForm() { moodForm.value = { date: '', value: 3, note: '' } }
+function resetMoodForm() { moodForm.value = { date: dayjs().format('YYYY-MM-DD'), value: 3, note: '' } }
 function resetNoteForm() { noteForm.value = { date: '', content: '' } }
 function resetSymptomForm() { symptomForm.value = { date: '', items: [] } }
 function resetSupplementForm() { supplementForm.value = { date: '', items: [] } }

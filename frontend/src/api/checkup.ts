@@ -1,6 +1,7 @@
 /** 孕程记 - 产检记录 API（含自定义产检、报告上传、NAS文件浏览）。 */
 
 import client from './client'
+import { getApiBase } from '@/utils/api-base'
 
 export const checkupApi = {
   // 标准产检
@@ -55,9 +56,8 @@ export const checkupApi = {
   listReports: (checkupId: string, checkupType: string = 'standard') =>
     client.get(`/checkups/${checkupId}/reports`, { params: { checkup_type: checkupType } }),
   getReportDownloadUrl: (reportId: string) => {
-    // 使用当前页面origin确保在fnOS CGI环境下正确解析
-    const base = typeof window !== 'undefined' ? window.location.origin : ''
-    return `${base}/api/v1/checkups/reports/${reportId}/download`
+    // 必须带网关前缀（/app/pregnancyjournal），否则会打到飞牛系统 API 返回 401
+    return `${getApiBase()}/checkups/reports/${reportId}/download`
   },
   deleteReport: (reportId: string) => client.delete(`/checkups/reports/${reportId}`),
 
