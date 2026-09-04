@@ -1,0 +1,33 @@
+#!/bin/bash
+# 孕程记 - 卸载时根据用户选择处理数据
+LOG_FILE="${TRIM_TEMP_LOGFILE:-/tmp/pregnancyjournal-uninstall.log}"
+mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}" 2>/dev/null
+}
+
+# 卸载前先杀掉所有相关进程
+log_msg "卸载前清理所有运行中的进程"
+PROCESS_PATTERN="${TRIM_APPDEST}/server/node/server.js"
+pkill -TERM -f "${PROCESS_PATTERN}" 2>/dev/null || true
+sleep 2
+pkill -KILL -f "${PROCESS_PATTERN}" 2>/dev/null || true
+rm -f "${TRIM_APPDEST}/app.sock" 2>/dev/null
+log_msg "进程清理完成"
+
+case "${wizard_data_action}" in
+    delete)
+        log_msg "User chose to delete all data"
+        rm -rf "${TRIM_PKGVAR}" 2>/dev/null
+        ;;
+    keep|"")
+        log_msg "User chose to keep data, cleaning runtime only"
+        rm -f "${TRIM_PKGVAR}/app.pid" 2>/dev/null
+        rm -f "${TRIM_PKGVAR}/info.log" 2>/dev/null
+        ;;
+    *)
+        log_msg "Unknown action: ${wizard_data_action}, defaulting to keep"
+        ;;
+esac
+exit 0
