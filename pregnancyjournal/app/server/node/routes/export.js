@@ -1006,8 +1006,6 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
       .text(`共 ${rows.length} 篇日记`, { align: 'center', width: PW });
     doc.text(`导出时间：${new Date().toLocaleString('zh-CN')}`, { align: 'center', width: PW });
     doc.moveDown(3);
-    doc.fontSize(11).fillColor('#999')
-      .text('— 由 孕程记 自动生成 —', { align: 'center', width: PW });
 
     // ---- 分隔线 + 换页 ----
     doc.addPage();
@@ -1142,8 +1140,6 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
       .text(`共 ${photos.length} 张珍贵瞬间`, { align: 'center', width: PW });
     doc.text(`生成时间：${new Date().toLocaleString('zh-CN')}`, { align: 'center', width: PW });
     doc.moveDown(3);
-    doc.fontSize(11).fillColor('#999')
-      .text('— 由 孕程记 自动生成 —', { align: 'center', width: PW });
 
     doc.addPage();
 
@@ -1218,7 +1214,6 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
     doc.moveDown(2);
     doc.fontSize(11).fillColor('#999')
       .text(`共 ${photos.length} 张照片`, { align: 'center', width: PW });
-    doc.text(`由 孕程记 自动生成`, { align: 'center', width: PW });
 
     // ---- 页脚 ----
     const pages = doc.bufferedPageRange();
