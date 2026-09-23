@@ -1,3 +1,77 @@
 #!/bin/bash
-# 孕程记 - 升级前预检查
+# 孕程记 - 升级【前】预检查 + 历史数据抢救
+#
+# 【为什么必须在这里做】
+# 升级流程 = 停止应用 -> 文件解压（覆盖 ${TRIM_APPDEST}）-> upgrade_callback -> 重启应用。
+# upgrade_init 是"解压之前"唯一的钩子。
+#
+# v0.0.27 及更早版本的 config.js 里，除 DATABASE_PATH 外的所有业务目录都回退到
+# process.cwd()/data，而 cmd/main 会 cd 到 ${TRIM_APPDEST}/server/node，
+# 因此用户数据（相册/产检照片、产检报告、日记图片、视频、缩略图、备份、企微配置…）
+# 实际都写在【安装目录】下：${TRIM_APPDEST}/server/node/data
+#
+# 安装目录升级时会被新包覆盖。若系统在解压前清空该目录，等应用启动时再去迁移
+# （storage-migrate.js 在 initDb 里执行）就已经太晚了 —— 源目录不存在，
+# 迁移会"执行成功但复制 0 个文件"，日志里看不出任何异常。
+#
+# 所以：在解压【之前】把旧目录里的用户数据复制到持久目录 ${TRIM_PKGVAR}/data。
+# 无论系统是否清空安装目录，数据都保得住。
+#
+# 【铁律】
+#   - 只复制，绝不删除、绝不移动源文件
+#   - 不覆盖持久目录里已存在的同名文件（-n），保证幂等、不破坏新数据
+#   - 不复制数据库本体与日志（数据库本来就在 var 里，避免用旧库覆盖正在用的库）
+#   - 任何失败都容忍，始终 exit 0 —— 升级绝不能因为抢救动作而中断
+
+LOG_FILE="${TRIM_PKGVAR:-/tmp}/info.log"
+mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - upgrade_init: $1" >> "${LOG_FILE}" 2>/dev/null
+    if [ -n "${TRIM_TEMP_LOGFILE:-}" ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - upgrade_init: $1" >> "${TRIM_TEMP_LOGFILE}" 2>/dev/null
+    fi
+}
+
+LEGACY="${TRIM_APPDEST}/server/node/data"
+SAFE="${TRIM_PKGVAR}/data"
+
+log_msg "开始升级前检查（旧版本=${TRIM_OLD_APPVER:-未知}）"
+log_msg "旧数据目录: ${LEGACY}"
+log_msg "持久目录:   ${SAFE}"
+
+if [ ! -d "${LEGACY}" ]; then
+    log_msg "旧数据目录不存在，跳过（全新安装，或此前已迁移过）"
+    exit 0
+fi
+
+mkdir -p "${SAFE}" 2>/dev/null
+
+copied=0
+for entry in "${LEGACY}"/* "${LEGACY}"/.[!.]*; do
+    [ -e "${entry}" ] || continue
+    name="$(basename "${entry}")"
+    case "${name}" in
+        *.db|*.db-wal|*.db-shm) continue ;;   # 数据库本体留在 var，别被旧库覆盖
+        *.jsonl|*.log)          continue ;;   # 日志无迁移价值
+        *.js)                   continue ;;   # 打包时误混入的开发脚本
+        # 随包发布的只读知识库（旧版把内置资源与可写目录混在一起），不是用户数据
+        recipes.json|food_safety_v3.json|checkup_schedule.json) continue ;;
+        default_checklist_*.json) continue ;;
+    esac
+    if [ -d "${entry}" ]; then
+        cp -an "${entry}" "${SAFE}/" 2>/dev/null && copied=$((copied + 1))
+    elif [ -f "${entry}" ]; then
+        cp -an "${entry}" "${SAFE}/" 2>/dev/null && copied=$((copied + 1))
+    fi
+done
+
+# 抢救过来的文件可能仍带旧属主；确保应用运行用户可读写。
+# TRIM_USERNAME 若在本阶段不可用则跳过，不影响升级。
+if [ -n "${TRIM_USERNAME:-}" ]; then
+    chown -R "${TRIM_USERNAME}" "${SAFE}" 2>/dev/null \
+        || log_msg "WARNING: chown 失败（不影响本次升级）"
+fi
+
+log_msg "抢救完成：处理 ${copied} 项 -> ${SAFE}"
 exit 0
