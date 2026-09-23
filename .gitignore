@@ -1,92 +1,18 @@
 # ===========================================
-# 孕程记 (pregnancy-journal) gitignore
-# 排除第三方项目、构建产物、敏感数据
+# 孕程记 (pregnancy-journal) .gitignore
+# 注意：应用已上移至仓库根目录（app/ cmd/ config/ wizard/ frontend/ ui/ …）
 # ===========================================
-
-# ---- 第三方项目/子仓库（非本仓库内容，避免合规风险） ----
-fnnas-docs-main/
-已上架项目/
-.trae-cn/
 
 # ---- 构建产物与打包 ----
 *.fpk
 app.tgz
+*.tar.gz
 _fpk_work/
 _verify_extract/
+.fpk-temp/
 build/
 
-# ---- 数据库与运行时数据 ----
-data/*.duckdb
-data/*.db
-data/backups/
-data/photos/
-data/thumbnails/
-
-# ---- Node / 前端依赖 ----
-node_modules/
-pregnancyjournal/frontend/node_modules/
-
-# ---- Python ----
-.venv/
-__pycache__/
-*.pyc
-paddleocr-env/
-
-# ---- 日志 ----
-*.log
-日志/
-
-# ---- 临时验证脚本（可选保留） ----
-# _check_old3.js
-# _compare_fpk.js
-# _inject_nm.js
-# _list_outer.js
-# _verify_fpk.js
-# _verify_old.js
-# _verify_old2.js
-# _verify_output.txt
-# _verify.js
-
-# ---- 系统文件 ----
-.DS_Store
-Thumbs.db
-
-# ---- IDE ----
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# ---- 环境配置 ----
-.env
-.env.*
-!.env.example
-
-# ===========================================
-# 以下合并自原 pregnancyjournal/.gitignore（应用已上移至仓库根目录）
-# ===========================================
-
-# 例外：后端依赖打包进安装包，避免每次安装都要 npm install
-!server/node/node_modules/
-
-# 前端历史产物 / 打包中间件
-app/www/
-*.tar.gz
-.fpk-temp/
-
-# 部署凭据文件
-ssh_pass.py
-sftp_batch.txt
-paramiko_debug.log
-deploy_*.py
-
-# 数据库文件（运行时生成）
-*.db
-*.db-shm
-*.db-wal
-
-# 前端构建产物（vite build 输出，可重新生成）
+# ---- 前端构建产物（vite build 输出，可重新生成）----
 app/ui/assets/
 app/ui/index.html
 app/ui/favicon.png
@@ -96,73 +22,85 @@ ui/index.html
 ui/favicon.png
 ui/images/
 
-# 模板截图
-muban.png
+# ---- 前端历史重复产物 ----
+app/www/
 
-# 测试数据 / 备份数据（含用户隐私）
+# ---- 数据库与运行时数据 ----
+*.db
+*.db-shm
+*.db-wal
+data/*.duckdb
+data/backups/
+data/photos/
+data/thumbnails/
+
+# ---- Node / 前端依赖 ----
+node_modules/
+
+# ---- Python ----
+.venv/
+__pycache__/
+*.pyc
+paddleocr-env/
+
+# ---- 日志 ----
+*.log
+logs/
+npm-debug.log*
+日志/
+
+# ---- 部署凭据文件（绝不入库）----
+ssh_pass.py
+sftp_batch.txt
+paramiko_debug.log
+deploy_*.py
+
+# ---- 环境变量与密钥 ----
+.env
+.env.*
+!.env.example
+
+# ---- 测试 / 备份数据（含用户隐私）----
 test-backup-data/
 test_data/
 backup-*/
 *.sql
 
-# 日志补充
-logs/
-npm-debug.log*
-
-# 本机 MCP 工具配置（含本机路径，不入库）
+# ---- 模板截图 / 本机工具配置 ----
+muban.png
 .mcp.json
 
-# vite 临时文件
+# ---- vite 临时文件 ----
 vite.config.ts.timestamp-*
-
-# ---- 本地遗留杂物（已移出仓库，防止误加回） ----
-/_*.js
-/_*.py
-/round*.ps1
-/update-remote-main.ps1
-/飞牛开发文档及脚手架/
-/fnnas-docs-main/
-/package/
-/pregnancyjournal备份/
-/pregnancyjournal备份.zip
-/pregnancyjournal_废弃_0904/
-/pregnancyjournal-0.0.26/
-/pregnancyjournal-0.0.26.zip
-/mempalace.yaml
-/mxcp-site.yml
-/entities.json
-/DEPLOY_NOTES.md
-/WEBSOCKET_FIX.md
-
-# agent 工作数据（不入库）
-.workbuddy/
 
 # ===========================================
 # 以下为「非本项目内容」拦截区
-# 工作区里长期堆积了他项目残留 / 参考文档 / 历史备份，
+# 工作区里长期堆积了他项目残留 / 参考文档 / 历史备份 / 第三方脚手架，
 # 一律不入库，避免 git add -A 误提交。
 # ===========================================
 
-# ---- 他项目残留（不属于孕程记） ----
+# ---- 他项目残留（不属于孕程记）----
 /.meituan-catpaw/
 /mempalace.yaml
 /mxcp-site.yml
 /entities.json
 
-# ---- 第三方参考文档与脚手架（仅本地查阅） ----
+# ---- 第三方参考文档与脚手架（仅本地查阅）----
 /飞牛开发文档及脚手架/
 /fnnas-docs-main/
+/已上架项目/
+/.trae-cn/
 
-# ---- 历史备份 / 旧版本解包（体积大，仅本地留档） ----
+# ---- 历史备份 / 旧版本解包（体积大，仅本地留档）----
 /package/
 /pregnancyjournal备份/
 /pregnancyjournal备份.zip
 /pregnancyjournal_废弃_0904/
+/pregnancyjournal_废弃_*/
 /pregnancyjournal-0.0.*/
 /pregnancyjournal-0.0.*.zip
-/pregnancyjournal_废弃_*/
 
-# ---- fnpack 工具二进制（打包要用，但不入库） ----
+# ---- fnpack 工具二进制（本地打包要用，但不入库）----
 /fnpack*
 
 # ---- 一次性临时脚本 ----
@@ -172,8 +110,27 @@ vite.config.ts.timestamp-*
 /round*.ps1
 /update-remote-*.ps1
 
-# ---- 项目内部资料（含大体积备份/fpk，不入库） ----
+# ---- 项目内部资料（含大体积 fpk 与 git bundle，不入库）----
 /.workbuddy/
 
-# ---- vite 临时文件 ----
-vite.config.ts.timestamp-*.mjs
+# ---- 本地留档的踩坑文档（暂不入库）----
+/DEPLOY_NOTES.md
+/WEBSOCKET_FIX.md
+
+# ---- 系统文件 / IDE ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===========================================
+# 反向例外：明确禁止
+# 历史上本目录曾有一行 `!server/node/node_modules/`，本意是"依赖也提交，
+# 省得安装时 npm install"，实际上把一份重复后端的上万个依赖文件从忽略里
+# 放了出来 —— 一次 git add -A 就会全部提交。
+# node_modules 永远不入库：后端依赖由 build.ps1 现场 npm install 并打进 app.tgz。
+# 不要在本文件里再加任何 `!...node_modules...` 形式的例外。
+# ===========================================
