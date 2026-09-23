@@ -9,7 +9,8 @@ $PkgDir    = Join-Path $PSScriptRoot "pregnancyjournal"
 if (-not (Test-Path (Join-Path $PkgDir "manifest"))) { $PkgDir = $PSScriptRoot }
 $ServerDir = Join-Path $PkgDir "app\server\node"
 $AppUi     = Join-Path $PkgDir "app\ui"
-$RootUi    = Join-Path $PkgDir "ui"
+# 注：不再有 $RootUi（根 ui/ 是历史死重，既不进包也不是运行时目录；
+# 运行时 STATIC_DIR = ${TRIM_APPDEST}/ui，来自 app.tgz:ui，即 app/ui）。
 $Version   = "0.0.28"   # 版本号锁定，禁止改动
 if ($PkgDir -eq $PSScriptRoot) { $Parent = $PSScriptRoot } else { $Parent = Split-Path $PkgDir -Parent }
 $Stage     = Join-Path $env:TEMP "pregnancyjournal_stage_$Version"
@@ -45,7 +46,7 @@ if (-not (Test-Path $indexHtml)) { $errors += "缺少前端 index.html" } else {
 }
 # 关键修复在位
 if ($serverJs -notmatch "app\.get\('\*'") { $errors += "server.js 缺少 catch-all 路由" }
-foreach ($cfg in @((Join-Path $RootUi "config"), (Join-Path $AppUi "config"))) {
+foreach ($cfg in @((Join-Path $AppUi "config"))) {
     $c = Get-Content $cfg -Raw
     if ($c -notmatch 'gatewaySocket.*app\.sock') { $errors += "$cfg 缺少统一网关配置" }
 }
@@ -128,7 +129,10 @@ Write-Host "stage 目录已组装（已排除 app\www 与运行时数据）"
 Step "5/6 fnpack 打包"
 $fnpack = Join-Path $Parent "fnpack_tool.exe"
 if (-not (Test-Path $fnpack)) { $fnpack = "fnpack_tool.exe" }
-Get-ChildItem $Parent -Filter "*.fpk" -File | Remove-Item -Force
+# 只清 fnpack 的中间产物 pregnancyjournal.fpk。
+# 带版本号的成品保留到新一轮成功后再被 Move-Item -Force 覆盖 ——
+# 这样万一本轮打包中途失败，上一版可用的 fpk 还在。
+Get-ChildItem $Parent -Filter "pregnancyjournal.fpk" -File | Remove-Item -Force
 Push-Location $Parent
 & $fnpack build --directory $Stage
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "fnpack 打包失败" }
