@@ -90,14 +90,24 @@ if (-not (Test-Path (Join-Path $ServerDir "node_modules\express"))) {
 } else { Write-Host "node_modules 已完整，跳过" }
 Pop-Location
 
-# ---------- Step 3: 规范 cmd 脚本编码 ----------
-Step "3/6 规范 cmd 脚本编码（无BOM、LF）"
+# ---------- Step 3: 规范 cmd 脚本编码（无BOM、LF）+ 同步 app/cmd ----------
+Step "3/6 规范 cmd 脚本编码（无BOM、LF）并同步 app/cmd"
+$RootCmd = Join-Path $PkgDir "cmd"
+$AppCmd  = Join-Path $PkgDir "app\cmd"
 $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-Get-ChildItem (Join-Path $PkgDir "cmd") -File | ForEach-Object {
+Get-ChildItem $RootCmd -File | ForEach-Object {
     $text = [System.IO.File]::ReadAllText($_.FullName).Replace("`r`n", "`n")
     [System.IO.File]::WriteAllText($_.FullName, $text, $utf8NoBom)
+    # 仓库里有两份同名脚本：根 cmd/ 是 fnOS 真正执行的那份（打包进 fpk 外层，
+    # 安装后位于 /var/apps/{appname}/cmd/）；app/cmd 是被解到 ${TRIM_APPDEST}/cmd 的副本。
+    # 历史坑：upgrade_init 只改了根 cmd/，app/cmd 还停在 4 行桩脚本 —— 一旦有人改错副本，
+    # 修复会静默失效且毫无报错。故以根 cmd/ 为唯一真源，打包时强制同步。
+    if (Test-Path $AppCmd) { Copy-Item $_.FullName (Join-Path $AppCmd $_.Name) -Force }
 }
-Write-Host "cmd 脚本已规范"
+$rootNames = @(Get-ChildItem $RootCmd -File | Select-Object -ExpandProperty Name | Sort-Object)
+$appNames  = @(Get-ChildItem $AppCmd  -File | Select-Object -ExpandProperty Name | Sort-Object)
+if (Compare-Object $rootNames $appNames) { throw "cmd/ 与 app/cmd/ 文件清单不一致，请手工对齐" }
+Write-Host "cmd 脚本已规范，并同步到 app/cmd（$($rootNames.Count) 个，两份一致）"
 
 # ---------- Step 4: 组装干净 stage 目录 ----------
 Step "4/6 组装干净 stage 目录"
@@ -183,15 +193,23 @@ foreach ($bad in @($inner | Where-Object { $_ -like "server/node/data/*.db" -or 
 foreach ($bad in @($inner | Where-Object { $_ -like "server/node/data/photos*" -or $_ -like "server/node/data/uploads*" })) {
     $vErrors += "包内混入可写数据目录: $bad"
 }
-# 升级前抢救脚本必须在包内且可执行（cmd/upgrade_init）
-$upgradeInit = Join-Path $verify "cmd\upgrade_init"
-if ($outer -notcontains "cmd/upgrade_init") { $vErrors += "包外层缺少: cmd/upgrade_init" } else {
-    & tar -xzf "$verify\pkg.tar.gz" -C $verify cmd/upgrade_init
-    $ub = [System.IO.File]::ReadAllBytes($upgradeInit)[0]
-    if ($ub -ne 0x23) { $vErrors += "cmd/upgrade_init 含 BOM" }
-    $uText = [System.IO.File]::ReadAllText($upgradeInit)
+# 升级前抢救脚本必须在【两层】都在位且内容一致：
+#   外层 cmd/        -> fnOS 实际执行的那份（/var/apps/{appname}/cmd/）
+#   app.tgz 内 cmd/  -> 解到 ${TRIM_APPDEST}/cmd 的副本（历史上曾落后，必须一起校验）
+if ($outer -notcontains "cmd/upgrade_init") { $vErrors += "包外层缺少: cmd/upgrade_init" }
+if ($inner -notcontains "cmd/upgrade_init") { $vErrors += "app.tgz 内缺少: cmd/upgrade_init" }
+foreach ($layer in @(
+        @{ Name = "外层"; Archive = "$verify\pkg.tar.gz" },
+        @{ Name = "app.tgz"; Archive = "$verify\app.tgz" })) {
+    $sub = Join-Path $verify ("x" + ($layer.Name -replace '[^A-Za-z0-9]', ''))
+    New-Item -ItemType Directory $sub -Force | Out-Null
+    & tar -xzf $layer.Archive -C $sub cmd/upgrade_init
+    $uPath = Join-Path $sub "cmd\upgrade_init"
+    if (-not (Test-Path $uPath)) { $vErrors += "$($layer.Name) cmd/upgrade_init 抽取失败"; continue }
+    if ([System.IO.File]::ReadAllBytes($uPath)[0] -ne 0x23) { $vErrors += "$($layer.Name) cmd/upgrade_init 含 BOM" }
+    $uText = [System.IO.File]::ReadAllText($uPath)
     if ($uText -notmatch "LEGACY=" -or $uText -notmatch "cp -an") {
-        $vErrors += "cmd/upgrade_init 缺少数据抢救逻辑"
+        $vErrors += "$($layer.Name) cmd/upgrade_init 缺少数据抢救逻辑"
     }
 }
 Remove-Item $verify -Recurse -Force

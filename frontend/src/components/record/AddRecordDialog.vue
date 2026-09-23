@@ -25,6 +25,15 @@
           </div>
         </template>
 
+        <!-- 腰围 -->
+        <template v-if="selectedType === 'waist'">
+          <div class="form-group">
+            <label>腰围 (cm)</label>
+            <n-input-number v-model:value="formData.waist" :min="40" :max="200" :step="0.1" placeholder="如：85" style="width: 100%" />
+          </div>
+          <div class="form-hint">💡 孕期腰围增长因人而异，建议固定时间（如晨起）测量以便对比</div>
+        </template>
+
         <!-- 血压 -->
         <template v-if="selectedType === 'blood_pressure'">
           <div class="form-row">
@@ -465,6 +474,9 @@ const visible = computed({
 
 const recordTypes = [
   { value: 'weight', icon: '⚖️', label: '体重' },
+  // 腰围：RecordList 点击已有腰围条目会以 type='waist' 打开本弹窗，
+  // 缺了这一项会导致「编辑腰围」打开的是空白表单且保存失败。
+  { value: 'waist', icon: '📏', label: '腰围' },
   { value: 'blood_pressure', icon: '🩺', label: '血压' },
   { value: 'blood_glucose', icon: '🩸', label: '血糖' },
   { value: 'temperature', icon: '🌡️', label: '体温' },
@@ -553,6 +565,8 @@ const formData = ref({
   recordDate: '',
   // 体重
   weight: null as number | null,
+  // 腰围
+  waist: null as number | null,
   // 血压
   bpSystolic: null as number | null,
   bpDiastolic: null as number | null,
@@ -652,6 +666,9 @@ watch(() => props.show, (val) => {
       switch (selectedType.value) {
         case 'weight':
           formData.value.weight = r.weight ?? null
+          break
+        case 'waist':
+          formData.value.waist = r.waist ?? null
           break
         case 'blood_pressure':
           formData.value.bpSystolic = r.blood_pressure_systolic != null ? Number(r.blood_pressure_systolic) : null
@@ -895,6 +912,10 @@ async function saveRecord() {
         if (!formData.value.weight) { message.warning('请输入体重'); saving.value = false; return }
         data.weight = formData.value.weight
         break
+      case 'waist':
+        if (!formData.value.waist) { message.warning('请输入腰围'); saving.value = false; return }
+        data.waist = formData.value.waist
+        break
       case 'blood_pressure':
         if (!formData.value.bpSystolic || !formData.value.bpDiastolic) { message.warning('请输入血压值'); saving.value = false; return }
         data.blood_pressure_systolic = String(formData.value.bpSystolic)
@@ -1063,6 +1084,7 @@ function resetForm() {
   formData.value = {
     recordDate: dayjs().format('YYYY-MM-DD'),
     weight: null,
+    waist: null,
     bpSystolic: null,
     bpDiastolic: null,
     glucoseTime: 'fasting',

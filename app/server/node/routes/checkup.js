@@ -47,6 +47,18 @@ function uploadSingle(field) {
 const CHECKUP_BASE = path.join(config.PHOTOS_DIR, 'checkups');
 const UUID_REGEX = /^[a-f0-9-]{8,}$/;
 
+// 附件归属 id 的合法形式。
+// 【为什么不能只校验 UUID】产检时间表的条目 id 是 `cs_001` 这种普通字符串，不是 UUID。
+// 前端「产检时间表」页上传报告/附件时传的就是它（`item.id`），读取接口
+// `GET /checkups/:id/reports` 也一直按这个 id 查库；但上传接口只校验 UUID，
+// 于是标准产检条目上传附件恒报「无效的ID格式」。
+// 允许字符集不含 `.` `/` `\` 与空白，因此不会造成路径穿越
+// （id 会被拼进 CHECKUP_BASE 下的目录路径）。
+const SAFE_OWNER_ID_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
+function _isSafeOwnerId(id) {
+  return typeof id === 'string' && SAFE_OWNER_ID_REGEX.test(id);
+}
+
 // NAS 可浏览根目录：应用共享目录 + 用户授权目录 + 常见存储卷
 function _nasRoots() {
   const set = new Set();
@@ -205,7 +217,7 @@ router.delete('/checkups/:id', async (req, res) => {
 
 router.post('/checkups/:id/photos', uploadSingle('file'), async (req, res) => {
   try {
-    if (!UUID_REGEX.test(req.params.id)) {
+    if (!_isSafeOwnerId(req.params.id)) {
       return res.json({ code: 1001, data: null, message: '无效的ID格式' });
     }
     logger.info('checkup', `POST /checkups/${req.params.id}/photos - file=${req.file?.originalname}, mime=${req.file?.mimetype}, size=${req.file?.size}`);
@@ -371,7 +383,7 @@ const REPORTS_DIR = path.join(CHECKUP_BASE, 'reports');
 
 router.post('/checkups/:id/reports', uploadSingle('file'), async (req, res) => {
   try {
-    if (!UUID_REGEX.test(req.params.id)) {
+    if (!_isSafeOwnerId(req.params.id)) {
       return res.json({ code: 1001, data: null, message: '无效的ID格式' });
     }
     if (!req.file) return res.json({ code: 1001, data: null, message: '请上传文件' });

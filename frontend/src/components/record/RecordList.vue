@@ -105,6 +105,9 @@ interface CategoryDef {
 
 const allCategories: CategoryDef[] = [
   { type: 'weight', icon: '⚖️', label: '体重', color: '#a78bfa', addable: true, actionType: 'add' },
+  // 腰围：与 RecordView 顶部「＋ 添加记录」菜单保持一致。
+  // 【历史问题】腰围只加进了那个小菜单，没加到本列表，用户在记录页主入口根本看不到它。
+  { type: 'waist', icon: '📏', label: '腰围', color: '#14b8a6', addable: true, actionType: 'add' },
   { type: 'blood_pressure', icon: '🩺', label: '血压', color: '#ef4444', addable: true, actionType: 'add' },
   { type: 'supplement', icon: '💊', label: '营养补充', color: '#06b6d4', addable: true, actionType: 'add' },
   { type: 'hcg', icon: '🧬', label: 'hCG', color: '#8b5cf6', addable: true, actionType: 'link', linkTo: 'hcg' },
@@ -130,6 +133,7 @@ function hasDataForType(type: string): boolean {
   const r = record.value
   switch (type) {
     case 'weight': return !!r.weight
+    case 'waist': return r.waist != null && r.waist !== ''
     case 'blood_pressure': return !!(r.blood_pressure_systolic || r.blood_pressure_diastolic)
     case 'blood_glucose': return !!(r.blood_glucose_fasting || r.blood_glucose_1h || r.blood_glucose_2h)
     case 'symptoms': {
@@ -176,6 +180,8 @@ function getPreview(type: string): string {
   switch (type) {
     case 'weight':
       return r.weight ? r.weight + ' kg' : ''
+    case 'waist':
+      return r.waist ? r.waist + ' cm' : ''
     case 'blood_pressure':
       return (r.blood_pressure_systolic || '--') + '/' + (r.blood_pressure_diastolic || '--') + ' mmHg'
     case 'blood_glucose': {
