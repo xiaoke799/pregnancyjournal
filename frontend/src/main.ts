@@ -57,8 +57,9 @@ window.addEventListener('pagehide', (event) => {
   }
 })
 
-// 记录应用启动
-logger.info('启动', `孕程记 v${import.meta.env.VITE_APP_VERSION || '0.0.27'} 已加载`, {
+// 记录应用启动。版本号由 vite.config.ts 从包根 manifest 注入（见 define）。
+// 兜底用 '0.0.0' 而不是某个真实版本号 —— 宁可显示"未知"，也不要谎报成旧版本。
+logger.info('启动', `孕程记 v${import.meta.env.VITE_APP_VERSION || '0.0.0'} 已加载`, {
   sessionId: logger.getSessionId(),
   userAgent: navigator.userAgent.substring(0, 80),
 })

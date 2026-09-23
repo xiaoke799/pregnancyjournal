@@ -44,6 +44,18 @@ if (-not (Test-Path $indexHtml)) { $errors += "缺少前端 index.html" } else {
         }
     }
 }
+# 版本号一致性：manifest 是唯一真源，build.ps1 的 $Version 必须与它相同；
+# 且前端产物必须真的带上了这个版本号（由 vite.config.ts 的 define 从 manifest 注入）。
+# 曾因前端没注入、main.ts 兜底写死 '0.0.27'，导致 v0.0.28 的包在日志里谎报 v0.0.27。
+$manifestVer = [regex]::Match([System.IO.File]::ReadAllText((Join-Path $PkgDir "manifest")),
+                              '(?m)^\s*version\s*=\s*([0-9][0-9.]*)').Groups[1].Value
+if ($manifestVer -ne $Version) { $errors += "manifest 版本($manifestVer) 与脚本 `$Version($Version) 不一致" }
+$entryJs = [regex]::Match($html, '/assets/(index-[A-Za-z0-9._-]+\.js)').Groups[1].Value
+if (-not $entryJs) {
+    $errors += "index.html 未引用 index-*.js 入口"
+} elseif (-not ([System.IO.File]::ReadAllText((Join-Path $AppUi "assets\$entryJs"))).Contains($manifestVer)) {
+    $errors += "前端产物未注入版本号 $manifestVer（先在 frontend 执行 npm run build 再打包）"
+}
 # 关键修复在位
 if ($serverJs -notmatch "app\.get\('\*'") { $errors += "server.js 缺少 catch-all 路由" }
 foreach ($cfg in @((Join-Path $AppUi "config"))) {
