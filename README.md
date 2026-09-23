@@ -35,9 +35,9 @@
 
 ### 安装方式 / Installation
 
-从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.27.fpk`（约 14.6MB），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
+从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.28.fpk`（约 14.6MB，以 Releases 页最新版为准），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
 
-Download `pregnancyjournal_v0.0.27.fpk` (≈14.6MB) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
+Download `pregnancyjournal_v0.0.28.fpk` (≈14.6MB; always grab the latest on the Releases page) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
 
 > 应用依赖已完整内置在安装包中，安装后无需联网下载任何组件。
 > All dependencies are bundled in the package — no network download needed after install.
@@ -70,7 +70,7 @@ Download `pregnancyjournal_v0.0.27.fpk` (≈14.6MB) from [Releases](https://gith
 ### 飞牛 OS 应用结构 / FnOS App Structure
 
 ```
-pregnancyjournal/
+pregnancyjournal/                    # 仓库根 = 应用根 / repo root == app root
 ├── manifest                # 飞牛 OS 应用清单 / FnOS app manifest
 ├── cmd/                    # 应用生命周期脚本 / Lifecycle scripts
 │   ├── install_init        #   安装前 / Pre-install
@@ -81,26 +81,37 @@ pregnancyjournal/
 │   └── upgrade_callback    #   升级回调 / Upgrade callback
 ├── wizard/                 # 安装向导 / Installation wizard
 ├── config/                 # 应用权限与资源限制 / App privilege & resource
-├── app/
-│   ├── server/node/        # 后端服务 / Backend service (Node.js)
-│   │   ├── routes/         #   API 路由 / API routes
-│   │   ├── services/       #   业务逻辑 / Business logic
-│   │   ├── data/           #   静态数据 / Static data
-│   │   ├── db.js           #   SQLite 数据库 / SQLite database
-│   │   └── server.js       #   服务入口 / Server entry
-│   └── ui/                 # 前端构建产物 / Frontend build output (gitignored)
-├── server/node/            # 运行时代码（重构版）/ Runtime (refactored)
+├── app/                    # 运行时载荷（整包为 app.tgz）/ Runtime payload (becomes app.tgz)
+│   ├── server/node/        #   后端服务 / Backend service (Node.js)
+│   │   ├── routes/         #     API 路由 / API routes
+│   │   ├── services/       #     业务逻辑 / Business logic
+│   │   ├── data/           #     内置只读知识库 / Bundled read-only assets
+│   │   ├── db.js           #     SQLite 数据库 / SQLite database
+│   │   ├── storage-migrate.js  # 升级时迁移历史数据 / Migrate legacy data on upgrade
+│   │   └── server.js       #     服务入口 / Server entry
+│   └── ui/                 #   前端构建产物（gitignored）/ Frontend build output
 ├── frontend/               # 前端源码 / Frontend source
-│   ├── public/config       #   网关配置（构建时自动复制）/ Gateway config (copied at build)
+│   ├── public/config       #   网关配置（构建时自动复制到 app/ui/config）
 │   └── src/
 │       ├── api/            # API 客户端 / API client
 │       ├── components/     # 组件 / Components
 │       ├── views/          # 页面 / Views
 │       └── stores/         # 状态管理 / State management
-├── ui/                     # 前端构建产物同步 / Frontend build sync target
 ├── docs/                   # 文档 / Documentation
+├── ICON.PNG                # 应用图标 64x64 / App icon
+├── ICON_256.PNG            # 应用图标 256x256 / App icon
+├── LICENSE                 # Apache-2.0
+├── CHANGELOG.md            # 变更日志 / Changelog
 └── build.ps1               # 一键打包脚本 / One-click packaging script
 ```
+
+> 说明：`manifest` / `cmd/` / `config/` / `wizard/` / `ICON*.PNG` / `LICENSE` 位于仓库根，
+> 由 fnpack 打进 `.fpk` 外层；`app/` 整体打包成包内的 `app.tgz`，安装时解到设备上的
+> `TRIM_APPDEST`（即 `/vol1/@appcenter/pregnancyjournal`）。
+>
+> Note: `manifest`, `cmd/`, `config/`, `wizard/`, `ICON*.PNG` and `LICENSE` live at the repo
+> root and are packed into the outer `.fpk`; the whole `app/` directory becomes `app.tgz`
+> inside the package and is extracted to `TRIM_APPDEST` on the device.
 
 ### 统一网关模式 / Unified Gateway Mode
 
@@ -133,15 +144,15 @@ Since v0.0.27, the app integrates with the FnOS unified gateway instead of bindi
 
 ```bash
 git clone https://github.com/xiaoke799/pregnancyjournal.git
-cd pregnancyjournal
+cd pregnancyjournal          # 仓库根即应用根 / repo root is the app root
 
 # 后端 / Backend
 cd app/server/node
 npm install
 node server.js
 
-# 前端 / Frontend (独立开发)
-cd ../../../frontend
+# 前端 / Frontend（另开一个终端 / in a separate terminal）
+cd frontend
 npm install
 npm run dev
 ```
@@ -156,18 +167,23 @@ pwsh ./build.ps1
 手动流程 / Manual steps:
 
 ```bash
-# 1. 构建前端（输出到 ../app/ui，注意 vite base 为 /app/pregnancyjournal/）
+# 1. 构建前端：产物输出到 app/ui，并把 frontend/public/config 一起带过去
+#    （vite base 固定为 /app/pregnancyjournal/，即飞牛网关前缀）
 cd frontend && npm install && npm run build
 
-# 2. 用 fnpack 打包 / Package with fnpack
-fnpack pack --directory .
+# 2. 组装 stage 后调用 fnpack（build.ps1 做的就是这件事，建议直接用脚本）
+#    注意必须用 fnpack 的 build 子命令，手打 tar 会导致安装报 code 10111
+fnpack build --directory <组装好的 stage 目录>
 ```
 
-> 注意：`frontend/public/config` 为网关配置源文件，构建时会自动复制到 `app/ui/config`，
-> 请勿手工修改 `app/ui/config`，保持三处（public/app\ui/ui）一致。
+> 注意：`frontend/public/config` 是网关配置的**唯一源文件**，Vite 构建时会自动复制到
+> `app/ui/config`。请只改源文件，不要手工改 `app/ui/config`。
 >
-> Note: `frontend/public/config` is the source of truth for the gateway config.
-> Vite copies it to `app/ui/config` during build — keep all three copies in sync.
+> Note: `frontend/public/config` is the single source of truth for the gateway config.
+> Vite copies it to `app/ui/config` during build — edit only the source file.
+
+> 打包细节（stage 要放哪些东西、为什么不能用"先整拷再删"、包内如何校验）见
+> `DEPLOY_NOTES.md`。
 
 ---
 
