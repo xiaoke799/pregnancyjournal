@@ -105,7 +105,83 @@ function _exportAllowedRoots() {
     ..._accessibleRoots(),
     config.SHARE_DIR ? path.resolve(config.SHARE_DIR) : null,
     ..._volumeRoots(),
+    // 用户手动指定、并通过了真实写入测试的目录（见 /trust-dir）
+    ..._readTrustedDirs(),
   ].filter(Boolean).map(p => path.resolve(p));
+}
+
+// 排查用：把「应用进程实际看到的环境」摊开。
+// 背景：用户在飞牛应用中心给应用添加了授权目录，但应用这边读不到 —— 到底是
+// ①环境变量根本没下发、②下发了下发成了别的名字、③还是应用启动早于授权（环境变量只在进程启动时注入）
+// 光看代码猜不出来，必须让应用自己把真实值报出来。只回传 TRIM_* 路径/版本/用户名，
+// 任何像 token/secret 的键一律打码，避免凭据外泄。
+function _buildDiagnostics() {
+  const trimKeys = Object.keys(process.env).filter(k => k.startsWith('TRIM_')).sort();
+  const envDump = {};
+  for (const k of trimKeys) {
+    if (/TOKEN|SECRET|PASS|KEY/i.test(k)) { envDump[k] = '(已隐藏)'; continue; }
+    envDump[k] = process.env[k];
+  }
+
+  const appName = process.env.TRIM_APPNAME || 'pregnancyjournal';
+  const appDir = `/var/apps/${appName}`;
+  const appShareDir = path.join(appDir, 'share');
+  const readDirSafe = (p) => {
+    try { return fs.readdirSync(p).slice(0, 60); } catch (e) { return null; }
+  };
+
+  return {
+    started_at: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+    uptime_sec: Math.round(process.uptime()),
+    pid: process.pid,
+    uid: typeof process.getuid === 'function' ? process.getuid() : null,
+    gid: typeof process.getgid === 'function' ? process.getgid() : null,
+    platform: process.platform,
+    node: process.version,
+
+    // 原始值 —— 空/null 就说明「系统没把这个变量给到应用进程」
+    accessible_raw: process.env.TRIM_DATA_ACCESSIBLE_PATHS || null,
+    accessible_parsed: _accessibleRoots(),
+    share_raw: process.env.TRIM_DATA_SHARE_PATHS || null,
+
+    trim_env: envDump,
+    trim_env_keys: trimKeys,
+
+    app_dir: appDir,
+    app_dir_entries: readDirSafe(appDir),
+    app_share_dir: appShareDir,
+    app_share_entries: readDirSafe(appShareDir),
+  };
+}
+
+// 「手动指定的导出目录」——用户自己在界面上填、并且通过真实写入测试的目录。
+// 存在的意义：万一系统没把授权路径经 TRIM_DATA_ACCESSIBLE_PATHS 下发（或有延迟），
+// 用户仍然能指定一个他自己确认过的目录，功能不至于完全不可用。
+// 安全语义：写入测试就是授权凭证 —— 应用以专用低权限用户运行，
+// 能真的写进去，说明系统确实给这个路径授过 ACL。
+function _trustedDirsFile() {
+  return path.join(config.DATA_DIR || '.', 'trusted_dirs.json');
+}
+
+function _readTrustedDirs() {
+  try {
+    const arr = JSON.parse(fs.readFileSync(_trustedDirsFile(), 'utf-8'));
+    return Array.isArray(arr) ? arr.filter(p => typeof p === 'string' && p.trim()) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function _writeTrustedDirs(list) {
+  try {
+    const dir = path.dirname(_trustedDirsFile());
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(_trustedDirsFile(), JSON.stringify([...new Set(list)].slice(0, 50), null, 2));
+    return true;
+  } catch (e) {
+    log.warn('导出', '保存手动目录失败', { error: e.message });
+    return false;
+  }
 }
 
 // 判断 target 是否位于 roots 之内（用 path.resolve 后按路径段比较，避免 /a/bc 命中 /a/b）
@@ -1409,6 +1485,51 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
   }
 });
 
+// 校验并记住一个「手动指定的导出目录」。
+// 只接受真实可写的目录：做一次真实写入再删除，写不进去就明确告诉用户
+// 「应用没有这个目录的写权限」以及该去哪里授权，而不是让他导出时才发现失败。
+router.post('/trust-dir', async (req, res) => {
+  try {
+    const { dir } = req.body || {};
+    if (!dir || typeof dir !== 'string' || !dir.trim()) {
+      return res.json({ code: 1001, data: null, message: '请填写目录路径' });
+    }
+    const target = path.resolve(dir.trim());
+
+    if (!fs.existsSync(target)) {
+      return res.json({ code: 1001, data: null, message: `目录不存在：${target}` });
+    }
+    let isDir = false;
+    try { isDir = fs.statSync(target).isDirectory(); } catch (e) { /* 下面统一报错 */ }
+    if (!isDir) {
+      return res.json({ code: 1001, data: null, message: `这不是一个目录：${target}` });
+    }
+
+    const probe = path.join(target, `.pj_write_test_${Date.now()}`);
+    try {
+      fs.writeFileSync(probe, 'ok');
+      fs.unlinkSync(probe);
+    } catch (e) {
+      log.warn('导出', `手动目录写入测试失败: ${target}`, { error: e.message });
+      return res.json({
+        code: 1002,
+        data: null,
+        message: `应用没有「${target}」的写权限。请在「飞牛应用中心 → 孕程记 → 设置 → 授权目录」里把该文件夹加入授权，或换一个位置。`,
+      });
+    }
+
+    const list = _readTrustedDirs();
+    if (!list.includes(target)) list.push(target);
+    _writeTrustedDirs(list);
+    log.api('导出', '已确认并记住手动指定的导出目录', { dir: target });
+
+    res.json({ code: 0, data: { dir: target, trusted_dirs: _readTrustedDirs() }, message: '目录可写，已加入可用位置' });
+  } catch (error) {
+    log.error('导出', 'trust-dir 失败', { error: error.message });
+    res.json({ code: 1001, data: null, message: error.message });
+  }
+});
+
 // 设置页首屏用：告诉前端「默认备份落在哪」「用户授权了哪些目录」。
 // 目的是让上层能区分两种状态——还没授权（给操作引导）/ 已授权（直接列出来可选）。
 router.get('/storage-info', (req, res) => {
@@ -1449,8 +1570,12 @@ router.get('/storage-info', (req, res) => {
         default_backup_dir: defaultBackupDir,
         share_backups_writable: shareBackupsWritable,
         authorized_dirs: authorizedDirs,
+        // 用户手动指定、写入测试通过的目录
+        trusted_dirs: _readTrustedDirs(),
         // manifest 的 disable_authorization_path=false ⇒ 应用设置页有「授权目录」入口
         authorization_enabled: true,
+        // 授权目录读不到时的排查依据，界面上有个「点这里排查」可以直接看
+        diag: _buildDiagnostics(),
       },
       message: 'success',
     });
@@ -1541,6 +1666,24 @@ router.get('/browse-dir', (req, res) => {
         desc: canRW ? '存储卷' : '无写权限',
       });
       allowedRoots.push(vol);
+    }
+
+    // 用户手动指定过、且写入测试通过的目录（见 POST /trust-dir）
+    for (const p of _readTrustedDirs()) {
+      try {
+        if (!fs.existsSync(p) || !fs.statSync(p).isDirectory()) continue;
+        let canRW = false;
+        try { fs.accessSync(p, fs.constants.R_OK | fs.constants.W_OK); canRW = true; } catch { /* 只读 */ }
+        roots.push({
+          name: `自选-${path.basename(p) || p}`,
+          path: p,
+          isRoot: true,
+          canRW,
+          type: 'trusted',
+          desc: '你手动指定的目录',
+        });
+        allowedRoots.push(p);
+      } catch { /* skip */ }
     }
 
     // 开发模式：如果没有找到任何根目录，使用当前工作目录

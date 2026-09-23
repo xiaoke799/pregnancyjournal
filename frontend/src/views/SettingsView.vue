@@ -131,10 +131,69 @@
                 <button v-if="exportDir" class="db-nav-btn" @click="exportDir = ''">清除</button>
               </div>
 
+              <div class="export-manual">
+                <span class="export-target-label">或直接填路径：</span>
+                <input
+                  v-model="manualDir"
+                  class="export-input"
+                  placeholder="/vol1/1000/备份"
+                  @keyup.enter="applyManualDir"
+                />
+                <button class="db-nav-btn" :disabled="!manualDir.trim() || checkingDir" @click="applyManualDir">
+                  {{ checkingDir ? '检查中…' : '检查并使用' }}
+                </button>
+              </div>
+
               <div v-if="storageLoaded && !authorizedDirs.length" class="export-guide">
                 还没有授权任何目录。请到 <b>飞牛应用中心 → 孕程记 → 设置 → 授权目录</b>
                 添加一个文件夹（例如 <code>/vol1/1000/备份</code>）；回来后若列表里没出现，重启一次应用即可。
               </div>
+
+              <!-- 排查区：授权了目录却读不到时，这里的原始值能直接说明是哪一环断了 -->
+              <details v-if="diag" class="export-diag">
+                <summary>看不到我刚授权的目录？点这里排查</summary>
+                <div class="diag-body">
+                  <div class="diag-row">
+                    <span class="diag-k">版本 / 启动于</span>
+                    <span class="diag-v">
+                      v{{ diag.trim_env?.TRIM_APPVER || '?' }} ·
+                      {{ diag.started_at }}（{{ diag.uptime_sec }} 秒前）
+                    </span>
+                  </div>
+                  <div class="diag-row">
+                    <span class="diag-k">授权目录原始值</span>
+                    <span class="diag-v" :class="{ bad: !diag.accessible_raw }">
+                      {{ diag.accessible_raw || '（空 —— 系统没把这个变量给应用进程）' }}
+                    </span>
+                  </div>
+                  <div class="diag-row">
+                    <span class="diag-k">解析后的授权目录</span>
+                    <span class="diag-v">{{ (diag.accessible_parsed || []).join('  |  ') || '（无）' }}</span>
+                  </div>
+                  <div class="diag-row">
+                    <span class="diag-k">共享目录原始值</span>
+                    <span class="diag-v">{{ diag.share_raw || '（空）' }}</span>
+                  </div>
+                  <div class="diag-row">
+                    <span class="diag-k">系统版本 / 架构</span>
+                    <span class="diag-v">
+                      {{ diag.trim_env?.TRIM_SYS_VERSION || '未知' }} / {{ diag.trim_env?.TRIM_SYS_ARCH || '未知' }}
+                    </span>
+                  </div>
+                  <div class="diag-row">
+                    <span class="diag-k">应用运行用户</span>
+                    <span class="diag-v">{{ diag.trim_env?.TRIM_USERNAME || '未知' }}（uid={{ diag.uid }} / gid={{ diag.gid }}）</span>
+                  </div>
+                  <div class="diag-row">
+                    <span class="diag-k">收到的 TRIM_ 变量</span>
+                    <span class="diag-v wrap">{{ (diag.trim_env_keys || []).join(', ') || '（一个都没有）' }}</span>
+                  </div>
+                  <div class="diag-tip">
+                    授权路径是<b>应用启动时</b>由系统注入的。如果「原始值」是空的、但你在应用中心确实加了目录，
+                    请<b>重启一次应用</b>再回来看。重启后仍是空的，把这一段截图发给开发者即可定位。
+                  </div>
+                </div>
+              </details>
 
               <div v-if="showExportBrowser" class="dir-browser-inline">
                 <div v-if="quickDirs.length" class="db-quick-select">
@@ -244,16 +303,17 @@
           <label style="font-size:13px;color:#666;">推送内容</label>
           <n-checkbox-group v-model:value="wecomPushTypes" @update:value="saveWecomPrefs">
             <n-space>
-              <n-checkbox value="push_checkup" label="产检提醒" />
-              <n-checkbox value="push_daily" label="每日看板" />
+              <n-checkbox value="push_daily" label="孕期概览" />
+              <n-checkbox value="push_checkup" label="产检安排" />
               <n-checkbox value="push_reminder" label="提醒事项" />
             </n-space>
           </n-checkbox-group>
+          <span style="font-size:12px;color:#999;">到达推送时间后，会推送上面勾选的内容（至少勾选一项，改完立即生效）</span>
         </div>
         <div v-if="wecomConfigured && wecomEnabled" class="setting-item">
           <label>每日推送时间</label>
           <n-time-picker v-model:formatted-value="wecomPushTime" format="HH:mm" style="width: 130px" @update:value="saveWecomPrefs" />
-          <span style="font-size:12px;color:#999;margin-left:8px;">到达该时间将自动推送每日看板</span>
+          <span style="font-size:12px;color:#999;margin-left:8px;">到达该时间会自动推送，失败会自动重试</span>
         </div>
         <div style="display: flex; gap: 8px;">
           <n-button type="primary" @click="saveWebhook" :loading="savingWecom">保存</n-button>
@@ -403,6 +463,9 @@ const exportResult = ref<{ success: boolean; message: string } | null>(null)
 const authorizedDirs = ref<any[]>([])
 const defaultBackupDir = ref('')
 const storageLoaded = ref(false)
+const diag = ref<any>(null)
+const manualDir = ref('')
+const checkingDir = ref(false)
 
 const showDirBrowser = ref(false)
 const browsingFor = ref<'backup' | 'restore'>('backup')
@@ -627,6 +690,7 @@ async function loadStorageInfo() {
     if (res.code === 0 && res.data) {
       defaultBackupDir.value = res.data.default_backup_dir || ''
       authorizedDirs.value = res.data.authorized_dirs || []
+      diag.value = res.data.diag || null
     }
   } catch (e) {
     console.error('loadStorageInfo:', e)
@@ -664,6 +728,27 @@ function confirmExportDir() {
   if (!p) return
   exportDir.value = p
   showExportBrowser.value = false
+}
+
+/** 手动填路径：交给后端做真实写入测试，写得进去才认（ACL 就是授权凭证） */
+async function applyManualDir() {
+  const p = manualDir.value.trim()
+  if (!p) return
+  checkingDir.value = true
+  try {
+    const res: any = await exportApi.trustDir(p)
+    if (res.code === 0) {
+      exportDir.value = res.data?.dir || p
+      manualDir.value = ''
+      message.success('目录可写，已选为导出位置')
+      loadStorageInfo()
+    } else {
+      message.error(res.message || '该目录不可用')
+    }
+  } catch (e: any) {
+    message.error('检查失败：' + (e?.message || ''))
+  }
+  checkingDir.value = false
 }
 
 async function handleExportBackup() {
@@ -854,9 +939,15 @@ async function saveWebhook() {
   savingWecom.value = true
   try {
     const res: any = await wecomApi.saveConfig(webhookUrl.value.trim())
-    message.success(res.code === 0 ? '保存成功' : res.message || '已保存')
-    wecomConfigured.value = true
-    await loadWecomStatus()
+    if (res.code === 0) {
+      // 配置一定已保存；测试发送可能因网络抖动失败，用 warning 区分提示
+      if (res.data && res.data.test_failed) message.warning(res.message || '配置已保存，但测试发送失败')
+      else message.success('保存成功，测试消息已发送')
+      wecomConfigured.value = true
+      await loadWecomStatus()
+    } else {
+      message.error(res.message || '保存失败')
+    }
   } catch (e: any) {
     message.error('保存失败: ' + e?.message)
   }
@@ -927,8 +1018,12 @@ function typeLabel(type: string): string {
 
 function formatLogTime(t?: string): string {
   if (!t) return ''
-  const d = new Date(t)
-  if (isNaN(d.getTime())) return t
+  // 后端统一写「本地时间」字符串（2026-09-23 08:00:00，无时区标记）。
+  // 部分浏览器对这种格式解析有兼容问题，统一补成 ISO 本地时间形式再解析。
+  let s = String(t).trim()
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) s = s.replace(' ', 'T')
+  const d = new Date(s)
+  if (isNaN(d.getTime())) return String(t)
   return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
@@ -1142,12 +1237,49 @@ function formatLogTime(t?: string): string {
 }
 .export-target-path.empty { color: #94a3b8; font-style: italic; }
 
+.export-manual { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.export-input {
+  flex: 1 1 190px; min-width: 0; padding: 5px 10px; font-size: 12.5px;
+  border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #1e293b;
+}
+.export-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
+
 .export-guide {
   margin-top: 10px; padding: 10px 12px; border-radius: 8px;
   background: #fffbeb; border: 1px solid #fde68a;
   font-size: 12.5px; color: #92400e; line-height: 1.6;
 }
 .export-guide code { background: #fef3c7; padding: 1px 5px; border-radius: 4px; }
+
+/* 授权目录排查区 */
+.export-diag {
+  margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 8px;
+  background: #f8fafc; overflow: hidden;
+}
+.export-diag > summary {
+  padding: 9px 12px; cursor: pointer; color: #475569; font-size: 12.5px;
+  list-style: none; user-select: none;
+}
+.export-diag > summary::-webkit-details-marker { display: none; }
+.export-diag > summary::before { content: '🔍 '; }
+.export-diag[open] > summary {
+  border-bottom: 1px solid #e2e8f0; background: #f1f5f9;
+  color: #1e293b; font-weight: 600;
+}
+.diag-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.diag-row { display: flex; flex-wrap: wrap; gap: 2px 8px; }
+.diag-k { flex: 0 0 124px; color: #64748b; font-size: 12px; }
+.diag-v {
+  flex: 1 1 150px; min-width: 0; color: #1e293b; word-break: break-all;
+  font-family: ui-monospace, Consolas, monospace; font-size: 11.5px;
+}
+.diag-v.bad { color: #dc2626; font-weight: 600; }
+.diag-v.wrap { font-size: 11px; line-height: 1.5; }
+.diag-tip {
+  margin-top: 4px; padding: 8px 10px; border-radius: 6px;
+  background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+  font-size: 12px; line-height: 1.6;
+}
 
 .export-card .dir-browser-inline { margin-top: 10px; }
 /* 起点按钮：路径可能很长（/vol1/@appshare/...），限宽 + 省略号，别把按钮撑成两行 */
