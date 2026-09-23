@@ -54,6 +54,11 @@ sftp_batch.txt
 paramiko_debug.log
 deploy_*.py
 
+# ---- 作者本人的收款码图片（个人支付码，绝不入库）----
+# 这两张图只留在本机，vite 构建会从 frontend/public/images/ 拷进 app/ui/images/ 并打进 fpk。
+# 从仓库克隆出来后重新构建不会有它们，界面会自动隐藏该区块（见 SettingsView 的 donateFailed）。
+frontend/public/images/donation_*.png
+
 # ---- 环境变量与密钥 ----
 .env
 .env.*

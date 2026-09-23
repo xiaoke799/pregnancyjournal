@@ -413,14 +413,49 @@
             <a class="feedback-link" href="https://qm.qq.com/q/BYvbmcnI4g" target="_blank" rel="noopener">💬 QQ群：689881692（xiaoke799 开发学习）</a>
           </div>
         </div>
+
+        <div v-if="visibleDonateCodes.length" class="setting-item donate-item">
+          <label>赞赏</label>
+          <div class="donate-box">
+            <div class="donate-text">
+              下面是作者的<b>微信赞赏码</b>与<b>支付宝收款码</b>。孕程记完全免费开源，数据也只留在你自己的 NAS 上。<br />
+              如果它帮到了你，可以请作者喝杯奶茶 ☕
+            </div>
+            <div class="donate-codes">
+              <div v-for="c in visibleDonateCodes" :key="c.key" class="donate-code">
+                <img
+                  class="donate-thumb"
+                  :src="c.img"
+                  :alt="c.label"
+                  title="点击放大"
+                  @click="openDonate(c.key)"
+                  @error="markDonateMissing(c.key)"
+                />
+                <div class="donate-label">{{ c.label }}</div>
+              </div>
+            </div>
+            <div class="donate-hint">点击图片放大，再用对应 App 的「扫一扫」</div>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- 赞赏码放大 -->
+    <n-modal
+      v-model:show="showDonateQr"
+      preset="card"
+      :title="'❤️ ' + activeDonate.label"
+      style="max-width: 420px;"
+    >
+      <img class="donate-large" :src="activeDonate.img" :alt="activeDonate.label" />
+      <div class="donate-modal-tip">{{ activeDonate.tip }}，或长按图片识别</div>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { NInput, NButton, NRadioGroup, NRadioButton, NTag, NSwitch, NCheckboxGroup, NCheckbox, NSpace, useMessage } from 'naive-ui'
+import { NInput, NButton, NRadioGroup, NRadioButton, NTag, NSwitch, NCheckboxGroup, NCheckbox, NSpace, NModal, useMessage } from 'naive-ui'
 import dayjs from 'dayjs'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { pregnancyApi } from '@/api/pregnancy'
@@ -431,6 +466,29 @@ import { pushApi } from '@/api/push'
 const logText = ref('')
 const logInfo = ref<any>(null)
 const logLoading = ref(false)
+
+// 收款码图片放在 frontend/public/images/ 下（构建后是 app/ui/images/*.png），
+// 用 BASE_URL 拼接，避免写死 /app/pregnancyjournal 前缀（dev 与本机预览都不带该前缀）。
+// 这两张图**不入库**（.gitignore 有规则）：从仓库克隆后重新构建是没有的，
+// 此时下面 v-if 会把整个「赞赏」区块隐藏掉，不会出现裂图。
+const showDonateQr = ref(false)
+const donateActive = ref('wechat')
+const donateCodes = [
+  { key: 'wechat', label: '微信赞赏码', tip: '打开微信「扫一扫」', img: `${import.meta.env.BASE_URL}images/donation_wechat.png` },
+  { key: 'alipay', label: '支付宝收款码', tip: '打开支付宝「扫一扫」', img: `${import.meta.env.BASE_URL}images/donation_alipay.png` },
+]
+const donateFailed = ref<string[]>([])
+const visibleDonateCodes = computed(() => donateCodes.filter((c) => !donateFailed.value.includes(c.key)))
+const activeDonate = computed(
+  () => donateCodes.find((c) => c.key === donateActive.value) || donateCodes[0],
+)
+function openDonate(key: string) {
+  donateActive.value = key
+  showDonateQr.value = true
+}
+function markDonateMissing(key: string) {
+  if (!donateFailed.value.includes(key)) donateFailed.value.push(key)
+}
 
 async function loadLogs() {
   logLoading.value = true
@@ -1143,6 +1201,23 @@ function formatLogTime(t?: string): string {
 .setting-item label { min-width: 72px; color: var(--text-secondary, #64748b); font-size: 14px; flex-shrink: 0; }
 .feedback-link { color: var(--primary-color, #c44680); text-decoration: none; font-size: 14px; transition: opacity .15s; word-break: break-all; }
 .feedback-link:hover { text-decoration: underline; opacity: .82; }
+
+/* 赞赏码 */
+.donate-item { align-items: flex-start; }
+.donate-box { display: flex; flex-direction: column; gap: 8px; }
+.donate-text { font-size: 13px; line-height: 1.7; color: var(--text-secondary, #64748b); }
+.donate-codes { display: flex; gap: 16px; flex-wrap: wrap; }
+.donate-code { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.donate-label { font-size: 12px; color: var(--text-secondary, #64748b); }
+.donate-thumb {
+  width: 160px; height: 160px; object-fit: contain; cursor: zoom-in;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px;
+  background: #fff; transition: transform .15s, box-shadow .15s;
+}
+.donate-thumb:hover { transform: scale(1.03); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.donate-hint { font-size: 12px; color: var(--text-tertiary, #94a3b8); }
+.donate-large { width: 100%; max-width: 340px; margin: 0 auto; display: block; border-radius: 10px; }
+.donate-modal-tip { margin-top: 10px; text-align: center; font-size: 13px; color: var(--text-secondary, #64748b); }
 .setting-hint { font-size: 12px; color: var(--text-hint, #94a3b8); padding: 4px 0 0 84px; margin-top: 4px; }
 .due-date-value { color: var(--primary-color, #c44680); font-weight: 600; }
 .due-date-value.calculated { font-size: 16px; }
