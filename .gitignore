@@ -26,13 +26,12 @@ ui/images/
 app/www/
 
 # ---- 数据库与运行时数据 ----
+# 仓库根的 data/ 是本地开发运行时目录（STORAGE_DIR 在无环境变量时兜底为 <cwd>/data），
+# 里面是本地数据库与运行状态，一律不入库。
+/data/
 *.db
 *.db-shm
 *.db-wal
-data/*.duckdb
-data/backups/
-data/photos/
-data/thumbnails/
 
 # ---- Node / 前端依赖 ----
 node_modules/
