@@ -1,4 +1,13 @@
-/** 孕程记 - 企业微信群机器人 API */
+/**
+ * 【已废弃】企业微信专用 API —— 请改用 `@/api/push`（pushApi）。
+ *
+ * 推送已升级为多渠道（企业微信 + 飞书），新代码统一走 pushApi：
+ *   pushApi.getChannelConfig('wecom') / saveChannelConfig('wecom', ...) / sendTest('wecom')
+ *   pushApi.getLogs() / retry() / dailyPushAll()
+ *
+ * 后端 /wecom/* 接口仍然保留（老版本客户端与自动化脚本还能用），
+ * 本文件仅为这些旧接口留一份调用清单；当前前端已无任何地方引用它。
+ */
 
 import client from './client'
 
