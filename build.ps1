@@ -121,8 +121,10 @@ Copy-Item $AppUi (Join-Path $Stage "ui") -Recurse -Force
 # 排除后端运行时垃圾（数据库/日志/用户上传绝不能进包）
 Remove-Item (Join-Path $Stage "app\server\node\data\*.db") -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $Stage "app\server\node\data\logs") -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item (Join-Path $Stage "app\server\node\data\photos\*") -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item (Join-Path $Stage "app\server\node\data\uploads\*") -Recurse -Force -ErrorAction SilentlyContinue
+# photos / uploads 是可写数据目录（运行时在 ${TRIM_PKGVAR}/data 下），不该出现在只读资源区。
+# 连目录本身一起删：只清内容会留下空目录，空目录也会作为条目进包。
+Remove-Item (Join-Path $Stage "app\server\node\data\photos") -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $Stage "app\server\node\data\uploads") -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "stage 目录已组装（已排除 app\www 与运行时数据）"
 
 # ---------- Step 5: fnpack 打包 ----------
@@ -176,6 +178,21 @@ if ($mb -ne 0x23) { $vErrors += "cmd/main 含 BOM" }
 # 包内不得含运行时数据库/日志
 foreach ($bad in @($inner | Where-Object { $_ -like "server/node/data/*.db" -or $_ -like "server/node/data/logs/*" })) {
     $vErrors += "包内混入运行时数据: $bad"
+}
+# 包内不得含可写数据目录（photos/uploads 属于 ${TRIM_PKGVAR}，不是随包只读资源）
+foreach ($bad in @($inner | Where-Object { $_ -like "server/node/data/photos*" -or $_ -like "server/node/data/uploads*" })) {
+    $vErrors += "包内混入可写数据目录: $bad"
+}
+# 升级前抢救脚本必须在包内且可执行（cmd/upgrade_init）
+$upgradeInit = Join-Path $verify "cmd\upgrade_init"
+if ($outer -notcontains "cmd/upgrade_init") { $vErrors += "包外层缺少: cmd/upgrade_init" } else {
+    & tar -xzf "$verify\pkg.tar.gz" -C $verify cmd/upgrade_init
+    $ub = [System.IO.File]::ReadAllBytes($upgradeInit)[0]
+    if ($ub -ne 0x23) { $vErrors += "cmd/upgrade_init 含 BOM" }
+    $uText = [System.IO.File]::ReadAllText($upgradeInit)
+    if ($uText -notmatch "LEGACY=" -or $uText -notmatch "cp -an") {
+        $vErrors += "cmd/upgrade_init 缺少数据抢救逻辑"
+    }
 }
 Remove-Item $verify -Recurse -Force
 if ($vErrors.Count -gt 0) { $vErrors | ForEach-Object { Write-Host "  [X] $_" -ForegroundColor Red }; throw "包内容验证失败" }
