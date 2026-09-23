@@ -285,26 +285,35 @@
         <div class="setting-hint">CSV 包含所有健康指标数据，可用 Excel 打开；日记和相册导出为 PDF 文件</div>
       </div>
 
-      <!-- 企业微信推送 -->
-      <div class="section wecom-section">
-        <h3>💬 企业微信推送</h3>
+      <!-- 推送渠道：企业微信 / 飞书（结构一致，共用一套模板） -->
+      <div v-for="ch in pushChannelMeta" :key="ch.key" class="section wecom-section">
+        <h3>{{ ch.icon }} {{ ch.name }}推送</h3>
         <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
           <label>Webhook URL</label>
           <n-input
-            v-model:value="webhookUrl"
+            v-model:value="channelState[ch.key].url"
             type="textarea"
             :autosize="{ minRows: 2, maxRows: 4 }"
-            placeholder="企业微信群机器人 Webhook 地址"
+            :placeholder="channelState[ch.key].placeholder || ch.urlPlaceholder"
+          />
+        </div>
+        <div v-if="ch.needsSecret" class="setting-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
+          <label>加签密钥</label>
+          <n-input
+            v-model:value="channelState[ch.key].secret"
+            type="password"
+            show-password-on="click"
+            :placeholder="channelState[ch.key].secretSet ? '已设置（留空则不改动）' : '可留空；仅当机器人开启「签名校验」时需要填写'"
           />
         </div>
         <!-- 推送开关和内容选项 -->
-        <div v-if="wecomConfigured" class="setting-item">
+        <div v-if="channelState[ch.key].configured" class="setting-item">
           <label>推送开关</label>
-          <n-switch v-model:value="wecomEnabled" @update:value="saveWecomPrefs" />
+          <n-switch v-model:value="channelState[ch.key].enabled" @update:value="saveChannelPrefs(ch.key)" />
         </div>
-        <div v-if="wecomConfigured && wecomEnabled" class="setting-item" style="flex-direction:column; align-items:stretch; gap:6px;">
+        <div v-if="channelState[ch.key].configured && channelState[ch.key].enabled" class="setting-item" style="flex-direction:column; align-items:stretch; gap:6px;">
           <label style="font-size:13px;color:#666;">推送内容</label>
-          <n-checkbox-group v-model:value="wecomPushTypes" @update:value="saveWecomPrefs">
+          <n-checkbox-group v-model:value="channelState[ch.key].types" @update:value="saveChannelPrefs(ch.key)">
             <n-space>
               <n-checkbox value="push_daily" label="孕期概览" />
               <n-checkbox value="push_checkup" label="产检安排" />
@@ -313,48 +322,56 @@
           </n-checkbox-group>
           <span style="font-size:12px;color:#999;">到达推送时间后，会推送上面勾选的内容（至少勾选一项，改完立即生效）</span>
         </div>
-        <div v-if="wecomConfigured && wecomEnabled" class="setting-item">
+        <div v-if="channelState[ch.key].configured && channelState[ch.key].enabled" class="setting-item">
           <label>每日推送时间</label>
-          <n-time-picker v-model:formatted-value="wecomPushTime" format="HH:mm" style="width: 130px" @update:value="saveWecomPrefs" />
+          <n-time-picker v-model:formatted-value="channelState[ch.key].time" format="HH:mm" style="width: 130px" @update:value="saveChannelPrefs(ch.key)" />
           <span style="font-size:12px;color:#999;margin-left:8px;">到达该时间会自动推送，失败会自动重试</span>
         </div>
         <div style="display: flex; gap: 8px;">
-          <n-button type="primary" @click="saveWebhook" :loading="savingWecom">保存</n-button>
-          <n-button @click="sendTestMessage" :loading="testingPush">测试发送</n-button>
-          <n-button type="warning" quaternary @click="clearWecomConfig">清除</n-button>
+          <n-button type="primary" @click="saveChannel(ch.key)" :loading="channelState[ch.key].saving">保存</n-button>
+          <n-button @click="sendChannelTest(ch.key)" :loading="channelState[ch.key].testing" :disabled="!channelState[ch.key].configured">测试发送</n-button>
+          <n-button v-if="channelState[ch.key].configured" type="warning" quaternary @click="clearChannel(ch.key)">清除</n-button>
         </div>
-        <div v-if="wecomConfigured" class="setting-item">
+        <div v-if="channelState[ch.key].configured" class="setting-item">
           <label>状态</label>
-          <n-tag :type="wecomStatus?.success ? 'success' : 'error'" size="small">{{ wecomStatus?.message || '已配置' }}</n-tag>
+          <n-tag :type="channelState[ch.key].status?.success ? 'success' : 'error'" size="small">{{ channelState[ch.key].status?.message || '已配置' }}</n-tag>
         </div>
+        <div class="setting-hint" style="padding-left:0; line-height:1.7;">{{ ch.hint }}</div>
+      </div>
 
-        <!-- 推送记录 -->
-        <div v-if="wecomConfigured" style="margin-top:16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <label style="font-weight:500;">📋 推送记录</label>
-            <n-button size="small" @click="loadPushLogs">刷新</n-button>
-          </div>
-          <n-radio-group v-model:value="pushLogFilter" size="small" @update:value="loadPushLogs" style="margin-bottom:8px;">
+      <!-- 推送记录（两个渠道合并展示，可按渠道筛选） -->
+      <div v-if="anyChannelConfigured" class="section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h3 style="margin:0;">📋 推送记录</h3>
+          <n-button size="small" @click="loadPushLogs">刷新</n-button>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+          <n-radio-group v-model:value="pushLogFilter" size="small" @update:value="loadPushLogs">
             <n-radio-button value="today">今天</n-radio-button>
             <n-radio-button value="week7">近7天</n-radio-button>
             <n-radio-button value="all">全部</n-radio-button>
           </n-radio-group>
-          <div v-if="pushLogs.length === 0" style="text-align:center; color:#999; font-size:13px; padding:20px 0;">暂无推送记录</div>
-          <div v-else class="push-log-list">
-            <div v-for="log in pushLogs" :key="log.id" class="push-log-item">
-              <div class="push-log-left">
-                <n-tag :type="log.status === 'success' ? 'success' : log.status === 'failed' ? 'error' : 'default'" size="small">
-                  {{ log.status === 'success' ? '成功' : log.status === 'failed' ? '失败' : '等待中' }}
-                </n-tag>
-                <span class="push-log-type">{{ typeLabel(log.push_type) }}</span>
-                <span class="push-log-content">{{ log.push_content }}</span>
-              </div>
-              <div class="push-log-right">
-                <span class="push-log-time">{{ formatLogTime(log.pushed_at || log.created_at) }}</span>
-                <n-button v-if="log.status === 'failed'" size="tiny" type="primary" text :loading="retryingId === log.id" @click="retryPush(log.id)">重试</n-button>
-              </div>
-              <div v-if="log.error_message" class="push-log-error">{{ log.error_message }}</div>
+          <n-radio-group v-model:value="pushLogChannel" size="small" @update:value="loadPushLogs">
+            <n-radio-button value="">全部渠道</n-radio-button>
+            <n-radio-button v-for="ch in pushChannelMeta" :key="ch.key" :value="ch.key">{{ ch.name }}</n-radio-button>
+          </n-radio-group>
+        </div>
+        <div v-if="pushLogs.length === 0" style="text-align:center; color:#999; font-size:13px; padding:20px 0;">暂无推送记录</div>
+        <div v-else class="push-log-list">
+          <div v-for="log in pushLogs" :key="log.id" class="push-log-item">
+            <div class="push-log-left">
+              <n-tag :bordered="false" size="small" style="background:var(--bg-secondary,#f1f5f9); color:var(--text-secondary,#64748b);">{{ channelLabel(log.channel) }}</n-tag>
+              <n-tag :type="log.status === 'success' ? 'success' : log.status === 'failed' ? 'error' : 'default'" size="small">
+                {{ log.status === 'success' ? '成功' : log.status === 'failed' ? '失败' : '等待中' }}
+              </n-tag>
+              <span class="push-log-type">{{ typeLabel(log.push_type) }}</span>
+              <span class="push-log-content">{{ log.push_content }}</span>
             </div>
+            <div class="push-log-right">
+              <span class="push-log-time">{{ formatLogTime(log.pushed_at || log.created_at) }}</span>
+              <n-button v-if="log.status === 'failed'" size="tiny" type="primary" text :loading="retryingId === log.id" @click="retryPush(log.id)">重试</n-button>
+            </div>
+            <div v-if="log.error_message" class="push-log-error">{{ log.error_message }}</div>
           </div>
         </div>
       </div>
@@ -402,14 +419,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { NInput, NButton, NRadioGroup, NRadioButton, NTag, NSwitch, NCheckboxGroup, NCheckbox, NSpace, useMessage } from 'naive-ui'
 import dayjs from 'dayjs'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { pregnancyApi } from '@/api/pregnancy'
 import { exportApi } from '@/api/export'
 import client from '@/api/client'
-import { wecomApi } from '@/api/wecom'
+import { pushApi } from '@/api/push'
 
 const logText = ref('')
 const logInfo = ref<any>(null)
@@ -482,18 +499,52 @@ const currentCanRW = ref<boolean | null>(null)
 const allPregnancies = ref<any[]>([])
 const activePregnancyId = ref('')
 
-const webhookUrl = ref('')
-const wecomConfigured = ref(false)
-const wecomStatus = ref<any>(null)
-const savingWecom = ref(false)
-const testingPush = ref(false)
-const wecomEnabled = ref(true)
-const wecomPushTypes = ref<string[]>(['push_checkup', 'push_daily', 'push_reminder'])
-const wecomPushTime = ref('08:00')
+// ===== 推送（企业微信 / 飞书）=====
+// 两个渠道的界面结构完全一致，用同一套模板 + 按渠道分片的状态渲染。
+const pushChannelMeta = [
+  {
+    key: 'wecom' as const,
+    name: '企业微信',
+    icon: '💬',
+    needsSecret: false,
+    urlPlaceholder: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx',
+    hint: '在企业微信群聊里点「⋯ → 群机器人 → 添加机器人」，复制它的 Webhook 地址粘贴到上面，再点「保存」即可。',
+  },
+  {
+    key: 'feishu' as const,
+    name: '飞书',
+    icon: '🐦',
+    needsSecret: true,
+    urlPlaceholder: 'https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx',
+    hint: '在飞书群里点「设置 → 群机器人 → 添加机器人 → 自定义机器人」，复制 Webhook 地址。若机器人安全设置选了「签名校验」，请把加签密钥填到上面；选了「自定义关键词」，关键词请填「孕程记」；选了「IP 白名单」，需把 NAS 的出口 IP 加进去。',
+  },
+]
+
+type ChannelState = {
+  url: string
+  secret: string
+  placeholder: string
+  secretSet: boolean
+  configured: boolean
+  enabled: boolean
+  types: string[]
+  time: string
+  status: any
+  saving: boolean
+  testing: boolean
+}
+
+const channelState = reactive<Record<string, ChannelState>>({
+  wecom: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
+  feishu: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
+})
+
+const anyChannelConfigured = computed(() => pushChannelMeta.some(ch => channelState[ch.key].configured))
 
 // 推送记录
 const pushLogs = ref<any[]>([])
 const pushLogFilter = ref<'today' | 'week7' | 'all'>('all')
+const pushLogChannel = ref<string>('')
 const retryingId = ref<string | null>(null)
 
 const calculatedDueDate = computed(() => {
@@ -537,7 +588,7 @@ onMounted(() => {
     }
   }).catch(() => {})
   loadAllPregnancies()
-  loadWecomStatus()
+  loadChannels()
   loadLogs()
   loadStorageInfo()
 })
@@ -910,88 +961,134 @@ async function handleGeneratePdf() {
   generatingPdf.value = false
 }
 
-// ========== 企业微信 ==========
-async function loadWecomStatus() {
+// ========== 推送渠道（企业微信 / 飞书）==========
+async function loadChannel(chKey: string) {
+  const st = channelState[chKey]
   try {
-    const configRes: any = await wecomApi.getConfig()
-    wecomConfigured.value = configRes?.data?.configured || false
-    wecomEnabled.value = configRes?.data?.enabled !== false
+    const res: any = await pushApi.getChannelConfig(chKey as any)
+    const d = res?.data || {}
+    st.configured = !!d.configured
+    st.enabled = d.enabled !== false
+    if (d.url_placeholder) st.placeholder = d.url_placeholder
+    st.secretSet = !!d.secret_set
     const types: string[] = []
-    if (configRes?.data?.push_checkup !== false) types.push('push_checkup')
-    if (configRes?.data?.push_daily !== false) types.push('push_daily')
-    if (configRes?.data?.push_reminder !== false) types.push('push_reminder')
-    wecomPushTypes.value = types
-    wecomPushTime.value = configRes?.data?.push_time || '08:00'
-    if (wecomConfigured.value) {
-      const statusRes: any = await wecomApi.getStatus()
-      wecomStatus.value = statusRes?.data?.status
-      webhookUrl.value = ''
-      // 加载推送记录
-      loadPushLogs()
-    }
+    if (d.push_daily !== false) types.push('push_daily')
+    if (d.push_checkup !== false) types.push('push_checkup')
+    if (d.push_reminder !== false) types.push('push_reminder')
+    st.types = types
+    st.time = d.push_time || '08:00'
+    // 地址与密钥不回显，输入框留空（重新填写才会覆盖）
+    st.url = ''
+    st.secret = ''
+    st.status = d.status || null
   } catch {
     // 忽略
   }
 }
 
-async function saveWebhook() {
-  if (!webhookUrl.value.trim()) {
+async function loadChannels() {
+  try {
+    const res: any = await pushApi.getChannels()
+    for (const ch of (res?.data || [])) {
+      const st = channelState[ch.channel]
+      if (!st) continue
+      st.configured = !!ch.configured
+      st.enabled = ch.enabled !== false
+      if (ch.url_placeholder) st.placeholder = ch.url_placeholder
+      st.secretSet = !!ch.secret_set
+      const types: string[] = []
+      if (ch.push_daily !== false) types.push('push_daily')
+      if (ch.push_checkup !== false) types.push('push_checkup')
+      if (ch.push_reminder !== false) types.push('push_reminder')
+      st.types = types
+      st.time = ch.push_time || '08:00'
+      st.status = ch.status || null
+    }
+  } catch {
+    // 忽略
+  }
+  loadPushLogs()
+}
+
+/** 保存地址（重新填写时才带地址；地址留空则只保存当前偏好） */
+async function saveChannel(chKey: string) {
+  const st = channelState[chKey]
+  if (!st.url.trim() && !st.configured) {
     message.warning('请输入 Webhook URL')
     return
   }
-  savingWecom.value = true
+  st.saving = true
   try {
-    const res: any = await wecomApi.saveConfig(webhookUrl.value.trim())
+    const payload: any = {
+      enabled: st.enabled,
+      push_daily: st.types.includes('push_daily'),
+      push_checkup: st.types.includes('push_checkup'),
+      push_reminder: st.types.includes('push_reminder'),
+      push_time: st.time,
+    }
+    if (st.url.trim()) payload.webhook_url = st.url.trim()
+    if (st.secret.trim()) payload.secret = st.secret.trim()
+
+    const res: any = await pushApi.saveChannelConfig(chKey as any, payload)
     if (res.code === 0) {
       // 配置一定已保存；测试发送可能因网络抖动失败，用 warning 区分提示
       if (res.data && res.data.test_failed) message.warning(res.message || '配置已保存，但测试发送失败')
-      else message.success('保存成功，测试消息已发送')
-      wecomConfigured.value = true
-      await loadWecomStatus()
+      else message.success(res.message || '保存成功')
+      if (st.url.trim()) st.configured = true
+      await loadChannel(chKey)
     } else {
       message.error(res.message || '保存失败')
     }
   } catch (e: any) {
-    message.error('保存失败: ' + e?.message)
+    message.error('保存失败: ' + (e?.message || ''))
   }
-  savingWecom.value = false
+  st.saving = false
 }
 
-async function sendTestMessage() {
-  testingPush.value = true
+async function sendChannelTest(chKey: string) {
+  const st = channelState[chKey]
+  st.testing = true
   try {
-    const res: any = await wecomApi.sendTest()
+    const res: any = await pushApi.sendTest(chKey as any)
+    if (res.code === 0) message.success(res.message || '测试消息已发送到群聊，请查看')
+    else message.error(res.message || '发送失败')
+  } catch (e: any) {
+    message.error('发送失败: ' + (e?.message || ''))
+  }
+  st.testing = false
+}
+
+async function clearChannel(chKey: string) {
+  const st = channelState[chKey]
+  const meta = pushChannelMeta.find(c => c.key === chKey)
+  try {
+    const res: any = await pushApi.saveChannelConfig(chKey as any, { webhook_url: '' })
     if (res.code === 0) {
-      message.success(res.message || '测试消息已发送到群聊！请在企业微信查看')
+      st.configured = false
+      st.status = null
+      st.url = ''
+      st.secret = ''
+      st.secretSet = false
+      message.info(res.message || `已清除${meta?.name || ''}配置`)
+      loadPushLogs()
     } else {
-      message.error(res.message || '发送失败')
+      message.error(res.message || '操作失败')
     }
   } catch (e: any) {
-    message.error('发送失败: ' + e?.message)
-  }
-  testingPush.value = false
-}
-
-async function clearWecomConfig() {
-  try {
-    await wecomApi.saveConfig('')
-    wecomConfigured.value = false
-    wecomStatus.value = null
-    webhookUrl.value = ''
-    message.info('已清除企业微信配置')
-  } catch {
-    message.error('操作失败')
+    message.error('操作失败: ' + (e?.message || ''))
   }
 }
 
-async function saveWecomPrefs() {
+async function saveChannelPrefs(chKey: string) {
+  const st = channelState[chKey]
+  if (!st.configured) return
   try {
-    await wecomApi.saveConfig(webhookUrl.value.trim(), {
-      enabled: wecomEnabled.value,
-      push_checkup: wecomPushTypes.value.includes('push_checkup'),
-      push_daily: wecomPushTypes.value.includes('push_daily'),
-      push_reminder: wecomPushTypes.value.includes('push_reminder'),
-      push_time: wecomPushTime.value,
+    await pushApi.saveChannelConfig(chKey as any, {
+      enabled: st.enabled,
+      push_checkup: st.types.includes('push_checkup'),
+      push_daily: st.types.includes('push_daily'),
+      push_reminder: st.types.includes('push_reminder'),
+      push_time: st.time,
     })
   } catch (e: any) { console.error('保存推送偏好失败:', e?.message) }
 }
@@ -999,7 +1096,7 @@ async function saveWecomPrefs() {
 // ========== 推送记录 ==========
 async function loadPushLogs() {
   try {
-    const res: any = await wecomApi.getPushLogs(pushLogFilter.value)
+    const res: any = await pushApi.getLogs(pushLogFilter.value, pushLogChannel.value as any)
     pushLogs.value = res?.data || []
   } catch (e: any) { console.error('加载推送记录失败:', e?.message) }
 }
@@ -1007,11 +1104,16 @@ async function loadPushLogs() {
 async function retryPush(logId: string) {
   retryingId.value = logId
   try {
-    const res: any = await wecomApi.retryPush(logId)
-    if (res.code === 0) { message.success('重试成功'); loadPushLogs() }
+    const res: any = await pushApi.retry(logId)
+    if (res.code === 0) { message.success(res.message || '重试成功'); loadPushLogs() }
     else message.warning(res.message || '重试失败')
   } catch (e: any) { message.error(e?.message || '重试失败') }
   finally { retryingId.value = null }
+}
+
+function channelLabel(ch?: string): string {
+  const map: Record<string, string> = { wecom: '企业微信', feishu: '飞书' }
+  return map[ch || 'wecom'] || (ch || '企业微信')
 }
 
 function typeLabel(type: string): string {

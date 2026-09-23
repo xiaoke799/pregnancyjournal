@@ -319,7 +319,8 @@ CREATE TABLE IF NOT EXISTS push_log (
   error_message TEXT,
   pushed_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  payload TEXT
+  payload TEXT,
+  channel TEXT DEFAULT 'wecom'
 );
 `;
 
@@ -343,6 +344,7 @@ function migrateDb() {
     },
     push_log: {
       payload: null,               // 推送正文（重试时原样重发，v0.0.28 新增）
+      channel: 'wecom',            // 推送渠道 wecom/feishu（v0.0.28 新增；老记录归为企业微信）
     },
   };
 

@@ -165,6 +165,8 @@ async function start() {
     './routes/diet',
     './routes/checkup-schedule',
     './routes/wecom',
+    './routes/feishu',
+    './routes/push',
     './routes/logs',
   ];
 

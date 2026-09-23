@@ -27,7 +27,7 @@
         <h3>📌 提醒看板</h3>
         <div class="header-actions">
           <span class="section-hint" v-if="todayTodos.length">未来30天 · {{ todayTodos.length }} 项</span>
-          <n-button size="tiny" :loading="pushing" @click="pushToWecom" v-if="todayTodos.length">推送微信</n-button>
+          <n-button size="tiny" :loading="pushing" @click="pushToWecom" v-if="todayTodos.length">推送消息</n-button>
         </div>
       </div>
       <div v-if="todayTodos.length === 0" class="empty-hint">暂无提醒，快添加一条吧</div>
@@ -296,7 +296,7 @@ import { usePregnancyStore } from '@/stores/pregnancy'
 import { useGestationalAge } from '@/composables/useGestationalAge'
 import { getDashboard } from '@/api/dashboard'
 import { reminderApi } from '@/api/reminder'
-import { wecomApi } from '@/api/wecom'
+import { pushApi } from '@/api/push'
 import { markCheckupCompleted } from '@/api/checkup-schedule'
 import { checkupApi } from '@/api/checkup'
 import client from '@/api/client'
@@ -690,12 +690,16 @@ async function pushToWecom() {
   if (!pregnancyStore.currentPregnancy) return
   pushing.value = true
   try {
-    const res: any = await wecomApi.dailyPush(pregnancyStore.currentPregnancy.id)
-    if (res.code === 0) message.success('每日看板已推送到微信')
+    // 推到所有已启用的渠道（企业微信 / 飞书）
+    const res: any = await pushApi.dailyPushAll(pregnancyStore.currentPregnancy.id)
+    if (res.code === 0) {
+      if (res.data && res.data.partial_failed) message.warning(res.message || '部分渠道推送失败')
+      else message.success(res.message || '每日看板已推送')
+    }
     else if (res.code === 1002) message.warning(res.message || '推送失败')
     else message.info(res.message || '已发送请求')
   } catch (e: any) {
-    message.error(e?.message || '推送失败，请检查企业微信配置')
+    message.error(e?.message || '推送失败，请先在设置页检查推送配置')
   } finally { pushing.value = false }
 }
 
