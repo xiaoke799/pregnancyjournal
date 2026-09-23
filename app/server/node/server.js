@@ -262,81 +262,15 @@ function getGatewayUser(req) {
 // 暴露给路由模块使用
 app.getGatewayUser = getGatewayUser;
 
-// ============ 每日推送调度器（使用 Unix Socket 自调用） ============
-const WECOM_CONFIG_FILE = path.join(config.DATA_DIR, 'wecom.json');
-const DAILY_PUSH_STATE_FILE = path.join(config.DATA_DIR, 'daily_push_state.json');
-
-function startDailyPushScheduler(server) {
-  const CHECK_INTERVAL = 30 * 60 * 1000;
-  const PUSH_HOUR = 21;
-  const socketPath = server.address();
-
-  setInterval(async () => {
-    try {
-      const now = new Date();
-      if (now.getHours() !== PUSH_HOUR) return;
-
-      let state = { lastPushDate: null };
-      try {
-        if (fs.existsSync(DAILY_PUSH_STATE_FILE)) {
-          state = JSON.parse(fs.readFileSync(DAILY_PUSH_STATE_FILE, 'utf-8'));
-        }
-      } catch { /* ignore */ }
-
-      const todayStr = now.toISOString().slice(0, 10);
-      if (state.lastPushDate === todayStr) return;
-
-      let wecomConfig = null;
-      try {
-        if (fs.existsSync(WECOM_CONFIG_FILE)) {
-          wecomConfig = JSON.parse(fs.readFileSync(WECOM_CONFIG_FILE, 'utf-8'));
-        }
-      } catch { /* ignore */ }
-
-      if (!wecomConfig || !wecomConfig.webhook_url || !wecomConfig.configured) return;
-
-      const db = require('./db');
-      const pregnancies = await db.queryAll("SELECT id FROM pregnancy WHERE status = 'active' LIMIT 10");
-      if (!pregnancies || pregnancies.length === 0) return;
-
-      for (const p of pregnancies) {
-        try {
-          const http = require('http');
-          const postData = JSON.stringify({ pregnancy_id: p.id });
-          const req = http.request({
-            socketPath: socketPath,
-            path: '/api/v1/wecom/daily-push',
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
-          }, (res) => {
-            let body = '';
-            res.on('data', c => body += c);
-            res.on('end', () => {
-              log.info('企业微信', `每日推送完成: pregnancy=${p.id}, result=${body.slice(0, 100)}`);
-            });
-          });
-          req.on('error', (e) => log.error('企业微信', `推送失败: ${e.message}`));
-          req.write(postData);
-          req.end();
-        } catch (e) {
-          log.error('企业微信', `推送异常: ${e.message}`);
-        }
-      }
-
-      state.lastPushDate = todayStr;
-      fs.writeFileSync(DAILY_PUSH_STATE_FILE, JSON.stringify(state), 'utf-8');
-      log.info('企业微信', `每日看板推送触发成功, 共${pregnancies.length}个孕期`);
-
-    } catch (e) {
-      log.error('企业微信', `调度器异常: ${e.message}`);
-    }
-  }, CHECK_INTERVAL);
-
-  log.info('企业微信', `每日推送调度器已启动 (每天 ${PUSH_HOUR}:00 触发)`);
-}
-
-start().then((server) => {
-  startDailyPushScheduler(server);
+// ============ 每日推送调度器 ============
+// 说明：推送调度器已统一放在 routes/wecom.js（读取设置页的「每日推送时间」push_time，
+// 支持失败自动重试）。本文件此前还有一个硬编码 21:00 的重复调度器，它有两个问题：
+//   1) 查询了不存在的 pregnancy.status 列（真实列名是 is_active）→ 每次都抛
+//      「no such column: status」，从未真正推送成功过；
+//   2) 与 wecom.js 的调度器并存 → 修好后会变成一天推两次。
+// 因此这里整体移除，只保留 wecom.js 里那一个。
+start().then(() => {
+  log.startup('服务已就绪');
 }).catch(err => {
   log.error('进程', '启动失败', { error: err.message });
   process.exit(1);
