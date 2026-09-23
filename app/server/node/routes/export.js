@@ -65,6 +65,49 @@ function _backupAllowedRoots() {
   ].filter(Boolean).map(p => path.resolve(p));
 }
 
+// 解析系统注入的「冒号分隔路径列表」。
+// 生产环境是 fnOS（Linux），路径形如 /vol1/@appshare/x，用 ':' 分隔没问题；
+// 但 Windows 盘符自带冒号（C:\x），按 ':' 切会把路径切成两半，
+// 所以本机开发/自测时改按 ';' 切（与 Windows PATH 风格一致）。
+function _splitPathList(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return [];
+  const sep = process.platform === 'win32' ? ';' : ':';
+  return s.split(sep).map(x => x.trim()).filter(Boolean);
+}
+
+// 用户在「飞牛应用中心 → 孕程记 → 设置 → 授权目录」里添加的文件夹。
+// 系统通过 TRIM_DATA_ACCESSIBLE_PATHS 注入，manifest 的 disable_authorization_path=false
+// 就是打开这个入口的开关（我们已经是 false）。**授权是用户动作，应用无权代替**，所以这里只读环境变量。
+function _accessibleRoots() {
+  return _splitPathList(process.env.TRIM_DATA_ACCESSIBLE_PATHS).map(p => path.resolve(p));
+}
+
+// 存储卷根目录（/vol1 ~ /vol10）。用于「用户还没在应用设置里授权任何目录」时的兜底：
+// 仍能浏览并选择。真正的写入权限由飞牛的系统 ACL 把关（应用以专用低权限用户运行），
+// 能写进去即说明该用户对该目录确实有写权限。
+function _volumeRoots() {
+  const out = [];
+  for (let i = 1; i <= 10; i++) {
+    const vol = `/vol${i}`;
+    try { if (fs.existsSync(vol) && fs.statSync(vol).isDirectory()) out.push(vol); } catch { /* skip */ }
+  }
+  return out;
+}
+
+// 「导出备份到指定目录」允许写入的范围。
+// = 备份落点 ∪ 用户授权目录 ∪ 共享目录 ∪ 存储卷根。
+// **必须与 GET /browse-dir 能列出的 roots 保持一致**，否则用户会遇到「能选却提示不允许导出」。
+// 老版本这里完全没校验，等于把「往任意路径写文件」暴露给了接口调用方。
+function _exportAllowedRoots() {
+  return [
+    ..._backupAllowedRoots(),
+    ..._accessibleRoots(),
+    config.SHARE_DIR ? path.resolve(config.SHARE_DIR) : null,
+    ..._volumeRoots(),
+  ].filter(Boolean).map(p => path.resolve(p));
+}
+
 // 判断 target 是否位于 roots 之内（用 path.resolve 后按路径段比较，避免 /a/bc 命中 /a/b）
 function _isUnderAnyRoot(target, roots) {
   const resolved = path.resolve(target);
@@ -568,10 +611,20 @@ router.post('/backup', async (req, res) => {
     const { dir } = req.body || {};
     log.info('export/备份', `POST /backup 开始, userDir=${dir||'(auto)'}`);
 
-    // 确定备份目录：用户指定 > BACKUPS_DIR > DATA_DIR/backups > PHOTOS_DIR/../backups
+    // 确定备份目录：用户指定 > SHARE_DIR/backups > BACKUPS_DIR > DATA_DIR/backups > PHOTOS_DIR/../backups
     var backupBase;
     if (dir && typeof dir === 'string' && dir.trim()) {
       backupBase = path.resolve(dir);
+      // 路径安全校验：只允许写到「备份落点 / 用户授权目录 / 共享目录」之内。
+      // 老版本这里只做 path.resolve() 不做校验，等于把任意路径写入的入口暴露给了接口调用方。
+      if (!_isUnderAnyRoot(backupBase, _exportAllowedRoots())) {
+        log.warn('备份', `拒绝导出到未授权目录: ${backupBase}`);
+        return res.json({
+          code: 1003,
+          data: null,
+          message: `不允许导出到该目录：${backupBase}\n请先在「飞牛应用中心 → 孕程记 → 设置 → 授权目录」里添加这个文件夹，再回到本页面选择。`,
+        });
+      }
       log.info('export/备份', `使用用户指定目录: ${backupBase}`);
     } else {
       // 按优先级尝试可写目录：
@@ -1356,13 +1409,65 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
   }
 });
 
+// 设置页首屏用：告诉前端「默认备份落在哪」「用户授权了哪些目录」。
+// 目的是让上层能区分两种状态——还没授权（给操作引导）/ 已授权（直接列出来可选）。
+router.get('/storage-info', (req, res) => {
+  try {
+    const shareDir = config.SHARE_DIR || '';
+    const shareBackups = shareDir ? path.join(shareDir, 'backups') : '';
+
+    // 默认备份落点 = 后端 /backup 不带 dir 时会用的那个目录（与候选顺序保持一致）
+    const candidates = [
+      shareBackups || null,
+      config.BACKUPS_DIR,
+      path.join(config.DATA_DIR || '.', 'backups'),
+    ].filter(Boolean);
+    let defaultBackupDir = '';
+    for (const c of candidates) {
+      try { fs.mkdirSync(c, { recursive: true }); fs.accessSync(c, fs.constants.W_OK); defaultBackupDir = c; break; }
+      catch { /* 试下一个 */ }
+    }
+
+    let shareBackupsWritable = false;
+    if (shareBackups) {
+      try { fs.mkdirSync(shareBackups, { recursive: true }); fs.accessSync(shareBackups, fs.constants.W_OK); shareBackupsWritable = true; }
+      catch { /* 无写权限 */ }
+    }
+
+    const authorizedDirs = _accessibleRoots().map(p => {
+      let canRW = false;
+      let exists = false;
+      try { exists = fs.existsSync(p); } catch { /* 访问失败 */ }
+      try { fs.accessSync(p, fs.constants.R_OK | fs.constants.W_OK); canRW = true; } catch { /* 可读不可写 */ }
+      return { path: p, name: path.basename(p) || p, canRW, exists };
+    });
+
+    res.json({
+      code: 0,
+      data: {
+        share_dir: shareDir,
+        default_backup_dir: defaultBackupDir,
+        share_backups_writable: shareBackupsWritable,
+        authorized_dirs: authorizedDirs,
+        // manifest 的 disable_authorization_path=false ⇒ 应用设置页有「授权目录」入口
+        authorization_enabled: true,
+      },
+      message: 'success',
+    });
+  } catch (error) {
+    log.error('存储信息', error.message);
+    res.json({ code: 1001, data: null, message: error.message });
+  }
+});
+
 router.get('/browse-dir', (req, res) => {
   try {
     let dirPath = req.query.path || '/';
-    if (dirPath === '/') dirPath = '/';
 
     // 先解码 URL 编码（防止 %2e%2e 等编码绕过）
     try { dirPath = decodeURIComponent(dirPath); } catch {}
+
+    const isRootQuery = (dirPath === '/' || dirPath === '');
 
     // 安全校验 1：禁止路径遍历和敏感目录访问
     const normalized = path.normalize(dirPath).replace(/\\/g, '/');
@@ -1378,15 +1483,14 @@ router.get('/browse-dir', (req, res) => {
     const roots = [];
 
     // 飞牛系统：检测用户授权目录 (TRIM_DATA_ACCESSIBLE_PATHS, V1.1.8+)
-    const accessiblePaths = process.env.TRIM_DATA_ACCESSIBLE_PATHS || '';
-    if (accessiblePaths) {
-      const accPaths = accessiblePaths.split(':').filter(p => p.trim());
+    const accPaths = _splitPathList(process.env.TRIM_DATA_ACCESSIBLE_PATHS);
+    if (accPaths.length) {
       for (const p of accPaths) {
         try {
           if (fs.existsSync(p) && fs.statSync(p).isDirectory()) {
             let canRW = false;
             try { fs.accessSync(p, fs.constants.R_OK | fs.constants.W_OK); canRW = true; } catch {}
-            const dirName = p.split('/').filter(Boolean).pop() || p;
+            const dirName = path.basename(p) || p;   // 不用 split('/')：Windows 盘符路径里没有 /，会取到整条路径
             roots.push({
               name: `授权-${dirName}`,
               path: p,
@@ -1402,15 +1506,14 @@ router.get('/browse-dir', (req, res) => {
     }
 
     // 飞牛系统：检测应用共享目录 (TRIM_DATA_SHARE_PATHS / data-share)
-    const sharePaths = process.env.TRIM_DATA_SHARE_PATHS || '';
-    if (sharePaths) {
-      const shPaths = sharePaths.split(':').filter(p => p.trim());
+    const shPaths = _splitPathList(process.env.TRIM_DATA_SHARE_PATHS);
+    if (shPaths.length) {
       for (const p of shPaths) {
         try {
           if (fs.existsSync(p) && fs.statSync(p).isDirectory()) {
             let canRW = false;
             try { fs.accessSync(p, fs.constants.R_OK | fs.constants.W_OK); canRW = true; } catch {}
-            const dirName = p.split('/').filter(Boolean).pop() || p;
+            const dirName = path.basename(p) || p;   // 不用 split('/')：Windows 盘符路径里没有 /，会取到整条路径
             roots.push({
               name: `共享-${dirName}`,
               path: p,
@@ -1425,21 +1528,19 @@ router.get('/browse-dir', (req, res) => {
       }
     }
 
-    // 兼容旧逻辑：扫描存储卷 /vol1 ~ /vol10
-    for (let i = 1; i <= 10; i++) {
-      const vol = `/vol${i}`;
-      try {
-        if (fs.existsSync(vol) && fs.statSync(vol).isDirectory()) {
-          try {
-            fs.accessSync(vol, fs.constants.R_OK | fs.constants.W_OK);
-            roots.push({ name: `存储${i} (${vol})`, path: vol, isRoot: true, canRW: true, type: 'volume' });
-            allowedRoots.push(vol);
-          } catch {
-            roots.push({ name: `存储${i}-只读 (${vol})`, path: vol, isRoot: true, canRW: false, type: 'volume' });
-            allowedRoots.push(vol);
-          }
-        }
-      } catch { /* skip */ }
+    // 兜底：用户还没在应用设置里授权任何目录时，仍然可以浏览并选择存储卷
+    for (const vol of _volumeRoots()) {
+      let canRW = false;
+      try { fs.accessSync(vol, fs.constants.R_OK | fs.constants.W_OK); canRW = true; } catch { /* 只读 */ }
+      roots.push({
+        name: canRW ? `存储 ${vol}` : `存储 ${vol}（只读）`,
+        path: vol,
+        isRoot: true,
+        canRW,
+        type: 'volume',
+        desc: canRW ? '存储卷' : '无写权限',
+      });
+      allowedRoots.push(vol);
     }
 
     // 开发模式：如果没有找到任何根目录，使用当前工作目录
@@ -1463,6 +1564,11 @@ router.get('/browse-dir', (req, res) => {
     );
     if (!isWithinAllowedRoot && dirPath !== '/') {
       return res.json({ code: 1001, data: null, message: '不允许访问该目录，超出授权范围' });
+    }
+
+    // 根请求只用来取「可选的起点目录列表」（roots），不列 / 下面的系统目录
+    if (isRootQuery) {
+      return res.json({ code: 0, data: { current: '/', items: [], roots, canRW: false } });
     }
 
     if (!fs.existsSync(dirPath)) {

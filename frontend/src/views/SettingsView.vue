@@ -87,6 +87,9 @@
             <div class="backup-card-body">
               <div class="backup-card-title">创建备份</div>
               <div class="backup-card-desc">自动备份全部数据（记录、日记、相册等），覆盖上一次备份</div>
+              <div v-if="defaultBackupDir" class="backup-path-hint">
+                📍 保存位置：<code>{{ defaultBackupDir }}</code>
+              </div>
             </div>
             <n-button type="primary" @click="handleBackup" :loading="backingUp" :disabled="backingUp">
               立即备份
@@ -106,6 +109,99 @@
             <n-button type="warning" @click="handleRestoreLatest" :loading="importing" :disabled="importing">
               恢复数据
             </n-button>
+          </div>
+
+          <!-- 导出备份到指定位置：原有的「立即备份」完全不受影响，这是额外多存一份的能力 -->
+          <div class="backup-card export-card">
+            <div class="backup-card-icon">📤</div>
+            <div class="backup-card-body">
+              <div class="backup-card-title">导出备份到指定位置</div>
+              <div class="backup-card-desc">
+                把完整备份（数据库 + 照片 + 检查报告）另存到你指定的目录，方便同步到别的硬盘或网盘。
+              </div>
+
+              <div class="export-target">
+                <span class="export-target-label">导出到：</span>
+                <span class="export-target-path" :class="{ empty: !exportDir }">
+                  {{ exportDir || '尚未选择' }}
+                </span>
+                <button class="db-nav-btn" @click="toggleExportBrowser">
+                  {{ showExportBrowser ? '收起' : '选择目录' }}
+                </button>
+                <button v-if="exportDir" class="db-nav-btn" @click="exportDir = ''">清除</button>
+              </div>
+
+              <div v-if="storageLoaded && !authorizedDirs.length" class="export-guide">
+                还没有授权任何目录。请到 <b>飞牛应用中心 → 孕程记 → 设置 → 授权目录</b>
+                添加一个文件夹（例如 <code>/vol1/1000/备份</code>）；回来后若列表里没出现，重启一次应用即可。
+              </div>
+
+              <div v-if="showExportBrowser" class="dir-browser-inline">
+                <div v-if="quickDirs.length" class="db-quick-select">
+                  <div class="db-quick-label">推荐位置</div>
+                  <div class="db-quick-list">
+                    <button
+                      v-for="d in quickDirs"
+                      :key="d.path"
+                      class="db-quick-btn"
+                      :class="[d.type, { active: exportDir === d.path, ro: !d.canRW }]"
+                      :disabled="!d.canRW"
+                      @click="pickQuickDir(d)"
+                    >
+                      <span class="db-quick-icon">{{ d.type === 'accessible' ? '📂' : '🗂️' }}</span>
+                      <span class="db-quick-text">
+                        <span class="db-quick-name">{{ d.name }}</span>
+                        <span class="db-quick-desc">{{ d.path }}{{ d.canRW ? '' : '（只读）' }}</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="db-path">
+                  <span class="db-path-text">📁 {{ currentBrowsePath }}</span>
+                  <span v-if="currentCanRW === false" class="db-path-tag db-rw-no">只读，无法导出到这里</span>
+                  <span v-else-if="currentCanRW === true" class="db-path-tag db-rw-ok">可写</span>
+                </div>
+                <div v-if="dirLoading" class="db-loading">加载中…</div>
+                <div v-else-if="!dirItems.length" class="db-empty">该目录下没有子文件夹</div>
+                <div v-else class="db-list">
+                  <div
+                    v-for="it in dirItems"
+                    :key="it.path"
+                    class="db-item"
+                    :class="{ ro: !it.canRW }"
+                    @click="selectDir(it.path)"
+                    @dblclick="navigateTo(it.path)"
+                  >
+                    <span>{{ it.canRW ? '📁' : '🔒' }}</span>
+                    <span>{{ it.name }}</span>
+                  </div>
+                </div>
+
+                <div class="db-bar">
+                  <button class="db-nav-btn" :disabled="!canNavigateUp" @click="navigateUp">⬆ 上一级</button>
+                  <span class="db-bar-tip">单击选中 · 双击进入</span>
+                  <button class="db-confirm-btn" :disabled="currentCanRW === false" @click="confirmExportDir">
+                    用这个目录
+                  </button>
+                </div>
+              </div>
+
+              <div class="export-actions">
+                <n-button type="primary" :loading="exportingBackup" :disabled="!exportDir" @click="handleExportBackup">
+                  📤 导出备份
+                </n-button>
+              </div>
+
+              <div
+                v-if="exportResult"
+                class="backup-result"
+                :class="{ success: exportResult.success, error: !exportResult.success }"
+                style="margin-top: 8px;"
+              >
+                {{ exportResult.message }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -229,6 +325,14 @@
           <label>理念</label>
           <span>数据私有 · NAS 本地 · 零上云</span>
         </div>
+        <div class="setting-item">
+          <label>反馈</label>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <a class="feedback-link" href="mailto:celiang-xiang@foxmail.com">✉️ 邮箱：celiang-xiang@foxmail.com</a>
+            <a class="feedback-link" href="https://github.com/xiaoke799" target="_blank" rel="noopener">🐙 GitHub：github.com/xiaoke799</a>
+            <a class="feedback-link" href="https://qm.qq.com/q/BYvbmcnI4g" target="_blank" rel="noopener">💬 QQ群：689881692（xiaoke799 开发学习）</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -289,6 +393,16 @@ const exportingDiary = ref(false)
 const backupDir = ref('')
 const restoreDir = ref('')
 const backupResult = ref<{ success: boolean; message: string } | null>(null)
+
+// ===== 导出备份到指定位置 =====
+// 与「立即备份」完全独立：立即备份照旧写到默认位置，这里是额外把它另存到用户指定目录。
+const exportDir = ref('')
+const exportingBackup = ref(false)
+const showExportBrowser = ref(false)
+const exportResult = ref<{ success: boolean; message: string } | null>(null)
+const authorizedDirs = ref<any[]>([])
+const defaultBackupDir = ref('')
+const storageLoaded = ref(false)
 
 const showDirBrowser = ref(false)
 const browsingFor = ref<'backup' | 'restore'>('backup')
@@ -359,6 +473,7 @@ onMounted(() => {
   loadAllPregnancies()
   loadWecomStatus()
   loadLogs()
+  loadStorageInfo()
 })
 
 async function loadAllPregnancies() {
@@ -431,10 +546,9 @@ async function savePregnancy() {
 // ========== 目录浏览器 ==========
 const canNavigateUp = computed(() => currentBrowsePath.value !== '/' && currentBrowsePath.value.length > 1)
 
-// 快捷目录：从 dirRoots 中筛选出授权目录和共享目录
-const quickDirs = computed(() => {
-  return dirRoots.value.filter((r: any) => r.type === 'accessible' || r.type === 'share')
-})
+// 可选起点一览：用户授权目录 / 应用共享目录 / 存储卷（没授权任何目录时的兜底）。
+// 不再单独排一行「根目录按钮」——集合与这里完全一致，两排只会显得重复。
+const quickDirs = computed(() => dirRoots.value)
 
 function toggleDirBrowser(forWhat: 'backup' | 'restore') {
   if (showDirBrowser.value && browsingFor.value === forWhat) {
@@ -504,11 +618,80 @@ function confirmDirSelect() {
   showDirBrowser.value = false
 }
 
-function selectQuickDir(dirPath: string) {
-  if (browsingFor.value === 'backup') backupDir.value = dirPath
-  else restoreDir.value = dirPath
-  // 可选：选择后自动关闭浏览器
-  // showDirBrowser.value = false
+// ========== 导出备份到指定位置 ==========
+/** 读取「默认备份落点 + 用户已授权目录」。用户授权目录由飞牛系统通过环境变量注入，
+ *  只能由用户在「应用中心 → 应用设置 → 授权目录」里添加，应用自己无权代劳。 */
+async function loadStorageInfo() {
+  try {
+    const res: any = await exportApi.storageInfo()
+    if (res.code === 0 && res.data) {
+      defaultBackupDir.value = res.data.default_backup_dir || ''
+      authorizedDirs.value = res.data.authorized_dirs || []
+    }
+  } catch (e) {
+    console.error('loadStorageInfo:', e)
+  }
+  storageLoaded.value = true
+}
+
+async function toggleExportBrowser() {
+  if (showExportBrowser.value) {
+    showExportBrowser.value = false
+    return
+  }
+  showExportBrowser.value = true
+  browsingFor.value = 'backup'
+  selectedDirPath.value = exportDir.value
+  currentCanRW.value = null
+  if (!dirRoots.value.length) {
+    await loadDirRoots()
+  }
+  if (exportDir.value) {
+    currentBrowsePath.value = exportDir.value
+    await loadDirItems(exportDir.value)
+  }
+}
+
+/** 点「推荐位置」里的快捷目录：直接选定并进入 */
+function pickQuickDir(d: any) {
+  if (!d || d.canRW === false) return
+  exportDir.value = d.path
+  navigateTo(d.path)
+}
+
+function confirmExportDir() {
+  const p = selectedDirPath.value || currentBrowsePath.value
+  if (!p) return
+  exportDir.value = p
+  showExportBrowser.value = false
+}
+
+async function handleExportBackup() {
+  if (!exportDir.value) {
+    message.warning('请先选择导出目录')
+    return
+  }
+  exportingBackup.value = true
+  exportResult.value = null
+  try {
+    const res: any = await exportApi.backup(exportDir.value)
+    if (res.code === 0) {
+      const where = res.data?.dir || exportDir.value
+      exportResult.value = {
+        success: true,
+        message: `导出完成！共 ${res.data?.total_rows || 0} 条记录、${res.data?.files?.total || 0} 个文件。位置：${where}`,
+      }
+      message.success('备份已导出')
+      loadStorageInfo()
+    } else {
+      exportResult.value = { success: false, message: res.message || '导出失败' }
+      message.error('导出失败')
+    }
+  } catch (e: any) {
+    exportResult.value = { success: false, message: '导出失败: ' + (e?.message || '') }
+    message.error('导出失败')
+  }
+  exportingBackup.value = false
 }
 
 // ========== 数据管理 ==========
@@ -758,6 +941,8 @@ function formatLogTime(t?: string): string {
 .setting-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-color, #e2e8f0); }
 .setting-item:last-child { border-bottom: none; }
 .setting-item label { min-width: 72px; color: var(--text-secondary, #64748b); font-size: 14px; flex-shrink: 0; }
+.feedback-link { color: var(--primary-color, #c44680); text-decoration: none; font-size: 14px; transition: opacity .15s; word-break: break-all; }
+.feedback-link:hover { text-decoration: underline; opacity: .82; }
 .setting-hint { font-size: 12px; color: var(--text-hint, #94a3b8); padding: 4px 0 0 84px; margin-top: 4px; }
 .due-date-value { color: var(--primary-color, #c44680); font-weight: 600; }
 .due-date-value.calculated { font-size: 16px; }
@@ -843,9 +1028,12 @@ function formatLogTime(t?: string): string {
   border-radius: 4px; margin-left: 4px;
 }
 .db-path {
+  display: flex; align-items: center; gap: 6px;
   padding: 7px 12px; font-size: 13px; color: #475569;
   border-bottom: 1px solid #e2e8f0; background: white;
 }
+.db-path-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-path-tag { flex-shrink: 0; font-size: 12px; }
 .db-rw-ok { color: #16a34a; font-weight: 600; }
 .db-rw-no { color: #dc2626; font-weight: 600; }
 .db-loading, .db-empty {
@@ -937,4 +1125,36 @@ function formatLogTime(t?: string): string {
 }
 .backup-result.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
 .backup-result.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+/* ===== 导出备份到指定位置 ===== */
+.backup-path-hint { margin-top: 4px; font-size: 12px; color: #64748b; word-break: break-all; }
+.backup-path-hint code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 11.5px; color: #475569; }
+
+.export-card { align-items: flex-start; }
+.export-target {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px;
+}
+.export-target-label { font-size: 12.5px; color: #64748b; }
+.export-target-path {
+  font-size: 12.5px; color: #1e293b; background: #fff;
+  border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 10px;
+  max-width: 100%; word-break: break-all;
+}
+.export-target-path.empty { color: #94a3b8; font-style: italic; }
+
+.export-guide {
+  margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+  background: #fffbeb; border: 1px solid #fde68a;
+  font-size: 12.5px; color: #92400e; line-height: 1.6;
+}
+.export-guide code { background: #fef3c7; padding: 1px 5px; border-radius: 4px; }
+
+.export-card .dir-browser-inline { margin-top: 10px; }
+/* 起点按钮：路径可能很长（/vol1/@appshare/...），限宽 + 省略号，别把按钮撑成两行 */
+.db-quick-btn { max-width: 100%; overflow: hidden; }
+.db-quick-btn .db-quick-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.db-quick-btn .db-quick-name,
+.db-quick-btn .db-quick-desc { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-bar-tip { font-size: 11px; color: #94a3b8; }
+.export-actions { margin-top: 12px; }
 </style>

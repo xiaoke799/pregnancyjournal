@@ -8,6 +8,9 @@ export const exportApi = {
   browseDir: (dirPath?: string) =>
     client.get('/browse-dir', { params: { path: dirPath || '/' } }),
 
+  /** 默认备份落点 + 用户已授权的目录（应用设置页里授权的那份） */
+  storageInfo: () => client.get('/storage-info'),
+
   exportCsv: (params?: Record<string, any>) =>
     client.get('/export/csv', { params, responseType: 'blob' }),
 
