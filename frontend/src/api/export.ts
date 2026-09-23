@@ -11,6 +11,9 @@ export const exportApi = {
   /** 默认备份落点 + 用户已授权的目录（应用设置页里授权的那份） */
   storageInfo: () => client.get('/storage-info'),
 
+  /** 确认并记住一个手动指定的导出目录（后端会先做一次真实写入测试） */
+  trustDir: (dir: string) => client.post('/trust-dir', { dir }),
+
   exportCsv: (params?: Record<string, any>) =>
     client.get('/export/csv', { params, responseType: 'blob' }),
 
