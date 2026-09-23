@@ -12,6 +12,13 @@ SOCKET_PATH="${TRIM_APPDEST}/app.sock"
 LOG_DIR="${TRIM_PKGVAR}/data/logs"
 STORAGE_DIR="${TRIM_PKGVAR}/data"
 
+# 版本号取自包根 manifest（唯一真源，与 config.js 的 APP_VERSION / build.ps1 / CHANGELOG 同批同步）。
+# 【别在这里写死版本号】曾经写死 v0.0.27，结果装了 v0.0.28 的包，日志里照样打印 v0.0.27，
+# 排查时极易误判成"升级没生效"。
+APP_ROOT="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+APP_VER="$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*//p' "${APP_ROOT}/manifest" 2>/dev/null | head -n 1 | tr -d '[:space:]')"
+[ -n "${APP_VER}" ] || APP_VER="未知"
+
 # Node 运行时路径
 NODE_BIN="/var/apps/nodejs_v22/target/bin"
 export PATH="${NODE_BIN}:${PATH}"
@@ -61,7 +68,7 @@ start_app() {
     log_msg "启动前清理旧进程..."
     stop_app >/dev/null 2>&1
 
-    log_msg "==== 启动孕程记 v0.0.27 ===="
+    log_msg "==== 启动孕程记 v${APP_VER} ===="
     log_msg "NODE_DIR: ${NODE_DIR}"
     log_msg "SERVER_ENTRY: ${SERVER_ENTRY}"
     log_msg "SOCKET_PATH: ${SOCKET_PATH}"
