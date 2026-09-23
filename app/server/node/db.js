@@ -318,7 +318,8 @@ CREATE TABLE IF NOT EXISTS push_log (
   status TEXT DEFAULT 'pending',
   error_message TEXT,
   pushed_at TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  payload TEXT
 );
 `;
 
@@ -339,6 +340,9 @@ function migrateDb() {
     },
     daily_record: {
       waist: null,                 // 腰围记录（v0.0.28 新增）
+    },
+    push_log: {
+      payload: null,               // 推送正文（重试时原样重发，v0.0.28 新增）
     },
   };
 
