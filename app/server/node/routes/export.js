@@ -110,6 +110,23 @@ function _exportAllowedRoots() {
   ].filter(Boolean).map(p => path.resolve(p));
 }
 
+// 「列出备份 / 一键恢复 / 指定目录恢复」时搜索 backup_* 子目录的范围（读侧）。
+// = 备份落点 ∪ 用户授权目录 ∪ 手动确认目录 ∪ 共享目录根。
+// 存在的意义：写侧（POST /backup）用 _exportAllowedRoots() 允许导出到授权目录，读侧若仍只认
+// 备份落点，就会出现「导出提示成功、列表里却看不到、也无法恢复」——2026-09-23 修的就是这个。
+// **刻意不含 /vol1~10 整个卷**：那是「导出」时的兜底可写范围，逐卷遍历找备份代价过高
+// （卷下动辄几十万文件）。用户主动导出的备份必然落在上面这几类目录之内，所以够用。
+function _backupSearchRoots() {
+  const roots = [
+    ..._backupAllowedRoots(),
+    ..._accessibleRoots(),
+    ..._readTrustedDirs(),
+    config.SHARE_DIR ? path.resolve(config.SHARE_DIR) : null,
+  ].filter(Boolean).map(p => path.resolve(p));
+  // 去重：同一个目录可能同时命中多个来源（如 授权目录 = 共享目录）
+  return [...new Set(roots)];
+}
+
 // 排查用：把「应用进程实际看到的环境」摊开。
 // 背景：用户在飞牛应用中心给应用添加了授权目录，但应用这边读不到 —— 到底是
 // ①环境变量根本没下发、②下发了下发成了别的名字、③还是应用启动早于授权（环境变量只在进程启动时注入）
@@ -653,13 +670,9 @@ router.post('/export/restore-db', async (req, res) => {
 
 router.get('/export/backups', async (req, res) => {
   try {
-    // 与备份一致：多候选目录搜索
-    const candidates = [
-      config.SHARE_DIR ? path.join(config.SHARE_DIR, 'backups') : null,
-      config.BACKUPS_DIR,
-      path.join(config.DATA_DIR || '.', 'backups'),
-      path.join(config.PHOTOS_DIR || '.', '..', 'backups'),
-    ].filter(Boolean);
+    // 与「备份」及「一键恢复」保持一致：搜 _backupSearchRoots()
+    // （含用户授权目录 / 手动确认目录）——否则导出到授权目录的备份在这里看不到。
+    const candidates = _backupSearchRoots();
     const allBackups = [];
     for (const base of candidates) {
       if (!fs.existsSync(base)) continue;
@@ -675,8 +688,15 @@ router.get('/export/backups', async (req, res) => {
         allBackups.push(...dirs);
       } catch {}
     }
-    allBackups.sort((a, b) => b.created_at.localeCompare(a.created_at));
-    res.json({ code: 0, data: allBackups, message: 'success' });
+    // 去重（同一目录可能同时命中多个搜索范围），再按时间倒序
+    const seenPaths = new Set();
+    const uniqueBackups = allBackups.filter((b) => {
+      if (seenPaths.has(b.path)) return false;
+      seenPaths.add(b.path);
+      return true;
+    });
+    uniqueBackups.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    res.json({ code: 0, data: uniqueBackups, message: 'success' });
   } catch (error) {
     res.json({ code: 1001, data: null, message: error.message });
   }
@@ -851,9 +871,10 @@ router.post('/restore', async (req, res) => {
     if (!dir) return res.json({ code: 1001, data: null, message: '请指定恢复目录路径' });
     const restoreDir = path.resolve(dir);
     if (!fs.existsSync(restoreDir)) return res.json({ code: 1001, data: null, message: '目录不存在: ' + restoreDir });
-    // 路径安全校验：仅允许从备份落点恢复（与 /backup、/export/backups 保持一致，
-    // 否则共享目录里的备份在列表可见却无法恢复）
-    if (!_isUnderAnyRoot(restoreDir, _backupAllowedRoots())) {
+    // 路径安全校验：沿用「备份搜索范围」（= 备份落点 ∪ 授权目录 ∪ 手动确认目录 ∪ 共享目录），
+    // 与 POST /backup 的可写范围、GET /export/backups 的可见范围三方对齐；
+    // 否则会出现「导出到授权目录成功 → 列表能看见 → 点恢复却说超出范围」。
+    if (!_isUnderAnyRoot(restoreDir, _backupSearchRoots())) {
       return res.json({ code: 1001, data: null, message: '不允许从该目录恢复，超出备份目录范围' });
     }
 
@@ -1754,13 +1775,9 @@ module.exports = router;
 router.post('/restore-latest', async (req, res) => {
   try {
     log.info('export/恢复', `POST /restore-latest 开始（一键恢复）`);
-    // 与备份保持一致：多候选目录搜索（fnOS 上 data/ 可能无写权限）
-    const candidates = [
-      config.SHARE_DIR ? path.join(config.SHARE_DIR, 'backups') : null,
-      config.BACKUPS_DIR,
-      path.join(config.DATA_DIR || '.', 'backups'),
-      path.join(config.PHOTOS_DIR || '.', '..', 'backups'),
-    ].filter(Boolean);
+    // 与 GET /export/backups 共用同一份搜索范围（含用户授权目录 / 手动确认目录），
+    // 否则「导出备份到指定位置」产生的备份在这里找不到。
+    const candidates = _backupSearchRoots();
 
     let latestBackup = null;
     for (const base of candidates) {
@@ -1784,7 +1801,6 @@ router.post('/restore-latest', async (req, res) => {
       return res.json({ code: 1001, data: null, message: '未找到任何备份，请先创建备份' });
     }
     log.api('恢复', '一键恢复开始', { dir: latestBackup });
-    db.lockDb();
 
     // 读取 data.json
     const dataFile = path.join(latestBackup, 'data.json');
@@ -1799,9 +1815,16 @@ router.post('/restore-latest', async (req, res) => {
       return res.json({ code: 1001, data: null, message: '备份文件格式错误或已损坏: ' + parseErr.message });
     }
     if (!importData || !importData.tables || typeof importData.tables !== 'object') {
-      db.unlockDb();
       return res.json({ code: 1001, data: null, message: '备份数据结构无效，缺少 tables 字段' });
     }
+
+    // ⚠️ 加锁必须放在**所有校验通过之后**。
+    // 锁定后 db.js 里的 30 秒自动落盘（setInterval(saveDb)）会被 saveDb 的
+    // `if (_savingDb || _dbLocked) return;` 直接跳过；一旦某个提前 return 漏了解锁，
+    // 此后所有写入就只进内存、永不落盘，而接口仍然返回成功 —— 静默数据丢失。
+    // （2026-09-23 修的正是这个：本函数原先在"缺 data.json""JSON 解析失败"两个分支漏解锁。）
+    // 与 POST /restore 的加锁位置保持一致，不要再往上挪。
+    db.lockDb();
 
     // ====== 1. 清空表并重新插入 + 2. 路径重写（全量事务保护） ======
     let totalRows = 0;
