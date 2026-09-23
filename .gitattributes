@@ -2,8 +2,8 @@
 * text=auto
 
 # shell脚本必须LF（Linux执行依赖，CRLF会导致 exec format error）
-pregnancyjournal/cmd/* text eol=lf
-pregnancyjournal/app/cmd/* text eol=lf
+cmd/* text eol=lf
+app/cmd/* text eol=lf
 *.sh text eol=lf
 
 # Windows批处理必须CRLF

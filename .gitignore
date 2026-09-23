@@ -51,10 +51,129 @@ paddleocr-env/
 .DS_Store
 Thumbs.db
 
-# ---- 环境配置 ----
-.env
-.env.local
-
 # ---- IDE ----
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# ---- 环境配置 ----
+.env
+.env.*
+!.env.example
+
+# ===========================================
+# 以下合并自原 pregnancyjournal/.gitignore（应用已上移至仓库根目录）
+# ===========================================
+
+# 例外：后端依赖打包进安装包，避免每次安装都要 npm install
+!server/node/node_modules/
+
+# 前端历史产物 / 打包中间件
+app/www/
+*.tar.gz
+.fpk-temp/
+
+# 部署凭据文件
+ssh_pass.py
+sftp_batch.txt
+paramiko_debug.log
+deploy_*.py
+
+# 数据库文件（运行时生成）
+*.db
+*.db-shm
+*.db-wal
+
+# 前端构建产物（vite build 输出，可重新生成）
+app/ui/assets/
+app/ui/index.html
+app/ui/favicon.png
+app/ui/images/
+ui/assets/
+ui/index.html
+ui/favicon.png
+ui/images/
+
+# 模板截图
+muban.png
+
+# 测试数据 / 备份数据（含用户隐私）
+test-backup-data/
+test_data/
+backup-*/
+*.sql
+
+# 日志补充
+logs/
+npm-debug.log*
+
+# 本机 MCP 工具配置（含本机路径，不入库）
+.mcp.json
+
+# vite 临时文件
+vite.config.ts.timestamp-*
+
+# ---- 本地遗留杂物（已移出仓库，防止误加回） ----
+/_*.js
+/_*.py
+/round*.ps1
+/update-remote-main.ps1
+/飞牛开发文档及脚手架/
+/fnnas-docs-main/
+/package/
+/pregnancyjournal备份/
+/pregnancyjournal备份.zip
+/pregnancyjournal_废弃_0904/
+/pregnancyjournal-0.0.26/
+/pregnancyjournal-0.0.26.zip
+/mempalace.yaml
+/mxcp-site.yml
+/entities.json
+/DEPLOY_NOTES.md
+/WEBSOCKET_FIX.md
+
+# agent 工作数据（不入库）
+.workbuddy/
+
+# ===========================================
+# 以下为「非本项目内容」拦截区
+# 工作区里长期堆积了他项目残留 / 参考文档 / 历史备份，
+# 一律不入库，避免 git add -A 误提交。
+# ===========================================
+
+# ---- 他项目残留（不属于孕程记） ----
+/.meituan-catpaw/
+/mempalace.yaml
+/mxcp-site.yml
+/entities.json
+
+# ---- 第三方参考文档与脚手架（仅本地查阅） ----
+/飞牛开发文档及脚手架/
+/fnnas-docs-main/
+
+# ---- 历史备份 / 旧版本解包（体积大，仅本地留档） ----
+/package/
+/pregnancyjournal备份/
+/pregnancyjournal备份.zip
+/pregnancyjournal_废弃_0904/
+/pregnancyjournal-0.0.*/
+/pregnancyjournal-0.0.*.zip
+/pregnancyjournal_废弃_*/
+
+# ---- fnpack 工具二进制（打包要用，但不入库） ----
+/fnpack*
+
+# ---- 一次性临时脚本 ----
+/_*.js
+/_*.py
+/_*.ps1
+/round*.ps1
+/update-remote-*.ps1
+
+# ---- 项目内部资料（含大体积备份/fpk，不入库） ----
+/.workbuddy/
+
+# ---- vite 临时文件 ----
+vite.config.ts.timestamp-*.mjs
