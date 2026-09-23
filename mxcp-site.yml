@@ -1,6 +1,0 @@
-mxcp: 1
-profile: default
-project: pregnancy-journal
-
-sql_tools:
-  enabled: true
