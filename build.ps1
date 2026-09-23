@@ -1,17 +1,17 @@
 # ============================================================
-# 孕程记 v0.0.27 一键打包脚本（唯一打包入口）
+# 孕程记 v0.0.28 一键打包脚本（唯一打包入口）
 # 流程：校验源码完整性 -> 安装生产依赖 -> 组装干净stage目录 -> fnpack打包 -> 解包验证
 # 用法：在项目根目录（含本脚本的目录）执行：pwsh -File build.ps1
 # ============================================================
 $ErrorActionPreference = "Stop"
-# 打包根目录：本地布局为脚本目录下的 pregnancyjournal/ 子目录
+# 打包根目录：应用位于脚本目录（仓库根）；仍兼容旧的 pregnancyjournal/ 子目录布局
 $PkgDir    = Join-Path $PSScriptRoot "pregnancyjournal"
 if (-not (Test-Path (Join-Path $PkgDir "manifest"))) { $PkgDir = $PSScriptRoot }
 $ServerDir = Join-Path $PkgDir "app\server\node"
 $AppUi     = Join-Path $PkgDir "app\ui"
 $RootUi    = Join-Path $PkgDir "ui"
-$Version   = "0.0.27"   # 版本号锁定，禁止改动
-$Parent    = Split-Path $PkgDir -Parent
+$Version   = "0.0.28"   # 版本号锁定，禁止改动
+if ($PkgDir -eq $PSScriptRoot) { $Parent = $PSScriptRoot } else { $Parent = Split-Path $PkgDir -Parent }
 $Stage     = Join-Path $env:TEMP "pregnancyjournal_stage_$Version"
 
 function Step($msg) { Write-Host "`n========== $msg ==========" -ForegroundColor Cyan }
@@ -76,10 +76,9 @@ $removed = 0
 Get-ChildItem $assetsDir -File | ForEach-Object {
     if (-not $keep.Contains($_.Name)) { Remove-Item $_.FullName -Force; $removed++ }
 }
-# 同步到根 ui（desktop_uidir）
-Remove-Item $RootUi -Recurse -Force -ErrorAction SilentlyContinue
-Copy-Item $AppUi $RootUi -Recurse -Force
-Write-Host "保留 $($keep.Count) 个依赖文件，清理 $removed 个冗余；根 ui 已同步"
+# 说明：根 ui/ 并未被 fnpack 打进包（包外层仅 manifest/cmd/config/wizard/ICON/LICENSE/app.tgz），
+# 故不再"删空根 ui 再整拷"——那一步纯属大批量无用删除，且会触发环境的批量删除护栏。
+Write-Host "保留 $($keep.Count) 个依赖文件，清理 $removed 个冗余"
 
 # ---------- Step 2: 安装生产依赖 ----------
 Step "2/6 安装后端生产依赖"
@@ -103,19 +102,27 @@ Write-Host "cmd 脚本已规范"
 Step "4/6 组装干净 stage 目录"
 if (Test-Path $Stage) { Remove-Item $Stage -Recurse -Force }
 New-Item -ItemType Directory $Stage | Out-Null
-# 只拷贝打包必需项：manifest/图标/LICENSE/cmd/config/wizard/app/ui
+# 包外层：manifest/图标/LICENSE/cmd/config/wizard
 foreach ($f in @("manifest","ICON.png","ICON_256.png","LICENSE")) {
     if (Test-Path (Join-Path $PkgDir $f)) { Copy-Item (Join-Path $PkgDir $f) $Stage -Force }
 }
-foreach ($d in @("cmd","config","wizard","app","ui")) {
+foreach ($d in @("cmd","config","wizard")) {
     Copy-Item (Join-Path $PkgDir $d) (Join-Path $Stage $d) -Recurse -Force
 }
-# 排除 app 内的重复/垃圾目录（www是历史重复产物）
-Remove-Item (Join-Path $Stage "app\www") -Recurse -Force -ErrorAction SilentlyContinue
-# 排除后端运行时垃圾（数据库/日志绝不能进包）
+# app 载荷：显式只拷 cmd / server / ui
+# （不再整拷 app 后再删 app\www —— app\www 有 1085 个文件，先拷再删会触发批量删除护栏）
+New-Item -ItemType Directory (Join-Path $Stage "app") | Out-Null
+foreach ($d in @("cmd","server","ui")) {
+    Copy-Item (Join-Path $PkgDir "app\$d") (Join-Path $Stage "app\$d") -Recurse -Force
+}
+# 包根 ui（desktop_uidir 指向安装目录下的 ui，由 app.tgz 解出）直接取前端产物
+Copy-Item $AppUi (Join-Path $Stage "ui") -Recurse -Force
+# 排除后端运行时垃圾（数据库/日志/用户上传绝不能进包）
 Remove-Item (Join-Path $Stage "app\server\node\data\*.db") -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $Stage "app\server\node\data\logs") -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host "stage 目录已组装（仅含打包必需项）"
+Remove-Item (Join-Path $Stage "app\server\node\data\photos\*") -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $Stage "app\server\node\data\uploads\*") -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "stage 目录已组装（已排除 app\www 与运行时数据）"
 
 # ---------- Step 5: fnpack 打包 ----------
 Step "5/6 fnpack 打包"
@@ -132,32 +139,40 @@ $finalPath = Join-Path $Parent "pregnancyjournal_v$Version.fpk"
 Move-Item $fpk.FullName $finalPath -Force
 
 # ---------- Step 6: 打包后解包验证 ----------
+# 只读清单 + 仅抽取 2 个小文件；不做整包解压（整包解压会产生上万文件，删除时撞护栏）
 Step "6/6 打包后解包验证"
-$verify = Join-Path $env:TEMP "pregnancyjournal_verify"
+$verify = Join-Path $env:TEMP "pregnancyjournal_verify_$Version"
 if (Test-Path $verify) { Remove-Item $verify -Recurse -Force }
 New-Item -ItemType Directory $verify | Out-Null
 Copy-Item $finalPath "$verify\pkg.tar.gz"
-tar -xzf "$verify\pkg.tar.gz" -C $verify
-tar -xzf "$verify\app.tgz" -C $verify
 $vErrors = @()
-# 外层必须项
-foreach ($f in @("manifest","cmd\main","LICENSE","config\privilege")) {
-    if (-not (Test-Path (Join-Path $verify $f))) { $vErrors += "包外层缺少: $f" }
+# 外层清单
+$outer = @(& tar -tzf "$verify\pkg.tar.gz")
+foreach ($f in @("manifest","cmd/main","LICENSE","config/privilege")) {
+    if ($outer -notcontains $f) { $vErrors += "包外层缺少: $f" }
 }
-# app.tgz 内必须项（静态数据 + 路由 + 前端 + node_modules）
+# 内层清单（只抽 app.tgz，不解压）
+& tar -xzf "$verify\pkg.tar.gz" -C $verify app.tgz
+if (-not (Test-Path (Join-Path $verify "app.tgz"))) { $vErrors += "包外缺少 app.tgz" }
+$inner = @(& tar -tzf "$verify\app.tgz")
 foreach ($f in @("server\node\server.js","server\node\websocket.js","server\node\data\recipes.json",
                  "server\node\data\food_safety_v3.json","server\node\node_modules\express\package.json",
                  "server\node\node_modules\sql.js\package.json")) {
-    if (-not (Test-Path (Join-Path $verify $f))) { $vErrors += "包内缺少: $f" }
+    if ($inner -notcontains ($f -replace '\\','/')) { $vErrors += "包内缺少: $f" }
 }
 foreach ($r in $routeFiles) {
-    if (-not (Test-Path (Join-Path $verify "server\node\routes\$r.js"))) { $vErrors += "包内缺少路由: $r.js" }
+    if ($inner -notcontains "server/node/routes/$r.js") { $vErrors += "包内缺少路由: $r.js" }
 }
-$assetCount = (Get-ChildItem (Join-Path $verify "ui\assets") -File -ErrorAction SilentlyContinue).Count
+$assetCount = @($inner | Where-Object { $_ -like "ui/assets/*" -and $_ -notlike "*/" }).Count
 if ($assetCount -lt 30) { $vErrors += "前端 assets 仅 $assetCount 个文件，异常" }
-# cmd/main 无BOM
+# cmd/main 无BOM（只抽这一个文件）
+& tar -xzf "$verify\pkg.tar.gz" -C $verify cmd/main
 $mb = [System.IO.File]::ReadAllBytes((Join-Path $verify "cmd\main"))[0]
 if ($mb -ne 0x23) { $vErrors += "cmd/main 含 BOM" }
+# 包内不得含运行时数据库/日志
+foreach ($bad in @($inner | Where-Object { $_ -like "server/node/data/*.db" -or $_ -like "server/node/data/logs/*" })) {
+    $vErrors += "包内混入运行时数据: $bad"
+}
 Remove-Item $verify -Recurse -Force
 if ($vErrors.Count -gt 0) { $vErrors | ForEach-Object { Write-Host "  [X] $_" -ForegroundColor Red }; throw "包内容验证失败" }
 
