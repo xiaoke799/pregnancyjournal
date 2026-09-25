@@ -25,7 +25,7 @@ const ALL_TABLES = [
   'checkup_report', 'lab_result', 'daily_record', 'contraction_session',
   'contraction', 'pregnancy_photo', 'diary_entry', 'checklist',
   'checklist_item', 'reminder', 'fetal_movement_session', 'fetal_movement',
-  'habit_checkin', 'supplement_checkin', 'app_config',
+  'habit_checkin', 'supplement_checkin', 'app_config', 'schedule_dates',
 ];
 
 // 恢复备份里的 files/config/* 时的落点分流：
@@ -225,6 +225,11 @@ function _isUnderAnyRoot(target, roots) {
 }
 
 // 表名 → 允许的列名白名单（防止 SQL 列名注入）
+//
+// ⚠️ 这份白名单同时决定了**恢复时会写回哪些列**：/restore-latest 先 `DELETE FROM 表`
+// 再按白名单插入，因此**不在白名单里的列会被永久丢掉**（备份里有也白搭）。
+// 加字段时务必同步这里，否则用户「恢复一次备份」就会静默少数据。
+// 曾经漏掉：daily_record 的三围（bust/waist/hip）、diary_entry.title、reminder.priority。
 const TABLE_COLUMNS = {
   pregnancy: ['id','last_period_date','conception_date','due_date','is_active','baby_name','created_at','updated_at'],
   prenatal_checkup: ['id','pregnancy_id','checkup_date','gestational_week','gestational_day','checkup_type','weight','blood_pressure','fetal_heart_rate','fundal_height','abdominal_circumference','hospital','notes','is_completed','is_recommended','created_at','updated_at'],
@@ -232,14 +237,15 @@ const TABLE_COLUMNS = {
   checkup_photo: ['id','checkup_id','file_path','thumbnail_path','note','created_at'],
   checkup_report: ['id','checkup_id','checkup_type','filename','file_path','file_type','mime_type','file_size','report_category','sub_item','created_at'],
   lab_result: ['id','checkup_id','category','item_name','value','unit','reference_min','reference_max','status','updated_at','created_at'],
-  daily_record: ['id','pregnancy_id','record_date','weight','fetal_heart_rate','body_temperature','blood_glucose_fasting','blood_glucose_1h','blood_glucose_2h','mood','mood_note','stool','stool_record','note','blood_pressure_systolic','blood_pressure_diastolic','sleep_hours','sleep_quality','symptoms','exercise_type','exercise_duration','diet_note','medication','edema_level','vaginal_discharge','skin_condition','urination_frequency','hcg_value','hcg_weeks','uric_acid','uric_acid_period','supplement_record','intimacy_note','plan_text','plan_date','is_plan_done','water_intake','habit_text','contraction_count','contraction_interval','contraction_duration','contraction_pain','contraction_record','fetal_movement_count','fetal_movement_duration','fetal_movement_record','sleep_record','diet_record','exercise_record','intimacy_record','created_at','updated_at'],
+  daily_record: ['id','pregnancy_id','record_date','weight','fetal_heart_rate','body_temperature','bust','waist','hip','blood_glucose_fasting','blood_glucose_1h','blood_glucose_2h','mood','mood_note','stool','stool_record','note','blood_pressure_systolic','blood_pressure_diastolic','sleep_hours','sleep_quality','symptoms','exercise_type','exercise_duration','diet_note','medication','edema_level','vaginal_discharge','skin_condition','urination_frequency','hcg_value','hcg_weeks','uric_acid','uric_acid_period','supplement_record','intimacy_note','plan_text','plan_date','is_plan_done','water_intake','habit_text','contraction_count','contraction_interval','contraction_duration','contraction_pain','contraction_record','fetal_movement_count','fetal_movement_duration','fetal_movement_record','sleep_record','diet_record','exercise_record','intimacy_record','created_at','updated_at'],
   contraction_session: ['id','pregnancy_id','session_date','start_time','end_time','total_count','avg_duration','avg_interval','notes','created_at'],
   contraction: ['id','session_id','start_time','end_time','duration','interval_from_prev','created_at'],
   pregnancy_photo: ['id','pregnancy_id','checkup_id','photo_type','gestational_week','gestational_day','milestone_type','file_path','thumbnail_path','note','media_type','created_at','updated_at'],
-  diary_entry: ['id','pregnancy_id','entry_date','gestational_week','content','mood','image_urls','created_at','updated_at'],
+  diary_entry: ['id','pregnancy_id','entry_date','gestational_week','title','content','mood','image_urls','created_at','updated_at'],
   checklist: ['id','pregnancy_id','type','name','created_at'],
   checklist_item: ['id','checklist_id','name','description','category','is_checked','is_custom','is_mandatory','sort_order','created_at'],
-  reminder: ['id','pregnancy_id','title','trigger_date','trigger_time','reminder_type','source_type','source_id','is_enabled','is_triggered','is_completed','notes','created_at','updated_at'],
+  reminder: ['id','pregnancy_id','title','trigger_date','trigger_time','reminder_type','source_type','source_id','is_enabled','is_triggered','is_completed','priority','notes','created_at','updated_at'],
+  schedule_dates: ['pregnancy_id','schedule_id','checkup_date','updated_at'],
   fetal_movement_session: ['id','pregnancy_id','session_date','start_time','end_time','total_count','notes','created_at'],
   fetal_movement: ['id','session_id','timestamp','created_at'],
   habit_checkin: ['id','pregnancy_id','date','items','notes','created_at','updated_at'],
@@ -1059,6 +1065,9 @@ router.post('/restore', async (req, res) => {
 const CSV_FIELDS = [
   { key: 'record_date', label: '日期' },
   { key: 'weight', label: '体重(kg)' },
+  { key: 'bust', label: '胸围(cm)' },
+  { key: 'waist', label: '腰围(cm)' },
+  { key: 'hip', label: '臀围(cm)' },
   { key: 'blood_pressure_systolic', label: '收缩压' },
   { key: 'blood_pressure_diastolic', label: '舒张压' },
   { key: 'blood_glucose_fasting', label: '空腹血糖' },
