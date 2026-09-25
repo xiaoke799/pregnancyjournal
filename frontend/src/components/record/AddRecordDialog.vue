@@ -25,13 +25,75 @@
           </div>
         </template>
 
-        <!-- 腰围 -->
+        <!-- 三围（胸围 / 腰围 / 臀围）—— 类型键仍是 waist，老数据不受影响 -->
         <template v-if="selectedType === 'waist'">
+          <div class="form-group">
+            <label>胸围 (cm)</label>
+            <n-input-number v-model:value="formData.bust" :min="50" :max="220" :step="0.1" placeholder="如：92" style="width: 100%" />
+          </div>
           <div class="form-group">
             <label>腰围 (cm)</label>
             <n-input-number v-model:value="formData.waist" :min="40" :max="200" :step="0.1" placeholder="如：85" style="width: 100%" />
           </div>
-          <div class="form-hint">💡 孕期腰围增长因人而异，建议固定时间（如晨起）测量以便对比</div>
+          <div class="form-group">
+            <label>臀围 (cm)</label>
+            <n-input-number v-model:value="formData.hip" :min="60" :max="230" :step="0.1" placeholder="如：95" style="width: 100%" />
+          </div>
+          <div class="form-hint">只填其中一两项也可以；建议固定时间（如晨起空腹）测量，便于前后对比</div>
+        </template>
+
+        <!-- 水肿 -->
+        <template v-if="selectedType === 'edema'">
+          <div class="form-group">
+            <label>水肿程度</label>
+            <n-radio-group v-model:value="formData.edemaLevel" size="small">
+              <n-radio-button value="none">无</n-radio-button>
+              <n-radio-button value="mild">轻度</n-radio-button>
+              <n-radio-button value="moderate">中度</n-radio-button>
+              <n-radio-button value="severe">重度</n-radio-button>
+            </n-radio-group>
+          </div>
+          <div class="form-hint">孕晚期轻微水肿较常见，可抬高下肢、少盐饮食；若短期内明显加重，或伴头痛、视物模糊、血压升高，请立即就医</div>
+        </template>
+
+        <!-- 阴道分泌物 -->
+        <template v-if="selectedType === 'discharge'">
+          <div class="form-group">
+            <label>分泌物情况</label>
+            <n-radio-group v-model:value="formData.vaginalDischarge" size="small">
+              <n-radio-button value="normal">正常</n-radio-button>
+              <n-radio-button value="more">偏多</n-radio-button>
+              <n-radio-button value="abnormal">异常</n-radio-button>
+            </n-radio-group>
+          </div>
+          <div class="form-hint">孕期分泌物增多多为正常；若出现异味、颜色异常、豆腐渣样，或伴瘙痒灼痛，请就医检查</div>
+        </template>
+
+        <!-- 皮肤状况 -->
+        <template v-if="selectedType === 'skin'">
+          <div class="form-group">
+            <label>皮肤状况</label>
+            <n-radio-group v-model:value="formData.skinCondition" size="small">
+              <n-radio-button value="normal">正常</n-radio-button>
+              <n-radio-button value="stretch_marks">妊娠纹</n-radio-button>
+              <n-radio-button value="itchy">瘙痒</n-radio-button>
+              <n-radio-button value="melasma">色素沉着</n-radio-button>
+            </n-radio-group>
+          </div>
+          <div class="form-hint">妊娠纹多出现在腹部与大腿，控制体重增速有帮助；若全身瘙痒（尤其手心脚心）请尽快就医排查胆汁淤积</div>
+        </template>
+
+        <!-- 排尿情况 -->
+        <template v-if="selectedType === 'urination'">
+          <div class="form-group">
+            <label>排尿情况</label>
+            <n-radio-group v-model:value="formData.urinationFrequency" size="small">
+              <n-radio-button value="normal">正常</n-radio-button>
+              <n-radio-button value="frequent">尿频</n-radio-button>
+              <n-radio-button value="painful">尿痛</n-radio-button>
+            </n-radio-group>
+          </div>
+          <div class="form-hint">孕早期与孕晚期尿频多为正常（子宫压迫膀胱）；若伴尿痛、尿急或发热，可能是尿路感染，需就医</div>
         </template>
 
         <!-- 血压 -->
@@ -205,7 +267,7 @@
             <label>饮水量 (ml)</label>
             <n-input-number v-model:value="formData.waterIntake" :min="0" :max="5000" :step="100" placeholder="如：1500" style="width: 100%" />
           </div>
-          <div class="form-hint">💡 孕期建议每日饮水1500-2000ml</div>
+          <div class="form-hint">孕期建议每日饮水1500-2000ml</div>
         </template>
 
         <!-- 排便 -->
@@ -240,7 +302,7 @@
             <label>体温 (℃)</label>
             <n-input-number v-model:value="formData.bodyTemperature" :min="35" :max="42" :step="0.1" placeholder="如：36.5" style="width: 100%" />
           </div>
-          <div class="form-hint">💡 孕期正常体温略高，36.5-37.2℃为正常范围</div>
+          <div class="form-hint">孕期正常体温略高，36.5-37.2℃为正常范围</div>
         </template>
 
         <!-- HCG -->
@@ -253,7 +315,7 @@
             <label>孕周</label>
             <n-input-number v-model:value="formData.hcgWeeks" :min="0" :max="42" :step="0.1" placeholder="如：6.5" style="width: 100%" />
           </div>
-          <div class="form-hint">💡 孕8-10周达到峰值，之后逐渐下降</div>
+          <div class="form-hint">孕8-10周达到峰值，之后逐渐下降</div>
         </template>
 
         <!-- 尿酸 -->
@@ -269,7 +331,7 @@
               { label: '餐后2小时', value: '餐后2小时' },
             ]" placeholder="选择时段" style="width: 100%" />
           </div>
-          <div class="form-hint">💡 女性正常范围155-357 μmol/L</div>
+          <div class="form-hint">女性正常范围155-357 μmol/L</div>
         </template>
 
         <!-- 营养补充 -->
@@ -305,7 +367,7 @@
             <label>备注（可选）</label>
             <n-input v-model:value="formData.intimacyNote" type="textarea" :rows="2" placeholder="如：正常、有轻微不适等" />
           </div>
-          <div class="form-hint">💡 正常孕期可适当同房，如有出血、腹痛请避免并咨询医生</div>
+          <div class="form-hint">正常孕期可适当同房，如有出血、腹痛请避免并咨询医生</div>
         </template>
 
         <!-- 心情 -->
@@ -332,7 +394,7 @@
             <label>胎心率（bpm）</label>
             <n-input-number v-model:value="formData.fetalHeartRate" :min="60" :max="200" placeholder="110-160" style="width: 100%" />
           </div>
-          <div class="form-hint">💡 正常胎心范围：110-160 bpm，低于110或高于160需关注</div>
+          <div class="form-hint">正常胎心范围：110-160 bpm，低于110或高于160需关注</div>
         </template>
 
         <!-- 计划 -->
@@ -412,7 +474,7 @@
             <input
               ref="imageInputRef"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
               style="display: none"
               @change="onImageSelected"
             />

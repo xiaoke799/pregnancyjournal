@@ -2,7 +2,7 @@
   <div class="diary-view">
     <div class="diary-header">
       <div class="diary-header-left">
-        <h2>📖 孕期日记</h2>
+        <h2>孕期日记</h2>
         <span v-if="pregnancyStore.currentPregnancy" class="diary-pregnancy-info">
           孕{{ gestationalWeeks }}周+{{ gestationalDays }}天 | {{ daysUntilDue }}天后预产期
         </span>
@@ -42,8 +42,8 @@
         <div class="diary-footer">
           <span class="diary-time">{{ formatTime(diary.created_at) }}</span>
           <div class="diary-actions">
-            <n-button size="tiny" quaternary @click.stop="editDiary(diary)">✏️ 编辑</n-button>
-            <n-button size="tiny" quaternary type="error" @click.stop="deleteDiary(diary)">🗑️ 删除</n-button>
+            <n-button size="tiny" quaternary @click.stop="editDiary(diary)">编辑</n-button>
+            <n-button size="tiny" quaternary type="error" @click.stop="deleteDiary(diary)">删除</n-button>
           </div>
         </div>
       </div>
@@ -85,13 +85,13 @@
               <n-button :type="editor.isActive('heading', { level: 3 }) ? 'primary' : 'default'" @click="editor.chain().focus().toggleHeading({ level: 3 }).run()" title="标题3">H3</n-button>
               <n-button :type="editor.isActive('bulletList') ? 'primary' : 'default'" @click="editor.chain().focus().toggleBulletList().run()" title="无序列表">• 列表</n-button>
               <n-button :type="editor.isActive('orderedList') ? 'primary' : 'default'" @click="editor.chain().focus().toggleOrderedList().run()" title="有序列表">1. 列表</n-button>
-              <n-button @click="handleInsertImage" title="插入图片">🖼️ 图片</n-button>
+              <n-button @click="handleInsertImage" title="插入图片">图片</n-button>
             </n-button-group>
           </div>
           <div class="diary-editor-wrapper">
             <EditorContent :editor="editor" class="diary-editor" />
           </div>
-          <input ref="imageInputRef" type="file" accept="image/jpeg,image/png,image/webp" style="display:none" @change="onImageSelected" />
+          <input ref="imageInputRef" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" style="display:none" @change="onImageSelected" />
         </div>
         <div class="form-group">
           <label>心情</label>

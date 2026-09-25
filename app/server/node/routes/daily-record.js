@@ -6,6 +6,7 @@ const fs = require('fs');
 const db = require('../db');
 const config = require('../config');
 const logger = require('../logger');
+const heic = require('../services/heic');
 
 // ===== 版本标记：部署后可通过日志确认是否加载了最新代码 =====
 logger.info('daily-record', `模块加载 v0.0.28 [${new Date().toISOString()}]`);
@@ -34,26 +35,55 @@ const upload = multer({
   }),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    // HEIC/HEIF 也放行：iPhone 默认就拍这个格式，传上来后转成 JPEG（见下面的 diary-image 路由），
+    // 否则 iPhone 用户根本没法往日记里插图。TIFF 不放行（浏览器显示不了）。
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('不支持的图片类型，仅允许 jpeg、png、webp'));
+      cb(new Error('不支持的图片类型，仅允许 JPEG / PNG / WebP / HEIC'));
     }
   }
 });
 
-router.post('/daily-records/diary-image', upload.single('image'), (req, res) => {
+// 把 multer 的错误（体积超限 / 类型不符）转成 JSON，避免前端只看到「服务器内部错误」
+function uploadDiaryImage(req, res, next) {
+  const mw = upload.single('image');
+  return mw(req, res, (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE'
+        ? '图片过大，最大支持 5MB（可先压缩或改用其它图片）'
+        : (err.message || '图片上传失败');
+      logger.warn('daily-record', `日记插图上传失败: ${msg}`);
+      return res.json({ code: 1001, data: null, message: msg });
+    }
+    next();
+  });
+}
+
+router.post('/daily-records/diary-image', uploadDiaryImage, async (req, res) => {
   try {
     logger.info('daily-record', `POST /diary-image - file=${req.file?.originalname}, size=${req.file?.size}, pregnancy_id=${req.body?.pregnancy_id}`);
     if (!req.file) {
       logger.warn('daily-record', 'POST /diary-image - no file uploaded');
       return res.json({ code: 1001, data: null, message: '请上传图片文件' });
     }
-    logger.info('daily-record', `POST /diary-image - saved as ${req.file.filename}`);
+    // HEIC/HEIF → 转成同名 .jpg 再返回（浏览器解不开 HEIC；原图保留）
+    let filename = req.file.filename;
+    const savedPath = path.join(DIARY_BASE, filename);
+    if (heic.isHeicFile(savedPath)) {
+      const conv = await heic.convertToJpeg(savedPath);
+      if (conv.ok) {
+        filename = path.basename(conv.jpegPath);
+        logger.info('daily-record', `日记插图 HEIC 已转 JPEG: ${req.file.filename} → ${filename}`);
+      } else {
+        logger.warn('daily-record', `日记插图 HEIC 转码失败（保留原图，浏览器可能无法预览）: ${conv.error}`);
+      }
+    }
+    logger.info('daily-record', `POST /diary-image - saved as ${filename}`);
     res.json({
       code: 0,
-      data: { url: `/api/v1/daily-records/diary/${req.file.filename}` },
+      data: { url: `/api/v1/daily-records/diary/${filename}` },
       message: 'success'
     });
   } catch (e) {
@@ -76,6 +106,7 @@ router.get('/daily-records/diary/:filename', (req, res) => {
       return res.status(404).json({ code: 1001, data: null, message: '文件不存在' });
     }
     logger.info('daily-record', `GET /diary/${filename} - serving file`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.sendFile(filePath);
   } catch (e) {
     logger.error('daily-record', `GET /diary/${filename} error: ${e.message}`);
@@ -130,7 +161,7 @@ router.post('/daily-records', (req, res) => {
       const updates = [];
       const params = [];
 
-      const fields = ['weight', 'fetal_heart_rate', 'body_temperature', 'waist',
+      const fields = ['weight', 'fetal_heart_rate', 'body_temperature', 'bust', 'waist', 'hip',
                       'blood_glucose_fasting', 'blood_glucose_1h', 'blood_glucose_2h',
                       'mood', 'mood_note', 'stool', 'stool_record', 'note',
                       'blood_pressure_systolic', 'blood_pressure_diastolic',
@@ -173,7 +204,7 @@ router.post('/daily-records', (req, res) => {
     // 而接口仍返回 HTTP 200，前端只看到"保存失败"。改成自动生成 + 数量自检后不会再犯。
     const INSERT_COLUMNS = [
       'id', 'pregnancy_id', 'record_date',
-      'weight', 'fetal_heart_rate', 'body_temperature', 'waist',
+      'weight', 'fetal_heart_rate', 'body_temperature', 'bust', 'waist', 'hip',
       'blood_glucose_fasting', 'blood_glucose_1h', 'blood_glucose_2h',
       'mood', 'mood_note', 'stool', 'stool_record', 'note',
       'blood_pressure_systolic', 'blood_pressure_diastolic',
@@ -196,7 +227,7 @@ router.post('/daily-records', (req, res) => {
     ];
     const insertParams = [
       id, pregnancy_id, record_date,
-      req.body.weight ?? null, req.body.fetal_heart_rate ?? null, req.body.body_temperature ?? null, req.body.waist ?? null,
+      req.body.weight ?? null, req.body.fetal_heart_rate ?? null, req.body.body_temperature ?? null, req.body.bust ?? null, req.body.waist ?? null, req.body.hip ?? null,
       req.body.blood_glucose_fasting ?? null, req.body.blood_glucose_1h ?? null, req.body.blood_glucose_2h ?? null,
       req.body.mood ?? null, req.body.mood_note || null, req.body.stool || null, req.body.stool_record || null, req.body.note || null,
       req.body.blood_pressure_systolic ?? null, req.body.blood_pressure_diastolic ?? null,
@@ -349,7 +380,7 @@ router.put('/daily-records/:record_id', (req, res) => {
     const updates = [];
     const params = [];
 
-    const fields = ['weight', 'fetal_heart_rate', 'body_temperature', 'waist',
+    const fields = ['weight', 'fetal_heart_rate', 'body_temperature', 'bust', 'waist', 'hip',
                     'blood_glucose_fasting', 'blood_glucose_1h', 'blood_glucose_2h',
                     'mood', 'mood_note', 'stool', 'stool_record', 'note',
                     'blood_pressure_systolic', 'blood_pressure_diastolic',
