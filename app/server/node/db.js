@@ -5,6 +5,7 @@ const config = require('./config');
 const log = require('./logger');
 
 let db = null;
+let SQLModule = null;   // 缓存 sql.js 构造器，供 reloadFromFile() 复用
 
 const SCHEMA = `
 PRAGMA journal_mode=WAL;
@@ -407,8 +408,54 @@ function migrateDb() {
   }
 }
 
+/** 执行建表语句 + 结构迁移。initDb 与 reloadFromFile 共用（两条语句都幂等）。 */
+function applySchemaAndMigrate() {
+  // SCHEMA 含多条语句，逐条执行（run() 只支持单条）
+  // 每条独立 try/catch，防止单条失败阻断后续表创建
+  const statements = SCHEMA.split(';').map(s => s.trim()).filter(s => s.length > 0);
+  let schemaOk = 0, schemaFail = 0;
+  for (const stmt of statements) {
+    try {
+      db.run(stmt);
+      schemaOk++;
+    } catch (e) {
+      schemaFail++;
+      console.error('[db] Schema 语句失败:', e.message, '| 语句:', stmt.substring(0, 80));
+    }
+  }
+  log.db(`Schema 执行完成: ${schemaOk} 成功, ${schemaFail} 失败`);
+  migrateDb();
+}
+
+/**
+ * 从磁盘上的 .db 文件重新载入内存 —— 供「整库文件替换」式的恢复使用。
+ *
+ * ⚠️ 为什么必须有它：本模块是「内存 SQLite + 每 30 秒整库落盘」（见 saveDb / setInterval）。
+ * 如果只把备份文件覆盖到 config.DATABASE_PATH 而**不重载内存**，
+ * 那么下一次 saveDb()（最迟 30 秒后）就会把**恢复之前的旧数据**整库写回去，
+ * 恢复被静默撤销 —— 而接口却回报「成功，重启后生效」，用户只会以为备份有问题。
+ *
+ * 文件不是合法 SQLite 时会抛错（调用方负责回滚）。
+ */
+async function reloadFromFile() {
+  if (!SQLModule) SQLModule = await initSqlJs();
+  const dbPath = config.DATABASE_PATH;
+  if (!fs.existsSync(dbPath)) throw new Error('数据库文件不存在');
+
+  const fileBuffer = fs.readFileSync(dbPath);
+  // new Database() 会校验文件头；再补一次「能否列出表」的健全性检查
+  const fresh = new SQLModule.Database(fileBuffer);
+  fresh.exec('SELECT count(*) FROM sqlite_master');
+
+  db = fresh;
+  applySchemaAndMigrate();
+  log.db('已从文件重新载入数据库（内存与磁盘一致）');
+  return true;
+}
+
 async function initDb() {
-  const SQL = await initSqlJs();
+  SQLModule = await initSqlJs();
+  const SQL = SQLModule;
   const dbPath = config.DATABASE_PATH;
   const dir = path.dirname(dbPath);
 
@@ -428,21 +475,7 @@ async function initDb() {
     log.db('创建新数据库');
   }
 
-  // SCHEMA 含多条语句，逐条执行（run() 只支持单条）
-  // 每条独立 try/catch，防止单条失败阻断后续表创建
-  const statements = SCHEMA.split(';').map(s => s.trim()).filter(s => s.length > 0);
-  let schemaOk = 0, schemaFail = 0;
-  for (const stmt of statements) {
-    try {
-      db.run(stmt);
-      schemaOk++;
-    } catch (e) {
-      schemaFail++;
-      console.error('[db] Schema 语句失败:', e.message, '| 语句:', stmt.substring(0, 80));
-    }
-  }
-  log.db(`Schema 执行完成: ${schemaOk} 成功, ${schemaFail} 失败`);
-  migrateDb();
+  applySchemaAndMigrate();
   // 一次性存储迁移：把历史误写到安装目录的业务文件搬进持久化目录（幂等、非破坏）
   try { require('./storage-migrate').migrateStorage(module.exports); } catch (e) { log.warn('存储迁移', e.message); }
   // 历史媒体补齐：HEIC 转 JPEG（浏览器解不开 HEIC）+ 给老照片补缩略图（异步、幂等、失败不影响启动）
@@ -523,4 +556,4 @@ function generateId() {
 function lockDb() { _dbLocked = true; }
 function unlockDb() { _dbLocked = false; }
 
-module.exports = { getDb, initDb, saveDb, queryOne, queryAll, run, generateId, lockDb, unlockDb };
+module.exports = { getDb, initDb, saveDb, queryOne, queryAll, run, generateId, lockDb, unlockDb, reloadFromFile };
