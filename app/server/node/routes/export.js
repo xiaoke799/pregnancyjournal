@@ -838,6 +838,25 @@ router.post('/backup', async (req, res) => {
     }
     trackCount('checkup_reports', count);
 
+    // ====== 3b. 日记插图 → files/diary/<filename> ======
+    // 日记插图是以 **URL（文件名）** 存在正文 HTML 里的，所以只要保住**同名文件**即可，
+    // 不需要改写任何数据库内容。此前完全没纳入备份 ⇒ 恢复后日记里的图会全丢。
+    exportData._file_map.diary = {};
+    let diaryCount = 0;
+    try {
+      const diaryDir = path.join(config.PHOTOS_DIR, 'diary');
+      const diaryFiles = fs.existsSync(diaryDir) ? fs.readdirSync(diaryDir) : [];
+      for (const name of diaryFiles) {
+        const src = path.join(diaryDir, name);
+        try { if (!fs.statSync(src).isFile()) continue; } catch (e) { continue; }
+        const fn = copyToBackup(src, 'diary');
+        if (fn) { exportData._file_map.diary[name] = fn; diaryCount += 1; }
+      }
+    } catch (e) {
+      log.warn('文件', `备份日记插图失败: ${e.message}`);
+    }
+    trackCount('diary', diaryCount);
+
     // ====== 4. 配置文件 → files/config/ （确保跨机器迁移完整） ======
     // 注意分流：wecom.json 是「可写状态文件」（在 DATA_DIR），
     // 其余是「内置只读知识库」（在 ASSETS_DIR）。
@@ -999,6 +1018,13 @@ router.post('/restore', async (req, res) => {
     // 4d. 配置文件 files/config/ → 按类型分流（可写状态 → DATA_DIR；内置资源 → ASSETS_DIR）
     const srcConfigDir = path.join(restoreDir, 'files', 'config');
     fileCount += restoreConfigDir(srcConfigDir);
+
+    // 4d-2. 日记插图 files/diary/ → PHOTOS_DIR/diary/
+    // 文件名必须保持原样：日记正文里的 <img src> 存的就是这个文件名，改名会让插图全部失效。
+    const srcDiaryDir = path.join(restoreDir, 'files', 'diary');
+    if (fs.existsSync(srcDiaryDir)) {
+      fileCount += copyDirFiles(srcDiaryDir, path.join(config.PHOTOS_DIR, 'diary'));
+    }
 
     // 4e. 兼容旧版备份结构（files/ 直接递归复制）
     const legacyFilesDir = path.join(restoreDir, 'files');
