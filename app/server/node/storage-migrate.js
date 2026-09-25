@@ -18,9 +18,17 @@ const log = require('./logger');
 
 const MARKER = '.storage_migrated_v1';
 
-// 不迁移的文件：数据库本体与日志（避免覆盖正在使用的库 / 无意义搬运）
+// 不迁移的文件：
+//  · 数据库本体与日志 —— 避免覆盖正在使用的库 / 无意义搬运
+//  · *.js —— 打包时混进 data 目录的开发脚本（如 build-food-safety.js），不是用户数据
+//  · 内置只读知识库 —— 随包发布、由 ASSETS_DIR 读取；复制到持久目录既无用又占地（食材库 380KB+）
+//    （口径与 cmd/upgrade_init、cmd/uninstall_init 的排除列表保持一致）
 function _skip(name) {
-  return /\.(db|db-wal|db-shm|tmp|jsonl|log)$/i.test(name) || name.endsWith('.db.tmp');
+  if (/\.(db|db-wal|db-shm|tmp|jsonl|log)$/i.test(name) || name.endsWith('.db.tmp')) return true;
+  if (/\.js$/i.test(name)) return true;
+  if (/^(recipes|food_safety_v3|checkup_schedule)\.json$/i.test(name)) return true;
+  if (/^default_checklist_.*\.json$/i.test(name)) return true;
+  return false;
 }
 
 function _copyDir(src, dest) {

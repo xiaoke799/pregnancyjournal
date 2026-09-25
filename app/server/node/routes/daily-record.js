@@ -209,13 +209,13 @@ router.post('/daily-records', (req, res) => {
                       'blood_glucose_fasting', 'blood_glucose_1h', 'blood_glucose_2h',
                       'mood', 'mood_note', 'stool', 'stool_record', 'note',
                       'blood_pressure_systolic', 'blood_pressure_diastolic',
-                      'sleep_hours', 'sleep_quality', 'sleep_record', 'symptoms', 'exercise_type',
-                      'exercise_duration', 'exercise_record', 'diet_note', 'diet_record', 'medication',
+                      'sleep_hours', 'sleep_quality', 'symptoms', 'exercise_type',
+                      'exercise_duration', 'diet_note', 'medication',
                       'edema_level', 'vaginal_discharge', 'skin_condition', 'urination_frequency',
                       'hcg_value', 'hcg_weeks', 'uric_acid', 'uric_acid_period', 'supplement_record', 'intimacy_note', 'intimacy_record',
                       'plan_text', 'plan_date', 'is_plan_done', 'water_intake', 'habit_text',
-                      'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain', 'contraction_record',
-                      'fetal_movement_count', 'fetal_movement_duration', 'fetal_movement_record'];
+                      'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain',
+                      'fetal_movement_count', 'fetal_movement_duration'];
  
       for (const field of fields) {
         if (req.body[field] !== undefined) {
@@ -265,9 +265,9 @@ router.post('/daily-records', (req, res) => {
       'is_plan_done',
       'water_intake',
       'habit_text',
-      'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain', 'contraction_record',
-      'fetal_movement_count', 'fetal_movement_duration', 'fetal_movement_record',
-      'sleep_record', 'diet_record', 'exercise_record', 'intimacy_record',
+      'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain',
+      'fetal_movement_count', 'fetal_movement_duration',
+      'intimacy_record',
     ];
     const insertParams = [
       id, pregnancy_id, record_date,
@@ -288,9 +288,9 @@ router.post('/daily-records', (req, res) => {
       req.body.is_plan_done ?? null,
       req.body.water_intake ?? null,
       req.body.habit_text || null,
-      req.body.contraction_count ?? null, req.body.contraction_interval ?? null, req.body.contraction_duration ?? null, req.body.contraction_pain || null, req.body.contraction_record || null,
-      req.body.fetal_movement_count ?? null, req.body.fetal_movement_duration ?? null, req.body.fetal_movement_record || null,
-      req.body.sleep_record || null, req.body.diet_record || null, req.body.exercise_record || null, req.body.intimacy_record || null,
+      req.body.contraction_count ?? null, req.body.contraction_interval ?? null, req.body.contraction_duration ?? null, req.body.contraction_pain || null,
+      req.body.fetal_movement_count ?? null, req.body.fetal_movement_duration ?? null,
+      req.body.intimacy_record || null,
     ];
     // 自检：列数与参数个数不一致时立刻抛错（暴露问题），而不是发出非法 SQL 静默失败
     if (INSERT_COLUMNS.length !== insertParams.length) {
@@ -428,13 +428,13 @@ router.put('/daily-records/:record_id', (req, res) => {
                     'blood_glucose_fasting', 'blood_glucose_1h', 'blood_glucose_2h',
                     'mood', 'mood_note', 'stool', 'stool_record', 'note',
                     'blood_pressure_systolic', 'blood_pressure_diastolic',
-                    'sleep_hours', 'sleep_quality', 'sleep_record', 'symptoms', 'exercise_type',
-                    'exercise_duration', 'exercise_record', 'diet_note', 'diet_record', 'medication',
+                    'sleep_hours', 'sleep_quality', 'symptoms', 'exercise_type',
+                    'exercise_duration', 'diet_note', 'medication',
                     'edema_level', 'vaginal_discharge', 'skin_condition', 'urination_frequency',
                     'hcg_value', 'hcg_weeks', 'uric_acid', 'uric_acid_period', 'supplement_record', 'intimacy_note', 'intimacy_record',
                     'plan_text', 'plan_date', 'is_plan_done', 'water_intake', 'habit_text',
-                    'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain', 'contraction_record',
-                    'fetal_movement_count', 'fetal_movement_duration', 'fetal_movement_record'];
+                    'contraction_count', 'contraction_interval', 'contraction_duration', 'contraction_pain',
+                    'fetal_movement_count', 'fetal_movement_duration'];
 
     for (const field of fields) {
       if (req.body[field] !== undefined) {
