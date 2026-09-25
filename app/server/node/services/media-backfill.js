@@ -92,7 +92,8 @@ async function _backfillThumbnails(db) {
   }
   const jobs = rows.filter((r) => r.file_path
     && fs.existsSync(r.file_path)
-    && (!r.thumbnail_path || r.thumbnail_path === r.file_path)
+    // 没有缩略图、缩略图就是原图、或缩略图文件丢了（例如从「不含缩略图」的备份恢复后）→ 都补一张
+    && (!r.thumbnail_path || r.thumbnail_path === r.file_path || !fs.existsSync(r.thumbnail_path))
     && imageThumb.canGenerate(r.file_path));
   if (!jobs.length) return { done: 0, failed: 0, left: 0 };
 

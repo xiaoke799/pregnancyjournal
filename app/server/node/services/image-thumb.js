@@ -41,10 +41,12 @@ function _load() {
   return _jpeg;
 }
 
+const JPEG_EXTS = ['.jpg', '.jpeg', '.jpe', '.jfif'];
+
 /** 该文件能否生成缩略图（仅 JPEG / PNG） */
 function canGenerate(filePath) {
   const ext = path.extname(String(filePath || '')).toLowerCase();
-  return ext === '.jpg' || ext === '.jpeg' || ext === '.png';
+  return JPEG_EXTS.includes(ext) || ext === '.png';
 }
 
 /** `xxx.jpg` → `xxx_thumb.jpg` */
