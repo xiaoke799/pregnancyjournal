@@ -1,6 +1,6 @@
 <template>
   <div class="photo-compare" v-if="photos.length >= 2">
-    <h4>🔄 孕肚对比</h4>
+    <h4>孕肚对比</h4>
     <div class="compare-controls">
       <select v-model="leftIndex" class="compare-select">
         <option v-for="(p, i) in photos" :key="i" :value="i">孕{{ p.gestational_week }}周</option>

@@ -2,11 +2,12 @@
   <div class="checklist-item-row" :class="{ checked: !!item.is_checked }">
     <input type="checkbox" :checked="!!item.is_checked" @change="$emit('toggle', item)" class="item-checkbox" />
     <span class="item-name">{{ item.name }}</span>
-    <button v-if="item.is_custom" class="delete-btn" @click="$emit('delete', item.id)">✕</button>
+    <button v-if="item.is_custom" class="delete-btn" @click="$emit('delete', item.id)"><AppIcon name="close" :size="12" /></button>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 defineProps<{
   item: {
     id: string

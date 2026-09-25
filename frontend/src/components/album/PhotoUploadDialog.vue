@@ -3,7 +3,6 @@
     <div class="upload-form">
       <div class="upload-area" @click="triggerFile" @dragover.prevent @drop.prevent="handleDrop">
         <div v-if="!previewUrl" class="upload-placeholder">
-          <span class="upload-icon">📷</span>
           <p>点击选择或拖拽照片</p>
         </div>
         <img v-else :src="previewUrl" class="preview-img" />

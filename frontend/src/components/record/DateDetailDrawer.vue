@@ -4,11 +4,11 @@
       <!-- 宝宝天数 & 倒计时 -->
       <div class="drawer-meta">
         <div class="meta-item" v-if="babyDays !== null">
-          <span class="meta-label">👶 宝宝第</span>
+          <span class="meta-label">宝宝第</span>
           <span class="meta-value">{{ babyDays }} 天</span>
         </div>
         <div class="meta-item" v-if="daysUntilDue !== null">
-          <span class="meta-label">📅 距预产期</span>
+          <span class="meta-label">距预产期</span>
           <span class="meta-value">还有 {{ daysUntilDue }} 天</span>
         </div>
       </div>
@@ -17,7 +17,7 @@
       <div v-if="records.length > 0" class="drawer-records">
         <div v-for="group in groupedRecords" :key="group.type" class="record-group">
           <div class="group-header">
-            <span class="group-icon">{{ group.icon }}</span>
+            <span class="group-icon"><AppIcon :name="group.icon" :size="16" /></span>
             <span class="group-name">{{ group.label }}</span>
           </div>
           <div class="group-items">
@@ -49,6 +49,7 @@
 import { computed } from 'vue'
 import { NDrawer, NDrawerContent, NButton } from 'naive-ui'
 import dayjs from 'dayjs'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 const props = defineProps<{
   show: boolean
@@ -105,7 +106,7 @@ const groupedRecords = computed<RecordGroup[]>(() => {
   const r = props.records[0] // DailyRecord 是按日期一天一条
 
   if (r.weight) {
-    groups.push({ type: 'weight', icon: '⚖️', label: '体重', items: [{ time: '', value: r.weight + ' kg' }] })
+    groups.push({ type: 'weight', icon: 'weight', label: '体重', items: [{ time: '', value: r.weight + ' kg' }] })
   }
   if (r.blood_pressure_systolic || r.blood_pressure_diastolic) {
     groups.push({
@@ -121,16 +122,16 @@ const groupedRecords = computed<RecordGroup[]>(() => {
     groups.push({ type: 'blood_glucose', icon: '🩸', label: '血糖', items })
   }
   if (r.fetal_heart_rate) {
-    groups.push({ type: 'fetal_heart_rate', icon: '❤️', label: '胎心', items: [{ time: '', value: r.fetal_heart_rate + ' bpm' }] })
+    groups.push({ type: 'fetal_heart_rate', icon: 'heart', label: '胎心', items: [{ time: '', value: r.fetal_heart_rate + ' bpm' }] })
   }
   if (r.body_temperature) {
-    groups.push({ type: 'body_temperature', icon: '🌡️', label: '体温', items: [{ time: '', value: r.body_temperature + ' °C' }] })
+    groups.push({ type: 'body_temperature', icon: 'thermometer', label: '体温', items: [{ time: '', value: r.body_temperature + ' °C' }] })
   }
   if (r.symptoms) {
     try {
       const symptoms = JSON.parse(r.symptoms)
       if (Array.isArray(symptoms) && symptoms.length > 0) {
-        groups.push({ type: 'symptoms', icon: '📋', label: '症状', items: [{ time: '', value: symptoms.join('、') }] })
+        groups.push({ type: 'symptoms', icon: 'clipboard', label: '症状', items: [{ time: '', value: symptoms.join('、') }] })
       }
     } catch { /* ignore */ }
   }

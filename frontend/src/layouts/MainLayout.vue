@@ -3,7 +3,9 @@
     <aside v-if="!isMobile" class="sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
       <div class="sidebar-header">
         <div class="logo-wrap">
-          <span class="logo-emoji">🌸</span>
+          <svg class="logo-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
           <span class="app-title" v-if="!appStore.sidebarCollapsed">孕程记</span>
         </div>
       </div>
@@ -17,7 +19,9 @@
           active-class="active"
         >
           <span class="nav-indicator"></span>
-          <span class="nav-icon">{{ item.icon }}</span>
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path v-for="(d, di) in item.paths" :key="di" :d="d" />
+          </svg>
           <span class="nav-label" v-if="!appStore.sidebarCollapsed">{{ item.label }}</span>
         </router-link>
       </nav>
@@ -47,7 +51,9 @@
         class="tabbar-item"
         active-class="tabbar-active"
       >
-        <span class="tabbar-icon">{{ item.icon }}</span>
+        <svg class="tabbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path v-for="(d, di) in item.paths" :key="di" :d="d" />
+        </svg>
         <span class="tabbar-label">{{ item.label }}</span>
         <span class="tabbar-dot"></span>
       </router-link>
@@ -64,14 +70,42 @@ const appStore = useAppStore()
 const { isMobile } = useResize()
 
 const navItems = [
-  { path: '/', icon: '🏠', label: '首页' },
-  { path: '/record', icon: '📝', label: '记录' },
-  { path: '/diary', icon: '📖', label: '日记' },
-  { path: '/album', icon: '📷', label: '相册' },
-  { path: '/checkup-schedule', icon: '🏥', label: '产检' },
-  { path: '/diet', icon: '🍎', label: '饮食' },
-  { path: '/checklist', icon: '✅', label: '清单' },
-  { path: '/settings', icon: '⚙️', label: '设置' },
+  { path: '/', label: '首页', paths: [
+    'M3 9.5L12 3l9 6.5V19a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2z',
+  ] },
+  { path: '/record', label: '记录', paths: [
+    'M9 4H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2',
+    'M10 2h4a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z',
+    'M8 12.5h8M8 16.5h5',
+  ] },
+  { path: '/diary', label: '日记', paths: [
+    'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z',
+    'M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z',
+  ] },
+  { path: '/album', label: '相册', paths: [
+    'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z',
+    'M8.5 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 1 0 0-3z',
+    'M21 15.5l-5-5L5 21',
+  ] },
+  { path: '/checkup-schedule', label: '产检', paths: [
+    'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z',
+    'M16 2v4M8 2v4M3 10h18',
+    'M8.5 15l2.5 2.5 4.5-4.5',
+  ] },
+  { path: '/diet', label: '饮食', paths: [
+    'M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2',
+    'M7 2v20',
+    'M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3z',
+  ] },
+  { path: '/checklist', label: '清单', paths: [
+    'M3 6l2 2 3-3',
+    'M3 13l2 2 3-3',
+    'M13 6h8M13 13h8',
+  ] },
+  { path: '/settings', label: '设置', paths: [
+    'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+    'M12 9a3 3 0 1 0 0 6 3 3 0 1 0 0-6',
+  ] },
 ]
 
 // 手机端 tabbar 显示所有功能入口（与电脑端侧边栏一致）
@@ -133,12 +167,26 @@ const tabbarItems = computed(() => navItems.filter(i =>
   cursor: default;
 }
 
-.logo-emoji {
-  font-size: 26px;
-  line-height: 1;
+.logo-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  color: var(--primary-color);
   filter: drop-shadow(0 2px 6px rgba(196, 70, 128, 0.3));
   animation: floatY 4s ease-in-out infinite;
 }
+/* 导航/标签栏用线性矢量图标（统一 fill:none + stroke），
+   不依赖系统 emoji 字体 —— 各家系统/Android WebView 强制反色都不会变形 */
+.logo-icon,
+.nav-icon,
+.tabbar-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 
 .app-title {
   font-size: 19px;
@@ -224,9 +272,8 @@ const tabbarItems = computed(() => navItems.filter(i =>
 }
 
 .nav-icon {
-  font-size: 18px;
   width: 22px;
-  text-align: center;
+  height: 22px;
   flex-shrink: 0;
   transition: transform var(--transition-base);
 }
@@ -340,8 +387,8 @@ const tabbarItems = computed(() => navItems.filter(i =>
 }
 
 .tabbar-icon {
-  font-size: 20px;
-  line-height: 1;
+  width: 22px;
+  height: 22px;
   transition: transform var(--transition-base);
 }
 

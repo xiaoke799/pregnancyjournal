@@ -7,11 +7,11 @@
     <div class="detail-body">
       <div class="size-info">
         <div class="size-item">
-          <span class="size-label">📏 身长</span>
+          <span class="size-label">身长</span>
           <span class="size-value">{{ data.length_cm }} cm</span>
         </div>
         <div class="size-item">
-          <span class="size-label">⚖️ 体重</span>
+          <span class="size-label">体重</span>
           <span class="size-value">{{ data.weight_g }} g</span>
         </div>
       </div>
@@ -20,7 +20,7 @@
         <p>{{ data.development }}</p>
       </div>
       <div class="tips">
-        <h4>💡 孕期提示</h4>
+        <h4>孕期提示</h4>
         <p>{{ data.tips }}</p>
       </div>
     </div>

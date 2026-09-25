@@ -16,7 +16,7 @@
           </div>
         </div>
         <div v-if="nextCheckup" class="next-checkup">
-          <div class="next-label">🕐 下一次产检</div>
+          <div class="next-label">下一次产检</div>
           <div class="next-name">{{ nextCheckup.name }}（孕{{ nextCheckup.week_range || '--' }}周）</div>
         </div>
       </div>
@@ -91,14 +91,13 @@
               quaternary
               type="error"
               @click="deleteCustom(item.id)"
-            >🗑</n-button>
+            ><AppIcon name="trash" :size="16" /></n-button>
           </div>
         </div>
 
         <!-- 准备事项（仅标准产检显示） -->
         <div v-if="item._type === 'standard' && item.preparation?.length" class="preparation-section">
           <div class="preparation-toggle" @click="togglePrepCollapse(item.id)">
-            <span class="prep-icon">📋</span>
             <span class="prep-title">检查准备</span>
             <span class="prep-count">{{ item.preparation.length }}条提示</span>
             <span class="prep-arrow">{{ prepCollapsed[item.id] ? '▸' : '▾' }}</span>
@@ -115,7 +114,6 @@
         <div v-if="item.items?.length" class="sub-items-section">
           <!-- 子项折叠头 -->
           <div class="sub-items-toggle" @click="toggleSubItemsCollapse(item)">
-            <span class="sub-items-icon">📝</span>
             <span class="sub-items-title">检查内容</span>
             <span class="sub-items-count">{{ item.items.length }}项</span>
             <span class="sub-items-badge-required">
@@ -136,9 +134,9 @@
               <span class="sub-item-fold">{{ isSubItemCollapsed(item, subItem) ? '▸' : '▾' }}</span>
               <label class="sub-item-upload-btn" @click.stop>
                 <input type="file" accept="image/*,.pdf" style="display:none" @change="(e) => handleSubItemUpload(e, item, subItemName(item, subItem))" />
-                <span>📎 上传</span>
+                <span>上传</span>
               </label>
-              <span class="sub-item-nas-btn" @click.stop="handleSubItemNasSelect(item, subItemName(item, subItem))">🖥</span>
+              <span class="sub-item-nas-btn" @click.stop="handleSubItemNasSelect(item, subItemName(item, subItem))"><AppIcon name="monitor" :size="16" /></span>
             </div>
             <div v-if="!isSubItemCollapsed(item, subItem) && getSubItemReports(item, subItemName(item, subItem)).length" class="sub-item-reports">
               <div v-for="r in getSubItemReports(item, subItemName(item, subItem))" :key="r.id" class="report-thumb-sm" @click="openReport(r)">
@@ -146,9 +144,9 @@
                   <img :src="getReportUrl(r.id)" class="report-img-sm" />
                 </template>
                 <template v-else>
-                  <div class="report-pdf-sm">📄<span class="pdf-label-sm">{{ r.filename }}</span></div>
+                  <div class="report-pdf-sm"><span class="pdf-label-sm">{{ r.filename }}</span></div>
                 </template>
-                <button class="report-del-sm" @click.stop="deleteReport(r, item)">✕</button>
+                <button class="report-del-sm" @click.stop="deleteReport(r, item)"><AppIcon name="close" :size="12" /></button>
               </div>
             </div>
           </div>
@@ -166,9 +164,9 @@
                   <img :src="getReportUrl(r.id)" class="report-img-sm" />
                 </template>
                 <template v-else>
-                  <div class="report-pdf-sm">📄<span class="pdf-label-sm">{{ r.filename }}</span></div>
+                  <div class="report-pdf-sm"><span class="pdf-label-sm">{{ r.filename }}</span></div>
                 </template>
-                <button class="report-del-sm" @click.stop="deleteReport(r, item)">✕</button>
+                <button class="report-del-sm" @click.stop="deleteReport(r, item)"><AppIcon name="close" :size="12" /></button>
               </div>
             </div>
           </div>
@@ -178,7 +176,7 @@
         <!-- 自定义产检 / 无子项的标准产检：保持原有上传方式 -->
         <div v-else class="report-section">
           <div class="report-header">
-            <span class="report-label">📎 报告 ({{ getItemReportCount(item) }})</span>
+            <span class="report-label">报告 ({{ getItemReportCount(item) }})</span>
           </div>
           <div class="category-tabs">
             <button v-for="cat in allCategories" :key="cat.value" class="cat-tab" :class="{ active: activeCategory[item._key] === cat.value }" @click="activeCategory[item._key] = cat.value">
@@ -189,7 +187,7 @@
           <div class="upload-bar">
             <label class="report-upload-btn">
               <input type="file" accept="image/*,.pdf" style="display:none" @change="(e) => handleReportUpload(e, item)" />
-              <span>📱 本地上传</span>
+              <span>本地上传</span>
             </label>
             <span class="upload-link nas-upload" @click.stop="openNasBrowser(item)">🖥 NAS选择</span>
             <span class="current-cat-hint">当前: {{ getCurrentCatLabel(item) }}</span>
@@ -201,9 +199,9 @@
                 <img :src="getReportUrl(r.id)" :alt="r.filename" class="report-img" />
               </template>
               <template v-else>
-                <div class="report-pdf-icon"><span class="pdf-icon">📄</span><span class="pdf-name">{{ r.filename }}</span></div>
+                <div class="report-pdf-icon"><span class="pdf-name">{{ r.filename }}</span></div>
               </template>
-              <button class="report-delete-btn" @click.stop="deleteReport(r, item)">✕</button>
+              <button class="report-delete-btn" @click.stop="deleteReport(r, item)"><AppIcon name="close" :size="12" /></button>
             </div>
           </div>
           <div v-else class="report-empty">暂无报告，点击上方上传</div>
@@ -242,7 +240,7 @@
             <div v-if="customForm.items.length" class="custom-items-list">
               <div v-for="(item, idx) in customForm.items" :key="idx" class="custom-item-row">
                 <n-input v-model:value="customForm.items[idx]" placeholder="如：B超、血常规" size="small" style="flex:1" />
-                <span class="custom-item-del" @click="customForm.items.splice(idx, 1)">✕</span>
+                <span class="custom-item-del" @click="customForm.items.splice(idx, 1)"><AppIcon name="close" :size="14" /></span>
               </div>
             </div>
             <div v-else class="no-items-hint">暂未添加子项</div>
@@ -277,7 +275,7 @@
       <div class="preset-picker-body">
         <div class="preset-search">
           <n-input v-model:value="presetSearchText" placeholder="搜索检查项目..." clearable>
-            <template #prefix>🔍</template>
+            <template #prefix><AppIcon name="search" :size="16" /></template>
           </n-input>
         </div>
         <div class="preset-category-list">
@@ -318,7 +316,7 @@
             :class="{ 'is-dir': entry.type === 'dir', 'is-file': entry.type === 'file' }"
             @click="entry.type === 'dir' ? navigateNas(entry.path) : nasSelectFile(entry)"
           >
-            <span class="nas-entry-icon">{{ entry.type === 'dir' ? '📁' : '📄' }}</span>
+            <span class="nas-entry-icon"><AppIcon :name="entry.type === 'dir' ? 'folder' : 'file'" :size="20" /></span>
             <span class="nas-entry-name">{{ entry.name }}</span>
             <span v-if="entry.type === 'file'" class="nas-entry-size">{{ formatSize(entry.size) }}</span>
           </div>
@@ -336,6 +334,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { NTag, NButton, NModal, NForm, NFormItem, NInput, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
+import AppIcon from '@/components/common/AppIcon.vue'
 import { markCheckupCompleted } from '@/api/checkup-schedule'
 import { checkupApi } from '@/api/checkup'
 import dayjs from 'dayjs'

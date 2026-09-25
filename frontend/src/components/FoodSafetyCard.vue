@@ -66,13 +66,13 @@
 
         <!-- 备注 -->
         <div class="detail-note-section" v-if="item.note">
-          <span class="note-label">📝 备注</span>
+          <span class="note-label">备注</span>
           <p class="note-content">{{ item.note }}</p>
         </div>
 
         <!-- 食用建议 -->
         <div class="detail-tips" v-if="currentSafetyLevel !== 'safe'">
-          <span class="tips-title">💡 食用建议</span>
+          <span class="tips-title">食用建议</span>
           <ul class="tips-list">
             <li v-for="(tip, i) in eatingTips(currentSafetyLevel)" :key="i">{{ tip }}</li>
           </ul>

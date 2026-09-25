@@ -1,7 +1,6 @@
 <template>
   <div class="development-summary" v-if="data">
     <div class="summary-header">
-      <span class="icon">🌱</span>
       <h3>本周发育参考</h3>
     </div>
     <div class="summary-body">
@@ -14,7 +13,6 @@
       <p class="development-text">{{ data.development }}</p>
     </div>
     <div class="tips">
-      <span class="tips-icon">💡</span>
       <span>{{ data.tips }}</span>
     </div>
   </div>

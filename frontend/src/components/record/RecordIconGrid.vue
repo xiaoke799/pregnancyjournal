@@ -6,25 +6,26 @@
       class="grid-item"
       @click="$emit('select', item.key)"
     >
-      <span class="item-icon">{{ item.icon }}</span>
+      <span class="item-icon"><AppIcon :name="item.icon" :size="18" /></span>
       <span class="item-label">{{ item.label }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 defineEmits<{
   select: [key: string]
 }>()
 
 const items = [
-  { key: 'weight', icon: '⚖️', label: '体重' },
+  { key: 'weight', icon: 'weight', label: '体重' },
   { key: 'fetal_movement', icon: '🦶', label: '胎动' },
-  { key: 'contraction', icon: '⏱️', label: '宫缩' },
-  { key: 'fetal_heart_rate', icon: '❤️', label: '胎心' },
-  { key: 'body_temperature', icon: '🌡️', label: '体温' },
+  { key: 'contraction', icon: 'timer', label: '宫缩' },
+  { key: 'fetal_heart_rate', icon: 'heart', label: '胎心' },
+  { key: 'body_temperature', icon: 'thermometer', label: '体温' },
   { key: 'blood_glucose', icon: '🩸', label: '血糖' },
-  { key: 'symptom', icon: '📋', label: '症状' },
+  { key: 'symptom', icon: 'clipboard', label: '症状' },
   { key: 'mood', icon: '😊', label: '心情' },
   { key: 'habit', icon: '✅', label: '好习惯' },
   { key: 'supplement', icon: '💊', label: '营养补充' },

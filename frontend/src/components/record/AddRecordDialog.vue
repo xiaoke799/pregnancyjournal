@@ -10,7 +10,7 @@
           :class="{ selected: selectedType === t.value }"
           @click="selectedType = t.value"
         >
-          <span class="type-icon">{{ t.icon }}</span>
+          <span class="type-icon"><AppIcon :name="t.icon" :size="18" /></span>
           <span class="type-label">{{ t.label }}</span>
         </div>
       </div>
@@ -462,7 +462,7 @@
                   @click="handleInsertImage"
                   title="插入图片"
                 >
-                  🖼️ 图片
+                  <AppIcon name="image" :size="15" /> 图片
                 </n-button>
               </n-button-group>
             </div>
@@ -510,6 +510,7 @@ import { dailyRecordApi } from '@/api/daily-record'
 import client from '@/api/client'
 import { getApiBase } from '@/utils/api-base'
 import dayjs from 'dayjs'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 const props = defineProps<{
   show: boolean
@@ -535,7 +536,7 @@ const visible = computed({
 })
 
 const recordTypes = [
-  { value: 'weight', icon: '⚖️', label: '体重' },
+  { value: 'weight', icon: 'weight', label: '体重' },
   // 三围（胸/腰/臀）：类型键仍是 waist，RecordList 点击该条目会以 type='waist' 打开本弹窗，
   // 缺了这一项会导致「编辑三围」打开的是空白表单且保存失败。
   { value: 'waist', icon: '📏', label: '三围' },
@@ -545,15 +546,15 @@ const recordTypes = [
   { value: 'urination', icon: '🚻', label: '排尿情况' },
   { value: 'blood_pressure', icon: '🩺', label: '血压' },
   { value: 'blood_glucose', icon: '🩸', label: '血糖' },
-  { value: 'temperature', icon: '🌡️', label: '体温' },
+  { value: 'temperature', icon: 'thermometer', label: '体温' },
   { value: 'hcg', icon: '🧬', label: 'HCG' },
   { value: 'uric_acid', icon: '🧪', label: '尿酸' },
   { value: 'supplement', icon: '💊', label: '营养补充' },
   { value: 'habit', icon: '✅', label: '好习惯' },
   { value: 'fetal_movement', icon: '🦶', label: '胎动' },
-  { value: 'contraction', icon: '⏱️', label: '宫缩' },
+  { value: 'contraction', icon: 'timer', label: '宫缩' },
   { value: 'intimacy', icon: '💑', label: '爱爱' },
-  { value: 'symptoms', icon: '📋', label: '症状' },
+  { value: 'symptoms', icon: 'clipboard', label: '症状' },
   { value: 'medication', icon: '💊', label: '用药' },
   { value: 'diet', icon: '🍎', label: '饮食' },
   { value: 'exercise', icon: '🏃', label: '运动' },
@@ -563,7 +564,7 @@ const recordTypes = [
   { value: 'plan', icon: '📌', label: '计划' },
   { value: 'diary', icon: '📝', label: '日记' },
   { value: 'mood', icon: '😊', label: '心情' },
-  { value: 'fetal_heart_rate', icon: '❤️', label: '测胎心' },
+  { value: 'fetal_heart_rate', icon: 'heart', label: '测胎心' },
 ]
 
 const moodOptions = [

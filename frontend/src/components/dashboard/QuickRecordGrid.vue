@@ -1,6 +1,6 @@
 <template>
   <div class="quick-record-grid">
-    <h3>✏️ 今日快速记录</h3>
+    <h3>今日快速记录</h3>
     <div class="grid">
       <div
         v-for="item in items"
@@ -8,7 +8,7 @@
         class="grid-item"
         @click="$emit('select', item.key)"
       >
-        <span class="item-icon">{{ item.icon }}</span>
+        <span class="item-icon"><AppIcon :name="item.icon" :size="18" /></span>
         <span class="item-label">{{ item.label }}</span>
       </div>
     </div>
@@ -16,17 +16,18 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 defineEmits<{
   select: [key: string]
 }>()
 
 const items = [
-  { key: 'weight', icon: '⚖️', label: '体重' },
+  { key: 'weight', icon: 'weight', label: '体重' },
   { key: 'fetal_movement', icon: '🦶', label: '胎动' },
-  { key: 'contraction', icon: '⏱️', label: '宫缩' },
+  { key: 'contraction', icon: 'timer', label: '宫缩' },
   { key: 'mood', icon: '😊', label: '心情' },
-  { key: 'fetal_heart_rate', icon: '❤️', label: '胎心' },
-  { key: 'symptom', icon: '📋', label: '症状' },
+  { key: 'fetal_heart_rate', icon: 'heart', label: '胎心' },
+  { key: 'symptom', icon: 'clipboard', label: '症状' },
 ]
 </script>
 

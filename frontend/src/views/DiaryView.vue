@@ -8,7 +8,7 @@
         </span>
       </div>
       <n-button type="primary" round @click="openNewDiary">
-        <template #icon>✏️</template>
+        <template #icon><AppIcon name="edit" :size="16" /></template>
         写日记
       </n-button>
     </div>
@@ -53,7 +53,7 @@
     <n-modal
       v-model:show="showDiaryModal"
       preset="card"
-      :title="editingDiary ? '✏️ 编辑日记' : '✏️ 写日记'"
+      :title="editingDiary ? '编辑日记' : '写日记'"
       style="max-width: 600px; width: 95vw;"
       :mask-closable="true"
       @after-leave="resetDiaryForm"
@@ -122,6 +122,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { NButton, NModal, NButtonGroup, NInput, NDatePicker, NSpin, useMessage } from 'naive-ui'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
+import AppIcon from '@/components/common/AppIcon.vue'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'

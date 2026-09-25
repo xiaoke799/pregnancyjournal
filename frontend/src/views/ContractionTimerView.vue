@@ -1,17 +1,17 @@
 <template>
   <div class="contraction-timer" :class="{ alert: alert511 }">
     <div class="timer-header">
-      <button class="close-btn" @click="goBack">✕ 关闭</button>
-      <h2>⏱️ 宫缩计时</h2>
+      <button class="close-btn" @click="goBack">关闭</button>
+      <h2>宫缩计时</h2>
     </div>
 
     <!-- 模式切换 -->
     <div class="mode-tabs">
       <button :class="['mode-tab', { active: mode === 'auto' }]" @click="mode = 'auto'">
-        ⏱️ 自动计时
+        <AppIcon name="timer" :size="15" /> 自动计时
       </button>
       <button :class="['mode-tab', { active: mode === 'manual' }]" @click="mode = 'manual'">
-        ✏️ 手动输入
+        <AppIcon name="edit" :size="15" /> 手动输入
       </button>
     </div>
 
@@ -120,6 +120,7 @@ import { NDatePicker, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useContractionTimer } from '@/composables/useContractionTimer'
 import dayjs from 'dayjs'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 const router = useRouter()
 const pregnancyStore = usePregnancyStore()

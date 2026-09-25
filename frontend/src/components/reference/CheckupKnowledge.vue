@@ -6,8 +6,8 @@
         <span class="knowledge-type">{{ data.short_name }}</span>
       </div>
       <div class="knowledge-meta">
-        <span class="meta-item">🕐 {{ data.timing }}</span>
-        <span class="meta-item">⏱️ {{ data.duration }}</span>
+        <span class="meta-item">{{ data.timing }}</span>
+        <span class="meta-item">{{ data.duration }}</span>
       </div>
       <p class="knowledge-desc">{{ data.description }}</p>
       <div class="knowledge-prep" v-if="data.preparation">

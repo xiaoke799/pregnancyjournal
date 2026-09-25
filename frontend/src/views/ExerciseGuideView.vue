@@ -22,41 +22,37 @@
     <!-- 各阶段详情 -->
     <n-collapse :default-expanded-names="[stageKey]" accordion>
       <!-- 孕早期 -->
-      <n-collapse-item name="early" title="🌱 孕早期（1~3个月）">
+      <n-collapse-item name="early" title="孕早期（1~3个月）">
         <div class="eg-tip eg-tip-info">
-          <span class="tip-icon">💡</span>
           <span><strong>原则</strong>胚胎着床未稳，以"缓慢、低强度"为主，避免腹部震动。</span>
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🚶</span><strong>散步</strong> <n-tag size="tiny" type="warning">首选</n-tag></div>
+          <div class="card-head"><strong>散步</strong> <n-tag size="tiny" type="warning">首选</n-tag></div>
           <p>最安全的运动方式。步伐放缓，每次15~30分钟，饭后稍作休息再进行。</p>
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🎵</span><strong>运动胎教</strong> <n-tag size="tiny" type="default">胎教同步</n-tag></div>
+          <div class="card-head"><strong>运动胎教</strong> <n-tag size="tiny" type="default">胎教同步</n-tag></div>
           <p>从孕8周开始，轻柔活动身体，通过羊水传递运动感刺激胎儿感官发育。可结合音乐胎教。</p>
         </div>
 
         <div class="eg-tip eg-tip-warn">
-          <span class="tip-icon">⚠️</span>
           <span><strong>注意</strong>避免剧烈跑跳、仰卧起坐、腹部用力；若有出血、腹痛立即停止并就医。</span>
         </div>
         <div class="eg-tip eg-tip-good">
-          <span class="tip-icon">⚖️</span>
           <span><strong>体重管理</strong>整个孕期增重12~14kg为宜，孕早期即开始控制。</span>
         </div>
       </n-collapse-item>
 
       <!-- 孕中期 -->
-      <n-collapse-item name="mid" title="🏊 孕中期（4~7个月）">
+      <n-collapse-item name="mid" title="孕中期（4~7个月）">
         <div class="eg-tip eg-tip-good">
-          <span class="tip-icon">✅</span>
           <span><strong>运动黄金期</strong>胎儿状况稳定，可主动参加适度运动——控制体重、提高抵抗力、改善妊娠不适、加强骨盆腰部肌肉。</span>
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🏊</span><strong>游泳</strong> <n-tag size="tiny" type="info">最佳全身运动</n-tag></div>
+          <div class="card-head"><strong>游泳</strong> <n-tag size="tiny" type="info">最佳全身运动</n-tag></div>
           <p>锻炼全身，减轻关节负担，缓解水肿和腰痛，放松子宫，强化心肺功能，可提高顺产概率。</p>
           <ul class="card-steps">
             <li>下水前淋浴热身，做基础体操放松身体</li>
@@ -65,28 +61,27 @@
             <li>结束后伸展胳膊肩膀跟腱收尾</li>
           </ul>
           <div class="eg-tip eg-tip-danger" style="margin-top:8px">
-            <span class="tip-icon">🚫</span>
             <span><strong>禁止蝶泳</strong>会使后背下部严重拱起，拉伤肩膀。</span>
           </div>
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🌿</span><strong>散步</strong> <n-tag size="tiny" type="success">每日必做</n-tag></div>
+          <div class="card-head"><strong>散步</strong> <n-tag size="tiny" type="success">每日必做</n-tag></div>
           <p>每天坚持，预防静脉曲张。<strong>下午4~5点</strong>最佳，阳光适宜草木释氧最强。中后期多走动利于顺产。外出需家人陪同。</p>
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">💃</span><strong>有氧操</strong> <n-tag size="tiny" type="warning">改善情绪</n-tag></div>
+          <div class="card-head"><strong>有氧操</strong> <n-tag size="tiny" type="warning">改善情绪</n-tag></div>
           <p>释放压力促进血清素分泌，动作以舒展为主，不要大幅度跳跃。</p>
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🤸</span><strong>背肩缓解运动</strong> <n-tag size="tiny" type="default">对症运动</n-tag></div>
+          <div class="card-head"><strong>背肩缓解运动</strong> <n-tag size="tiny" type="default">对症运动</n-tag></div>
           <p>韧带疼痛、背肩不适时通过专项拉伸缓解腰背酸胀，保持身体灵活性。</p>
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🧘</span><strong>普拉提 — 伸展四肢</strong> <n-tag size="tiny" type="info">核心锻炼</n-tag></div>
+          <div class="card-head"><strong>普拉提 — 伸展四肢</strong> <n-tag size="tiny" type="info">核心锻炼</n-tag></div>
           <p>平躺配合腹式呼吸，交替互换四肢姿势，重复5~10次：</p>
           <ol class="card-steps">
             <li>平躺，左腿伸直右腿屈膝，右臂上伸左臂放体侧</li>
@@ -97,20 +92,19 @@
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🌸</span><strong>孕妇瑜伽 / 太极拳</strong> <n-tag size="tiny" type="success">降压放松</n-tag></div>
+          <div class="card-head"><strong>孕妇瑜伽 / 太极拳</strong> <n-tag size="tiny" type="success">降压放松</n-tag></div>
           <p>使全身肌肉放松，对妊娠期高血压尤其有益，也缓解紧张情绪改善睡眠。</p>
         </div>
       </n-collapse-item>
 
       <!-- 孕晚期 -->
-      <n-collapse-item name="late" title="🧘 孕晚期（8~9个月）">
+      <n-collapse-item name="late" title="孕晚期（8~9个月）">
         <div class="eg-tip eg-tip-warn">
-          <span class="tip-icon">⚠️</span>
           <span><strong>原则</strong>不走太远、不站太久。"不疲劳、不剧烈"为前提，头晕气短立即停止就医。</span>
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🦵</span><strong>普拉提 — 减轻水肿</strong> <n-tag size="tiny" type="default">推荐</n-tag></div>
+          <div class="card-head"><strong>普拉提 — 减轻水肿</strong> <n-tag size="tiny" type="default">推荐</n-tag></div>
           <p>呼吸不畅或手脚腕水肿时推荐：</p>
           <div class="step-grid">
             <div class="step-block">
@@ -141,7 +135,7 @@
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">💪</span><strong>凯格尔运动（盆底肌）</strong> <n-tag size="tiny" type="error">改善漏尿</n-tag></div>
+          <div class="card-head"><strong>凯格尔运动（盆底肌）</strong> <n-tag size="tiny" type="error">改善漏尿</n-tag></div>
           <p>规律盆底肌锻炼，减少痔疮不适、预防漏尿，需长期坚持：</p>
           <ol class="card-steps">
             <li>全身放松，夹紧臀部和大腿</li>
@@ -152,7 +146,7 @@
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🤱</span><strong>缩紧阴道 + 分腿助产</strong> <n-tag size="tiny" type="warning">临产助力</n-tag></div>
+          <div class="card-head"><strong>缩紧阴道 + 分腿助产</strong> <n-tag size="tiny" type="warning">临产助力</n-tag></div>
           <p>降低尿失禁发生概率：</p>
           <div class="step-grid">
             <div class="step-block">
@@ -176,53 +170,51 @@
         </div>
 
         <div class="eg-card">
-          <div class="card-head"><span class="card-icon">🌳</span><strong>散步 + 瑜伽</strong></div>
+          <div class="card-head"><strong>散步 + 瑜伽</strong></div>
           <p>白天适当运动促进血液循环，避免站太久走太多。职场孕妈每工作1小时活动5分钟，双脚抬高缓解疲劳。</p>
         </div>
       </n-collapse-item>
 
       <!-- 临产前 -->
-      <n-collapse-item name="prepartum" title="🏃 临产前（孕10月）">
+      <n-collapse-item name="prepartum" title="临产前（孕10月）">
         <div class="eg-tip eg-tip-good">
-          <span class="tip-icon">🎯</span>
           <span><strong>尚未入盆？多运动！</strong>在医生建议下多运动有利于胎儿入盆。</span>
         </div>
 
         <div class="phase-grid">
           <div class="phase-item orange">
-            <strong>🏗️ 爬楼梯</strong>
+            <strong>爬楼梯</strong>
             <p>锻炼大腿臀肌群，帮助入盆，促第一产程到来</p>
           </div>
           <div class="phase-item green">
-            <strong>⛰️ 爬小山包</strong>
+            <strong>爬小山包</strong>
             <p>午后14~16点氧气最强，借爬山充氧，累了就休息</p>
           </div>
           <div class="phase-item blue">
-            <strong>🚶 散步+上下楼梯</strong>
+            <strong>散步+上下楼梯</strong>
             <p>过了预产期仍可促进分娩，催产素分泌</p>
           </div>
           <div class="phase-item purple">
-            <strong>🌬️ 腹式呼吸法</strong>
+            <strong>腹式呼吸法</strong>
             <p>脊背挺直，鼻吸腹鼓，呼气更慢更用力</p>
           </div>
           <div class="phase-item pink">
-            <strong>🤲 拉梅兹呼吸法</strong>
+            <strong>拉梅兹呼吸法</strong>
             <p>胸部→浅喘→喘息→哈气四阶段应对产程</p>
           </div>
           <div class="phase-item yellow">
-            <strong>⚽ 分娩球操</strong>
+            <strong>分娩球操</strong>
             <p>弓步举球+挺胸落球，打开盆腔空间</p>
           </div>
         </div>
 
         <div class="eg-tip eg-tip-warn">
-          <span class="tip-icon">👨</span>
           <span><strong>必须有家人陪同</strong>外出爬楼梯/爬山/散步时确保安全，紧急情况立即送医。</span>
         </div>
       </n-collapse-item>
 
       <!-- 运动禁忌 -->
-      <n-collapse-item name="forbid" title="🚫 运动禁忌 & 停止信号">
+      <n-collapse-item name="forbid" title="运动禁忌&停止信号">
         <div style="font-weight:600;margin-bottom:8px;color:#e8627a;">出现以下症状，立即停止运动并就医：</div>
         <div class="signal-list">
           <n-tag v-for="s in stopSignals" :key="s" type="error" size="small" round bordered>{{ s }}</n-tag>
@@ -238,28 +230,27 @@
         </div>
 
         <div class="eg-tip eg-tip-info" style="margin-top:12px">
-          <span class="tip-icon">💡</span>
           <span><strong>养胎不必整天卧床</strong>长期卧床会导致抑郁、便秘、下肢血液不畅甚至静脉血栓。除非有明确禁忌，否则都应适量运动。</span>
         </div>
       </n-collapse-item>
 
       <!-- 特殊场景 -->
-      <n-collapse-item name="special" title="🏙️ 特殊场景建议">
+      <n-collapse-item name="special" title="特殊场景建议">
         <div class="phase-grid">
           <div class="phase-item blue">
-            <strong>🏢 住高楼</strong>
+            <strong>住高楼</strong>
             <p>电梯与楼梯结合使用，孕晚期爬楼梯助入盆</p>
           </div>
           <div class="phase-item green">
-            <strong>💼 职场孕妈</strong>
+            <strong>职场孕妈</strong>
             <p>每1小时活动5分钟，双脚抬高，避免交叠双腿</p>
           </div>
           <div class="phase-item orange">
-            <strong>❤️‍🩹 妊娠高血压</strong>
+            <strong>妊娠高血压</strong>
             <p>散步太极孕妇瑜伽降压，避免激烈导致血压波动</p>
           </div>
           <div class="phase-item pink">
-            <strong>🌿 预防便秘</strong>
+            <strong>预防便秘</strong>
             <p>户外运动促进肠道蠕动，配合高纤维饮食</p>
           </div>
         </div>
