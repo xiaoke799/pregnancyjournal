@@ -32,20 +32,37 @@ const ALL_TABLES = [
 //  · 可写状态文件（企业微信配置、推送状态）→ config.DATA_DIR（持久化目录）
 //  · 内置只读知识库（菜谱/食材安全/产检计划）→ config.ASSETS_DIR（安装目录，写失败仅告警）
 const WRITABLE_CONFIG_FILES = new Set(['wecom.json', 'daily_push_state.json', 'schedule_dates.json']);
+
+// 内置知识库：随安装包发布、随升级更新的「只读资源」，不是用户数据。
+// ⚠️ 恢复备份时**绝不覆盖**它们（只在文件缺失时补写）：
+// 备份里带的往往是**旧版本**的副本（菜谱更少、食材库更薄、产检表结构更旧），
+// 一旦覆盖，用户就会遇到「恢复了备份，内容反而退回旧版」——静默、无提示、且难以自查。
+// 曾经踩过同类的「升级后内置知识库丢失」，正是同一类问题的另一面。
+const BUILTIN_RESOURCE_FILES = new Set(['checkup_schedule.json', 'recipes.json', 'food_safety_v3.json']);
+
 function restoreConfigDir(srcConfigDir) {
   if (!fs.existsSync(srcConfigDir)) return 0;
   let n = 0;
+  const skipped = [];
   for (const fn of fs.readdirSync(srcConfigDir)) {
     const src = path.join(srcConfigDir, fn);
     try {
       if (!fs.statSync(src).isFile()) continue;
       const destDir = WRITABLE_CONFIG_FILES.has(fn) ? config.DATA_DIR : config.ASSETS_DIR;
+      const destPath = path.join(destDir, fn);
+      if (BUILTIN_RESOURCE_FILES.has(fn) && fs.existsSync(destPath)) {
+        skipped.push(fn);
+        continue;
+      }
       fs.mkdirSync(destDir, { recursive: true });
-      fs.copyFileSync(src, path.join(destDir, fn));
+      fs.copyFileSync(src, destPath);
       n++;
     } catch (e) {
       log.warn('恢复', `配置文件回写失败 ${fn}: ${e.message}`);
     }
+  }
+  if (skipped.length) {
+    log.info('恢复', `保留当前版本的内置知识库，未被旧备份覆盖: ${skipped.join(', ')}`);
   }
   return n;
 }
@@ -1423,23 +1440,28 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
       const imgW = CW;
       const imgH = 380; // 固定图片高度
 
-      const imgPath = photo.file_path || photo.thumbnail_path;
-      if (imgPath && fs.existsSync(imgPath)) {
+      // 依次尝试：原图 → 缩略图。
+      // pdfkit 只能嵌 JPEG / PNG（其它格式直接抛 Unknown image format），所以 WebP/GIF/BMP/AVIF 这类
+      // 原图嵌不进去时，退而用我们的 JPEG 缩略图 —— 总比整页留个「图片无法加载」的框强。
+      const candidates = [photo.file_path, photo.thumbnail_path]
+        .filter((p, i, arr) => !!p && arr.indexOf(p) === i);
+      let embedded = false;
+      for (const imgPath of candidates) {
+        if (!fs.existsSync(imgPath)) continue;
         try {
           doc.image(imgPath, imgX, imgY, { width: imgW, height: imgH, fit: [imgW, imgH], align: 'center', valign: 'center' });
+          embedded = true;
+          break;
         } catch (e) {
-          // 图片加载失败时显示占位框
-          doc.save();
-          doc.rect(imgX, imgY, imgW, imgH).fillAndStroke('#f5f5f5', '#ddd');
-          doc.font(fontName).fontSize(12).fillColor('#999')
-            .text('[图片无法加载]', imgX, imgY + imgH / 2 - 8, { width: imgW, align: 'center' });
-          doc.restore();
+          log.warn('相册PDF', `嵌入失败，尝试下一个候选: ${path.basename(imgPath)} (${e.message})`);
         }
-      } else {
+      }
+      if (!embedded) {
+        const anyExists = candidates.some((p) => fs.existsSync(p));
         doc.save();
         doc.rect(imgX, imgY, imgW, imgH).fillAndStroke('#f5f5f5', '#ddd');
         doc.font(fontName).fontSize(12).fillColor('#999')
-          .text('[图片文件不存在]', imgX, imgY + imgH / 2 - 8, { width: imgW, align: 'center' });
+          .text(anyExists ? '[这张照片的格式无法放进 PDF]' : '[图片文件不存在]', imgX, imgY + imgH / 2 - 8, { width: imgW, align: 'center' });
         doc.restore();
       }
 

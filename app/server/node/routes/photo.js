@@ -8,20 +8,27 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../logger');
 const heic = require('../services/heic');
+const imageThumb = require('../services/image-thumb');
 
 const VIDEO_EXTS = new Set([
   'mp4', 'webm', 'mov', 'avi', 'ogg', 'mkv', 'flv', 'wmv', 'm4v',
   '3gp', '3g2', 'mts', 'm2ts', 'ts', 'vob', 'rm', 'rmvb', 'asf'
 ]);
 const VIDEO_MIMES = (mime) => typeof mime === 'string' && mime.startsWith('video/');
-const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'heic', 'heif', 'tiff', 'tif']);
+const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'heic', 'heif']);
+
+// TIFF 明确拒收：浏览器显示不了（Chrome/Edge/Firefox 都不支持），PDF 也嵌不进去，
+// 收下来只能变成一个打不开的文件 —— 不如当场说清楚，让用户转成 JPEG/PNG。
+const UNSUPPORTED_EXTS = new Set(['tiff', 'tif']);
 
 // 手机端常见：mimetype 为空或 application/octet-stream，此时按扩展名兜底，避免误拒 HEIC 等
 function _isAllowedMedia(file) {
+  const name = (file && file.originalname) || '';
+  const ext = path.extname(name).toLowerCase().slice(1);
   const mime = ((file && file.mimetype) || '').toLowerCase();
+  if (UNSUPPORTED_EXTS.has(ext) || mime === 'image/tiff') return false;
   if (mime.startsWith('image/') || mime.startsWith('video/')) return true;
   if (!mime || mime === 'application/octet-stream') {
-    const ext = path.extname((file && file.originalname) || '').toLowerCase().slice(1);
     return IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext);
   }
   return false;
@@ -53,6 +60,17 @@ function _isVideo(filename, contentType) {
   if (contentType && VIDEO_MIMES(contentType)) return true;
   const ext = path.extname(filename || '').toLowerCase().slice(1);
   return VIDEO_EXTS.has(ext);
+}
+
+// 媒体文件响应头：
+// - nosniff：避免浏览器按内容嗅探出意料之外的类型
+// - SVG 内联返回时加 CSP sandbox：直接打开该 URL 会在应用同源下执行脚本（存储型 XSS 面），
+//   加 sandbox 后脚本不执行；对 <img> 正常显示没有影响
+function _applyServeHeaders(res, filePath) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  if (/\.svgz?$/i.test(String(filePath))) {
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  }
 }
 
 function _ensureDir(dir) {
@@ -87,7 +105,12 @@ router.post('/photos', uploadSingle('file'), async (req, res) => {
     if (!req.file) return res.json({ code: 1001, data: null, message: '请上传文件' });
     if (!_isAllowedMedia(req.file)) {
       try { fs.unlinkSync(req.file.path); } catch (e) {}
-      return res.json({ code: 1001, data: null, message: `不支持的文件类型(${req.file.mimetype || '未知'})` });
+      const ext = path.extname(req.file.originalname || '').toLowerCase().slice(1);
+      const tips = (UNSUPPORTED_EXTS.has(ext) || (req.file.mimetype || '') === 'image/tiff')
+        ? '暂不支持 TIFF 格式（浏览器无法预览），请先转成 JPEG 或 PNG 再上传'
+        : `不支持的文件类型(${req.file.mimetype || '未知'})`;
+      logger.warn('photo', `拒绝上传: ${req.file.originalname} (${req.file.mimetype})`);
+      return res.json({ code: 1001, data: null, message: tips });
     }
     const { pregnancy_id, photo_type, gestational_week, gestational_day, milestone_type, checkup_id, note, media_type: reqMedia, photo_date } = req.body;
     logger.info('photo', `POST /photos - file=${req.file.originalname}, size=${req.file.size}, type=${photo_type}, pregnancy_id=${pregnancy_id}, photo_date=${photo_date||'(auto)'}`);
@@ -124,6 +147,12 @@ router.post('/photos', uploadSingle('file'), async (req, res) => {
       }
     }
     thumbnail_path = _getThumbnailPath(destPath, finalMediaType);
+    // 相册网格用的缩略图（此前没有：网格直接加载全尺寸原图，手机流量吃不消）
+    // 仅 JPEG/PNG 能纯 JS 解码；其它格式或失败时保持 thumbnail_path = 原文件，行为与以前一致
+    if (finalMediaType !== 'video') {
+      const thumb = imageThumb.makeThumbnail(destPath);
+      if (thumb) thumbnail_path = thumb;
+    }
     const id = db.generateId();
     await db.run(
       `INSERT INTO pregnancy_photo (id, pregnancy_id, photo_type, file_path, thumbnail_path, gestational_week, gestational_day, milestone_type, checkup_id, note, media_type, created_at, updated_at)
@@ -236,6 +265,7 @@ router.get('/photos/:id/file', async (req, res) => {
     const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.tiff': 'image/tiff', '.heic': 'image/heic', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webp', '.mov': 'video/quicktime', '.avi': 'video/x-msvideo', '.mkv': 'video/x-matroska', '.ogg': 'video/ogg', '.flv': 'video/x-flv', '.wmv': 'video/x-ms-wmv', '.m4v': 'video/x-m4v', '.3gp': 'video/3gpp' };
     const ext = path.extname(photo.file_path).toLowerCase();
     res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
+    _applyServeHeaders(res, photo.file_path);
     res.sendFile(resolvedPath);
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
@@ -259,6 +289,7 @@ router.get('/photos/:id/thumbnail', async (req, res) => {
     if (!allowedDirs.some(d => resolvedPath === d || resolvedPath.startsWith(d + path.sep))) {
       return res.status(403).json({ code: 1001, data: null, message: '不允许访问该文件' });
     }
+    _applyServeHeaders(res, thumbPath);
     res.sendFile(resolvedPath);
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
