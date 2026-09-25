@@ -804,7 +804,10 @@ router.post('/backup', async (req, res) => {
         const fn = copyToBackup(p.file_path, 'album');
         if (fn) { exportData._file_map.album[p.file_path] = fn; count++; }
       }
-      if (p.thumbnail_path && p.thumbnail_path !== p.file_path && fs.existsSync(p.thumbnail_path)) {
+      // 我们自己生成的 `_thumb.jpg` 缩略图是**可再生**的派生文件，不进备份（否则每份备份都会
+      // 白白大出几十上百 MB）；恢复之后由 services/media-backfill.js 自动补回来。
+      const isDerivedThumb = /_thumb\.jpg$/i.test(p.thumbnail_path || '');
+      if (p.thumbnail_path && p.thumbnail_path !== p.file_path && !isDerivedThumb && fs.existsSync(p.thumbnail_path)) {
         const fn = copyToBackup(p.thumbnail_path, 'album');
         if (fn) { exportData._file_map.album[p.thumbnail_path] = `thumb_${fn}`; count++; }
       }

@@ -67,7 +67,12 @@ function _isVideo(filename, contentType) {
 // - SVG 内联返回时加 CSP sandbox：直接打开该 URL 会在应用同源下执行脚本（存储型 XSS 面），
 //   加 sandbox 后脚本不执行；对 <img> 正常显示没有影响
 function _applyServeHeaders(res, filePath) {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // 只在类型明确时才加 nosniff：类型未知（octet-stream）时浏览器靠内容嗅探还能把图显示出来，
+  // 加了 nosniff 反而会让没登记扩展名的图片（.jfif/.jpe 之类）显示不出来。
+  const ct = String(res.getHeader('Content-Type') || '');
+  if (ct && ct !== 'application/octet-stream') {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  }
   if (/\.svgz?$/i.test(String(filePath))) {
     res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
   }
@@ -262,7 +267,7 @@ router.get('/photos/:id/file', async (req, res) => {
     const isAllowed = allowedDirs.some(dir => resolvedPath.toLowerCase().startsWith(dir));
     if (!isAllowed) return res.status(403).json({ code: 1001, data: null, message: '不允许访问该路径' });
 
-    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.tiff': 'image/tiff', '.heic': 'image/heic', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webp', '.mov': 'video/quicktime', '.avi': 'video/x-msvideo', '.mkv': 'video/x-matroska', '.ogg': 'video/ogg', '.flv': 'video/x-flv', '.wmv': 'video/x-ms-wmv', '.m4v': 'video/x-m4v', '.3gp': 'video/3gpp' };
+    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.jpe': 'image/jpeg', '.jfif': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.tiff': 'image/tiff', '.tif': 'image/tiff', '.heic': 'image/heic', '.heif': 'image/heif', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v', '.avi': 'video/x-msvideo', '.mkv': 'video/x-matroska', '.ogg': 'video/ogg', '.ogv': 'video/ogg', '.flv': 'video/x-flv', '.wmv': 'video/x-ms-wmv', '.3gp': 'video/3gpp', '.3g2': 'video/3gpp2', '.mts': 'video/mp2t', '.m2ts': 'video/mp2t', '.ts': 'video/mp2t', '.vob': 'video/dvd', '.rm': 'application/vnd.rn-realmedia', '.rmvb': 'application/vnd.rn-realmedia-vbr', '.asf': 'video/x-ms-asf' };
     const ext = path.extname(photo.file_path).toLowerCase();
     res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
     _applyServeHeaders(res, photo.file_path);
@@ -281,7 +286,7 @@ router.get('/photos/:id/thumbnail', async (req, res) => {
       thumbPath = photo.file_path;
     }
     if (!thumbPath || !fs.existsSync(thumbPath)) return res.status(404).json({ code: 1001, data: null, message: '文件不存在' });
-    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.heic': 'image/heic', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime' };
+    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.jpe': 'image/jpeg', '.jfif': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.heic': 'image/heic', '.heif': 'image/heif', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v' };
     const ext = path.extname(thumbPath).toLowerCase();
     res.setHeader('Content-Type', mimeMap[ext] || 'image/jpeg');
     const allowedDirs = [path.resolve(config.PHOTOS_DIR), path.resolve(config.MEDIA_DIR)];
