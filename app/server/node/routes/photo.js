@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../logger');
+const heic = require('../services/heic');
 
 const VIDEO_EXTS = new Set([
   'mp4', 'webm', 'mov', 'avi', 'ogg', 'mkv', 'flv', 'wmv', 'm4v',
@@ -111,6 +112,17 @@ router.post('/photos', uploadSingle('file'), async (req, res) => {
       _ensureDir(path.join(ALBUM_BASE, dateDir));
     }
     fs.renameSync(req.file.path, destPath);
+    // HEIC/HEIF：浏览器（Chrome/Edge/Firefox）解不开，转成同名 .jpg 供显示；原图保留不删。
+    // 转码失败不阻断上传 —— 原样入库，前端会给出「该格式无法预览」提示。
+    if (finalMediaType !== 'video' && heic.isHeicFile(destPath)) {
+      const conv = await heic.convertToJpeg(destPath);
+      if (conv.ok) {
+        logger.info('photo', `HEIC 已转 JPEG: ${path.basename(destPath)} → ${path.basename(conv.jpegPath)}`);
+        destPath = conv.jpegPath;
+      } else {
+        logger.warn('photo', `HEIC 转码失败（保留原图，浏览器可能无法预览）: ${conv.error}`);
+      }
+    }
     thumbnail_path = _getThumbnailPath(destPath, finalMediaType);
     const id = db.generateId();
     await db.run(
@@ -196,6 +208,10 @@ router.delete('/photos/:id', async (req, res) => {
     }
     if (photo.file_path && fs.existsSync(photo.file_path)) { try { fs.unlinkSync(photo.file_path); } catch (e) {} }
     if (photo.thumbnail_path && photo.thumbnail_path !== photo.file_path && fs.existsSync(photo.thumbnail_path)) { try { fs.unlinkSync(photo.thumbnail_path); } catch (e) {} }
+    // 连带给 HEIC 原图（显示用的是转出来的 .jpg，原图与它同目录同名）
+    for (const p of heic.siblingOriginals(photo.file_path)) {
+      try { fs.unlinkSync(p); } catch (e) { /* 单个失败不影响删除记录 */ }
+    }
     await db.run('DELETE FROM pregnancy_photo WHERE id = ?', [id]);
     logger.info('photo', `DELETE /photos/${id} - deleted successfully, file=${photo.file_path}`);
     res.json({ code: 0, data: null, message: 'success' });

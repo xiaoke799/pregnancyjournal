@@ -421,6 +421,8 @@ async function initDb() {
   migrateDb();
   // 一次性存储迁移：把历史误写到安装目录的业务文件搬进持久化目录（幂等、非破坏）
   try { require('./storage-migrate').migrateStorage(module.exports); } catch (e) { log.warn('存储迁移', e.message); }
+  // 历史 HEIC 照片转码：浏览器解不开 HEIC，后台把它们转成 JPEG 并回写数据库（异步、幂等、失败不影响启动）
+  try { require('./services/heic-backfill').startHeicBackfill(module.exports); } catch (e) { log.warn('HEIC 回填', e.message); }
   saveDb();
   log.db('数据库就绪');
 
