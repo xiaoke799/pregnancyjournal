@@ -12,7 +12,9 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 const logger = require('../logger');
+const config = require('../config');
 const heic = require('./heic');
 const imageThumb = require('./image-thumb');
 
@@ -20,6 +22,7 @@ const MAX_HEIC_PER_RUN = 500;
 const MAX_THUMBS_PER_RUN = 80;
 const HEIC_DELAY_MS = 200;
 const THUMB_DELAY_MS = 1000;   // 解码 JPEG 是同步的，间隔大一点，别让应用发木
+const MAX_SCAN_FILES = 20000;  // 路径自愈时最多扫多少个文件
 
 // 需要回填的表：pathCols 是要改写的路径列；isReport 为 true 时额外更新文件类型字段
 const TARGETS = [
@@ -31,6 +34,62 @@ const TARGETS = [
 let _running = false;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** 递归收集「文件名 → 真实路径」；文件名是 uuid，几乎不会重名 */
+function _indexDir(dir, index, budget) {
+  if (budget.left <= 0) return;
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+  for (const ent of entries) {
+    if (budget.left <= 0) return;
+    const p = path.join(dir, ent.name);
+    try {
+      if (ent.isDirectory()) _indexDir(p, index, budget);
+      else if (ent.isFile()) {
+        budget.left -= 1;
+        if (!index.has(ent.name)) index.set(ent.name, p);
+      }
+    } catch (e) { /* 单个条目失败不影响整体 */ }
+  }
+}
+
+/**
+ * 路径自愈：记录指向的文件**不存在**时，按文件名在当前照片/媒体目录里找回来并改写记录。
+ *
+ * 专治 v0.0.27 → v0.0.29 迁移里最可能出现的一类 404：
+ * 文件已经被 `cmd/upgrade_init` 搬进持久目录，但数据库里的路径还是**旧安装目录**——
+ * 例如迁移标记 `.storage_migrated_v1` 已存在（`storage-migrate.js` 直接 return，不再重写路径），
+ * 或用户换过存储卷导致旧路径前缀对不上。
+ * 只在「basename 命中 + 目标文件真实存在」时才改；文件名叫 uuid，不会误配。
+ */
+function healPaths(db) {
+  const index = new Map();
+  const budget = { left: MAX_SCAN_FILES };
+  for (const root of [config.PHOTOS_DIR, config.MEDIA_DIR]) _indexDir(root, index, budget);
+  if (!index.size) return { fixed: 0, scanned: 0 };
+
+  let fixed = 0;
+  for (const t of TARGETS) {
+    let rows = [];
+    try { rows = db.queryAll(`SELECT ${t.select} FROM ${t.table}`) || []; } catch (e) { continue; }
+    for (const row of rows) {
+      const cur = row.file_path;
+      if (!cur || fs.existsSync(cur)) continue;          // 路径本来就有效，别动
+      const hit = index.get(path.basename(cur));
+      if (!hit) continue;
+      try {
+        db.run(`UPDATE ${t.table} SET file_path = ? WHERE id = ?`, [hit, row.id]);
+        if (t.pathCols.includes('thumbnail_path')) {
+          // 缩略图先指回原图（等于"没有缩略图"），稍后由缩略图回填生成
+          db.run(`UPDATE ${t.table} SET thumbnail_path = ? WHERE id = ?`, [hit, row.id]);
+        }
+        fixed += 1;
+        logger.info('媒体补齐', `路径自愈: ${path.basename(cur)} → ${hit}`);
+      } catch (e) { /* 单条失败不影响其它 */ }
+    }
+  }
+  return { fixed, scanned: index.size };
+}
 
 async function _collectHeicJobs(db) {
   const jobs = [];
@@ -116,6 +175,13 @@ async function runMediaBackfill(db) {
   if (_running) return;
   _running = true;
   try {
+    // 0) 路径自愈（最先做：后面两步都依赖 file_path 能找到文件）
+    const h = healPaths(db);
+    if (h.fixed > 0) {
+      try { db.saveDb(); } catch (e) { /* 交给定时落盘 */ }
+      logger.startup(`路径自愈: 修好 ${h.fixed} 条（扫描 ${h.scanned} 个文件）`);
+    }
+
     // 1) HEIC → JPEG
     const heicJobs = await _collectHeicJobs(db);
     if (heicJobs.length) {
@@ -151,4 +217,4 @@ function startMediaBackfill(db) {
   });
 }
 
-module.exports = { startMediaBackfill, runMediaBackfill };
+module.exports = { startMediaBackfill, runMediaBackfill, healPaths };
