@@ -105,7 +105,9 @@ CREATE TABLE IF NOT EXISTS daily_record (
   weight REAL,
   fetal_heart_rate INTEGER,
   body_temperature REAL,
+  bust REAL,
   waist REAL,
+  hip REAL,
   blood_glucose_fasting REAL,
   blood_glucose_1h REAL,
   blood_glucose_2h REAL,
@@ -329,6 +331,24 @@ function getDb() {
   return db;
 }
 
+/**
+ * 从建表语句里解析某个字段声明的类型（REAL / INTEGER / TEXT …）。
+ * 补列时必须沿用它在 SCHEMA 里的类型 —— 不能一律用 TEXT：
+ * SQLite 是「按列亲和性」存值的，TEXT 列写入数字 92 会被存成字符串 '92'，
+ * 读回来就是 "92" 而不是 92，前端数字输入框与折线图都会受影响。
+ * （实测踩过：老库补出来的 bust/hip 读回来是字符串，新装库是数字。）
+ */
+function declaredColumnType(table, col) {
+  try {
+    const tableDef = SCHEMA.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${table} \\(([\\s\\S]*?)\\n\\);`));
+    if (!tableDef) return null;
+    const m = tableDef[1].match(new RegExp(`(?:^|\\n)\\s*${col}\\s+([A-Za-z]+)`, 'i'));
+    return m ? m[1].toUpperCase() : null;
+  } catch {
+    return null;
+  }
+}
+
 function migrateDb() {
   // 仅保留真正不在 SCHEMA 中的列（大多数列已在 CREATE TABLE 中定义）
   // 老库升级时执行 ADD COLUMN；新库因 SCHEMA 已包含则跳过
@@ -341,6 +361,8 @@ function migrateDb() {
     },
     daily_record: {
       waist: null,                 // 腰围记录（v0.0.28 新增）
+      bust: null,                  // 胸围（v0.0.29 新增，与 waist/hip 合称三围）
+      hip: null,                   // 臀围（v0.0.29 新增）
     },
     push_log: {
       payload: null,               // 推送正文（重试时原样重发，v0.0.28 新增）
@@ -356,7 +378,9 @@ function migrateDb() {
       for (const [col, defaultVal] of Object.entries(cols)) {
         if (!existingCols.has(col)) {
           try {
-            db.run(`ALTER TABLE ${table} ADD COLUMN ${col} TEXT`);
+            // 沿用 SCHEMA 里声明的类型（数值列必须是 REAL/INTEGER，不能用 TEXT —— 见函数注释）
+            const colType = declaredColumnType(table, col) || 'TEXT';
+            db.run(`ALTER TABLE ${table} ADD COLUMN ${col} ${colType}`);
             if (defaultVal !== null) {
               db.run(`UPDATE ${table} SET ${col} = ? WHERE ${col} IS NULL`, [defaultVal]);
             }

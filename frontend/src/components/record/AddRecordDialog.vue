@@ -536,9 +536,13 @@ const visible = computed({
 
 const recordTypes = [
   { value: 'weight', icon: '⚖️', label: '体重' },
-  // 腰围：RecordList 点击已有腰围条目会以 type='waist' 打开本弹窗，
-  // 缺了这一项会导致「编辑腰围」打开的是空白表单且保存失败。
-  { value: 'waist', icon: '📏', label: '腰围' },
+  // 三围（胸/腰/臀）：类型键仍是 waist，RecordList 点击该条目会以 type='waist' 打开本弹窗，
+  // 缺了这一项会导致「编辑三围」打开的是空白表单且保存失败。
+  { value: 'waist', icon: '📏', label: '三围' },
+  { value: 'edema', icon: '🦵', label: '水肿' },
+  { value: 'discharge', icon: '💧', label: '分泌物' },
+  { value: 'skin', icon: '✨', label: '皮肤状况' },
+  { value: 'urination', icon: '🚻', label: '排尿情况' },
   { value: 'blood_pressure', icon: '🩺', label: '血压' },
   { value: 'blood_glucose', icon: '🩸', label: '血糖' },
   { value: 'temperature', icon: '🌡️', label: '体温' },
@@ -627,8 +631,15 @@ const formData = ref({
   recordDate: '',
   // 体重
   weight: null as number | null,
-  // 腰围
+  // 三围
+  bust: null as number | null,
   waist: null as number | null,
+  hip: null as number | null,
+  // 水肿 / 分泌物 / 皮肤 / 排尿
+  edemaLevel: 'none' as string,
+  vaginalDischarge: 'normal' as string,
+  skinCondition: 'normal' as string,
+  urinationFrequency: 'normal' as string,
   // 血压
   bpSystolic: null as number | null,
   bpDiastolic: null as number | null,
@@ -730,7 +741,21 @@ watch(() => props.show, (val) => {
           formData.value.weight = r.weight ?? null
           break
         case 'waist':
+          formData.value.bust = r.bust ?? null
           formData.value.waist = r.waist ?? null
+          formData.value.hip = r.hip ?? null
+          break
+        case 'edema':
+          formData.value.edemaLevel = r.edema_level || 'none'
+          break
+        case 'discharge':
+          formData.value.vaginalDischarge = r.vaginal_discharge || 'normal'
+          break
+        case 'skin':
+          formData.value.skinCondition = r.skin_condition || 'normal'
+          break
+        case 'urination':
+          formData.value.urinationFrequency = r.urination_frequency || 'normal'
           break
         case 'blood_pressure':
           formData.value.bpSystolic = r.blood_pressure_systolic != null ? Number(r.blood_pressure_systolic) : null
@@ -975,8 +1000,25 @@ async function saveRecord() {
         data.weight = formData.value.weight
         break
       case 'waist':
-        if (!formData.value.waist) { message.warning('请输入腰围'); saving.value = false; return }
-        data.waist = formData.value.waist
+        // 三围：允许只填其中一两项（有的人只量腰围），但一项都不填就没意义
+        if (formData.value.bust == null && formData.value.waist == null && formData.value.hip == null) {
+          message.warning('请至少填写胸围 / 腰围 / 臀围中的一项'); saving.value = false; return
+        }
+        if (formData.value.bust != null) data.bust = formData.value.bust
+        if (formData.value.waist != null) data.waist = formData.value.waist
+        if (formData.value.hip != null) data.hip = formData.value.hip
+        break
+      case 'edema':
+        data.edema_level = formData.value.edemaLevel || 'none'
+        break
+      case 'discharge':
+        data.vaginal_discharge = formData.value.vaginalDischarge || 'normal'
+        break
+      case 'skin':
+        data.skin_condition = formData.value.skinCondition || 'normal'
+        break
+      case 'urination':
+        data.urination_frequency = formData.value.urinationFrequency || 'normal'
         break
       case 'blood_pressure':
         if (!formData.value.bpSystolic || !formData.value.bpDiastolic) { message.warning('请输入血压值'); saving.value = false; return }
@@ -1146,7 +1188,13 @@ function resetForm() {
   formData.value = {
     recordDate: dayjs().format('YYYY-MM-DD'),
     weight: null,
+    bust: null,
     waist: null,
+    hip: null,
+    edemaLevel: 'none',
+    vaginalDischarge: 'normal',
+    skinCondition: 'normal',
+    urinationFrequency: 'normal',
     bpSystolic: null,
     bpDiastolic: null,
     glucoseTime: 'fasting',
