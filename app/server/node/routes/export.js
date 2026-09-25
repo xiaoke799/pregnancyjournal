@@ -650,6 +650,11 @@ router.post('/export/backup-db', async (req, res) => {
     const backupsDir = path.join(config.DATA_DIR || '.', 'backups');
     if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir, { recursive: true });
 
+    // ⚠️ 本模块是「内存 SQLite + 每 30 秒整库落盘」，直接复制文件可能拿到**最多 30 秒前的状态**：
+    // 用户刚写完记录就点备份，备份里会少掉最新数据（且毫无提示）。
+    // 先强制落盘一次，保证备份内容与当前内存状态一致。
+    try { db.saveDb(); } catch (e) { log.warn('备份', `强制落盘失败（备份可能偏旧）: ${e.message}`); }
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const backupPath = path.join(backupsDir, `backup_${timestamp}.db`);
     fs.copyFileSync(dbPath, backupPath);
@@ -681,11 +686,38 @@ router.post('/export/restore-db', async (req, res) => {
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const preRestore = path.join(backupsDirForPre, `pre_restore_${timestamp}.db`);
+    // 回滚副本也要先落盘，否则「恢复失败回滚」会把数据退回到最多 30 秒前的状态
+    try { db.saveDb(); } catch (e) { log.warn('恢复', `回滚副本落盘失败: ${e.message}`); }
     if (fs.existsSync(dbPath)) fs.copyFileSync(dbPath, preRestore);
 
-    fs.copyFileSync(resolvedBackup, dbPath);
-    log.api('恢复', `数据库恢复完成`, { from: backupPath });
-    res.json({ code: 0, data: { restored: true, pre_restore_backup: preRestore }, message: '恢复成功，重启后生效' });
+    // ⚠️ 本模块是「内存 SQLite + 每 30 秒整库落盘」。
+    // 只覆盖文件而不重载内存的话，最迟 30 秒后 saveDb() 就会把**恢复前的旧数据**写回去，
+    // 恢复被静默撤销（接口却报成功）。所以：加锁 → 覆盖 → 重载内存；失败则回滚并重载。
+    db.lockDb();
+    try {
+      fs.copyFileSync(resolvedBackup, dbPath);
+      await db.reloadFromFile();
+    } catch (e) {
+      let rolledBack = false;
+      try {
+        if (fs.existsSync(preRestore)) {
+          fs.copyFileSync(preRestore, dbPath);
+          await db.reloadFromFile();
+          rolledBack = true;
+        }
+      } catch (e2) {
+        log.error('恢复', `回滚失败: ${e2.message}`);
+      }
+      db.unlockDb();
+      return res.json({
+        code: 1001, data: null,
+        message: `恢复失败（${e.message}）${rolledBack ? '，已回滚到恢复前的数据' : '，且回滚失败，请立即用 ${preRestore} 手动恢复'}`,
+      });
+    }
+    db.unlockDb();
+
+    log.api('恢复', `数据库恢复完成（已重载内存）`, { from: backupPath });
+    res.json({ code: 0, data: { restored: true, pre_restore_backup: preRestore }, message: '恢复成功，已立即生效（无需重启）' });
   } catch (error) {
     res.json({ code: 1001, data: null, message: error.message });
   }
@@ -1976,6 +2008,15 @@ router.post('/restore-latest', async (req, res) => {
     // 配置文件 → 按类型分流（可写状态 → DATA_DIR；内置资源 → ASSETS_DIR）
     const srcConfig = path.join(latestBackup, 'files', 'config');
     fileCount += restoreConfigDir(srcConfig);
+
+    // 日记插图 → PHOTOS_DIR/diary/
+    // 文件名必须保持原样：日记正文的 <img src> 存的就是这个文件名，改名会让插图全部失效。
+    // ⚠️ 这一步原来只在 /restore 里有、/restore-latest 漏了 ⇒ 用户用「一键恢复」时
+    // 日记正文回来了但插图全 404（同一功能两个平行实现、改一处漏一处的老毛病）。
+    const srcDiaryDir = path.join(latestBackup, 'files', 'diary');
+    if (fs.existsSync(srcDiaryDir)) {
+      fileCount += copyDirFiles(srcDiaryDir, path.join(config.PHOTOS_DIR, 'diary'));
+    }
 
     // 兼容旧版备份（无 _file_map 时递归复制）
     const filesDir = path.join(latestBackup, 'files');
