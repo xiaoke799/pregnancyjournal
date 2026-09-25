@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../logger');
+const heic = require('../services/heic');
 
 const ALLOWED_PHOTO_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'application/pdf'];
 const PHOTO_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.heic', '.heif', '.pdf'];
@@ -80,6 +81,10 @@ const schedule_dates_file = path.join(config.DATA_DIR, 'schedule_dates.json');
 function _deleteReportFile(filePath) {
   if (filePath && fs.existsSync(filePath)) {
     try { fs.unlinkSync(filePath); } catch (e) {}
+  }
+  // 显示用的是转出来的 .jpg，HEIC 原图与它同目录同名，一并清理
+  for (const p of heic.siblingOriginals(filePath)) {
+    try { fs.unlinkSync(p); } catch (e) {}
   }
 }
 
@@ -233,12 +238,23 @@ router.post('/checkups/:id/photos', uploadSingle('file'), async (req, res) => {
     const destPath = path.join(checkupDir, filename);
     _ensureDir(config.PHOTOS_DIR);
     fs.renameSync(req.file.path, destPath);
+    // HEIC/HEIF：浏览器解不开，转成同名 .jpg 供显示（原图保留不删；失败不阻断上传）
+    let photoPath = destPath;
+    if (heic.isHeicFile(destPath)) {
+      const conv = await heic.convertToJpeg(destPath);
+      if (conv.ok) {
+        photoPath = conv.jpegPath;
+        logger.info('checkup', `HEIC 已转 JPEG: ${path.basename(destPath)} → ${path.basename(photoPath)}`);
+      } else {
+        logger.warn('checkup', `HEIC 转码失败（保留原图，浏览器可能无法预览）: ${conv.error}`);
+      }
+    }
     const id = db.generateId();
     // 产检照片暂不生成独立缩略图，thumbnail_path 指向原图（前端可直接使用）
     await db.run(
       `INSERT INTO checkup_photo (id, checkup_id, file_path, thumbnail_path, note, created_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-      [id, req.params.id, destPath, destPath, req.body.note || null]
+      [id, req.params.id, photoPath, photoPath, req.body.note || null]
     );
     const row = await db.queryOne('SELECT * FROM checkup_photo WHERE id = ?', [id]);
     logger.info('checkup', `POST /checkups/${req.params.id}/photos - photo saved (id=${id})`);
@@ -403,11 +419,30 @@ router.post('/checkups/:id/reports', uploadSingle('file'), async (req, res) => {
     if (!fs.existsSync(reportDir)) fs.mkdirSync(reportDir, { recursive: true });
     const destPath = path.join(reportDir, filename);
     fs.renameSync(req.file.path, destPath);
+    // HEIC/HEIF 报告：转成 JPEG 再入库（否则浏览器显示不出来；转码失败保留原图，不阻断上传）
+    let reportPath = destPath;
+    let reportName = req.file.originalname;
+    let reportType = ext.slice(1);
+    let reportMime = req.file.mimetype;
+    let reportSize = req.file.size;
+    if (heic.isHeicFile(destPath)) {
+      const conv = await heic.convertToJpeg(destPath);
+      if (conv.ok) {
+        reportPath = conv.jpegPath;
+        reportName = path.basename(reportPath);
+        reportType = 'jpg';
+        reportMime = 'image/jpeg';
+        try { reportSize = fs.statSync(reportPath).size; } catch (e) {}
+        logger.info('checkup', `报告 HEIC 已转 JPEG: ${path.basename(destPath)} → ${reportName}`);
+      } else {
+        logger.warn('checkup', `报告 HEIC 转码失败（保留原图）: ${conv.error}`);
+      }
+    }
     const id = db.generateId();
     await db.run(
       `INSERT INTO checkup_report (id, checkup_id, file_path, filename, file_type, mime_type, file_size, checkup_type, report_category, sub_item, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      [id, req.params.id, destPath, req.file.originalname, ext.slice(1), req.file.mimetype, req.file.size, checkup_type, report_category, sub_item || null]
+      [id, req.params.id, reportPath, reportName, reportType, reportMime, reportSize, checkup_type, report_category, sub_item || null]
     );
     const row = await db.queryOne('SELECT * FROM checkup_report WHERE id = ?', [id]);
     res.json({ code: 0, data: row, message: 'success' });
@@ -528,11 +563,30 @@ router.post('/checkups/:id/reports/from-nas', async (req, res) => {
     _ensureDir(REPORTS_DIR);
     fs.copyFileSync(normalized, destPath);
     const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.heic': 'image/heic', '.pdf': 'application/pdf' };
+    // HEIC/HEIF 报告：转成 JPEG 再入库（否则浏览器显示不出来；转码失败保留原图，不阻断导入）
+    let reportPath = destPath;
+    let reportName = path.basename(nas_path);
+    let reportType = ext.slice(1);
+    let reportMime = mimeMap[ext.toLowerCase()] || 'application/octet-stream';
+    let reportSize = stat.size;
+    if (heic.isHeicFile(destPath)) {
+      const conv = await heic.convertToJpeg(destPath);
+      if (conv.ok) {
+        reportPath = conv.jpegPath;
+        reportName = path.basename(reportPath);
+        reportType = 'jpg';
+        reportMime = 'image/jpeg';
+        try { reportSize = fs.statSync(reportPath).size; } catch (e) {}
+        logger.info('checkup', `从 NAS 导入的 HEIC 报告已转 JPEG: ${path.basename(destPath)} → ${reportName}`);
+      } else {
+        logger.warn('checkup', `从 NAS 导入的 HEIC 报告转码失败（保留原图）: ${conv.error}`);
+      }
+    }
     const id = db.generateId();
     await db.run(
       `INSERT INTO checkup_report (id, checkup_id, file_path, filename, file_type, mime_type, file_size, checkup_type, report_category, sub_item, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      [id, req.params.id, destPath, path.basename(nas_path), ext.slice(1), mimeMap[ext.toLowerCase()] || 'application/octet-stream', stat.size, checkup_type, report_category, sub_item || null]
+      [id, req.params.id, reportPath, reportName, reportType, reportMime, reportSize, checkup_type, report_category, sub_item || null]
     );
     const row = await db.queryOne('SELECT * FROM checkup_report WHERE id = ?', [id]);
     res.json({ code: 0, data: row, message: 'success' });
