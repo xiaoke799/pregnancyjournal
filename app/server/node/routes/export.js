@@ -237,7 +237,7 @@ const TABLE_COLUMNS = {
   checkup_photo: ['id','checkup_id','file_path','thumbnail_path','note','created_at'],
   checkup_report: ['id','checkup_id','checkup_type','filename','file_path','file_type','mime_type','file_size','report_category','sub_item','created_at'],
   lab_result: ['id','checkup_id','category','item_name','value','unit','reference_min','reference_max','status','updated_at','created_at'],
-  daily_record: ['id','pregnancy_id','record_date','weight','fetal_heart_rate','body_temperature','bust','waist','hip','blood_glucose_fasting','blood_glucose_1h','blood_glucose_2h','mood','mood_note','stool','stool_record','note','blood_pressure_systolic','blood_pressure_diastolic','sleep_hours','sleep_quality','symptoms','exercise_type','exercise_duration','diet_note','medication','edema_level','vaginal_discharge','skin_condition','urination_frequency','hcg_value','hcg_weeks','uric_acid','uric_acid_period','supplement_record','intimacy_note','plan_text','plan_date','is_plan_done','water_intake','habit_text','contraction_count','contraction_interval','contraction_duration','contraction_pain','contraction_record','fetal_movement_count','fetal_movement_duration','fetal_movement_record','sleep_record','diet_record','exercise_record','intimacy_record','created_at','updated_at'],
+  daily_record: ['id','pregnancy_id','record_date','weight','fetal_heart_rate','body_temperature','bust','waist','hip','blood_glucose_fasting','blood_glucose_1h','blood_glucose_2h','mood','mood_note','stool','stool_record','note','blood_pressure_systolic','blood_pressure_diastolic','sleep_hours','sleep_quality','symptoms','exercise_type','exercise_duration','diet_note','medication','edema_level','vaginal_discharge','skin_condition','urination_frequency','hcg_value','hcg_weeks','uric_acid','uric_acid_period','supplement_record','intimacy_note','plan_text','plan_date','is_plan_done','water_intake','habit_text','contraction_count','contraction_interval','contraction_duration','contraction_pain','fetal_movement_count','fetal_movement_duration','intimacy_record','created_at','updated_at'],
   contraction_session: ['id','pregnancy_id','session_date','start_time','end_time','total_count','avg_duration','avg_interval','notes','created_at'],
   contraction: ['id','session_id','start_time','end_time','duration','interval_from_prev','created_at'],
   pregnancy_photo: ['id','pregnancy_id','checkup_id','photo_type','gestational_week','gestational_day','milestone_type','file_path','thumbnail_path','note','media_type','created_at','updated_at'],
@@ -979,6 +979,11 @@ router.post('/restore', async (req, res) => {
       db.getDb().run('BEGIN TRANSACTION');
       for (const [table, rows] of Object.entries(importData.tables || {})) {
         if (ALL_TABLES.includes(table) && Array.isArray(rows)) {
+          // 与 /restore-latest 保持一致：**先清空该表再按备份写入**（=「恢复到该备份的状态」）。
+          // 原实现只做 INSERT OR REPLACE（合并语义）：备份之后新建的记录不会消失，
+          // 用户会以为"我恢复过了"却发现数据没变回去 —— 两个恢复入口语义不同，极易误解。
+          // 空数组时跳过（与 /restore-latest 一致）：旧版备份里缺的表/空表不应把现有数据清空。
+          if (rows.length > 0) db.run(`DELETE FROM ${table}`);
           const count = writeTable(table, rows);
           results[table] = count;
           totalRows += count;
@@ -1139,11 +1144,6 @@ const CSV_FIELDS = [
   { key: 'contraction_interval', label: '宫缩间隔(分)' },
   { key: 'contraction_duration', label: '宫缩持续(分)' },
   { key: 'contraction_pain', label: '宫缩疼痛感' },
-  { key: 'contraction_record', label: '宫缩详细记录' },
-  { key: 'fetal_movement_record', label: '胎动详细记录' },
-  { key: 'sleep_record', label: '睡眠记录' },
-  { key: 'diet_record', label: '饮食记录' },
-  { key: 'exercise_record', label: '运动记录' },
   { key: 'intimacy_record', label: '爱爱详情' },
 ];
 

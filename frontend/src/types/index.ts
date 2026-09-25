@@ -65,13 +65,8 @@ export interface DailyRecord {
   contraction_interval: number | null
   contraction_duration: number | null
   contraction_pain: string | null
-  contraction_record: string | null
   fetal_movement_count: number | null
   fetal_movement_duration: number | null
-  fetal_movement_record: string | null
-  sleep_record: string | null
-  diet_record: string | null
-  exercise_record: string | null
   intimacy_record: string | null
   created_at: string
   updated_at: string

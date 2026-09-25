@@ -5,8 +5,12 @@ const logger = require('../logger');
 
 router.post('/reminders', (req, res) => {
   try {
+    // priority：dashboard 用它把重要提醒排前面。此前**不接收**这个字段，
+    // 导致前端即使传了也会被静默丢弃、永远停在默认值（属于"字段看着有、实际用不上"）。
     const { pregnancy_id, title, trigger_date, trigger_time, reminder_type,
-            source_type, source_id, is_enabled, notes } = req.body;
+            source_type, source_id, is_enabled, notes, priority } = req.body;
+    const PRIORITIES = new Set(['high', 'medium', 'low']);
+    const prio = PRIORITIES.has(priority) ? priority : 'medium';
     logger.info('reminder', `POST /reminders - title=${title}, trigger_date=${trigger_date}, pregnancy_id=${pregnancy_id}`);
 
     if (!pregnancy_id || !title) {
@@ -17,11 +21,11 @@ router.post('/reminders', (req, res) => {
     const id = db.generateId();
     db.run(
       `INSERT INTO reminder (id, pregnancy_id, title, trigger_date, trigger_time,
-       reminder_type, source_type, source_id, is_enabled, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       reminder_type, source_type, source_id, is_enabled, priority, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, pregnancy_id, title, trigger_date || null, trigger_time || null,
        reminder_type || 'custom', source_type || null, source_id || null,
-       is_enabled !== undefined ? (is_enabled ? 1 : 0) : 1, notes || null]
+       is_enabled !== undefined ? (is_enabled ? 1 : 0) : 1, prio, notes || null]
     );
 
     const reminder = db.queryOne('SELECT * FROM reminder WHERE id = ?', [id]);
@@ -119,7 +123,7 @@ router.put('/reminders/:id', (req, res) => {
 
     const fields = ['title', 'trigger_date', 'trigger_time', 'reminder_type',
                     'source_type', 'source_id', 'is_enabled', 'is_completed',
-                    'is_triggered', 'notes'];
+                    'is_triggered', 'priority', 'notes'];
 
     for (const field of fields) {
       if (req.body[field] !== undefined) {
