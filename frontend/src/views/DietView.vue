@@ -710,6 +710,14 @@ const earlyRecipes:SimpleRcp[]=[
   { emoji:'🌰', name:'板栗烧白菜', tag:'补DHA', desc:'板栗不饱和脂肪酸+白菜清爽' },
   { emoji:'🧈', name:'海带结烧豆腐', tag:'促进脑发育', desc:'海带补碘+豆腐植物蛋白' },
   { emoji:'🐟', name:'鳕鱼豆腐羹', tag:'新陈代谢', desc:'低脂高蛋白易消化吸收' },
+  { emoji:'🍋', name:'柠檬蜂蜜水', tag:'缓解孕吐', tagType:'success', desc:'温水泡柠檬片加少量蜂蜜，晨起恶心时小口喝' },
+  { emoji:'🥣', name:'小米南瓜粥', tag:'养胃止吐', desc:'小米养胃、南瓜温和，孕吐期最容易被接受的一碗粥' },
+  { emoji:'🥚', name:'虾皮蒸蛋羹', tag:'补钙易消化', desc:'蛋液加1.5倍温水过筛蒸10分钟，撒虾皮补钙' },
+  { emoji:'🍪', name:'苏打饼干', tag:'随身备着', desc:'起床前先吃两片再起身，能明显减轻晨吐' },
+  { emoji:'🥛', name:'姜汁撞奶', tag:'温中止呕', ingredients:'牛奶250ml 姜汁15ml 糖少许', desc:'牛奶加热到70℃左右冲入姜汁静置凝固，暖胃又缓解恶心' },
+  { emoji:'🍜', name:'番茄牛腩面', tag:'开胃补铁', desc:'番茄酸甜开胃+牛腩补铁，煮至软烂更易入口' },
+  { emoji:'🐟', name:'清蒸鲈鱼', tag:'少刺优质蛋白', desc:'鲈鱼刺少肉嫩，孕早期补充优质蛋白很合适' },
+  { emoji:'🫐', name:'酸奶水果杯', tag:'补钙加餐', desc:'无糖酸奶加蓝莓草莓，补钙又能缓解便秘' },
 ]
 
 const midRecipes:SimpleRcp[]=[
@@ -725,6 +733,14 @@ const midRecipes:SimpleRcp[]=[
   { emoji:'🍠', name:'红薯牛奶汁', tag:'润肠通便', desc:'红薯纤维+牛奶补钙' },
   { emoji:'🥣', name:'小米花生粥', tag:'补脑解压', desc:'小米安神+花生有益脂肪酸' },
   { emoji:'🐟', name:'清炒鳝鱼', tag:'补DHA', desc:'鳝鱼富含DHA，胎儿脑发育优质食材' },
+  { emoji:'🥩', name:'芦笋炒牛肉', tag:'补铁补叶酸', tagType:'error', ingredients:'牛里脊150g 芦笋200g', desc:'牛肉切薄片上浆快炒，芦笋焯水后同炒，铁+叶酸双补' },
+  { emoji:'🥬', name:'芝麻酱拌菠菜', tag:'补钙补铁', tagType:'success', desc:'菠菜焯水去草酸后拌芝麻酱，钙含量翻倍' },
+  { emoji:'🍗', name:'香菇滑鸡', tag:'增强免疫', desc:'鸡腿肉嫩滑，香菇提鲜，蛋白质与多糖兼顾' },
+  { emoji:'🐟', name:'豆腐鲫鱼汤', tag:'优质蛋白', desc:'鲫鱼煎后加开水煮至奶白，配豆腐，汤鲜不腻' },
+  { emoji:'🎃', name:'南瓜蒸排骨', tag:'补钙补锌', desc:'排骨腌入味后与南瓜块同蒸40分钟，清淡不油腻' },
+  { emoji:'🥑', name:'三文鱼牛油果饭', tag:'补DHA', tagType:'info', ingredients:'三文鱼100g 牛油果半个 米饭1碗', desc:'三文鱼务必煎至全熟后与牛油果搭配，DHA与健康脂肪同补' },
+  { emoji:'🍵', name:'红枣银耳莲子羹', tag:'润燥养颜', desc:'银耳泡发撕小朵，与莲子红枣炖至胶质浓稠；当天吃完不隔夜' },
+  { emoji:'🥒', name:'虾皮炒西葫芦', tag:'补钙消肿', desc:'西葫芦水分足，虾皮补钙，孕期水肿者可常吃' },
 ]
 
 const lateRecipes:SimpleRcp[]=[
@@ -740,6 +756,14 @@ const lateRecipes:SimpleRcp[]=[
   { emoji:'🍊', name:'金橘菠菜豆浆', tag:'补VC', desc:'金橘菠菜VC+豆浆植物蛋白' },
   { emoji:'🍤', name:'青菜虾仁粥', tag:'增免疫', desc:'清淡鲜美储备体力' },
   { emoji:'🥣', name:'莲子大米粥', tag:'静心安神', desc:'缓解产前焦虑帮助安眠' },
+  { emoji:'🫒', name:'冬瓜海带汤', tag:'消水肿', tagType:'info', ingredients:'冬瓜300g 海带结100g', desc:'冬瓜利水、海带补碘，少盐饮用对下肢水肿有缓解' },
+  { emoji:'🥬', name:'芹菜炒香干', tag:'控血压', tagType:'success', desc:'芹菜含钾与纤维，配香干补钙，适合血压偏高的孕妈' },
+  { emoji:'🐟', name:'红豆鲫鱼汤', tag:'利水催乳', desc:'赤小豆提前泡2小时，与鲫鱼同炖至豆烂，产后同样适用' },
+  { emoji:'🍠', name:'蒸南瓜山药', tag:'控糖主食', tagType:'success', desc:'两者都属低GI根茎类，蒸熟替代部分米饭有助控糖' },
+  { emoji:'🥗', name:'鸡胸肉沙拉', tag:'控体重', desc:'鸡胸肉煎熟切片配生菜番茄，油醋汁调味，控糖控重都合适' },
+  { emoji:'🥣', name:'燕麦紫薯粥', tag:'通便', desc:'燕麦纤维+紫薯花青素，缓解孕晚期常见便秘' },
+  { emoji:'🍐', name:'莲子百合甜汤', tag:'润肺助眠', desc:'莲子去芯与百合炖软，睡前一小时少量食用' },
+  { emoji:'🍚', name:'糙米红豆饭', tag:'稳定血糖', desc:'糙米红豆按2:1混煮，咀嚼感强、升糖慢，正餐主食优选' },
 ]
 
 const postpartumRecipes:SimpleRcp[]=[
@@ -748,6 +772,21 @@ const postpartumRecipes:SimpleRcp[]=[
   { emoji:'🍚', name:'四神粥', tag:'月子基础', tagType:'success', ingredients:'薏仁100g 通心莲50g 茨实10g 山药50g', desc:'所有材料熬成粥，健脾养胃是月子餐的基础粥品。' },
   { emoji:'🍡', name:'甜糯米粥', tag:'每日份', tagType:'default', ingredients:'糯米50g 米酒水1220ml 桂圆5粒 红糖30g', desc:'电饭锅煮40分钟熄火加红糖。糯米粘肠但难消化不可一次多食。' },
   { emoji:'🫘', name:'红豆汤', tag:'每日份', tagType:'error', ingredients:'红豆70g 带皮老姜10g 米酒水1220ml 红糖30g', desc:'泡8小时后高压锅25-35分钟至开花，早10点和下午3点分两次吃。' },
+  { emoji:'🍖', name:'麻油猪肝', tag:'产后第1周', tagType:'success', ingredients:'猪肝100g 老姜5片 麻油2勺', desc:'猪肝切薄片焯去血水，麻油爆香姜片后快炒至变色，补铁首选，每周2-3次。' },
+  { emoji:'🌰', name:'麻油腰花', tag:'产后第1-2周', tagType:'default', ingredients:'猪腰1副 老姜5片 麻油2勺', desc:'猪腰切花刀去筋膜，用米酒水焯去腥后快炒，腰子要全熟但不要久炒。' },
+  { emoji:'🦴', name:'杜仲腰花汤', tag:'腰酸调理', tagType:'info', ingredients:'猪腰1副 杜仲10g 红枣5颗', desc:'杜仲先煮20分钟取汁，再下腰花煮至全熟，帮助缓解产后腰酸。' },
+  { emoji:'🐔', name:'麻油鸡', tag:'产后第2周起', tagType:'success', ingredients:'土鸡半只 老姜10片 麻油3勺', desc:'姜片爆香后下鸡块炒至微黄，加水焖煮40分钟；哺乳期可用高汤替代米酒水。' },
+  { emoji:'🍜', name:'麻油面线', tag:'主食', tagType:'default', ingredients:'面线1把 麻油1勺 老姜2片 鸡蛋1个', desc:'面线煮软捞出，麻油煎蛋加姜丝拌入，是月子里的经典主食。' },
+  { emoji:'🥣', name:'十全大补汤', tag:'气血双补', tagType:'warning', ingredients:'十全大补药包1份 鸡肉或排骨500g', desc:'药材与肉同炖1.5小时，恶露未净或感冒发热时暂不食用，服用前建议咨询医生。' },
+  { emoji:'🧄', name:'姜醋猪脚蛋', tag:'补钙下奶', tagType:'success', ingredients:'猪脚1只 甜醋500ml 老姜200g 鸡蛋4个', desc:'猪脚焯水后与姜、甜醋同煲2小时，鸡蛋煮熟去壳同泡；胃酸多者少吃。' },
+  { emoji:'🍲', name:'木瓜排骨汤', tag:'通乳', tagType:'success', ingredients:'青木瓜半个 排骨400g 花生30g', desc:'排骨焯水后与花生先炖1小时，再下木瓜块煮20分钟，清甜不油腻。' },
+  { emoji:'🥕', name:'山药排骨汤', tag:'健脾养胃', tagType:'default', ingredients:'山药200g 排骨400g 枸杞10g', desc:'排骨炖40分钟后加山药再煮20分钟，产后脾胃虚弱者很适合。' },
+  { emoji:'🐟', name:'通草鲫鱼汤', tag:'通乳经典', tagType:'success', ingredients:'鲫鱼1条 通草6g 姜3片', desc:'鲫鱼煎至两面微黄后加开水，放通草煮至汤色奶白，少盐饮用。' },
+  { emoji:'🌿', name:'八珍汤', tag:'气血双补', tagType:'warning', ingredients:'八珍药包1份 乌鸡半只', desc:'药材与乌鸡炖1.5小时，属药膳，恶露异常或发热时停用并咨询医生。' },
+  { emoji:'🍚', name:'黄豆糙米粥', tag:'每日主食', tagType:'default', ingredients:'黄豆30g 糙米60g 红枣3颗', desc:'黄豆提前泡4小时与糙米同煮至软烂，纤维丰富有助产后排便。' },
+  { emoji:'🥬', name:'菠菜猪肝汤', tag:'补铁', tagType:'error', ingredients:'菠菜150g 猪肝100g 姜2片', desc:'猪肝先焯水，菠菜焯水去草酸后同煮，每周2次补铁效果好。' },
+  { emoji:'🍵', name:'红枣桂圆小米粥', tag:'安神补气', tagType:'default', ingredients:'小米60g 红枣5颗 桂圆肉10g', desc:'小米先煮20分钟再加红枣桂圆煮10分钟；恶露多或上火时去掉桂圆。' },
+  { emoji:'🥛', name:'花生牛奶炖蛋', tag:'加餐', tagType:'info', ingredients:'牛奶250ml 鸡蛋2个 花生碎20g', desc:'蛋液与温牛奶按1:1.5调匀过筛，小火蒸10分钟，撒花生碎，补钙又下奶。' },
 ]
 
 // ─── 婴儿辅食数据 ───
@@ -758,6 +797,11 @@ const transitionRecipes:SimpleRcp[]=[
   { emoji:'🥬', name:'油菜水', tag:'', ingredients:'嫩油菜叶20g', desc:'切碎沸水煮2分钟滤出菜水温后喂食' },
   { emoji:'🥔', name:'土豆泥', tag:'5M+', ingredients:'土豆半个', desc:'去皮切块蒸熟压成细腻泥状，加少量温水或母乳' },
   { emoji:'🥚', name:'蛋黄泥', tag:'注意过敏', ingredients:'鸡蛋1个', desc:'煮熟取蛋黄碾碎调糊，初次只喂1/8个观察3天' },
+  { emoji:'🎃', name:'南瓜泥', tag:'6M+', ingredients:'南瓜100g', desc:'蒸熟压成细腻泥状，天然甜味最容易接受' },
+  { emoji:'🥦', name:'西兰花泥', tag:'6M+', ingredients:'西兰花嫩花球50g', desc:'蒸熟后压泥过筛，含叶酸与维生素C' },
+  { emoji:'🍐', name:'梨泥', tag:'6M+ 润燥', ingredients:'雪梨半个', desc:'蒸熟后压泥，比生梨温和，适合刚开始加辅食的宝宝' },
+  { emoji:'🍌', name:'香蕉泥', tag:'6M+', ingredients:'熟香蕉半根', desc:'用勺直接压泥即可，无需加热，注意选熟透的' },
+  { emoji:'🍚', name:'米油', tag:'第一口', ingredients:'大米30g 水500ml', desc:'大米久煮后取上层米汤，温和好吸收，适合刚满6个月' },
 ]
 
 const growingRecipes:SimpleRcp[]=[
@@ -767,6 +811,11 @@ const growingRecipes:SimpleRcp[]=[
   { emoji:'🥚', name:'蛋黄羹', tag:'8M+', ingredients:'鸡蛋1个 温水适量', desc:'蛋黄打散加1.5倍温水搅匀过筛，小火蒸8-10分钟' },
   { emoji:'🍗', name:'鸡肉泥', tag:'8M+', ingredients:'鸡胸肉30g', desc:'姜片煮熟剁成肉末加少量汤调成泥状' },
   { emoji:'🥣', name:'山药红枣粥', tag:'8M+', ingredients:'山药30g 红枣3颗 大米30g', desc:'山药切丁红枣去核切碎同煮至软烂约40分钟' },
+  { emoji:'🥬', name:'猪肝菠菜泥', tag:'8M+ 补铁', ingredients:'猪肝20g 菠菜20g', desc:'猪肝煮熟去筋膜压碎，菠菜焯水切末，拌入米糊，每周1-2次' },
+  { emoji:'🧈', name:'豆腐鸡蛋羹', tag:'8M+', ingredients:'嫩豆腐30g 蛋黄1个', desc:'豆腐压碎与蛋黄加温水调匀，蒸10分钟至完全凝固' },
+  { emoji:'🐟', name:'三文鱼土豆泥', tag:'8M+ 补DHA', ingredients:'三文鱼30g 土豆半个', desc:'三文鱼蒸熟仔细挑刺压碎，与土豆泥拌匀' },
+  { emoji:'🍅', name:'番茄鳕鱼粥', tag:'8M+', ingredients:'鳕鱼30g 番茄半个 大米30g', desc:'番茄去皮切碎与米同煮，鳕鱼蒸熟挑刺后拌入' },
+  { emoji:'🎃', name:'南瓜小米粥', tag:'8M+', ingredients:'南瓜50g 小米30g', desc:'小米先煮20分钟再加南瓜丁煮至软烂，好消化不胀气' },
 ]
 
 const advancedRecipes:SimpleRcp[]=[
@@ -777,6 +826,11 @@ const advancedRecipes:SimpleRcp[]=[
   { emoji:'🥩', name:'豌豆牛肉粥', tag:'10M+', ingredients:'牛肉末20g 豌豌豆20g 大米30g', desc:'豌豆煮烂压泥，八成熟加牛肉末搅匀煮熟' },
   { emoji:'🐟', name:'清蒸鱼饼', tag:'11M+', ingredients:'鱼肉80g 鸡蛋半个 面粉少许', desc:'鱼肉剁泥加蛋液面粉搅拌上劲做成小饼蒸12-15分钟' },
   { emoji:'🍝', name:'番茄肉末面', tag:'11M+', ingredients:'婴儿面条30g 番茄半个 猪肉末20g', desc:'番茄去皮切碎炒散肉末加番茄汁煮开下面条' },
+  { emoji:'🍚', name:'胡萝卜肉末软饭', tag:'10M+', ingredients:'软饭1小碗 胡萝卜30g 猪肉末20g', desc:'肉末炒散加胡萝卜碎炒软，拌入偏软的米饭' },
+  { emoji:'🍄', name:'香菇鸡肉粥', tag:'10M+', ingredients:'香菇1朵 鸡胸肉20g 大米30g', desc:'香菇切极碎与米同煮，鸡肉煮熟撕成细丝拌入' },
+  { emoji:'🐟', name:'三文鱼蔬菜饼', tag:'11M+ 手指食物', ingredients:'三文鱼50g 土豆半个 西兰花20g', desc:'全部蒸熟压泥拌匀捏成小饼，平底锅少油两面煎定型' },
+  { emoji:'🎃', name:'蛋黄南瓜面', tag:'10M+', ingredients:'南瓜50g 蛋黄1个 婴儿面条20g', desc:'南瓜蒸熟压泥加水煮开，下面条与蛋黄液煮至浓稠' },
+  { emoji:'🥩', name:'牛肉蔬菜粥', tag:'11M+ 补铁', ingredients:'牛肉末20g 青菜20g 大米30g', desc:'牛肉末用少量水打散后下锅，加青菜碎煮至软烂' },
 ]
 
 // ─── 催奶食谱 ───
@@ -787,6 +841,10 @@ const pigRecipes:SimpleRcp[]=[
   { emoji:'🥜', name:'花生猪蹄汤', tag:'补血下奶', ingredients:'花生200g 猪蹄2只', desc:'猪蹄净毛斩块加足水花生调料小火炖2小时至酥烂' },
   { emoji:'🌿', name:'猪蹄通草汤', tag:'通乳下奶', ingredients:'猪蹄1只 通草10g 水1500ml', desc:'大火开后小火煮1-2小时，每天一次连服3-5天' },
   { emoji:'🥬', name:'酸菜猪手煲', tag:'开胃催乳', ingredients:'猪手1只 川酸菜 花生', desc:'斩开焯水5分钟捞出，大火30分钟后小火慢炖1小时' },
+  { emoji:'🍄', name:'猪蹄香菇汤', tag:'催乳', ingredients:'猪蹄1只 干香菇8朵 姜3片', desc:'香菇泡发后与猪蹄同炖2小时，汤浓味鲜，撇去浮油后喝' },
+  { emoji:'🦴', name:'蹄筋花生汤', tag:'催乳补胶原', ingredients:'猪蹄筋200g 花生60g 姜3片', desc:'蹄筋焯水后与花生小火炖2小时至软糯' },
+  { emoji:'🥜', name:'猪骨通草汤', tag:'通乳', ingredients:'猪骨500g 通草6g 姜3片', desc:'猪骨焯水后加通草炖1.5小时，少盐喝汤吃骨边肉' },
+  { emoji:'🍈', name:'猪蹄木瓜汤', tag:'催乳', ingredients:'猪蹄1只 青木瓜半个', desc:'猪蹄炖1.5小时后加木瓜块再煮20分钟，清甜下奶' },
 ]
 
 const fishRecipes:SimpleRcp[]=[
@@ -795,19 +853,31 @@ const fishRecipes:SimpleRcp[]=[
   { emoji:'🔴', name:'赤豆鲫鱼汤', tag:'产前安胎产后通乳', ingredients:'鲫鱼1条 赤小豆50g', desc:'赤豆浸泡2小时煮至七成熟加鲫鱼文火煮至烂熟' },
   { emoji:'🐙', name:'乌鱼通草汤', tag:'通经下乳', ingredients:'乌鱼1条 通草3g', desc:'所有食材共炖熟，吃鱼喝汤每日一次' },
   { emoji:'🥒', name:'冬瓜鲫鱼汤', tag:'利水通乳', ingredients:'鲫鱼1-2尾 冬瓜', desc:'冷水锅大火烧开改小火慢炖至汤汁奶白下冬瓜片调味' },
+  { emoji:'🐠', name:'鲈鱼通草汤', tag:'通乳少刺', ingredients:'鲈鱼1条 通草6g 姜3片', desc:'鲈鱼刺少肉嫩，与通草同煮至汤色转白，适合怕刺的妈妈' },
+  { emoji:'🧈', name:'鲫鱼豆腐汤', tag:'补钙通乳', ingredients:'鲫鱼1条 嫩豆腐200g 姜3片', desc:'鲫鱼煎至微黄加开水煮白，下豆腐块再煮10分钟' },
+  { emoji:'🐟', name:'带鱼木瓜汤', tag:'催乳', ingredients:'带鱼1条 青木瓜半个 姜3片', desc:'带鱼煎定型后加开水与木瓜同炖30分钟' },
+  { emoji:'🔴', name:'鲤鱼赤豆汤', tag:'利水通乳', ingredients:'鲤鱼1条 赤小豆80g', desc:'赤小豆泡2小时先煮至七成熟，再下鲤鱼文火炖烂' },
 ]
 
 const chickenRecipes:SimpleRcp[]=[
   { emoji:'🐔', name:'黄芪炖鸡汤', tag:'产后5-7天后', ingredients:'黄芪50g 枸杞15g 红枣10个 母鸡1只', desc:'药材放滤袋母鸡焯水切块小火炖焖1小时加盐米酒' },
   { emoji:'🐓', name:'母鸡炖山药', tag:'脾胃虚弱少乳', ingredients:'母鸡1只 黄芪30g 党参15g 山药15g', desc:'药材置入鸡肚浇黄酒隔水蒸熟1-2天内吃完' },
   { emoji:'🖤', name:'清炖乌骨鸡汤', tag:'产后虚弱', ingredients:'乌骨鸡肉1000g 党参15g 黄芪25g 枸杞15g', desc:'鸡肉切碎拌匀葱姜盐酒上铺药材隔水蒸20分钟' },
+  { emoji:'🐓', name:'公鸡汤', tag:'催乳', ingredients:'公鸡1只 姜3片 黄芪15g', desc:'传统认为公鸡偏于催乳、母鸡偏于补虚；去皮炖2小时更清爽' },
+  { emoji:'🍄', name:'香菇鸡汤', tag:'补气', ingredients:'土鸡半只 干香菇8朵 红枣5颗', desc:'香菇泡发后同炖1.5小时，鲜味足，少盐更利于下奶' },
+  { emoji:'🌿', name:'党参鸡汤', tag:'气血不足', ingredients:'母鸡半只 党参15g 红枣5颗', desc:'药材与鸡同炖1.5小时，属药膳，感冒发热时停用' },
+  { emoji:'🥔', name:'山药乌鸡汤', tag:'健脾催乳', ingredients:'乌鸡半只 山药200g 枸杞10g', desc:'乌鸡炖1小时后加山药再煮20分钟，温和不上火' },
 ]
 
 const vegRecipes:SimpleRcp[]=[
   { emoji:'🥭', name:'木瓜花生大枣汤', tag:'显著增加乳汁', ingredients:'木瓜750g 花生150g 大枣5粒 片糖', desc:'木瓜去皮切块加8碗水加片糖文火煲2小时' },
   { emoji:'⚫', name:'黑芝麻粥', tag:'补肝肾通乳', ingredients:'黑芝麻25g 大米适量', desc:'黑芝麻捻碎大米洗净加水煮成粥每日2-3次' },
   { emoji:'🧈', name:'豆腐煮红糖', tag:'简单有效', ingredients:'豆腐120g 红糖30g 黄酒一小杯', desc:'加水一碗半文火煮成一碗加黄酒调服5-7次有效' },
-  { emoji:'🍶', name:'酒酿蛋花汤', tag:'益气活血', ingredients:'酒酿1块 鸡蛋1个', desc:'酒酿加水煮开打入鸡蛋煮成蛋花状趁热服用' },
+  { emoji:'🍶', name:'酒酿蛋花汤', tag:'益气活血', ingredients:'酒酿1块 鸡蛋1个', desc:'酒酿加水煮开打入鸡蛋煮成蛋花状趁热服用。⚠️ 酒酿含酒精，哺乳期建议充分煮沸久一点或减少酒酿用量，也可用少量米酒水替代。' },
+  { emoji:'🌼', name:'黄花菜瘦肉汤', tag:'通乳安神', ingredients:'干黄花菜30g 瘦肉150g 姜2片', desc:'黄花菜泡发洗净（务必泡透煮熟）与瘦肉同煮40分钟' },
+  { emoji:'🫛', name:'豌豆猪蹄汤', tag:'催乳', ingredients:'猪蹄1只 豌豆100g 姜3片', desc:'豌豆泡2小时后与猪蹄小火炖2小时至酥烂' },
+  { emoji:'🌾', name:'茭白通草汤', tag:'通乳', ingredients:'茭白2根 通草6g 瘦肉100g', desc:'茭白切滚刀块与通草、瘦肉同煮40分钟，清淡不腻' },
+  { emoji:'🥜', name:'花生红枣豆浆', tag:'加餐下奶', ingredients:'黄豆50g 花生20g 红枣5颗', desc:'全部泡发后打浆煮沸，早晚各一杯，植物蛋白与铁兼顾' },
 ]
 </script>
 

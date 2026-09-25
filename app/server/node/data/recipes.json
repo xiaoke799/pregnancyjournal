@@ -3,13 +3,40 @@
     "id": "recipe_001",
     "name": "西兰花炒虾仁",
     "category": "荤菜",
-    "suitable_weeks": [4, 40],
-    "suitable_stage": ["early", "mid", "late"],
-    "ingredients": ["西兰花", "虾仁", "蒜末", "盐"],
+    "suitable_weeks": [
+      4,
+      40
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "西兰花",
+      "虾仁",
+      "蒜末",
+      "盐"
+    ],
     "nutrition": "高蛋白、低脂肪、富含叶酸和维生素C",
-    "nutrition_details": { "calories": 180, "protein_g": 22, "fat_g": 5, "carbs_g": 8, "folate_mcg": 120, "vitamin_c_mg": 85, "iron_mg": 3.2, "calcium_mg": 150, "dha_mg": 150 },
+    "nutrition_details": {
+      "calories": 180,
+      "protein_g": 22,
+      "fat_g": 5,
+      "carbs_g": 8,
+      "folate_mcg": 120,
+      "vitamin_c_mg": 85,
+      "iron_mg": 3.2,
+      "calcium_mg": 150,
+      "dha_mg": 150
+    },
     "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
-    "health_benefits": ["补充优质蛋白质促进胎儿组织发育", "叶酸预防神经管缺陷", "DHA促进胎儿大脑和视网膜发育", "维生素C增强免疫力"],
+    "health_benefits": [
+      "补充优质蛋白质促进胎儿组织发育",
+      "叶酸预防神经管缺陷",
+      "DHA促进胎儿大脑和视网膜发育",
+      "维生素C增强免疫力"
+    ],
     "special_notes": "适合妊娠糖尿病孕妇（低GI）",
     "image": "/images/recipe/broccoli_shrimp.jpg",
     "description": "富含蛋白质和叶酸，适合全孕期食用，口感清淡易消化"
@@ -18,13 +45,40 @@
     "id": "recipe_002",
     "name": "红枣山药粥",
     "category": "主食",
-    "suitable_weeks": [4, 40],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["红枣", "山药", "大米", "枸杞"],
+    "suitable_weeks": [
+      4,
+      40
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "红枣",
+      "山药",
+      "大米",
+      "枸杞"
+    ],
     "nutrition": "补气养血、健脾养胃、富含膳食纤维",
-    "nutrition_details": { "calories": 220, "protein_g": 6, "fat_g": 1.5, "carbs_g": 45, "fiber_g": 4.5, "iron_mg": 2.8, "potassium_mg": 380, "vitamin_a_mcg": 45 },
+    "nutrition_details": {
+      "calories": 220,
+      "protein_g": 6,
+      "fat_g": 1.5,
+      "carbs_g": 45,
+      "fiber_g": 4.5,
+      "iron_mg": 2.8,
+      "potassium_mg": 380,
+      "vitamin_a_mcg": 45
+    },
     "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
-    "health_benefits": ["红枣补气养血，缓解孕期贫血", "山药健脾养胃，改善消化功能", "富含膳食纤维预防便秘", "适合孕早期缓解孕吐反应"],
+    "health_benefits": [
+      "红枣补气养血，缓解孕期贫血",
+      "山药健脾养胃，改善消化功能",
+      "富含膳食纤维预防便秘",
+      "适合孕早期缓解孕吐反应"
+    ],
     "contraindications": "血糖控制不佳者需控制摄入量",
     "image": "/images/recipe/jujube_yam_porridge.jpg",
     "description": "养胃补气血，孕早期缓解孕吐，孕晚期补充能量"
@@ -33,12 +87,37 @@
     "id": "recipe_003",
     "name": "清蒸鲈鱼",
     "category": "荤菜",
-    "suitable_weeks": [8, 40],
-    "suitable_stage": ["mid", "late", "nursing"],
-    "ingredients": ["鲈鱼", "姜片", "葱段", "蒸鱼豉油"],
+    "suitable_weeks": [
+      8,
+      40
+    ],
+    "suitable_stage": [
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "鲈鱼",
+      "姜片",
+      "葱段",
+      "蒸鱼豉油"
+    ],
     "nutrition": "高蛋白低脂，富含DHA、EPA和不饱和脂肪酸",
-    "nutrition_details": { "calories": 160, "protein_g": 28, "fat_g": 4, "carbs_g": 2, "dha_mg": 350, "epa_mg": 200, "selenium_mcg": 45 },
-    "health_benefits": ["DHA促进胎儿大脑和视力发育", "优质蛋白质易于消化吸收", "硒元素增强免疫力", "低脂肪有助于控制孕期体重"],
+    "nutrition_details": {
+      "calories": 160,
+      "protein_g": 28,
+      "fat_g": 4,
+      "carbs_g": 2,
+      "dha_mg": 350,
+      "epa_mg": 200,
+      "selenium_mcg": 45
+    },
+    "health_benefits": [
+      "DHA促进胎儿大脑和视力发育",
+      "优质蛋白质易于消化吸收",
+      "硒元素增强免疫力",
+      "低脂肪有助于控制孕期体重"
+    ],
     "special_notes": "建议每周食用2-3次，避免过度烹饪",
     "image": "/images/recipe/steamed_seabass.jpg",
     "description": "DHA含量丰富，促进胎儿大脑发育，适合孕中晚期"
@@ -47,12 +126,36 @@
     "id": "recipe_004",
     "name": "菠菜猪肝汤",
     "category": "汤品",
-    "suitable_weeks": [12, 40],
-    "suitable_stage": ["mid", "late"],
-    "ingredients": ["菠菜", "猪肝", "姜丝", "盐"],
+    "suitable_weeks": [
+      12,
+      40
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "菠菜",
+      "猪肝",
+      "姜丝",
+      "盐"
+    ],
     "nutrition": "富含铁、叶酸和维生素A",
-    "nutrition_details": { "calories": 190, "protein_g": 20, "fat_g": 6, "carbs_g": 8, "iron_mg": 12, "folate_mcg": 180, "vitamin_a_mcg": 650 },
-    "health_benefits": ["猪肝是天然铁库，预防孕期缺铁性贫血", "菠菜富含叶酸，促进胎儿神经系统发育", "维生素A有利于视力发育", "适合孕中期血容量增加期"],
+    "nutrition_details": {
+      "calories": 190,
+      "protein_g": 20,
+      "fat_g": 6,
+      "carbs_g": 8,
+      "iron_mg": 12,
+      "folate_mcg": 180,
+      "vitamin_a_mcg": 650
+    },
+    "health_benefits": [
+      "猪肝是天然铁库，预防孕期缺铁性贫血",
+      "菠菜富含叶酸，促进胎儿神经系统发育",
+      "维生素A有利于视力发育",
+      "适合孕中期血容量增加期"
+    ],
     "contraindications": "猪肝维生素A含量高，每周不宜超过2次",
     "image": "/images/recipe/spinach_liver_soup.jpg",
     "description": "补铁养血经典汤品，适合孕中晚期预防贫血"
@@ -61,12 +164,38 @@
     "id": "recipe_005",
     "name": "燕麦牛奶粥",
     "category": "早餐",
-    "suitable_weeks": [4, 42],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["燕麦", "牛奶", "蜂蜜", "坚果碎"],
+    "suitable_weeks": [
+      4,
+      42
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "燕麦",
+      "牛奶",
+      "蜂蜜",
+      "坚果碎"
+    ],
     "nutrition": "富含膳食纤维、钙质和B族维生素",
-    "nutrition_details": { "calories": 260, "protein_g": 10, "fat_g": 5, "carbs_g": 42, "fiber_g": 6, "calcium_mg": 280, "vitamin_b6_mg": 0.8 },
-    "health_benefits": ["燕麦膳食纤维预防孕期便秘", "牛奶补充钙质促进胎儿骨骼发育", "B族维生素缓解孕吐反应", "低升糖指数，适合妊娠糖尿病"],
+    "nutrition_details": {
+      "calories": 260,
+      "protein_g": 10,
+      "fat_g": 5,
+      "carbs_g": 42,
+      "fiber_g": 6,
+      "calcium_mg": 280,
+      "vitamin_b6_mg": 0.8
+    },
+    "health_benefits": [
+      "燕麦膳食纤维预防孕期便秘",
+      "牛奶补充钙质促进胎儿骨骼发育",
+      "B族维生素缓解孕吐反应",
+      "低升糖指数，适合妊娠糖尿病"
+    ],
     "special_notes": "乳糖不耐受可用豆奶代替牛奶",
     "image": "/images/recipe/oat_milk_porridge.jpg",
     "description": "营养丰富的孕期早餐，预防便秘，补钙健骨"
@@ -75,12 +204,36 @@
     "id": "recipe_006",
     "name": "番茄牛腩",
     "category": "荤菜",
-    "suitable_weeks": [12, 40],
-    "suitable_stage": ["mid", "late"],
-    "ingredients": ["牛腩", "番茄", "洋葱", "胡萝卜"],
+    "suitable_weeks": [
+      12,
+      40
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "牛腩",
+      "番茄",
+      "洋葱",
+      "胡萝卜"
+    ],
     "nutrition": "富含优质蛋白、铁和番茄红素",
-    "nutrition_details": { "calories": 280, "protein_g": 24, "fat_g": 14, "carbs_g": 12, "iron_mg": 5.5, "lycopene_mg": 15, "zinc_mg": 6 },
-    "health_benefits": ["牛肉是优质蛋白和铁的良好来源", "番茄红素抗氧化，保护心血管", "锌元素促进胎儿生长发育", "胡萝卜提供丰富的维生素A"],
+    "nutrition_details": {
+      "calories": 280,
+      "protein_g": 24,
+      "fat_g": 14,
+      "carbs_g": 12,
+      "iron_mg": 5.5,
+      "lycopene_mg": 15,
+      "zinc_mg": 6
+    },
+    "health_benefits": [
+      "牛肉是优质蛋白和铁的良好来源",
+      "番茄红素抗氧化，保护心血管",
+      "锌元素促进胎儿生长发育",
+      "胡萝卜提供丰富的维生素A"
+    ],
     "special_notes": "牛腩选择肥瘦相间的部位，炖煮至软烂",
     "image": "/images/recipe/tomato_beef.jpg",
     "description": "补铁补蛋白，口感酸甜开胃，适合孕中晚期"
@@ -89,12 +242,38 @@
     "id": "recipe_007",
     "name": "清炒时蔬",
     "category": "素菜",
-    "suitable_weeks": [4, 42],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["时令蔬菜", "蒜末", "盐", "植物油"],
+    "suitable_weeks": [
+      4,
+      42
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "时令蔬菜",
+      "蒜末",
+      "盐",
+      "植物油"
+    ],
     "nutrition": "富含维生素、矿物质和膳食纤维",
-    "nutrition_details": { "calories": 80, "protein_g": 3, "fat_g": 4, "carbs_g": 8, "fiber_g": 4, "vitamin_c_mg": 60, "folate_mcg": 90 },
-    "health_benefits": ["多种蔬菜提供全面营养", "膳食纤维促进肠道蠕动", "维生素C增强免疫力", "清淡烹饪保留更多营养"],
+    "nutrition_details": {
+      "calories": 80,
+      "protein_g": 3,
+      "fat_g": 4,
+      "carbs_g": 8,
+      "fiber_g": 4,
+      "vitamin_c_mg": 60,
+      "folate_mcg": 90
+    },
+    "health_benefits": [
+      "多种蔬菜提供全面营养",
+      "膳食纤维促进肠道蠕动",
+      "维生素C增强免疫力",
+      "清淡烹饪保留更多营养"
+    ],
     "special_notes": "蔬菜选择多样化，每天至少5种不同颜色",
     "image": "/images/recipe/stir_fried_vegetables.jpg",
     "description": "清淡健康的日常素菜，适合全孕期食用"
@@ -103,12 +282,38 @@
     "id": "recipe_008",
     "name": "紫菜蛋花汤",
     "category": "汤品",
-    "suitable_weeks": [4, 42],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["紫菜", "鸡蛋", "虾皮", "葱花"],
+    "suitable_weeks": [
+      4,
+      42
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "紫菜",
+      "鸡蛋",
+      "虾皮",
+      "葱花"
+    ],
     "nutrition": "富含碘、钙和优质蛋白",
-    "nutrition_details": { "calories": 120, "protein_g": 9, "fat_g": 5, "carbs_g": 6, "iodine_mcg": 80, "calcium_mg": 180, "dha_mg": 60 },
-    "health_benefits": ["紫菜富含碘，促进甲状腺激素合成", "虾皮补钙效果好", "鸡蛋提供优质蛋白和卵磷脂", "清淡不油腻，适合孕吐期"],
+    "nutrition_details": {
+      "calories": 120,
+      "protein_g": 9,
+      "fat_g": 5,
+      "carbs_g": 6,
+      "iodine_mcg": 80,
+      "calcium_mg": 180,
+      "dha_mg": 60
+    },
+    "health_benefits": [
+      "紫菜富含碘，促进甲状腺激素合成",
+      "虾皮补钙效果好",
+      "鸡蛋提供优质蛋白和卵磷脂",
+      "清淡不油腻，适合孕吐期"
+    ],
     "special_notes": "紫菜含碘较高，甲状腺疾病患者遵医嘱",
     "image": "/images/recipe/seaweed_egg_soup.jpg",
     "description": "补钙补碘快手汤，适合全孕期日常饮用"
@@ -117,12 +322,36 @@
     "id": "recipe_009",
     "name": "红豆薏米粥",
     "category": "主食",
-    "suitable_weeks": [16, 40],
-    "suitable_stage": ["mid", "late"],
-    "ingredients": ["红豆", "薏米", "大米", "红糖"],
+    "suitable_weeks": [
+      16,
+      40
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "红豆",
+      "薏米",
+      "大米",
+      "红糖"
+    ],
     "nutrition": "富含膳食纤维、B族维生素和铁",
-    "nutrition_details": { "calories": 240, "protein_g": 8, "fat_g": 1.5, "carbs_g": 50, "fiber_g": 7, "iron_mg": 4, "vitamin_b1_mg": 0.5 },
-    "health_benefits": ["红豆利水消肿，缓解孕期水肿", "薏米健脾祛湿", "B族维生素促进能量代谢", "红糖补充铁质，温补气血"],
+    "nutrition_details": {
+      "calories": 240,
+      "protein_g": 8,
+      "fat_g": 1.5,
+      "carbs_g": 50,
+      "fiber_g": 7,
+      "iron_mg": 4,
+      "vitamin_b1_mg": 0.5
+    },
+    "health_benefits": [
+      "红豆利水消肿，缓解孕期水肿",
+      "薏米健脾祛湿",
+      "B族维生素促进能量代谢",
+      "红糖补充铁质，温补气血"
+    ],
     "contraindications": "孕早期和体质虚寒者慎用薏米",
     "image": "/images/recipe/red_bean_barley_porridge.jpg",
     "description": "利水消肿粥品，适合孕中晚期水肿明显者"
@@ -131,12 +360,38 @@
     "id": "recipe_010",
     "name": "豆浆全麦面包",
     "category": "早餐",
-    "suitable_weeks": [4, 42],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["全麦面包", "豆浆", "水煮蛋", "生菜"],
+    "suitable_weeks": [
+      4,
+      42
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "全麦面包",
+      "豆浆",
+      "水煮蛋",
+      "生菜"
+    ],
     "nutrition": "均衡营养，富含植物蛋白和复合碳水",
-    "nutrition_details": { "calories": 320, "protein_g": 16, "fat_g": 8, "carbs_g": 45, "fiber_g": 6, "calcium_mg": 200, "folate_mcg": 100 },
-    "health_benefits": ["全麦面包提供持久能量", "豆浆富含大豆异黄酮和植物蛋白", "水煮蛋补充优质蛋白和卵磷脂", "生菜增加膳食纤维"],
+    "nutrition_details": {
+      "calories": 320,
+      "protein_g": 16,
+      "fat_g": 8,
+      "carbs_g": 45,
+      "fiber_g": 6,
+      "calcium_mg": 200,
+      "folate_mcg": 100
+    },
+    "health_benefits": [
+      "全麦面包提供持久能量",
+      "豆浆富含大豆异黄酮和植物蛋白",
+      "水煮蛋补充优质蛋白和卵磷脂",
+      "生菜增加膳食纤维"
+    ],
     "special_notes": "豆浆选择无糖或低糖款",
     "image": "/images/recipe/soy_milk_bread.jpg",
     "description": "快手营养早餐，全孕期适用，能量持久"
@@ -145,12 +400,37 @@
     "id": "recipe_011",
     "name": "鸡汤",
     "category": "汤品",
-    "suitable_weeks": [12, 42],
-    "suitable_stage": ["mid", "late", "nursing"],
-    "ingredients": ["老母鸡", "枸杞", "红枣", "姜片"],
+    "suitable_weeks": [
+      12,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "老母鸡",
+      "枸杞",
+      "红枣",
+      "姜片"
+    ],
     "nutrition": "富含优质蛋白、氨基酸和矿物质",
-    "nutrition_details": { "calories": 200, "protein_g": 22, "fat_g": 10, "carbs_g": 5, "iron_mg": 3, "zinc_mg": 3, "potassium_mg": 300 },
-    "health_benefits": ["鸡汤温补，增强抵抗力", "优质氨基酸促进胎儿组织发育", "红枣枸杞补气血", "适合产后恢复和哺乳期"],
+    "nutrition_details": {
+      "calories": 200,
+      "protein_g": 22,
+      "fat_g": 10,
+      "carbs_g": 5,
+      "iron_mg": 3,
+      "zinc_mg": 3,
+      "potassium_mg": 300
+    },
+    "health_benefits": [
+      "鸡汤温补，增强抵抗力",
+      "优质氨基酸促进胎儿组织发育",
+      "红枣枸杞补气血",
+      "适合产后恢复和哺乳期"
+    ],
     "special_notes": "去油后饮用更佳，避免过多脂肪摄入",
     "image": "/images/recipe/chicken_soup.jpg",
     "description": "传统滋补汤品，适合孕中晚期和产后恢复"
@@ -159,12 +439,38 @@
     "id": "recipe_012",
     "name": "清蒸水蛋",
     "category": "荤菜",
-    "suitable_weeks": [4, 42],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["鸡蛋", "温水", "盐", "香油"],
+    "suitable_weeks": [
+      4,
+      42
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "鸡蛋",
+      "温水",
+      "盐",
+      "香油"
+    ],
     "nutrition": "优质完全蛋白，富含卵磷脂和维生素",
-    "nutrition_details": { "calories": 140, "protein_g": 12, "fat_g": 9, "carbs_g": 2, "choline_mg": 250, "vitamin_a_mcg": 150, "selenium_mcg": 20 },
-    "health_benefits": ["卵磷脂促进胎儿大脑发育", "优质蛋白易消化吸收", "口感滑嫩，适合孕吐期", "营养丰富，性价比高"],
+    "nutrition_details": {
+      "calories": 140,
+      "protein_g": 12,
+      "fat_g": 9,
+      "carbs_g": 2,
+      "choline_mg": 250,
+      "vitamin_a_mcg": 150,
+      "selenium_mcg": 20
+    },
+    "health_benefits": [
+      "卵磷脂促进胎儿大脑发育",
+      "优质蛋白易消化吸收",
+      "口感滑嫩，适合孕吐期",
+      "营养丰富，性价比高"
+    ],
     "special_notes": "蒸制时加温水，蛋水比例1:1.5",
     "image": "/images/recipe/steamed_egg.jpg",
     "description": "嫩滑营养，全孕期适用，尤其适合孕早期"
@@ -173,12 +479,37 @@
     "id": "recipe_013",
     "name": "芝麻糊",
     "category": "甜品",
-    "suitable_weeks": [8, 42],
-    "suitable_stage": ["mid", "late", "nursing"],
-    "ingredients": ["黑芝麻", "糯米", "冰糖", "牛奶"],
+    "suitable_weeks": [
+      8,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "黑芝麻",
+      "糯米",
+      "冰糖",
+      "牛奶"
+    ],
     "nutrition": "富含钙、铁、维生素E和不饱和脂肪酸",
-    "nutrition_details": { "calories": 220, "protein_g": 7, "fat_g": 9, "carbs_g": 30, "calcium_mg": 350, "iron_mg": 4, "vitamin_e_mg": 8 },
-    "health_benefits": ["黑芝麻补钙效果好，促进胎儿骨骼发育", "维生素E抗氧化，保护细胞", "铁元素预防孕期贫血", "润肠通便，缓解便秘"],
+    "nutrition_details": {
+      "calories": 220,
+      "protein_g": 7,
+      "fat_g": 9,
+      "carbs_g": 30,
+      "calcium_mg": 350,
+      "iron_mg": 4,
+      "vitamin_e_mg": 8
+    },
+    "health_benefits": [
+      "黑芝麻补钙效果好，促进胎儿骨骼发育",
+      "维生素E抗氧化，保护细胞",
+      "铁元素预防孕期贫血",
+      "润肠通便，缓解便秘"
+    ],
     "special_notes": "血糖偏高者减少冰糖用量",
     "image": "/images/recipe/sesame_paste.jpg",
     "description": "补钙养发甜品，适合孕中晚期和哺乳期"
@@ -187,12 +518,37 @@
     "id": "recipe_014",
     "name": "玉米排骨汤",
     "category": "汤品",
-    "suitable_weeks": [8, 40],
-    "suitable_stage": ["early", "mid", "late"],
-    "ingredients": ["玉米", "排骨", "胡萝卜", "姜片"],
+    "suitable_weeks": [
+      8,
+      40
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "玉米",
+      "排骨",
+      "胡萝卜",
+      "姜片"
+    ],
     "nutrition": "富含蛋白质、钙和膳食纤维",
-    "nutrition_details": { "calories": 230, "protein_g": 18, "fat_g": 12, "carbs_g": 14, "calcium_mg": 200, "fiber_g": 3, "vitamin_a_mcg": 200 },
-    "health_benefits": ["排骨补钙补蛋白", "玉米膳食纤维促进消化", "胡萝卜提供维生素A", "口感清甜，增进食欲"],
+    "nutrition_details": {
+      "calories": 230,
+      "protein_g": 18,
+      "fat_g": 12,
+      "carbs_g": 14,
+      "calcium_mg": 200,
+      "fiber_g": 3,
+      "vitamin_a_mcg": 200
+    },
+    "health_benefits": [
+      "排骨补钙补蛋白",
+      "玉米膳食纤维促进消化",
+      "胡萝卜提供维生素A",
+      "口感清甜，增进食欲"
+    ],
     "special_notes": "排骨焯水去血沫，汤更清澈",
     "image": "/images/recipe/corn_ribs_soup.jpg",
     "description": "清甜滋补汤品，全孕期适用，开胃营养"
@@ -201,12 +557,38 @@
     "id": "recipe_015",
     "name": "水果沙拉",
     "category": "甜品",
-    "suitable_weeks": [4, 42],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["苹果", "香蕉", "草莓", "酸奶"],
+    "suitable_weeks": [
+      4,
+      42
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "苹果",
+      "香蕉",
+      "草莓",
+      "酸奶"
+    ],
     "nutrition": "富含维生素C、膳食纤维和益生菌",
-    "nutrition_details": { "calories": 150, "protein_g": 4, "fat_g": 2, "carbs_g": 30, "fiber_g": 4, "vitamin_c_mg": 60, "calcium_mg": 120 },
-    "health_benefits": ["多种水果提供全面维生素", "酸奶益生菌调理肠胃", "低热量健康零食", "膳食纤维预防便秘"],
+    "nutrition_details": {
+      "calories": 150,
+      "protein_g": 4,
+      "fat_g": 2,
+      "carbs_g": 30,
+      "fiber_g": 4,
+      "vitamin_c_mg": 60,
+      "calcium_mg": 120
+    },
+    "health_benefits": [
+      "多种水果提供全面维生素",
+      "酸奶益生菌调理肠胃",
+      "低热量健康零食",
+      "膳食纤维预防便秘"
+    ],
     "contraindications": "血糖偏高者控制水果分量，选择低糖水果",
     "special_notes": "水果新鲜现切，避免久放",
     "image": "/images/recipe/fruit_salad.jpg",
@@ -216,12 +598,37 @@
     "id": "recipe_016",
     "name": "鲫鱼豆腐汤",
     "category": "汤品",
-    "suitable_weeks": [12, 42],
-    "suitable_stage": ["mid", "late", "nursing"],
-    "ingredients": ["鲫鱼", "豆腐", "姜片", "葱花"],
+    "suitable_weeks": [
+      12,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "鲫鱼",
+      "豆腐",
+      "姜片",
+      "葱花"
+    ],
     "nutrition": "高蛋白、高钙，富含DHA和卵磷脂",
-    "nutrition_details": { "calories": 170, "protein_g": 20, "fat_g": 6, "carbs_g": 4, "calcium_mg": 300, "dha_mg": 200, "phosphorus_mg": 220 },
-    "health_benefits": ["鲫鱼DHA促进胎儿大脑发育", "豆腐是植物钙的最佳来源", "卵磷脂有利于神经系统发育", "产后催奶佳品"],
+    "nutrition_details": {
+      "calories": 170,
+      "protein_g": 20,
+      "fat_g": 6,
+      "carbs_g": 4,
+      "calcium_mg": 300,
+      "dha_mg": 200,
+      "phosphorus_mg": 220
+    },
+    "health_benefits": [
+      "鲫鱼DHA促进胎儿大脑发育",
+      "豆腐是植物钙的最佳来源",
+      "卵磷脂有利于神经系统发育",
+      "产后催奶佳品"
+    ],
     "special_notes": "鲫鱼煎至两面金黄再加水煮，汤色更白",
     "image": "/images/recipe/crucian_tofu_soup.jpg",
     "description": "经典催奶汤品，孕中晚期和产后必备"
@@ -230,12 +637,37 @@
     "id": "recipe_017",
     "name": "小米南瓜粥",
     "category": "主食",
-    "suitable_weeks": [4, 42],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["小米", "南瓜", "红枣"],
+    "suitable_weeks": [
+      4,
+      42
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "小米",
+      "南瓜",
+      "红枣"
+    ],
     "nutrition": "富含B族维生素、膳食纤维和胡萝卜素",
-    "nutrition_details": { "calories": 180, "protein_g": 5, "fat_g": 1.5, "carbs_g": 38, "fiber_g": 3, "vitamin_a_mcg": 300, "vitamin_b1_mg": 0.4 },
-    "health_benefits": ["小米养胃，缓解孕吐", "南瓜富含胡萝卜素，保护视力", "膳食纤维促进肠道蠕动", "温补不燥，适合脾胃虚弱者"],
+    "nutrition_details": {
+      "calories": 180,
+      "protein_g": 5,
+      "fat_g": 1.5,
+      "carbs_g": 38,
+      "fiber_g": 3,
+      "vitamin_a_mcg": 300,
+      "vitamin_b1_mg": 0.4
+    },
+    "health_benefits": [
+      "小米养胃，缓解孕吐",
+      "南瓜富含胡萝卜素，保护视力",
+      "膳食纤维促进肠道蠕动",
+      "温补不燥，适合脾胃虚弱者"
+    ],
     "special_notes": "南瓜去皮切块，与小米同煮",
     "image": "/images/recipe/millet_pumpkin_porridge.jpg",
     "description": "养胃健脾粥品，孕早期缓解孕吐首选"
@@ -244,12 +676,38 @@
     "id": "recipe_018",
     "name": "蒜蓉西兰花",
     "category": "素菜",
-    "suitable_weeks": [4, 42],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["西兰花", "蒜末", "盐", "橄榄油"],
+    "suitable_weeks": [
+      4,
+      42
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "西兰花",
+      "蒜末",
+      "盐",
+      "橄榄油"
+    ],
     "nutrition": "富含叶酸、维生素C和膳食纤维",
-    "nutrition_details": { "calories": 70, "protein_g": 4, "fat_g": 3, "carbs_g": 7, "folate_mcg": 100, "vitamin_c_mg": 90, "fiber_g": 3 },
-    "health_benefits": ["叶酸含量丰富，预防神经管缺陷", "维生素C增强免疫力", "膳食纤维预防便秘", "低热量，控制孕期体重"],
+    "nutrition_details": {
+      "calories": 70,
+      "protein_g": 4,
+      "fat_g": 3,
+      "carbs_g": 7,
+      "folate_mcg": 100,
+      "vitamin_c_mg": 90,
+      "fiber_g": 3
+    },
+    "health_benefits": [
+      "叶酸含量丰富，预防神经管缺陷",
+      "维生素C增强免疫力",
+      "膳食纤维预防便秘",
+      "低热量，控制孕期体重"
+    ],
     "special_notes": "焯水30秒，保留更多营养",
     "image": "/images/recipe/garlic_broccoli.jpg",
     "description": "叶酸补充好帮手，全孕期推荐素菜"
@@ -258,12 +716,38 @@
     "id": "recipe_019",
     "name": "核桃红枣豆浆",
     "category": "饮品",
-    "suitable_weeks": [4, 42],
-    "suitable_stage": ["early", "mid", "late", "nursing"],
-    "ingredients": ["黄豆", "核桃", "红枣", "冰糖"],
+    "suitable_weeks": [
+      4,
+      42
+    ],
+    "suitable_stage": [
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "黄豆",
+      "核桃",
+      "红枣",
+      "冰糖"
+    ],
     "nutrition": "富含植物蛋白、不饱和脂肪酸和维生素E",
-    "nutrition_details": { "calories": 180, "protein_g": 8, "fat_g": 7, "carbs_g": 22, "omega3_mg": 800, "vitamin_e_mg": 5, "calcium_mg": 100 },
-    "health_benefits": ["核桃补脑，DHA前体促进胎儿大脑发育", "黄豆优质植物蛋白", "红枣补气血", "维生素E抗氧化"],
+    "nutrition_details": {
+      "calories": 180,
+      "protein_g": 8,
+      "fat_g": 7,
+      "carbs_g": 22,
+      "omega3_mg": 800,
+      "vitamin_e_mg": 5,
+      "calcium_mg": 100
+    },
+    "health_benefits": [
+      "核桃补脑，DHA前体促进胎儿大脑发育",
+      "黄豆优质植物蛋白",
+      "红枣补气血",
+      "维生素E抗氧化"
+    ],
     "special_notes": "黄豆提前浸泡6小时，口感更佳",
     "image": "/images/recipe/walnut_soy_milk.jpg",
     "description": "补脑养血饮品，全孕期日常营养补充"
@@ -272,14 +756,2204 @@
     "id": "recipe_020",
     "name": "清炒虾仁",
     "category": "荤菜",
-    "suitable_weeks": [8, 40],
-    "suitable_stage": ["mid", "late"],
-    "ingredients": ["虾仁", "黄瓜", "蛋清", "盐"],
+    "suitable_weeks": [
+      8,
+      40
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "虾仁",
+      "黄瓜",
+      "蛋清",
+      "盐"
+    ],
     "nutrition": "高蛋白低脂肪，富含钙和锌",
-    "nutrition_details": { "calories": 150, "protein_g": 24, "fat_g": 3, "carbs_g": 4, "calcium_mg": 180, "zinc_mg": 3, "selenium_mcg": 30 },
-    "health_benefits": ["虾仁优质蛋白促进胎儿发育", "钙质促进胎儿骨骼和牙齿发育", "锌元素促进细胞生长", "低脂肪适合孕期控制体重"],
+    "nutrition_details": {
+      "calories": 150,
+      "protein_g": 24,
+      "fat_g": 3,
+      "carbs_g": 4,
+      "calcium_mg": 180,
+      "zinc_mg": 3,
+      "selenium_mcg": 30
+    },
+    "health_benefits": [
+      "虾仁优质蛋白促进胎儿发育",
+      "钙质促进胎儿骨骼和牙齿发育",
+      "锌元素促进细胞生长",
+      "低脂肪适合孕期控制体重"
+    ],
     "special_notes": "虾仁去虾线，用蛋清腌制更嫩滑",
     "image": "/images/recipe/stir_fried_shrimp.jpg",
     "description": "高蛋白低脂荤菜，孕中晚期营养优选"
+  },
+  {
+    "id": "recipe_021",
+    "name": "小米粥",
+    "category": "主食",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "小米",
+      "水"
+    ],
+    "nutrition": "富含B族维生素，温和易消化",
+    "nutrition_details": {
+      "calories": 210,
+      "protein_g": 6,
+      "fat_g": 1.5,
+      "carbs_g": 44,
+      "folate_mcg": 15,
+      "vitamin_c_mg": 0,
+      "iron_mg": 0.8,
+      "calcium_mg": 10,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "健脾养胃",
+      "缓解孕吐期不适",
+      "易消化不增加肠胃负担"
+    ],
+    "special_notes": "血糖偏高者注意控制分量",
+    "image": "",
+    "description": "养胃健脾的经典主食，孕吐期最容易入口"
+  },
+  {
+    "id": "recipe_022",
+    "name": "杂粮饭",
+    "category": "主食",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "大米",
+      "糙米",
+      "燕麦",
+      "红豆"
+    ],
+    "nutrition": "膳食纤维与B族维生素丰富",
+    "nutrition_details": {
+      "calories": 320,
+      "protein_g": 8,
+      "fat_g": 2,
+      "carbs_g": 66,
+      "folate_mcg": 25,
+      "vitamin_c_mg": 0,
+      "iron_mg": 1.8,
+      "calcium_mg": 25,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "低GI有助稳定血糖",
+      "膳食纤维缓解便秘",
+      "B族维生素参与能量代谢"
+    ],
+    "special_notes": "妊娠糖尿病孕妈的优选主食",
+    "image": "",
+    "description": "粗细搭配，比白米饭更耐饿也更稳血糖"
+  },
+  {
+    "id": "recipe_023",
+    "name": "红薯粥",
+    "category": "主食",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "红薯",
+      "大米"
+    ],
+    "nutrition": "膳食纤维与β-胡萝卜素丰富",
+    "nutrition_details": {
+      "calories": 240,
+      "protein_g": 5,
+      "fat_g": 1,
+      "carbs_g": 52,
+      "folate_mcg": 18,
+      "vitamin_c_mg": 12,
+      "iron_mg": 0.9,
+      "calcium_mg": 30,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "促进肠道蠕动",
+      "缓解孕期便秘",
+      "天然甜味易接受"
+    ],
+    "special_notes": "胃酸多者不宜空腹大量食用",
+    "image": "",
+    "description": "通便效果温和，孕晚期尤其适合"
+  },
+  {
+    "id": "recipe_024",
+    "name": "蔬菜鸡蛋饼",
+    "category": "早餐",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "鸡蛋",
+      "面粉",
+      "青菜",
+      "胡萝卜"
+    ],
+    "nutrition": "优质蛋白配蔬菜，营养均衡",
+    "nutrition_details": {
+      "calories": 290,
+      "protein_g": 14,
+      "fat_g": 12,
+      "carbs_g": 32,
+      "folate_mcg": 55,
+      "vitamin_c_mg": 25,
+      "iron_mg": 2.2,
+      "calcium_mg": 80,
+      "dha_mg": 60
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补充优质蛋白质",
+      "一餐吃到蛋与蔬菜",
+      "快手早餐"
+    ],
+    "special_notes": "蛋液务必煎至完全凝固",
+    "image": "",
+    "description": "把蔬菜藏进饼里，适合不爱吃菜的孕妈"
+  },
+  {
+    "id": "recipe_025",
+    "name": "全麦三明治",
+    "category": "早餐",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "全麦面包",
+      "鸡蛋",
+      "生菜",
+      "番茄"
+    ],
+    "nutrition": "纤维与蛋白搭配，方便携带",
+    "nutrition_details": {
+      "calories": 330,
+      "protein_g": 16,
+      "fat_g": 12,
+      "carbs_g": 38,
+      "folate_mcg": 60,
+      "vitamin_c_mg": 20,
+      "iron_mg": 2.5,
+      "calcium_mg": 90,
+      "dha_mg": 40
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "全麦纤维优于白面包",
+      "蛋白质充足",
+      "适合上班族"
+    ],
+    "special_notes": "生菜番茄要洗净，鸡蛋要全熟",
+    "image": "",
+    "description": "上班路上也能吃好的早餐"
+  },
+  {
+    "id": "recipe_026",
+    "name": "玉米面发糕",
+    "category": "主食",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "玉米面",
+      "面粉",
+      "酵母",
+      "红枣"
+    ],
+    "nutrition": "粗粮细作，含膳食纤维",
+    "nutrition_details": {
+      "calories": 230,
+      "protein_g": 6,
+      "fat_g": 2,
+      "carbs_g": 48,
+      "folate_mcg": 12,
+      "vitamin_c_mg": 0,
+      "iron_mg": 1.2,
+      "calcium_mg": 20,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "粗粮补充",
+      "发酵后更易消化",
+      "自带甜味少加糖"
+    ],
+    "special_notes": "糖尿病人控制分量",
+    "image": "",
+    "description": "蒸制不上火，比蛋糕健康得多"
+  },
+  {
+    "id": "recipe_027",
+    "name": "虾仁蒸蛋",
+    "category": "荤菜",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "虾仁",
+      "鸡蛋",
+      "温水"
+    ],
+    "nutrition": "蛋白质与卵磷脂丰富",
+    "nutrition_details": {
+      "calories": 190,
+      "protein_g": 18,
+      "fat_g": 11,
+      "carbs_g": 3,
+      "folate_mcg": 45,
+      "vitamin_c_mg": 2,
+      "iron_mg": 1.5,
+      "calcium_mg": 70,
+      "dha_mg": 60
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "优质蛋白",
+      "卵磷脂有助胎儿脑发育",
+      "嫩滑易消化"
+    ],
+    "special_notes": "蛋液要蒸至完全凝固，虾仁须熟透",
+    "image": "",
+    "description": "口感嫩滑，孕吐期也能吃下"
+  },
+  {
+    "id": "recipe_028",
+    "name": "红烧排骨",
+    "category": "荤菜",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "排骨",
+      "冰糖",
+      "姜",
+      "生抽"
+    ],
+    "nutrition": "钙磷与胶原蛋白",
+    "nutrition_details": {
+      "calories": 330,
+      "protein_g": 24,
+      "fat_g": 22,
+      "carbs_g": 10,
+      "folate_mcg": 12,
+      "vitamin_c_mg": 0,
+      "iron_mg": 2.8,
+      "calcium_mg": 60,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补充蛋白质与矿物质",
+      "胶原蛋白",
+      "滋味浓郁有食欲"
+    ],
+    "special_notes": "糖分与油脂偏高，每周 1-2 次",
+    "image": "",
+    "description": "补钙强骨的家常硬菜"
+  },
+  {
+    "id": "recipe_029",
+    "name": "白切鸡",
+    "category": "荤菜",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "三黄鸡",
+      "姜",
+      "葱"
+    ],
+    "nutrition": "低脂优质蛋白",
+    "nutrition_details": {
+      "calories": 220,
+      "protein_g": 27,
+      "fat_g": 11,
+      "carbs_g": 1,
+      "folate_mcg": 12,
+      "vitamin_c_mg": 0,
+      "iron_mg": 1.6,
+      "calcium_mg": 15,
+      "dha_mg": 30
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "蛋白质含量高",
+      "脂肪低于红肉",
+      "清淡不刺激"
+    ],
+    "special_notes": "骨头带血是传统标准，孕期请煮到完全熟透",
+    "image": "",
+    "description": "清淡鲜美，去皮吃更低脂"
+  },
+  {
+    "id": "recipe_030",
+    "name": "板栗烧鸡",
+    "category": "荤菜",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "鸡腿肉",
+      "板栗",
+      "姜"
+    ],
+    "nutrition": "蛋白质与不饱和脂肪酸",
+    "nutrition_details": {
+      "calories": 360,
+      "protein_g": 26,
+      "fat_g": 16,
+      "carbs_g": 28,
+      "folate_mcg": 20,
+      "vitamin_c_mg": 8,
+      "iron_mg": 2.4,
+      "calcium_mg": 25,
+      "dha_mg": 60
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "供给优质蛋白质",
+      "板栗提供复合碳水",
+      "补肾强腰"
+    ],
+    "special_notes": "糖分较高，控制分量",
+    "image": "",
+    "description": "秋冬应季滋补菜，香糯下饭"
+  },
+  {
+    "id": "recipe_031",
+    "name": "芦笋炒牛肉",
+    "category": "荤菜",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "牛里脊",
+      "芦笋",
+      "蒜"
+    ],
+    "nutrition": "铁与叶酸双补",
+    "nutrition_details": {
+      "calories": 250,
+      "protein_g": 26,
+      "fat_g": 12,
+      "carbs_g": 8,
+      "folate_mcg": 90,
+      "vitamin_c_mg": 30,
+      "iron_mg": 4.5,
+      "calcium_mg": 30,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补铁预防贫血",
+      "叶酸预防神经管缺陷",
+      "牛肉中的铁吸收率高"
+    ],
+    "special_notes": "牛肉炒至变色即可，久炒易老",
+    "image": "",
+    "description": "孕中期补铁的高效组合"
+  },
+  {
+    "id": "recipe_032",
+    "name": "香菇滑鸡",
+    "category": "荤菜",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "鸡腿肉",
+      "香菇",
+      "姜",
+      "生粉"
+    ],
+    "nutrition": "蛋白质与菌菇多糖",
+    "nutrition_details": {
+      "calories": 270,
+      "protein_g": 25,
+      "fat_g": 13,
+      "carbs_g": 10,
+      "folate_mcg": 20,
+      "vitamin_c_mg": 5,
+      "iron_mg": 2.2,
+      "calcium_mg": 25,
+      "dha_mg": 50
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "增强免疫力",
+      "优质蛋白",
+      "口感滑嫩好入口"
+    ],
+    "special_notes": "香菇务必炒熟煮透",
+    "image": "",
+    "description": "滑嫩鲜香，配饭一绝"
+  },
+  {
+    "id": "recipe_033",
+    "name": "三文鱼炒饭",
+    "category": "荤菜",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "三文鱼",
+      "米饭",
+      "鸡蛋",
+      "青豆"
+    ],
+    "nutrition": "DHA丰富的一餐",
+    "nutrition_details": {
+      "calories": 420,
+      "protein_g": 24,
+      "fat_g": 16,
+      "carbs_g": 46,
+      "folate_mcg": 40,
+      "vitamin_c_mg": 8,
+      "iron_mg": 2,
+      "calcium_mg": 40,
+      "dha_mg": 700
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "DHA含量突出",
+      "有助胎儿大脑发育",
+      "一餐营养均衡"
+    ],
+    "special_notes": "三文鱼务必煎至全熟，孕期不吃生三文鱼",
+    "image": "",
+    "description": "把补脑食材做成最家常的炒饭"
+  },
+  {
+    "id": "recipe_034",
+    "name": "清炒鳝丝",
+    "category": "荤菜",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "黄鳝",
+      "韭黄",
+      "姜"
+    ],
+    "nutrition": "DHA与铁含量好",
+    "nutrition_details": {
+      "calories": 230,
+      "protein_g": 22,
+      "fat_g": 13,
+      "carbs_g": 6,
+      "folate_mcg": 15,
+      "vitamin_c_mg": 10,
+      "iron_mg": 2.6,
+      "calcium_mg": 40,
+      "dha_mg": 280
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补充DHA",
+      "含铁有助补血",
+      "高蛋白低脂"
+    ],
+    "special_notes": "黄鳝必须彻底煮熟，死鳝不可食用",
+    "image": "",
+    "description": "江浙家常做法，鲜香嫩滑"
+  },
+  {
+    "id": "recipe_035",
+    "name": "清炒菠菜",
+    "category": "素菜",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "菠菜",
+      "蒜",
+      "盐"
+    ],
+    "nutrition": "铁与叶酸丰富",
+    "nutrition_details": {
+      "calories": 90,
+      "protein_g": 4,
+      "fat_g": 5,
+      "carbs_g": 7,
+      "folate_mcg": 120,
+      "vitamin_c_mg": 40,
+      "iron_mg": 3,
+      "calcium_mg": 90,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补铁",
+      "补充叶酸",
+      "维生素K有助凝血"
+    ],
+    "special_notes": "先焯水去掉草酸，避免影响钙吸收",
+    "image": "",
+    "description": "补铁明星菜，记得先焯水"
+  },
+  {
+    "id": "recipe_036",
+    "name": "蚝油生菜",
+    "category": "素菜",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "生菜",
+      "蚝油",
+      "蒜"
+    ],
+    "nutrition": "维生素与纤维，清爽解腻",
+    "nutrition_details": {
+      "calories": 80,
+      "protein_g": 3,
+      "fat_g": 4,
+      "carbs_g": 8,
+      "folate_mcg": 40,
+      "vitamin_c_mg": 15,
+      "iron_mg": 0.8,
+      "calcium_mg": 40,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "低热量",
+      "补充维生素",
+      "缓解孕期油腻感"
+    ],
+    "special_notes": "蚝油含钠，控制用量",
+    "image": "",
+    "description": "几分钟出锅的清爽小炒"
+  },
+  {
+    "id": "recipe_037",
+    "name": "醋溜白菜",
+    "category": "素菜",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "白菜",
+      "醋",
+      "干辣椒"
+    ],
+    "nutrition": "维生素C与水分充足",
+    "nutrition_details": {
+      "calories": 85,
+      "protein_g": 3,
+      "fat_g": 4,
+      "carbs_g": 9,
+      "folate_mcg": 35,
+      "vitamin_c_mg": 30,
+      "iron_mg": 0.7,
+      "calcium_mg": 50,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "开胃爽口",
+      "补充维生素C",
+      "热量低"
+    ],
+    "special_notes": "胃酸多者减少醋量",
+    "image": "",
+    "description": "酸香开胃，配肉菜解腻"
+  },
+  {
+    "id": "recipe_038",
+    "name": "麻婆豆腐",
+    "category": "素菜",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "嫩豆腐",
+      "肉末",
+      "豆瓣酱",
+      "花椒"
+    ],
+    "nutrition": "植物蛋白与钙",
+    "nutrition_details": {
+      "calories": 240,
+      "protein_g": 16,
+      "fat_g": 14,
+      "carbs_g": 10,
+      "folate_mcg": 25,
+      "vitamin_c_mg": 3,
+      "iron_mg": 2.2,
+      "calcium_mg": 180,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补钙",
+      "植物与动物蛋白互补",
+      "口感嫩滑"
+    ],
+    "special_notes": "孕期做微辣版，少放豆瓣酱与花椒",
+    "image": "",
+    "description": "下饭神器，孕期记得点微辣"
+  },
+  {
+    "id": "recipe_039",
+    "name": "芝麻酱拌菠菜",
+    "category": "素菜",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "菠菜",
+      "芝麻酱",
+      "蒜"
+    ],
+    "nutrition": "钙含量高的一道凉拌菜",
+    "nutrition_details": {
+      "calories": 160,
+      "protein_g": 7,
+      "fat_g": 11,
+      "carbs_g": 8,
+      "folate_mcg": 115,
+      "vitamin_c_mg": 35,
+      "iron_mg": 3,
+      "calcium_mg": 210,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "芝麻酱钙含量高",
+      "叶酸与铁同时补充",
+      "开胃"
+    ],
+    "special_notes": "菠菜焯水去草酸；芝麻酱热量高，适量",
+    "image": "",
+    "description": "把补钙和补铁放在同一盘里"
+  },
+  {
+    "id": "recipe_040",
+    "name": "芹菜炒香干",
+    "category": "素菜",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "芹菜",
+      "香干",
+      "蒜"
+    ],
+    "nutrition": "钾与钙，有助控血压",
+    "nutrition_details": {
+      "calories": 170,
+      "protein_g": 12,
+      "fat_g": 10,
+      "carbs_g": 9,
+      "folate_mcg": 30,
+      "vitamin_c_mg": 10,
+      "iron_mg": 2.5,
+      "calcium_mg": 200,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "钾有助调节血压",
+      "香干补钙",
+      "膳食纤维助排便"
+    ],
+    "special_notes": "血压偏高者少盐制作",
+    "image": "",
+    "description": "孕晚期控血压的家常搭配"
+  },
+  {
+    "id": "recipe_041",
+    "name": "虾皮炒西葫芦",
+    "category": "素菜",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "西葫芦",
+      "虾皮",
+      "蒜"
+    ],
+    "nutrition": "补钙兼利水消肿",
+    "nutrition_details": {
+      "calories": 120,
+      "protein_g": 8,
+      "fat_g": 6,
+      "carbs_g": 8,
+      "folate_mcg": 20,
+      "vitamin_c_mg": 12,
+      "iron_mg": 1.5,
+      "calcium_mg": 180,
+      "dha_mg": 30
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "虾皮补钙",
+      "西葫芦水分足",
+      "有助缓解水肿"
+    ],
+    "special_notes": "虾皮含钠高，少放盐",
+    "image": "",
+    "description": "清爽补钙，水肿期也合适"
+  },
+  {
+    "id": "recipe_042",
+    "name": "冬瓜排骨汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "冬瓜",
+      "排骨",
+      "姜"
+    ],
+    "nutrition": "低脂利尿，蛋白质尚可",
+    "nutrition_details": {
+      "calories": 200,
+      "protein_g": 15,
+      "fat_g": 10,
+      "carbs_g": 8,
+      "folate_mcg": 12,
+      "vitamin_c_mg": 15,
+      "iron_mg": 1.5,
+      "calcium_mg": 40,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "利水消肿",
+      "补充蛋白质",
+      "清爽不腻"
+    ],
+    "special_notes": "少放盐更利于消肿",
+    "image": "",
+    "description": "孕晚期水肿的经典汤品"
+  },
+  {
+    "id": "recipe_043",
+    "name": "山药鸡汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "山药",
+      "鸡腿",
+      "枸杞"
+    ],
+    "nutrition": "健脾益胃，温和滋补",
+    "nutrition_details": {
+      "calories": 250,
+      "protein_g": 22,
+      "fat_g": 12,
+      "carbs_g": 14,
+      "folate_mcg": 15,
+      "vitamin_c_mg": 8,
+      "iron_mg": 1.8,
+      "calcium_mg": 30,
+      "dha_mg": 40
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "健脾养胃",
+      "优质蛋白",
+      "性质温和不上火"
+    ],
+    "special_notes": "去皮鸡肉更清爽",
+    "image": "",
+    "description": "胃口差的时候喝它最舒服"
+  },
+  {
+    "id": "recipe_044",
+    "name": "海带豆腐汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "海带",
+      "嫩豆腐",
+      "姜"
+    ],
+    "nutrition": "碘与钙同补",
+    "nutrition_details": {
+      "calories": 150,
+      "protein_g": 12,
+      "fat_g": 7,
+      "carbs_g": 10,
+      "folate_mcg": 25,
+      "vitamin_c_mg": 3,
+      "iron_mg": 1.8,
+      "calcium_mg": 160,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补充碘",
+      "豆腐补钙",
+      "低脂清爽"
+    ],
+    "special_notes": "海带碘含量高，每周 2-3 次即可",
+    "image": "",
+    "description": "清淡鲜甜，补碘补钙一步到位"
+  },
+  {
+    "id": "recipe_045",
+    "name": "莲藕花生汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "莲藕",
+      "花生",
+      "排骨"
+    ],
+    "nutrition": "膳食纤维与不饱和脂肪",
+    "nutrition_details": {
+      "calories": 230,
+      "protein_g": 14,
+      "fat_g": 12,
+      "carbs_g": 16,
+      "folate_mcg": 20,
+      "vitamin_c_mg": 25,
+      "iron_mg": 1.6,
+      "calcium_mg": 40,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "润燥",
+      "补充纤维",
+      "花生提供健康脂肪"
+    ],
+    "special_notes": "花生过敏者禁用",
+    "image": "",
+    "description": "清甜滋补，秋冬尤其合适"
+  },
+  {
+    "id": "recipe_046",
+    "name": "玉米胡萝卜汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "玉米",
+      "胡萝卜",
+      "瘦肉"
+    ],
+    "nutrition": "胡萝卜素与纤维",
+    "nutrition_details": {
+      "calories": 180,
+      "protein_g": 12,
+      "fat_g": 7,
+      "carbs_g": 18,
+      "folate_mcg": 22,
+      "vitamin_c_mg": 12,
+      "iron_mg": 1.2,
+      "calcium_mg": 30,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "β-胡萝卜素护眼",
+      "膳食纤维",
+      "天然清甜"
+    ],
+    "special_notes": "胡萝卜素为脂溶性，配少量油脂吸收更好",
+    "image": "",
+    "description": "天然甜味，孩子和孕妈都喜欢"
+  },
+  {
+    "id": "recipe_047",
+    "name": "番茄鸡蛋汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "番茄",
+      "鸡蛋",
+      "葱花"
+    ],
+    "nutrition": "开胃快手，维C与蛋白",
+    "nutrition_details": {
+      "calories": 120,
+      "protein_g": 9,
+      "fat_g": 6,
+      "carbs_g": 8,
+      "folate_mcg": 30,
+      "vitamin_c_mg": 25,
+      "iron_mg": 1.4,
+      "calcium_mg": 40,
+      "dha_mg": 30
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "番茄红素抗氧化",
+      "蛋白质补充",
+      "酸味开胃"
+    ],
+    "special_notes": "蛋液要煮至完全凝固",
+    "image": "",
+    "description": "三分钟出锅，孕吐期的救急汤"
+  },
+  {
+    "id": "recipe_048",
+    "name": "麻油猪肝",
+    "category": "荤菜",
+    "suitable_weeks": [
+      38,
+      42
+    ],
+    "suitable_stage": [
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "猪肝",
+      "老姜",
+      "麻油"
+    ],
+    "nutrition": "高铁高维A，产后补血首选",
+    "nutrition_details": {
+      "calories": 260,
+      "protein_g": 20,
+      "fat_g": 17,
+      "carbs_g": 5,
+      "folate_mcg": 220,
+      "vitamin_c_mg": 15,
+      "iron_mg": 11,
+      "calcium_mg": 15,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补铁补血",
+      "维生素A丰富",
+      "帮助产后恢复"
+    ],
+    "special_notes": "维生素A极高，产后每周 2-3 次即可，孕期不宜多吃",
+    "image": "",
+    "description": "产后第一周的经典补铁菜"
+  },
+  {
+    "id": "recipe_049",
+    "name": "花生猪脚汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      38,
+      42
+    ],
+    "suitable_stage": [
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "猪蹄",
+      "花生",
+      "姜"
+    ],
+    "nutrition": "胶原与脂肪，传统催乳汤",
+    "nutrition_details": {
+      "calories": 420,
+      "protein_g": 26,
+      "fat_g": 30,
+      "carbs_g": 10,
+      "folate_mcg": 25,
+      "vitamin_c_mg": 0,
+      "iron_mg": 2,
+      "calcium_mg": 40,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "传统认为有助下奶",
+      "补充蛋白质",
+      "胶原丰富"
+    ],
+    "special_notes": "油脂高，喝前撇去浮油，每周 2-3 次",
+    "image": "",
+    "description": "月子里的经典催乳汤，注意撇油"
+  },
+  {
+    "id": "recipe_050",
+    "name": "通草鲫鱼汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      38,
+      42
+    ],
+    "suitable_stage": [
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "鲫鱼",
+      "通草",
+      "姜"
+    ],
+    "nutrition": "传统通乳汤，蛋白质高",
+    "nutrition_details": {
+      "calories": 210,
+      "protein_g": 24,
+      "fat_g": 10,
+      "carbs_g": 6,
+      "folate_mcg": 20,
+      "vitamin_c_mg": 2,
+      "iron_mg": 1.8,
+      "calcium_mg": 60,
+      "dha_mg": 260
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "传统通乳方",
+      "优质蛋白",
+      "汤色奶白"
+    ],
+    "special_notes": "通草属中药材，用量与是否适用请咨询医生",
+    "image": "",
+    "description": "下奶经典方，务必少盐"
+  },
+  {
+    "id": "recipe_051",
+    "name": "黄豆糙米粥",
+    "category": "主食",
+    "suitable_weeks": [
+      38,
+      42
+    ],
+    "suitable_stage": [
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "黄豆",
+      "糙米",
+      "红枣"
+    ],
+    "nutrition": "植物蛋白与纤维，产后主食",
+    "nutrition_details": {
+      "calories": 290,
+      "protein_g": 13,
+      "fat_g": 5,
+      "carbs_g": 50,
+      "folate_mcg": 60,
+      "vitamin_c_mg": 5,
+      "iron_mg": 3.2,
+      "calcium_mg": 80,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "植物蛋白与纤维兼备",
+      "有助产后排便",
+      "不增加肠胃负担"
+    ],
+    "special_notes": "黄豆需充分泡发煮烂",
+    "image": "",
+    "description": "产后主食的稳妥选择"
+  },
+  {
+    "id": "recipe_052",
+    "name": "红枣桂圆小米粥",
+    "category": "主食",
+    "suitable_weeks": [
+      38,
+      42
+    ],
+    "suitable_stage": [
+      "nursing"
+    ],
+    "ingredients": [
+      "小米",
+      "红枣",
+      "桂圆肉"
+    ],
+    "nutrition": "安神补气，温润易消化",
+    "nutrition_details": {
+      "calories": 250,
+      "protein_g": 7,
+      "fat_g": 2,
+      "carbs_g": 54,
+      "folate_mcg": 20,
+      "vitamin_c_mg": 8,
+      "iron_mg": 1.8,
+      "calcium_mg": 30,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "养心安神",
+      "补气",
+      "易消化"
+    ],
+    "special_notes": "含桂圆，孕期不宜；恶露多或上火时去掉桂圆",
+    "image": "",
+    "description": "产后安神粥，哺乳期喝更合适"
+  },
+  {
+    "id": "recipe_053",
+    "name": "山药排骨汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "山药",
+      "排骨",
+      "枸杞"
+    ],
+    "nutrition": "健脾养胃，温和补钙",
+    "nutrition_details": {
+      "calories": 240,
+      "protein_g": 18,
+      "fat_g": 12,
+      "carbs_g": 16,
+      "folate_mcg": 18,
+      "vitamin_c_mg": 12,
+      "iron_mg": 1.9,
+      "calcium_mg": 50,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "健脾养胃",
+      "补充蛋白质",
+      "产后脾胃虚弱者适宜"
+    ],
+    "special_notes": "撇去浮油更清爽",
+    "image": "",
+    "description": "从孕中期一直能喝到月子里的汤"
+  },
+  {
+    "id": "recipe_054",
+    "name": "银耳莲子羹",
+    "category": "甜品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "银耳",
+      "莲子",
+      "红枣",
+      "冰糖"
+    ],
+    "nutrition": "胶质润燥，低脂甜品",
+    "nutrition_details": {
+      "calories": 150,
+      "protein_g": 3,
+      "fat_g": 0.5,
+      "carbs_g": 33,
+      "folate_mcg": 10,
+      "vitamin_c_mg": 2,
+      "iron_mg": 1,
+      "calcium_mg": 20,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "润燥",
+      "热量低于多数甜品",
+      "补充纤维"
+    ],
+    "special_notes": "银耳泡发不超过 4 小时，当天吃完",
+    "image": "",
+    "description": "想吃甜的时候，它是更稳妥的选择"
+  },
+  {
+    "id": "recipe_055",
+    "name": "红豆沙",
+    "category": "甜品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "红豆",
+      "冰糖"
+    ],
+    "nutrition": "铁与膳食纤维",
+    "nutrition_details": {
+      "calories": 220,
+      "protein_g": 8,
+      "fat_g": 1,
+      "carbs_g": 46,
+      "folate_mcg": 30,
+      "vitamin_c_mg": 2,
+      "iron_mg": 2.6,
+      "calcium_mg": 40,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补铁",
+      "膳食纤维丰富",
+      "传统甜品"
+    ],
+    "special_notes": "加糖适量，血糖高者减半",
+    "image": "",
+    "description": "传统甜品，自己煮能控制糖量"
+  },
+  {
+    "id": "recipe_056",
+    "name": "酸奶水果杯",
+    "category": "甜品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "无糖酸奶",
+      "蓝莓",
+      "草莓",
+      "燕麦片"
+    ],
+    "nutrition": "钙与益生菌，营养加餐",
+    "nutrition_details": {
+      "calories": 200,
+      "protein_g": 10,
+      "fat_g": 5,
+      "carbs_g": 28,
+      "folate_mcg": 25,
+      "vitamin_c_mg": 35,
+      "iron_mg": 1.2,
+      "calcium_mg": 200,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补钙",
+      "益生菌有助肠道",
+      "维生素C补充"
+    ],
+    "special_notes": "现做现吃，不要久放",
+    "image": "",
+    "description": "把加餐吃成补钙的机会"
+  },
+  {
+    "id": "recipe_057",
+    "name": "花生牛奶炖蛋",
+    "category": "甜品",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "牛奶",
+      "鸡蛋",
+      "花生碎"
+    ],
+    "nutrition": "钙与蛋白质双补",
+    "nutrition_details": {
+      "calories": 250,
+      "protein_g": 14,
+      "fat_g": 13,
+      "carbs_g": 18,
+      "folate_mcg": 40,
+      "vitamin_c_mg": 2,
+      "iron_mg": 1.8,
+      "calcium_mg": 260,
+      "dha_mg": 30
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补钙",
+      "优质蛋白",
+      "口感嫩滑"
+    ],
+    "special_notes": "花生过敏者禁用；蛋液务必蒸至凝固",
+    "image": "",
+    "description": "补钙又能当加餐的甜点"
+  },
+  {
+    "id": "recipe_058",
+    "name": "蒸蛋羹",
+    "category": "甜品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "鸡蛋",
+      "温水",
+      "香油"
+    ],
+    "nutrition": "优质蛋白，嫩滑易消化",
+    "nutrition_details": {
+      "calories": 140,
+      "protein_g": 13,
+      "fat_g": 9,
+      "carbs_g": 3,
+      "folate_mcg": 45,
+      "vitamin_c_mg": 0,
+      "iron_mg": 1.6,
+      "calcium_mg": 50,
+      "dha_mg": 50
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "优质蛋白",
+      "易消化吸收",
+      "适合没胃口时"
+    ],
+    "special_notes": "加 1.5 倍温水过筛，蒸出来才嫩",
+    "image": "",
+    "description": "最温和的一碗蛋白质"
+  },
+  {
+    "id": "recipe_059",
+    "name": "豆浆",
+    "category": "饮品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "黄豆",
+      "水"
+    ],
+    "nutrition": "植物蛋白与大豆异黄酮",
+    "nutrition_details": {
+      "calories": 120,
+      "protein_g": 9,
+      "fat_g": 5,
+      "carbs_g": 9,
+      "folate_mcg": 30,
+      "vitamin_c_mg": 0,
+      "iron_mg": 1.8,
+      "calcium_mg": 30,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "植物蛋白补充",
+      "不含乳糖",
+      "性价比高"
+    ],
+    "special_notes": "必须彻底煮沸（生豆浆有毒），煮沸后再煮 5 分钟",
+    "image": "",
+    "description": "每天的植物蛋白来源，务必煮透"
+  },
+  {
+    "id": "recipe_060",
+    "name": "鲜榨橙汁",
+    "category": "饮品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "橙子"
+    ],
+    "nutrition": "维生素C丰富",
+    "nutrition_details": {
+      "calories": 110,
+      "protein_g": 2,
+      "fat_g": 0.3,
+      "carbs_g": 26,
+      "folate_mcg": 30,
+      "vitamin_c_mg": 90,
+      "iron_mg": 0.2,
+      "calcium_mg": 40,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补充维生素C",
+      "促进铁吸收",
+      "缓解口干"
+    ],
+    "special_notes": "果汁糖分吸收快，优先直接吃水果",
+    "image": "",
+    "description": "维C补给，但别用它代替喝水"
+  },
+  {
+    "id": "recipe_061",
+    "name": "红豆薏米水",
+    "category": "饮品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "红豆",
+      "薏米"
+    ],
+    "nutrition": "利水消肿，传统祛湿饮",
+    "nutrition_details": {
+      "calories": 90,
+      "protein_g": 3,
+      "fat_g": 0.5,
+      "carbs_g": 20,
+      "folate_mcg": 12,
+      "vitamin_c_mg": 0,
+      "iron_mg": 1.2,
+      "calcium_mg": 15,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "利水消肿",
+      "传统祛湿",
+      "热量低"
+    ],
+    "special_notes": "薏米孕期不宜，本款仅供备孕与产后；孕期请改用赤小豆+茯苓",
+    "image": "",
+    "description": "祛湿消肿，但孕期要换配方"
+  },
+  {
+    "id": "recipe_062",
+    "name": "柠檬蜂蜜水",
+    "category": "饮品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "柠檬",
+      "蜂蜜",
+      "温水"
+    ],
+    "nutrition": "缓解孕吐，补充维C",
+    "nutrition_details": {
+      "calories": 70,
+      "protein_g": 0.5,
+      "fat_g": 0,
+      "carbs_g": 17,
+      "folate_mcg": 5,
+      "vitamin_c_mg": 25,
+      "iron_mg": 0.1,
+      "calcium_mg": 10,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "缓解孕吐",
+      "补充维生素C",
+      "促进饮水"
+    ],
+    "special_notes": "蜂蜜含糖，血糖高者改用代糖或不加",
+    "image": "",
+    "description": "晨起恶心的救急饮品"
+  },
+  {
+    "id": "recipe_063",
+    "name": "红枣枸杞茶",
+    "category": "饮品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "红枣",
+      "枸杞"
+    ],
+    "nutrition": "温润补气，日常代茶饮",
+    "nutrition_details": {
+      "calories": 60,
+      "protein_g": 1.5,
+      "fat_g": 0.2,
+      "carbs_g": 14,
+      "folate_mcg": 8,
+      "vitamin_c_mg": 5,
+      "iron_mg": 0.9,
+      "calcium_mg": 15,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补气",
+      "枸杞含胡萝卜素",
+      "替代含咖啡因饮品"
+    ],
+    "special_notes": "红枣含糖，糖尿病人少放；枸杞不宜过量",
+    "image": "",
+    "description": "取代浓茶咖啡的日常热饮"
+  },
+  {
+    "id": "recipe_064",
+    "name": "牛奶炖木瓜",
+    "category": "甜品",
+    "suitable_weeks": [
+      38,
+      42
+    ],
+    "suitable_stage": [
+      "nursing"
+    ],
+    "ingredients": [
+      "青木瓜",
+      "牛奶",
+      "冰糖"
+    ],
+    "nutrition": "传统催乳甜品",
+    "nutrition_details": {
+      "calories": 180,
+      "protein_g": 8,
+      "fat_g": 6,
+      "carbs_g": 24,
+      "folate_mcg": 25,
+      "vitamin_c_mg": 30,
+      "iron_mg": 0.6,
+      "calcium_mg": 240,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "传统催乳方",
+      "补钙",
+      "口感清甜"
+    ],
+    "special_notes": "木瓜孕期不宜，本款为产后哺乳期食谱",
+    "image": "",
+    "description": "产后催乳甜品，哺乳期专用"
+  },
+  {
+    "id": "recipe_065",
+    "name": "南瓜小米糊",
+    "category": "主食",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "南瓜",
+      "小米"
+    ],
+    "nutrition": "温和养胃，易消化",
+    "nutrition_details": {
+      "calories": 190,
+      "protein_g": 5,
+      "fat_g": 1.5,
+      "carbs_g": 40,
+      "folate_mcg": 18,
+      "vitamin_c_mg": 12,
+      "iron_mg": 0.9,
+      "calcium_mg": 25,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "健脾养胃",
+      "β-胡萝卜素",
+      "不刺激肠胃"
+    ],
+    "special_notes": "血糖高者控制分量",
+    "image": "",
+    "description": "孕吐期喝得下的一碗热糊"
+  },
+  {
+    "id": "recipe_066",
+    "name": "南瓜馒头",
+    "category": "主食",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "南瓜",
+      "面粉",
+      "酵母"
+    ],
+    "nutrition": "β-胡萝卜素与碳水",
+    "nutrition_details": {
+      "calories": 230,
+      "protein_g": 7,
+      "fat_g": 1.5,
+      "carbs_g": 48,
+      "folate_mcg": 15,
+      "vitamin_c_mg": 8,
+      "iron_mg": 1.2,
+      "calcium_mg": 25,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "天然甜味",
+      "β-胡萝卜素",
+      "发酵面食好消化"
+    ],
+    "special_notes": "自己蒸可控制糖量",
+    "image": "",
+    "description": "颜色好看、甜味天然的松软主食"
+  },
+  {
+    "id": "recipe_067",
+    "name": "青菜面条",
+    "category": "主食",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "面条",
+      "青菜",
+      "鸡蛋"
+    ],
+    "nutrition": "清淡易消化的主食",
+    "nutrition_details": {
+      "calories": 320,
+      "protein_g": 12,
+      "fat_g": 6,
+      "carbs_g": 54,
+      "folate_mcg": 55,
+      "vitamin_c_mg": 25,
+      "iron_mg": 2,
+      "calcium_mg": 60,
+      "dha_mg": 30
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "一餐吃到主食与蔬菜",
+      "清淡不油腻",
+      "孕吐期易入口"
+    ],
+    "special_notes": "蛋要煮全熟，汤底少盐",
+    "image": "",
+    "description": "胃口差的时候，一碗就够了"
+  },
+  {
+    "id": "recipe_068",
+    "name": "豆浆油条",
+    "category": "早餐",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early"
+    ],
+    "ingredients": [
+      "豆浆",
+      "油条"
+    ],
+    "nutrition": "豆浆提供蛋白，油条属油炸",
+    "nutrition_details": {
+      "calories": 450,
+      "protein_g": 14,
+      "fat_g": 24,
+      "carbs_g": 46,
+      "folate_mcg": 40,
+      "vitamin_c_mg": 0,
+      "iron_mg": 2.2,
+      "calcium_mg": 40,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "豆浆提供植物蛋白",
+      "经典中式早餐"
+    ],
+    "special_notes": "油条为高温油炸且可能含铝添加剂，孕期建议少吃；可把油条换成全麦馒头或鸡蛋饼",
+    "image": "",
+    "description": "想解馋可以偶尔吃，但油条要少，豆浆务必煮沸"
+  },
+  {
+    "id": "recipe_069",
+    "name": "全麦面包",
+    "category": "早餐",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "全麦面粉",
+      "酵母",
+      "牛奶"
+    ],
+    "nutrition": "纤维与B族维生素优于白面包",
+    "nutrition_details": {
+      "calories": 240,
+      "protein_g": 9,
+      "fat_g": 4,
+      "carbs_g": 42,
+      "folate_mcg": 25,
+      "vitamin_c_mg": 0,
+      "iron_mg": 2,
+      "calcium_mg": 80,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "膳食纤维丰富",
+      "饱腹感强",
+      "方便携带"
+    ],
+    "special_notes": "看配料表，全麦粉排第一位才是真全麦",
+    "image": "",
+    "description": "办公室抽屉里可以常备的主食"
+  },
+  {
+    "id": "recipe_070",
+    "name": "清炖鸽子汤",
+    "category": "汤品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "鸽子",
+      "枸杞",
+      "红枣",
+      "姜"
+    ],
+    "nutrition": "高蛋白低脂，滋补不燥",
+    "nutrition_details": {
+      "calories": 200,
+      "protein_g": 22,
+      "fat_g": 9,
+      "carbs_g": 8,
+      "folate_mcg": 15,
+      "vitamin_c_mg": 5,
+      "iron_mg": 2.4,
+      "calcium_mg": 25,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "滋补气血",
+      "蛋白质优质",
+      "性质温和"
+    ],
+    "special_notes": "撇去浮油；感冒发热时暂不食用",
+    "image": "",
+    "description": "比老母鸡汤更清爽的滋补汤"
+  },
+  {
+    "id": "recipe_071",
+    "name": "干煸四季豆",
+    "category": "素菜",
+    "suitable_weeks": [
+      13,
+      42
+    ],
+    "suitable_stage": [
+      "mid",
+      "late"
+    ],
+    "ingredients": [
+      "四季豆",
+      "肉末",
+      "蒜"
+    ],
+    "nutrition": "膳食纤维与植物蛋白",
+    "nutrition_details": {
+      "calories": 210,
+      "protein_g": 10,
+      "fat_g": 13,
+      "carbs_g": 14,
+      "folate_mcg": 35,
+      "vitamin_c_mg": 15,
+      "iron_mg": 1.8,
+      "calcium_mg": 60,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补充纤维",
+      "蛋白质兼顾",
+      "下饭"
+    ],
+    "special_notes": "四季豆必须彻底炒熟（半生含皂苷会中毒），家庭做法建议先焯水再炒",
+    "image": "",
+    "description": "一定要炒到完全熟透再吃"
+  },
+  {
+    "id": "recipe_072",
+    "name": "牛奶",
+    "category": "饮品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "牛奶"
+    ],
+    "nutrition": "钙与优质蛋白的基础来源",
+    "nutrition_details": {
+      "calories": 150,
+      "protein_g": 8,
+      "fat_g": 8,
+      "carbs_g": 12,
+      "folate_mcg": 5,
+      "vitamin_c_mg": 1,
+      "iron_mg": 0.1,
+      "calcium_mg": 300,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补钙首选",
+      "优质蛋白",
+      "助眠"
+    ],
+    "special_notes": "每日 300-500ml；乳糖不耐受可选舒化奶或酸奶",
+    "image": "",
+    "description": "孕期每天两杯，钙基本就够了"
+  },
+  {
+    "id": "recipe_073",
+    "name": "酸奶",
+    "category": "饮品",
+    "suitable_weeks": [
+      0,
+      42
+    ],
+    "suitable_stage": [
+      "preparing",
+      "early",
+      "mid",
+      "late",
+      "nursing"
+    ],
+    "ingredients": [
+      "酸奶"
+    ],
+    "nutrition": "钙与益生菌",
+    "nutrition_details": {
+      "calories": 130,
+      "protein_g": 7,
+      "fat_g": 5,
+      "carbs_g": 15,
+      "folate_mcg": 5,
+      "vitamin_c_mg": 1,
+      "iron_mg": 0.1,
+      "calcium_mg": 280,
+      "dha_mg": 0
+    },
+    "daily_value_ref": "基于《中国居民膳食营养素参考摄入量》（DRIs 2023）孕中晚期标准",
+    "health_benefits": [
+      "补钙",
+      "益生菌有助肠道",
+      "缓解便秘"
+    ],
+    "special_notes": "选无糖或低糖款，看配料表避开\"风味发酵乳\"高糖产品",
+    "image": "",
+    "description": "比牛奶更友好的补钙选择"
   }
 ]

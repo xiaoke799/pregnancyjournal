@@ -40,10 +40,11 @@ function loadRecipes() {
     _recipesCache = [];
   }
 
-  // 如果菜谱太少，补充默认菜谱
-  if (_recipesCache.length < 30) {
-    logger.info('diet', `Recipes too few (${_recipesCache.length}), adding defaults`);
-    const defaultRecipes = [
+  // 内置补充菜谱：按【名称】去重追加，而不是旧写法的「少于 30 条才整体补」。
+  // 旧写法的坑：一旦数据文件超过 30 条，这 38 道经典家常菜会【静默消失】，
+  // 随机池反而比原来更小（而且没有任何提示）。现在只要文件里没有同名菜谱就补上，
+  // 文件里有同名（通常更详细）的则以文件为准。
+  const defaultRecipes = [
       // 主食
       { id: 'def_01', name: '小米粥', category: '主食', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['小米'], nutrition: '富含维生素B、易消化', description: '养胃健脾，适合晨起' },
       { id: 'def_02', name: '杂粮饭', category: '主食', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['大米','糙米','燕麦'], nutrition: '膳食纤维丰富', description: '低GI，稳定血糖' },
@@ -89,9 +90,13 @@ function loadRecipes() {
       { id: 'def_37', name: '红豆沙', category: '甜品', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['红豆','冰糖'], nutrition: '铁、膳食纤维', description: '传统甜品' },
       { id: 'def_38', name: '蒸蛋羹', category: '甜品', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['鸡蛋'], nutrition: '优质蛋白', description: '嫩滑易消化' },
     ];
-    _recipesCache = [..._recipesCache, ...defaultRecipes];
-    logger.info('diet', `After adding defaults: ${_recipesCache.length} total recipes`);
+  const existingNames = new Set(_recipesCache.map(r => r.name));
+  const topUp = defaultRecipes.filter(r => !existingNames.has(r.name));
+  if (topUp.length > 0) {
+    logger.info('diet', `菜谱补齐: 数据文件 ${_recipesCache.length} 条，追加内置 ${topUp.length} 条`);
+    _recipesCache = [..._recipesCache, ...topUp];
   }
+  logger.info('diet', `食谱池共 ${_recipesCache.length} 条`);
   return _recipesCache;
 }
 
