@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "version": "3.2",
+    "version": "3.3",
     "last_updated": "2026-09-25",
     "data_source": "基于以下权威指南综合整理",
     "references": [
@@ -17,7 +17,7 @@
       "limit": "限制食用量，避免过量摄入"
     },
     "disclaimer": "本数据仅供参考，具体饮食请遵医嘱。个体差异较大，过敏体质者需特别注意。",
-    "note": "本次扩充后共 1112 条，覆盖 13 个分类"
+    "note": "本次扩充后共 1129 条，覆盖 13 个分类；其中 118 个食材带口语别名"
   },
   "categories": [
     {
@@ -62,7 +62,12 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "西红柿",
+            "洋柿子",
+            "火柿子"
+          ]
         },
         {
           "name": "南瓜",
@@ -146,7 +151,12 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "通菜",
+            "蕹菜",
+            "竹叶菜"
+          ]
         },
         {
           "name": "油麦菜",
@@ -194,7 +204,11 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "芫荽",
+            "胡荽"
+          ]
         },
         {
           "name": "茴香",
@@ -326,7 +340,10 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "矮瓜"
+          ]
         },
         {
           "name": "黄瓜",
@@ -338,7 +355,11 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "青瓜",
+            "胡瓜"
+          ]
         },
         {
           "name": "丝瓜",
@@ -362,7 +383,10 @@
             "nursing": "caution",
             "preparing": "safe",
             "late": "caution"
-          }
+          },
+          "aliases": [
+            "凉瓜"
+          ]
         },
         {
           "name": "西葫芦",
@@ -446,7 +470,11 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "莴苣笋",
+            "青笋"
+          ]
         },
         {
           "name": "洋葱",
@@ -470,7 +498,11 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "蒜",
+            "蒜头"
+          ]
         },
         {
           "name": "生姜",
@@ -482,7 +514,11 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "姜",
+            "老姜"
+          ]
         },
         {
           "name": "大葱",
@@ -494,7 +530,10 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "葱"
+          ]
         },
         {
           "name": "芋头",
@@ -506,7 +545,11 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "芋艿",
+            "毛芋"
+          ]
         },
         {
           "name": "山药",
@@ -518,7 +561,11 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "淮山",
+            "薯蓣"
+          ]
         },
         {
           "name": "红薯",
@@ -530,7 +577,13 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "番薯",
+            "山芋",
+            "甘薯",
+            "红苕"
+          ]
         },
         {
           "name": "紫薯",
@@ -566,7 +619,11 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "马铃薯",
+            "洋芋"
+          ]
         },
         {
           "name": "莲藕",
@@ -578,7 +635,10 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "藕节"
+          ]
         },
         {
           "name": "荸荠",
@@ -674,7 +734,10 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "微型大白菜"
+          ]
         },
         {
           "name": "小白菜",
@@ -1574,7 +1637,10 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "蒜苔"
+          ]
         },
         {
           "name": "大白菜",
@@ -1634,7 +1700,12 @@
             "nursing": "safe",
             "preparing": "safe",
             "late": "safe"
-          }
+          },
+          "aliases": [
+            "洋白菜",
+            "莲花白",
+            "高丽菜"
+          ]
         },
         {
           "name": "甘蓝",
@@ -1898,7 +1969,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "绿花菜",
+            "青花菜"
+          ]
         },
         {
           "name": "花菜",
@@ -1910,7 +1985,12 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "菜花",
+            "椰菜花",
+            "白花菜"
+          ]
         },
         {
           "name": "紫菜苔",
@@ -2018,7 +2098,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "甜玉米粒"
+          ]
         },
         {
           "name": "冬笋",
@@ -2066,7 +2149,12 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "小番茄",
+            "樱桃番茄",
+            "迷你番茄"
+          ]
         },
         {
           "name": "小葱",
@@ -2222,7 +2310,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "山药蛋",
+            "零余子"
+          ]
         },
         {
           "name": "凉薯",
@@ -2234,7 +2326,12 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "沙葛",
+            "豆薯",
+            "葛薯"
+          ]
         },
         {
           "name": "甜菜叶",
@@ -2516,7 +2613,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "香蕈"
+          ]
         },
         {
           "name": "花菇",
@@ -2540,7 +2640,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "侧耳",
+            "秀珍菇"
+          ]
         },
         {
           "name": "金针菇",
@@ -2552,7 +2656,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "金菇",
+            "冬菇"
+          ]
         },
         {
           "name": "杏鲍菇",
@@ -2564,7 +2672,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "刺芹侧耳"
+          ]
         },
         {
           "name": "口蘑",
@@ -2636,7 +2747,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "真姬菇",
+            "海鲜菇"
+          ]
         },
         {
           "name": "海鲜菇",
@@ -2756,7 +2871,12 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "木耳",
+            "云耳",
+            "光木耳"
+          ]
         },
         {
           "name": "银耳",
@@ -2768,7 +2888,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "雪耳",
+            "白木耳"
+          ]
         },
         {
           "name": "毛木耳",
@@ -3086,7 +3210,12 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "雪梨",
+            "鸭梨",
+            "白梨"
+          ]
         },
         {
           "name": "桃子",
@@ -3110,7 +3239,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "提子",
+            "菩提子"
+          ]
         },
         {
           "name": "西瓜",
@@ -3146,7 +3279,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "甜橙",
+            "脐橙"
+          ]
         },
         {
           "name": "柚子",
@@ -3158,7 +3295,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "文旦",
+            "栾"
+          ]
         },
         {
           "name": "橘子",
@@ -3170,7 +3311,12 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "桔子",
+            "蜜橘",
+            "柑子"
+          ]
         },
         {
           "name": "柠檬",
@@ -3194,7 +3340,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "士多啤梨"
+          ]
         },
         {
           "name": "樱桃",
@@ -3206,7 +3355,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "车厘子",
+            "朱樱"
+          ]
         },
         {
           "name": "蓝莓",
@@ -3242,7 +3395,10 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "凤梨"
+          ]
         },
         {
           "name": "火龙果",
@@ -3266,7 +3422,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "奇异果"
+          ]
         },
         {
           "name": "木瓜",
@@ -3278,7 +3437,11 @@
             "mid": "unsafe",
             "late": "unsafe",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "番木瓜",
+            "乳瓜"
+          ]
         },
         {
           "name": "山楂",
@@ -3290,7 +3453,11 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "红果",
+            "山里红"
+          ]
         },
         {
           "name": "桂圆",
@@ -3302,7 +3469,10 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "龙眼"
+          ]
         },
         {
           "name": "荔枝",
@@ -3326,7 +3496,10 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "榴梿"
+          ]
         },
         {
           "name": "椰子",
@@ -3410,7 +3583,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "映日果"
+          ]
         },
         {
           "name": "哈密瓜",
@@ -3458,7 +3634,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "鸡蛋果",
+            "西番莲"
+          ]
         },
         {
           "name": "车厘子",
@@ -3674,7 +3854,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "芭乐",
+            "鸡矢果"
+          ]
         },
         {
           "name": "杨桃",
@@ -4568,7 +4752,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "黄牛肉"
+          ]
         },
         {
           "name": "羊肉",
@@ -4580,7 +4767,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "绵羊肉"
+          ]
         },
         {
           "name": "鸡肉",
@@ -4592,7 +4782,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "鸡"
+          ]
         },
         {
           "name": "鸭肉",
@@ -4664,7 +4857,15 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "猪脚",
+            "猪手",
+            "蹄髈",
+            "肘子",
+            "猪肘",
+            "蹄膀"
+          ]
         },
         {
           "name": "猪肝",
@@ -4856,7 +5057,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "里脊肉"
+          ]
         },
         {
           "name": "猪五花",
@@ -5012,7 +5216,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "排骨",
+            "肋排"
+          ]
         },
         {
           "name": "猪小排",
@@ -5060,7 +5268,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "牛腩肉"
+          ]
         },
         {
           "name": "牛里脊",
@@ -5348,7 +5559,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "鸡脯肉"
+          ]
         },
         {
           "name": "鸡腿",
@@ -5774,7 +5988,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "花鲈",
+            "鲈板"
+          ]
         },
         {
           "name": "鲫鱼",
@@ -5822,7 +6040,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "鲑鱼",
+            "大马哈鱼"
+          ]
         },
         {
           "name": "鳕鱼",
@@ -5834,7 +6056,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "大头青"
+          ]
         },
         {
           "name": "龙利鱼",
@@ -5858,7 +6083,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "刀鱼",
+            "牙带鱼"
+          ]
         },
         {
           "name": "黄花鱼",
@@ -5990,7 +6219,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "虾子",
+            "海虾"
+          ]
         },
         {
           "name": "基围虾",
@@ -6062,7 +6295,11 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "蚬子",
+            "蛤喇"
+          ]
         },
         {
           "name": "扇贝",
@@ -6086,7 +6323,11 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "牡蛎",
+            "海蛎子"
+          ]
         },
         {
           "name": "牡蛎",
@@ -6122,7 +6363,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "刺参",
+            "海鼠"
+          ]
         },
         {
           "name": "墨鱼",
@@ -6134,7 +6379,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "乌贼",
+            "乌鱼"
+          ]
         },
         {
           "name": "鱿鱼",
@@ -6146,7 +6395,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "柔鱼",
+            "句公"
+          ]
         },
         {
           "name": "章鱼",
@@ -6170,7 +6423,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "昆布",
+            "江白菜"
+          ]
         },
         {
           "name": "紫菜",
@@ -6182,7 +6439,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "海苔",
+            "索菜"
+          ]
         },
         {
           "name": "海蜇",
@@ -6614,7 +6875,11 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "花甲",
+            "蛤蛎"
+          ]
         },
         {
           "name": "白蛤",
@@ -6746,7 +7011,11 @@
             "mid": "unsafe",
             "late": "unsafe",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "螺蛳",
+            "螺陀"
+          ]
         },
         {
           "name": "海螺",
@@ -6770,7 +7039,11 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "克氏原螯虾",
+            "淡水小龙虾"
+          ]
         },
         {
           "name": "河虾",
@@ -6842,7 +7115,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "虾米皮"
+          ]
         },
         {
           "name": "虾米",
@@ -6866,7 +7142,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "虾肉"
+          ]
         },
         {
           "name": "梭子蟹",
@@ -7058,7 +7337,10 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "鱼蛋"
+          ]
         },
         {
           "name": "鱼豆腐",
@@ -7184,7 +7466,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "鸡子",
+            "鸡卵"
+          ]
         },
         {
           "name": "鸭蛋",
@@ -7232,7 +7518,11 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "松花蛋",
+            "变蛋"
+          ]
         },
         {
           "name": "咸鸭蛋",
@@ -7244,7 +7534,11 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "咸蛋",
+            "盐蛋"
+          ]
         },
         {
           "name": "生鸡蛋",
@@ -7280,7 +7574,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "鲜奶",
+            "纯牛奶"
+          ]
         },
         {
           "name": "酸奶",
@@ -7292,7 +7590,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "优酪乳",
+            "发酵乳"
+          ]
         },
         {
           "name": "巴氏奶",
@@ -7340,7 +7642,11 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "芝士",
+            "起司"
+          ]
         },
         {
           "name": "软奶酪",
@@ -7898,7 +8204,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "豆奶",
+            "豆乳"
+          ]
         },
         {
           "name": "豆皮",
@@ -8054,7 +8364,12 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "芸豆角",
+            "豆角",
+            "菜豆"
+          ]
         },
         {
           "name": "豇豆",
@@ -8066,7 +8381,12 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "豆角",
+            "长豆角",
+            "长豇豆"
+          ]
         },
         {
           "name": "嫩豆腐",
@@ -8528,7 +8848,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "粟米",
+            "黄小米"
+          ]
         },
         {
           "name": "燕麦",
@@ -8540,7 +8864,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "莜麦",
+            "雀麦"
+          ]
         },
         {
           "name": "薏米",
@@ -8564,7 +8892,13 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "苞米",
+            "苞谷",
+            "棒子",
+            "粟米"
+          ]
         },
         {
           "name": "荞麦",
@@ -8588,7 +8922,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "藜麦米",
+            "昆诺阿藜"
+          ]
         },
         {
           "name": "糙米",
@@ -8612,7 +8950,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "紫米",
+            "血糯米"
+          ]
         },
         {
           "name": "面粉",
@@ -8636,7 +8978,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "面",
+            "挂面"
+          ]
         },
         {
           "name": "馒头",
@@ -8648,7 +8994,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "馍",
+            "馍馍"
+          ]
         },
         {
           "name": "面包",
@@ -8684,7 +9034,11 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "白粿",
+            "糖糕"
+          ]
         },
         {
           "name": "粽子",
@@ -8708,7 +9062,11 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "元宵",
+            "汤团"
+          ]
         },
         {
           "name": "八宝粥",
@@ -8804,7 +9162,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "米粉线",
+            "米线儿"
+          ]
         },
         {
           "name": "粉丝",
@@ -8816,7 +9178,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "冬粉",
+            "龙口粉丝"
+          ]
         },
         {
           "name": "粉条",
@@ -8900,7 +9266,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "云吞皮",
+            "抄手皮"
+          ]
         },
         {
           "name": "饺子皮",
@@ -9068,7 +9438,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "苞米面"
+          ]
         },
         {
           "name": "玉米糁",
@@ -9518,7 +9891,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "胡桃",
+            "羌桃"
+          ]
         },
         {
           "name": "杏仁",
@@ -9602,7 +9979,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "落花生",
+            "长生果"
+          ]
         },
         {
           "name": "瓜子",
@@ -9626,7 +10007,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "向日葵籽",
+            "瓜子"
+          ]
         },
         {
           "name": "芝麻",
@@ -9638,7 +10023,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "胡麻",
+            "脂麻"
+          ]
         },
         {
           "name": "栗子",
@@ -9650,7 +10039,12 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "板栗",
+            "毛栗",
+            "大栗"
+          ]
         },
         {
           "name": "葡萄干",
@@ -9782,7 +10176,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "白瓜子"
+          ]
         },
         {
           "name": "西瓜子",
@@ -10244,7 +10641,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "豉油"
+          ]
         },
         {
           "name": "醋",
@@ -10256,7 +10656,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "食醋",
+            "酢"
+          ]
         },
         {
           "name": "白糖",
@@ -10268,7 +10672,11 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "砂糖",
+            "白砂糖"
+          ]
         },
         {
           "name": "红糖",
@@ -10280,7 +10688,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "黑糖",
+            "赤砂糖"
+          ]
         },
         {
           "name": "冰糖",
@@ -10304,7 +10716,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "蜜糖",
+            "蜂糖"
+          ]
         },
         {
           "name": "味精",
@@ -10340,7 +10756,11 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "黄酒",
+            "烹饪酒"
+          ]
         },
         {
           "name": "八角",
@@ -11018,7 +11438,12 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "开水",
+            "白水",
+            "凉白开"
+          ]
         },
         {
           "name": "矿泉水",
@@ -11090,7 +11515,10 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "咖啡饮品"
+          ]
         },
         {
           "name": "浓咖啡",
@@ -11126,7 +11554,11 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "珍珠奶茶",
+            "波霸奶茶"
+          ]
         },
         {
           "name": "红茶",
@@ -11258,7 +11690,11 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "肥宅水",
+            "碳酸饮料"
+          ]
         },
         {
           "name": "雪碧",
@@ -11390,7 +11826,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "梳打水"
+          ]
         },
         {
           "name": "气泡水",
@@ -12092,7 +12531,13 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "泡面",
+            "速食面",
+            "公仔面",
+            "快食面"
+          ]
         },
         {
           "name": "火腿肠",
@@ -12188,7 +12633,10 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "洋芋片"
+          ]
         },
         {
           "name": "糖果",
@@ -12212,7 +12660,10 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "朱古力"
+          ]
         },
         {
           "name": "冰淇淋",
@@ -12224,7 +12675,11 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "冰激凌",
+            "冰其淋"
+          ]
         },
         {
           "name": "果冻",
@@ -12236,7 +12691,10 @@
             "mid": "caution",
             "late": "caution",
             "nursing": "caution"
-          }
+          },
+          "aliases": [
+            "啫喱"
+          ]
         },
         {
           "name": "蛋糕",
@@ -12248,7 +12706,10 @@
             "mid": "limit",
             "late": "limit",
             "nursing": "limit"
-          }
+          },
+          "aliases": [
+            "西点"
+          ]
         },
         {
           "name": "饼干",
@@ -12260,7 +12721,10 @@
             "mid": "safe",
             "late": "safe",
             "nursing": "safe"
-          }
+          },
+          "aliases": [
+            "饼乾"
+          ]
         },
         {
           "name": "果脯蜜饯",
@@ -13442,6 +13906,210 @@
             "mid": "unsafe",
             "late": "unsafe",
             "nursing": "caution"
+          }
+        },
+        {
+          "name": "龟苓膏",
+          "safety": "avoid",
+          "note": "含龟板与土茯苓，传统用于清热祛湿，但药性偏寒凉，孕期不建议食用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "茯苓饼",
+          "safety": "safe",
+          "note": "茯苓制成的传统点心，含糖较高，孕期适量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "八珍糕",
+          "safety": "caution",
+          "note": "含多种药材的健脾糕点，孕期食用前建议咨询医生",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "阿胶糕",
+          "safety": "avoid",
+          "note": "含阿胶（活血），孕期不建议食用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "固元膏",
+          "safety": "avoid",
+          "note": "以阿胶为主料，孕期不建议",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "四物汤",
+          "safety": "avoid",
+          "note": "当归川芎芍药熟地，活血调经，孕期禁用",
+          "safety_by_stage": {
+            "preparing": "caution",
+            "early": "unsafe",
+            "mid": "unsafe",
+            "late": "unsafe",
+            "nursing": "caution"
+          }
+        },
+        {
+          "name": "生化汤",
+          "safety": "caution",
+          "note": "产后常用方（当归川芎桃仁等），仅产后遵医嘱使用，孕期禁用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "十全大补汤",
+          "safety": "caution",
+          "note": "气血双补方，孕期不建议自行服用，需遵医嘱",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "八珍汤",
+          "safety": "caution",
+          "note": "气血双补方，孕期不建议自行服用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "人参鸡汤",
+          "safety": "caution",
+          "note": "含人参，孕期不建议自行进补，需遵医嘱",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "枸杞菊花茶",
+          "safety": "safe",
+          "note": "枸杞配菊花，孕期可少量饮用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "罗汉果茶",
+          "safety": "safe",
+          "note": "润喉代茶饮，孕期适量，血糖高者注意",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "陈皮水",
+          "safety": "safe",
+          "note": "理气健脾，孕期可少量饮用",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "玉米须水",
+          "safety": "safe",
+          "note": "传统利水消肿，孕期饮用前建议咨询医生",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "莲子心",
+          "safety": "caution",
+          "note": "苦寒清心，孕期少量，脾胃虚寒者不宜",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "桂花",
+          "safety": "safe",
+          "note": "调味花材，孕期适量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "safe",
+            "mid": "safe",
+            "late": "safe",
+            "nursing": "safe"
+          }
+        },
+        {
+          "name": "茉莉花",
+          "safety": "caution",
+          "note": "花茶常见，含微量咖啡因，孕期少量",
+          "safety_by_stage": {
+            "preparing": "safe",
+            "early": "caution",
+            "mid": "caution",
+            "late": "caution",
+            "nursing": "safe"
           }
         }
       ]

@@ -8,6 +8,12 @@
         <span class="current-stage-badge" :class="'badge-' + currentSafetyLevel">
           {{ stageLabel(currentStage) }}: {{ safetyText(currentSafetyLevel) }}
         </span>
+        <!-- 搜索命中别名时告知用户「为什么这条会出现」，同时说明它属于哪一类 -->
+        <span v-if="item.category || (item.aliases && item.aliases.length)" class="food-meta">
+          <template v-if="item.category">{{ item.category }}</template>
+          <template v-if="item.category && item.aliases && item.aliases.length"> · </template>
+          <template v-if="item.aliases && item.aliases.length">别名：{{ item.aliases.join('、') }}</template>
+        </span>
       </div>
 
       <!-- 右侧：其他阶段快速预览 -->
@@ -84,6 +90,9 @@ interface FoodSafetyItem {
   safety_by_stage: Record<string, string>
   note: string
   image: string | null
+  /** 以下两项可能没有：分类浏览时不返回，搜索结果会带上 */
+  category?: string
+  aliases?: string[]
 }
 
 const props = defineProps<{
@@ -254,8 +263,9 @@ function eatingTips(level: string): string[] {
 }
 .card-main:hover { background: #f8fafc; }
 
-.card-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.card-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; flex-wrap: wrap; }
 .food-name { font-size: 15px; font-weight: 700; color: var(--text-color); }
+.food-meta { font-size: 11px; color: var(--text-hint, #94a3b8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .current-stage-badge {
   padding: 2px 10px; border-radius: 8px; font-size: 11px; font-weight: 600;
   white-space: nowrap; flex-shrink: 0;
