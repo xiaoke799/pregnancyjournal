@@ -2,7 +2,7 @@
   <div class="stats-view" :class="{ 'is-mobile': isMobile }">
     <!-- 顶部：时间段切换 -->
     <div class="stats-header">
-      <h2 class="stats-title">📊 数据统计</h2>
+      <h2 class="stats-title">数据统计</h2>
       <div class="period-tabs">
         <button
           v-for="p in periodOptions" :key="p.value"
@@ -28,11 +28,11 @@
     <div v-if="records.length > 0" class="charts-section">
 
       <!-- 体重 -->
-      <MetricCard v-if="hasData('weight')" title="⚖️ 体重变化" unit="kg" :color="'#a78bfa'"
+      <MetricCard v-if="hasData('weight')" title="体重变化" unit="kg" :color="'#a78bfa'"
         :dates="chartDates" :values="chartValues('weight')" :table-data="tableData('weight', 'weight')" />
 
       <!-- 血压 -->
-      <MetricCard v-if="hasData('bp')" title="🩺 血压变化" unit="mmHg" :color="'#ef4444'"
+      <MetricCard v-if="hasData('bp')" title="血压变化" unit="mmHg" :color="'#ef4444'"
         :dates="chartDates"
         :values="chartValues('bp_systolic')"
         :values2="chartValues('bp_diastolic')"
@@ -40,7 +40,7 @@
         :table-data="tableData('bp', 'blood_pressure_systolic', { sub: 'blood_pressure_diastolic', format: (r: any) => `${r.blood_pressure_systolic || '--'}/${r.blood_pressure_diastolic || '--'}` })" />
 
       <!-- 血糖 -->
-      <MetricCard v-if="hasData('glucose')" title="🩸 血糖变化" unit="mmol/L" :color="'#f59e0b'"
+      <MetricCard v-if="hasData('glucose')" title="血糖变化" unit="mmol/L" :color="'#f59e0b'"
         :dates="chartDates"
         :values="chartValues('glucose_fasting')"
         :values2="chartValues('glucose_1h')"
@@ -55,32 +55,45 @@
         })" />
 
       <!-- HCG -->
-      <MetricCard v-if="hasData('hcg')" title="🧬 HCG 变化" unit="mIU/mL" :color="'#ec4899'"
+      <MetricCard v-if="hasData('hcg')" title="HCG变化" unit="mIU/mL" :color="'#ec4899'"
         :dates="chartDates" :values="chartValues('hcg_value')"
         :table-data="tableData('hcg', 'hcg_value', { extra: 'hcg_weeks', extraLabel: '孕周' })" />
 
       <!-- 尿酸 -->
-      <MetricCard v-if="hasData('uric_acid')" title="🧪 尿酸变化" unit="μmol/L" :color="'#06b6d4'"
+      <MetricCard v-if="hasData('uric_acid')" title="尿酸变化" unit="μmol/L" :color="'#06b6d4'"
         :dates="chartDates" :values="chartValues('uric_acid')"
         :table-data="tableData('uric_acid', 'uric_acid', { extra: 'uric_acid_period', extraLabel: '时段' })" />
 
       <!-- 体温 -->
-      <MetricCard v-if="hasData('temp')" title="🌡️ 体温变化" unit="°C" :color="'#f97316'"
+      <MetricCard v-if="hasData('temp')" title="体温变化" unit="°C" :color="'#f97316'"
         :dates="chartDates" :values="chartValues('body_temperature')"
         :table-data="tableData('temp', 'body_temperature')" />
 
+      <!-- 三围（胸围 / 腰围 / 臀围）—— 与「记录」页统计标签保持一致 -->
+      <MetricCard v-if="hasData('waist')" title="腰围变化" unit="cm" :color="'#14b8a6'"
+        :dates="chartDates" :values="chartValues('waist')"
+        :table-data="tableData('waist', 'waist')" />
+
+      <MetricCard v-if="hasData('bust')" title="胸围变化" unit="cm" :color="'#0d9488'"
+        :dates="chartDates" :values="chartValues('bust')"
+        :table-data="tableData('bust', 'bust')" />
+
+      <MetricCard v-if="hasData('hip')" title="臀围变化" unit="cm" :color="'#0f766e'"
+        :dates="chartDates" :values="chartValues('hip')"
+        :table-data="tableData('hip', 'hip')" />
+
       <!-- 睡眠 -->
-      <MetricCard v-if="hasData('sleep')" title="😴 睡眠时长" unit="小时" :color="'#8b5cf6'"
+      <MetricCard v-if="hasData('sleep')" title="睡眠时长" unit="小时" :color="'#8b5cf6'"
         :dates="chartDates" :values="chartValues('sleep_hours')"
         :table-data="tableData('sleep', 'sleep_hours', { extra: 'sleep_quality', extraLabel: '质量' })" />
 
       <!-- 饮水 -->
-      <MetricCard v-if="hasData('water')" title="💧 饮水量" unit="ml" :color="'#3b82f6'"
+      <MetricCard v-if="hasData('water')" title="饮水量" unit="ml" :color="'#3b82f6'"
         :dates="chartDates" :values="chartValues('water_intake')"
         :table-data="tableData('water', 'water_intake')" />
 
       <!-- 胎动 -->
-      <MetricCard v-if="hasData('fm')" title="🦶 胎动次数" unit="次" :color="'#10b981'"
+      <MetricCard v-if="hasData('fm')" title="胎动次数" unit="次" :color="'#10b981'"
         :dates="chartDates" :values="chartValues('fetal_movement_count')"
         :table-data="tableData('fm', 'fetal_movement_count', { extra: 'fetal_movement_duration', extraLabel: '用时(分)' })" />
     </div>
@@ -175,6 +188,10 @@ function hasData(metric: string): boolean {
     case 'hcg': return records.value.some((r: any) => r.hcg_value != null)
     case 'uric_acid': return records.value.some((r: any) => r.uric_acid != null)
     case 'temp': return records.value.some((r: any) => r.body_temperature != null)
+    // 三围（任一项有值即算有数据）
+    case 'waist': return records.value.some((r: any) => r.bust != null || r.waist != null || r.hip != null)
+    case 'bust': return records.value.some((r: any) => r.bust != null)
+    case 'hip': return records.value.some((r: any) => r.hip != null)
     case 'sleep': return records.value.some((r: any) => r.sleep_hours != null)
     case 'water': return records.value.some((r: any) => r.water_intake != null)
     case 'fm': return records.value.some((r: any) => r.fetal_movement_count != null)
