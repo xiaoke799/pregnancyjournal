@@ -1,8 +1,16 @@
 /**
+ * ⛔ 一次性历史脚本 —— 请勿再执行！(ONE-SHOT HISTORICAL SCRIPT — DO NOT RE-RUN)
+ *
+ * 它会把 food_safety_v3.json 里**所有分类**的条目拍平塞进「蔬菜类」，
+ * 再用本文件内硬编码的分类清单**整文件覆盖**回去。
+ * 现在的数据文件已扩充到 1100+ 条 / 13 个分类（含菌菇类、药食同源、别名等），
+ * 执行一次就会：条目全部堆到「蔬菜类」、菌菇类与药食同源分类消失、重复条目混入。
+ *
+ * 该文件只用于还原 2026-06 之前那次「155 条蔬菜 → 9 分类」的历史转换，留存仅为追溯。
+ * 日常维护请用 .workbuddy/scripts/ 下的脚本（food_add_*.js + expand_food_safety.js + enhance_food_safety.js）。
+ *
  * Rebuild food_safety_v3.json with multi-category structure.
  * Preserves existing 155 vegetable items, adds 9 more categories with common pregnancy-related foods.
- *
- * Run: node build-food-safety.js
  */
 const fs = require('fs');
 const path = require('path');
