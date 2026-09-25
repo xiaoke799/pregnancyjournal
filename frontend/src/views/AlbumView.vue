@@ -53,16 +53,31 @@
                 class="media-thumb"
                 @error="onImageError(item)"
               />
-              <div v-else-if="item.media_type !== 'video' && item._imgFailed" class="media-thumb media-fallback">
+              <div
+                v-else-if="item.media_type !== 'video' && item._imgFailed"
+                class="media-thumb media-fallback"
+                title="无法预览：文件缺失，或该格式浏览器不支持（如 TIFF）"
+              >
                 📷
               </div>
-              <!-- 视频缩略图 -->
+              <!-- 视频缩略图：后端不做视频抽帧，直接让浏览器渲染首帧（#t 让浏览器去取那一帧） -->
               <div v-else class="video-thumb-wrapper">
-                <img
-                  :src="thumbnailUrl(item.id)"
-                  :alt="item.note || ''"
+                <video
+                  v-if="!item._videoFailed"
+                  :src="fileUrl(item.id) + '#t=0.5'"
                   class="media-thumb"
-                />
+                  preload="metadata"
+                  muted
+                  playsinline
+                  @error="onVideoError(item)"
+                ></video>
+                <div
+                  v-else
+                  class="media-thumb media-fallback"
+                  title="无法预览：该视频编码浏览器不支持（常见于 iPhone 的 HEVC）"
+                >
+                  🎬
+                </div>
                 <div class="video-play-overlay">
                   <div class="play-icon">▶</div>
                 </div>
@@ -127,10 +142,21 @@
       </template>
     </n-modal>
 
-    <!-- 照片/视频全屏预览 -->
+    <!-- 照片全屏预览 -->
     <n-modal v-model:show="showImagePreview" preset="card" :style="{ maxWidth: '90vw', maxHeight: '90vh' }" :closable="true">
       <div style="text-align: center;">
-        <img :src="previewImageUrl" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px;" />
+        <img
+          v-if="!imagePreviewFailed"
+          :src="previewImageUrl"
+          style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px;"
+          @error="imagePreviewFailed = true"
+        />
+        <div v-else style="padding: 32px 16px; color: #64748b; font-size: 14px; line-height: 1.8;">
+          <div style="font-size: 32px; margin-bottom: 8px;">🖼️</div>
+          <div>这个文件无法在浏览器里预览</div>
+          <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">可能是文件已丢失，或该格式浏览器不支持（如 TIFF）</div>
+          <a :href="previewImageUrl" download style="display: inline-block; margin-top: 12px; color: #7c3aed;">下载原文件</a>
+        </div>
         <div v-if="previewItemData" style="margin-top: 16px; text-align: left; padding: 12px; background: #f8fafc; border-radius: 8px;">
           <div style="font-weight: 600; margin-bottom: 8px;">{{ previewItemData.dateText }} · 孕{{ previewItemData.week || '?' }}周</div>
           <div v-if="previewItemData.note" style="color: #64748b; font-size: 14px; line-height: 1.6;">{{ previewItemData.note }}</div>
@@ -142,12 +168,22 @@
     <!-- 视频播放弹窗 -->
     <n-modal v-model:show="showVideoPreview" preset="card" :style="{ maxWidth: '90vw' }" :closable="true" title="视频播放">
       <video
-        v-if="showVideoPreview"
+        v-if="showVideoPreview && !videoPreviewFailed"
         :src="previewVideoUrl"
         controls
         autoplay
+        @error="videoPreviewFailed = true"
         style="width: 100%; max-height: 80vh;"
       ></video>
+      <div v-else-if="videoPreviewFailed" style="padding: 24px 8px; color: #64748b; font-size: 14px; line-height: 1.8;">
+        <div style="font-size: 32px; margin-bottom: 8px;">🎬</div>
+        <div>当前浏览器无法播放这个视频</div>
+        <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">
+          常见于 iPhone 录制的 HEVC / H.265 格式：手机上的浏览器一般能播，电脑端的 Chrome / Edge 不行。
+        </div>
+        <a :href="previewVideoUrl" download style="display: inline-block; margin-top: 12px; color: #7c3aed;">下载视频</a>
+        <span style="font-size: 13px; color: #94a3b8;">（用手机或 VLC 等本地播放器打开）</span>
+      </div>
     </n-modal>
 
     <!-- 编辑照片/视频对话框 -->
@@ -211,6 +247,7 @@ interface PhotoItem {
   media_type: string
   created_at: string
   _imgFailed?: boolean
+  _videoFailed?: boolean
 }
 
 interface PhotoGroup {
@@ -230,8 +267,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 // 照片预览
 const showImagePreview = ref(false)
 const previewImageUrl = ref('')
+const imagePreviewFailed = ref(false)
 const showVideoPreview = ref(false)
 const previewVideoUrl = ref('')
+const videoPreviewFailed = ref(false)
 const activeAlbumTab = ref('all')
 const uploadPhotoType = ref('belly')
 
@@ -305,9 +344,11 @@ const groupedPhotos = computed<PhotoGroup[]>(() => {
 function previewItem(item: PhotoItem) {
   if (item.media_type === 'video') {
     previewVideoUrl.value = fileUrl(item.id)
+    videoPreviewFailed.value = false
     showVideoPreview.value = true
   } else {
     previewImageUrl.value = fileUrl(item.id)
+    imagePreviewFailed.value = false
     showImagePreview.value = true
   }
   // 同时填充预览信息面板
@@ -426,6 +467,11 @@ async function loadPhotos() {
 
 async function onImageError(item: PhotoItem) {
   item._imgFailed = true
+}
+
+/** 视频缩略图加载失败（编码不被浏览器支持时）→ 退化成占位图标 */
+function onVideoError(item: PhotoItem) {
+  item._videoFailed = true
 }
 
 onMounted(async () => {
