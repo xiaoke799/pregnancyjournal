@@ -9,8 +9,8 @@
     <div class="action-bar">
       <h3 class="date-title">{{ selectedDate }}</h3>
       <div class="sub-tab-bar">
-        <button class="sub-tab-btn" :class="{ active: activeSubTab === 'record' }" @click="activeSubTab = 'record'">📝 记录</button>
-        <button class="sub-tab-btn" :class="{ active: activeSubTab === 'stats' }" @click="activeSubTab = 'stats'">📊 统计</button>
+        <button class="sub-tab-btn" :class="{ active: activeSubTab === 'record' }" @click="activeSubTab = 'record'">记录</button>
+        <button class="sub-tab-btn" :class="{ active: activeSubTab === 'stats' }" @click="activeSubTab = 'stats'">统计</button>
       </div>
       <n-popover trigger="click" placement="bottom-end" :show-arrow="false" :style="{ maxWidth: '320px', padding: '8px' }">
         <template #trigger>
@@ -65,7 +65,7 @@
     <!-- ====== 统计模式内容 ====== -->
     <div v-if="activeSubTab === 'stats'" class="stats-panel">
       <div class="stats-header">
-        <h3>📊 数据统计</h3>
+        <h3>数据统计</h3>
         <div class="period-tabs">
           <button
             v-for="p in periodOptions" :key="p.value"
@@ -90,11 +90,11 @@
       <!-- 图表区域 -->
       <div v-if="statsRecords.length > 0" class="charts-section">
         <!-- 体重 -->
-        <MetricCard v-if="hasData('weight')" title="⚖️ 体重变化" unit="kg" :color="'#a78bfa'"
+        <MetricCard v-if="hasData('weight')" title="体重变化" unit="kg" :color="'#a78bfa'"
           :dates="chartDates" :values="chartValues('weight')" :table-data="tableData('weight', 'weight')" />
 
         <!-- 血压 -->
-        <MetricCard v-if="hasData('bp')" title="🩺 血压变化" unit="mmHg" :color="'#ef4444'"
+        <MetricCard v-if="hasData('bp')" title="血压变化" unit="mmHg" :color="'#ef4444'"
           :dates="chartDates"
           :values="chartValues('bp_systolic')"
           :values2="chartValues('bp_diastolic')"
@@ -102,7 +102,7 @@
           :table-data="tableData('bp', 'blood_pressure_systolic', { sub: 'blood_pressure_diastolic', format: (r: any) => `${r.blood_pressure_systolic || '--'}/${r.blood_pressure_diastolic || '--'}` })" />
 
         <!-- 血糖 -->
-        <MetricCard v-if="hasData('glucose')" title="🩸 血糖变化" unit="mmol/L" :color="'#f59e0b'"
+        <MetricCard v-if="hasData('glucose')" title="血糖变化" unit="mmol/L" :color="'#f59e0b'"
           :dates="chartDates"
           :values="chartValues('glucose_fasting')"
           :values2="chartValues('glucose_1h')"
@@ -117,37 +117,46 @@
           })" />
 
         <!-- HCG -->
-        <MetricCard v-if="hasData('hcg')" title="🧬 HCG 变化" unit="mIU/mL" :color="'#ec4899'"
+        <MetricCard v-if="hasData('hcg')" title="HCG变化" unit="mIU/mL" :color="'#ec4899'"
           :dates="chartDates" :values="chartValues('hcg_value')"
           :table-data="tableData('hcg', 'hcg_value', { extra: 'hcg_weeks', extraLabel: '孕周' })" />
 
         <!-- 尿酸 -->
-        <MetricCard v-if="hasData('uric_acid')" title="🧪 尿酸变化" unit="μmol/L" :color="'#06b6d4'"
+        <MetricCard v-if="hasData('uric_acid')" title="尿酸变化" unit="μmol/L" :color="'#06b6d4'"
           :dates="chartDates" :values="chartValues('uric_acid')"
           :table-data="tableData('uric_acid', 'uric_acid', { extra: 'uric_acid_period', extraLabel: '时段' })" />
 
         <!-- 体温 -->
-        <MetricCard v-if="hasData('temp')" title="🌡️ 体温变化" unit="°C" :color="'#f97316'"
+        <MetricCard v-if="hasData('temp')" title="体温变化" unit="°C" :color="'#f97316'"
           :dates="chartDates" :values="chartValues('body_temperature')"
           :table-data="tableData('temp', 'body_temperature')" />
 
         <!-- 腰围 -->
-        <MetricCard v-if="hasData('waist')" title="📏 腰围变化" unit="cm" :color="'#14b8a6'"
+        <MetricCard v-if="hasData('waist')" title="腰围变化" unit="cm" :color="'#14b8a6'"
           :dates="chartDates" :values="chartValues('waist')"
           :table-data="tableData('waist', 'waist')" />
 
+        <!-- 胸围 / 臀围（与腰围合称三围，各自一条曲线便于对比） -->
+        <MetricCard v-if="hasData('bust')" title="胸围变化" unit="cm" :color="'#0d9488'"
+          :dates="chartDates" :values="chartValues('bust')"
+          :table-data="tableData('bust', 'bust')" />
+
+        <MetricCard v-if="hasData('hip')" title="臀围变化" unit="cm" :color="'#0f766e'"
+          :dates="chartDates" :values="chartValues('hip')"
+          :table-data="tableData('hip', 'hip')" />
+
         <!-- 睡眠 -->
-        <MetricCard v-if="hasData('sleep')" title="😴 睡眠时长" unit="小时" :color="'#8b5cf6'"
+        <MetricCard v-if="hasData('sleep')" title="睡眠时长" unit="小时" :color="'#8b5cf6'"
           :dates="chartDates" :values="chartValues('sleep_hours')"
           :table-data="tableData('sleep', 'sleep_hours', { extra: 'sleep_quality', extraLabel: '质量' })" />
 
         <!-- 饮水 -->
-        <MetricCard v-if="hasData('water')" title="💧 饮水量" unit="ml" :color="'#3b82f6'"
+        <MetricCard v-if="hasData('water')" title="饮水量" unit="ml" :color="'#3b82f6'"
           :dates="chartDates" :values="chartValues('water_intake')"
           :table-data="tableData('water', 'water_intake')" />
 
         <!-- 胎动 -->
-        <MetricCard v-if="hasData('fm')" title="🦶 胎动次数" unit="次" :color="'#10b981'"
+        <MetricCard v-if="hasData('fm')" title="胎动次数" unit="次" :color="'#10b981'"
           :dates="chartDates" :values="chartValues('fetal_movement_count')"
           :table-data="tableData('fm', 'fetal_movement_count', { extra: 'fetal_movement_duration', extraLabel: '用时(分)' })" />
       </div>
@@ -159,7 +168,7 @@
     <n-modal
       v-model:show="showWeightModal"
       preset="card"
-      title="⚖️ 记录体重"
+      title="记录体重"
       style="max-width: 400px; width: 92vw;"
       :mask-closable="true"
       @after-leave="resetWeightForm"
@@ -188,7 +197,7 @@
     <n-modal
       v-model:show="showBpModal"
       preset="card"
-      title="🩺 记录血压"
+      title="记录血压"
       style="max-width: 420px; width: 92vw;"
       :mask-closable="true"
       @after-leave="resetBpForm"
@@ -223,7 +232,7 @@
     <n-modal
       v-model:show="showGlucoseModal"
       preset="card"
-      title="🩸 记录血糖"
+      title="记录血糖"
       style="max-width: 420px; width: 92vw;"
       :mask-closable="true"
       @after-leave="resetGlucoseForm"
@@ -260,7 +269,7 @@
     <n-modal
       v-model:show="showFhrModal"
       preset="card"
-      title="❤️ 测胎心"
+      title="测胎心"
       style="max-width: 400px; width: 92vw;"
       :mask-closable="true"
       @after-leave="resetFhrForm"
@@ -274,7 +283,7 @@
           <label>胎心率 (bpm)</label>
           <n-input-number v-model:value="fhrForm.value" :min="60" :max="200" placeholder="110-160" style="width: 100%" />
         </div>
-        <div class="form-hint-text">💡 正常范围：110-160 bpm</div>
+        <div class="form-hint-text">正常范围：110-160 bpm</div>
         <div class="qf-group">
           <label>备注（可选）</label>
           <n-input v-model:value="fhrForm.note" placeholder="可选" />
@@ -290,7 +299,7 @@
     <n-modal
       v-model:show="showStoolModal"
       preset="card"
-      title="💩 记录便便"
+      title="记录便便"
       style="max-width: 420px; width: 92vw;"
       :mask-closable="true"
       @after-leave="resetStoolForm"
@@ -328,7 +337,7 @@
     <n-modal
       v-model:show="showMoodModal"
       preset="card"
-      title="😊 记录心情"
+      title="记录心情"
       style="max-width: 420px; width: 92vw;"
       :mask-closable="true"
       @after-leave="resetMoodForm"
@@ -363,7 +372,7 @@
     <n-modal
       v-model:show="showNoteModal"
       preset="card"
-      title="📝 写日记"
+      title="写日记"
       style="max-width: 480px; width: 94vw;"
       :mask-closable="true"
       @after-leave="resetNoteForm"
@@ -388,7 +397,7 @@
     <n-modal
       v-model:show="showSymptomModal"
       preset="card"
-      title="📋 记录症状"
+      title="记录症状"
       style="max-width: 440px; width: 94vw;"
       :mask-closable="true"
       @after-leave="resetSymptomForm"
@@ -419,7 +428,7 @@
     <n-modal
       v-model:show="showSupplementModal"
       preset="card"
-      title="💊 营养补充"
+      title="营养补充"
       style="max-width: 440px; width: 94vw;"
       :mask-closable="true"
       @after-leave="resetSupplementForm"
@@ -450,7 +459,7 @@
     <n-modal
       v-model:show="showHabitModal"
       preset="card"
-      title="✅ 好习惯打卡"
+      title="好习惯打卡"
       style="max-width: 420px; width: 92vw;"
       :mask-closable="true"
       @after-leave="resetHabitForm"
@@ -472,7 +481,7 @@
     </n-modal>
 
     <!-- 体温弹窗 -->
-    <n-modal v-model:show="showTempModal" preset="card" title="🌡️ 记录体温" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetTempForm">
+    <n-modal v-model:show="showTempModal" preset="card" title="记录体温" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetTempForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="tempForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>体温 (°C)</label><n-input-number v-model:value="tempForm.value" :min="35" :max="42" :step="0.1" placeholder="36.5" style="width:100%" /></div>
@@ -482,7 +491,7 @@
     </n-modal>
 
     <!-- 睡眠弹窗 -->
-    <n-modal v-model:show="showSleepModal" preset="card" title="😴 记录睡眠" style="max-width:420px;width:92vw;" :mask-closable="true" @after-leave="resetSleepForm">
+    <n-modal v-model:show="showSleepModal" preset="card" title="记录睡眠" style="max-width:420px;width:92vw;" :mask-closable="true" @after-leave="resetSleepForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="sleepForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
@@ -496,18 +505,18 @@
     </n-modal>
 
     <!-- 饮水弹窗 -->
-    <n-modal v-model:show="showWaterModal" preset="card" title="💧 记录饮水" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetWaterForm">
+    <n-modal v-model:show="showWaterModal" preset="card" title="记录饮水" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetWaterForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="waterForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>饮水量 (ml)</label><n-input-number v-model:value="waterForm.value" :min="0" :max="5000" :step="50" placeholder="今日总饮水量" style="width:100%" /></div>
-        <div class="form-hint-text">💡 建议孕期每日饮水 1700-2300ml</div>
+        <div class="form-hint-text">建议孕期每日饮水 1700-2300ml</div>
         <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="waterForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showWaterModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveWater">保存</n-button></template>
     </n-modal>
 
     <!-- 饮食弹窗 -->
-    <n-modal v-model:show="showDietModal" preset="card" title="🍎 记录饮食" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetDietForm">
+    <n-modal v-model:show="showDietModal" preset="card" title="记录饮食" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetDietForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="dietForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>餐次</label><n-radio-group v-model:value="dietForm.meal" size="small"><n-radio-button value="早餐">早餐</n-radio-button><n-radio-button value="午餐">午餐</n-radio-button><n-radio-button value="晚餐">晚餐</n-radio-button><n-radio-button value="加餐">加餐</n-radio-button></n-radio-group></div>
@@ -517,7 +526,7 @@
     </n-modal>
 
     <!-- 运动弹窗 -->
-    <n-modal v-model:show="showExerciseModal" preset="card" title="🏃 记录运动" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetExerciseForm">
+    <n-modal v-model:show="showExerciseModal" preset="card" title="记录运动" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetExerciseForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="exerciseForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
@@ -531,21 +540,21 @@
     </n-modal>
 
     <!-- 胎动弹窗 -->
-    <n-modal v-model:show="showFmModal" preset="card" title="🦶 记录胎动" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetFmForm">
+    <n-modal v-model:show="showFmModal" preset="card" title="记录胎动" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetFmForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="fmForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
           <div class="qf-group flex1"><label>胎动次数</label><n-input-number v-model:value="fmForm.count" :min="0" :max="200" placeholder="次数" style="width:100%" /></div>
           <div class="qf-group flex1"><label>用时(分钟)</label><n-input-number v-model:value="fmForm.duration" :min="0" :max="180" :step="5" placeholder="分钟" style="width:100%" /></div>
         </div>
-        <div class="form-hint-text">💡 正常胎动：每小时≥3次，每天累计10次以上</div>
+        <div class="form-hint-text">正常胎动：每小时≥3次，每天累计10次以上</div>
         <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="fmForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showFmModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveFm">保存</n-button></template>
     </n-modal>
 
     <!-- 宫缩弹窗 -->
-    <n-modal v-model:show="showContrModal" preset="card" title="⏱️ 记录宫缩" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetContrForm">
+    <n-modal v-model:show="showContrModal" preset="card" title="记录宫缩" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetContrForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="contrForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
@@ -559,7 +568,7 @@
     </n-modal>
 
     <!-- 计划弹窗 -->
-    <n-modal v-model:show="showPlanModal" preset="card" title="📌 记录计划" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetPlanForm">
+    <n-modal v-model:show="showPlanModal" preset="card" title="记录计划" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetPlanForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="planForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>计划内容</label><n-input v-model:value="planForm.text" type="textarea" :rows="3" placeholder="今天计划做什么..." /></div>
@@ -568,7 +577,7 @@
     </n-modal>
 
     <!-- 爱爱弹窗 -->
-    <n-modal v-model:show="showIntimacyModal" preset="card" title="💑 记录爱爱" style="max-width:420px;width:94vw;" :mask-closable="true" @after-leave="resetIntimacyForm">
+    <n-modal v-model:show="showIntimacyModal" preset="card" title="记录爱爱" style="max-width:420px;width:94vw;" :mask-closable="true" @after-leave="resetIntimacyForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="intimacyForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>次数</label><n-input-number v-model:value="intimacyForm.count" :min="0" :max="10" placeholder="次数" style="width:100%" /></div>
@@ -580,37 +589,39 @@
     </n-modal>
 
     <!-- HCG 专业记录弹窗 -->
-    <n-modal v-model:show="showHcgModal" preset="card" title="🧬 HCG 记录" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetHcgForm">
+    <n-modal v-model:show="showHcgModal" preset="card" title="HCG记录" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetHcgForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="hcgForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>HCG 值 (mIU/mL)</label><n-input-number v-model:value="hcgForm.value" :min="0" :max="1000000" :step="100" placeholder="如：50000" style="width:100%" /></div>
         <div class="qf-group"><label>孕周（可选，用于参考范围）</label><n-input-number v-model:value="hcgForm.weeks" :min="3" :max="15" :step="1" placeholder="如：6" style="width:100%" /></div>
-        <div class="form-hint-text">💡 孕3-4周: 50-500 | 孕4-5周: 100-5000 | 孕5-6周: 1000-50000 | 孕6-8周达峰值后逐渐下降</div>
+        <div class="form-hint-text">孕3-4周: 50-500 | 孕4-5周: 100-5000 | 孕5-6周: 1000-50000 | 孕6-8周达峰值后逐渐下降</div>
         <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="hcgForm.note" placeholder="如：翻倍情况、医生建议等" /></div>
       </div>
       <template #action><n-button @click="showHcgModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveHcg">保存</n-button></template>
     </n-modal>
 
     <!-- 尿酸专业记录弹窗 -->
-    <n-modal v-model:show="showUaModal" preset="card" title="🧪 尿酸记录" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetUaForm">
+    <n-modal v-model:show="showUaModal" preset="card" title="尿酸记录" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetUaForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="uaForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-row">
           <div class="qf-group flex1"><label>尿酸值 (μmol/L)</label><n-input-number v-model:value="uaForm.value" :min="100" :max="800" :step="10" placeholder="如：350" style="width:100%" /></div>
           <div class="qf-group flex1"><label>测量时段</label><n-select v-model:value="uaForm.period" :options="uaPeriodOptions" placeholder="选择" style="width:100%" /></div>
         </div>
-        <div class="form-hint-text">💡 正常参考值：非孕期 150-360 μmol/L；孕期可能略高，>420需关注</div>
+        <div class="form-hint-text">正常参考值：非孕期 150-360 μmol/L；孕期可能略高，>420需关注</div>
         <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="uaForm.note" placeholder="如：是否空腹、医生建议等" /></div>
       </div>
       <template #action><n-button @click="showUaModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveUa">保存</n-button></template>
     </n-modal>
 
-    <!-- 腰围弹窗 -->
-    <n-modal v-model:show="showWaistModal" preset="card" title="📏 记录腰围" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetWaistForm">
+    <!-- 三围弹窗（胸围 / 腰围 / 臀围，可只填其中一两项） -->
+    <n-modal v-model:show="showWaistModal" preset="card" title="📏 记录三围" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetWaistForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="waistForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
+        <div class="qf-group"><label>胸围 (cm)</label><n-input-number v-model:value="waistForm.bust" :min="50" :max="220" :step="0.1" placeholder="如：92" style="width:100%" /></div>
         <div class="qf-group"><label>腰围 (cm)</label><n-input-number v-model:value="waistForm.value" :min="40" :max="200" :step="0.1" placeholder="如：85" style="width:100%" /></div>
-        <div class="form-hint-text">💡 孕期腰围增长因人而异，建议固定时间（如晨起）测量以便对比</div>
+        <div class="qf-group"><label>臀围 (cm)</label><n-input-number v-model:value="waistForm.hip" :min="60" :max="230" :step="0.1" placeholder="如：95" style="width:100%" /></div>
+        <div class="form-hint-text">只填其中一两项也可以；建议固定时间（如晨起空腹）测量，便于前后对比</div>
         <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="waistForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showWaistModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveWaist">保存</n-button></template>
@@ -748,12 +759,16 @@ const uaPeriodOptions = [
 ]
 const uaForm = ref({ date: '', value: null as number | null, period: '空腹', note: '' })
 // 腰围
-const waistForm = ref({ date: '', value: null as number | null, note: '' })
+const waistForm = ref({ date: '', bust: null as number | null, value: null as number | null, hip: null as number | null, note: '' })
 
 // ====== 类型菜单定义 ======
 const quickTypes = [
   { value: 'weight', icon: '⚖️', label: '体重' },
-  { value: 'waist', icon: '📏', label: '腰围' },
+  { value: 'waist', icon: '📏', label: '三围' },
+  { value: 'edema', icon: '🦵', label: '水肿' },
+  { value: 'discharge', icon: '💧', label: '分泌物' },
+  { value: 'skin', icon: '✨', label: '皮肤状况' },
+  { value: 'urination', icon: '🚻', label: '排尿情况' },
   { value: 'blood_pressure', icon: '🩺', label: '血压' },
   { value: 'blood_glucose', icon: '🩸', label: '血糖' },
   { value: 'fetal_heart_rate', icon: '❤️', label: '胎心' },
@@ -802,7 +817,30 @@ const previewItems = computed<PreviewItem[]>(() => {
     items.push({ type: 'blood_glucose', icon: '🩸', label: '血糖', value: parts.join(' ') + ' mmol/L', color: '#f59e0b' })
   }
   if (r.fetal_heart_rate) items.push({ type: 'fetal_heart_rate', icon: '❤️', label: '胎心', value: r.fetal_heart_rate + ' bpm', color: '#f472b6' })
-  if (r.waist) items.push({ type: 'waist', icon: '📏', label: '腰围', value: r.waist + ' cm', color: '#14b8a6' })
+  // 三围合并成一张预览卡（预览位有限，最多 6 张），只显示已填的那些
+  {
+    const parts: string[] = []
+    if (r.bust) parts.push('胸' + r.bust)
+    if (r.waist) parts.push('腰' + r.waist)
+    if (r.hip) parts.push('臀' + r.hip)
+    if (parts.length) items.push({ type: 'waist', icon: '📏', label: '三围', value: parts.join(' ') + ' cm', color: '#14b8a6' })
+  }
+  {
+    const edemaMap: Record<string, string> = { none: '无', mild: '轻度', moderate: '中度', severe: '重度' }
+    if (r.edema_level) items.push({ type: 'edema', icon: '🦵', label: '水肿', value: edemaMap[r.edema_level] || r.edema_level, color: '#0ea5e9' })
+  }
+  {
+    const dMap: Record<string, string> = { normal: '正常', more: '偏多', abnormal: '异常' }
+    if (r.vaginal_discharge) items.push({ type: 'discharge', icon: '💧', label: '分泌物', value: dMap[r.vaginal_discharge] || r.vaginal_discharge, color: '#06b6d4' })
+  }
+  {
+    const sMap: Record<string, string> = { normal: '正常', stretch_marks: '妊娠纹', itchy: '瘙痒', melasma: '色素沉着' }
+    if (r.skin_condition) items.push({ type: 'skin', icon: '✨', label: '皮肤', value: sMap[r.skin_condition] || r.skin_condition, color: '#d946ef' })
+  }
+  {
+    const uMap: Record<string, string> = { normal: '正常', frequent: '尿频', painful: '尿痛' }
+    if (r.urination_frequency) items.push({ type: 'urination', icon: '🚻', label: '排尿', value: uMap[r.urination_frequency] || r.urination_frequency, color: '#22d3ee' })
+  }
   if (r.mood) {
     const icons = ['', '😢', '😔', '😐', '😊', '😄']
     items.push({ type: 'mood', icon: '😊', label: '心情', value: (icons[r.mood] || '😐') + (r.mood_note ? ' ' + r.mood_note.slice(0, 8) : ''), color: '#f87171' })
@@ -879,7 +917,14 @@ function openQuickAdd(type: string) {
     case 'hcg': resetHcgForm(); hcgForm.value.date = d; showHcgModal.value = true; break
     case 'uric_acid': resetUaForm(); uaForm.value.date = d; showUaModal.value = true; break
     case 'waist': resetWaistForm(); waistForm.value.date = d; showWaistModal.value = true; break
-  default: message.warning('未知类型: ' + type)
+  // 没有专属小弹窗的类型（水肿 / 分泌物 / 皮肤状况 / 排尿情况）走通用大弹窗。
+  // ⚠️ 这里以前只弹一句「未知类型」警告 —— 于是新加的记录类型点下去等于没反应，
+  // 用户会以为「这个功能根本没做」。所以默认分支必须能真的打开录入界面。
+  default:
+    addDialogType.value = type
+    addDialogRecord.value = null
+    showAddDialog.value = true
+    break
   }
 }
 
@@ -1147,7 +1192,7 @@ async function saveIntimacy() {
 // ====== HCG & 尿酸 ======
 function resetHcgForm() { hcgForm.value = { date: '', value: null, weeks: null, note: '' } }
 function resetUaForm() { uaForm.value = { date: '', value: null, period: '空腹', note: '' } }
-function resetWaistForm() { waistForm.value = { date: '', value: null, note: '' } }
+function resetWaistForm() { waistForm.value = { date: '', bust: null, value: null, hip: null, note: '' } }
 
 async function saveHcg() {
   if (!hcgForm.value.value) { message.warning('请输入HCG值'); return }
@@ -1174,13 +1219,21 @@ async function saveUa() {
 }
 
 async function saveWaist() {
-  if (!waistForm.value.value) { message.warning('请输入腰围'); return }
-  console.log('[Record] saveWaist:', { value: waistForm.value.value })
-  const ok = await doUpsert({
+  const { bust, value, hip } = waistForm.value
+  // 三围允许只填一两项，但一项都不填就没意义
+  if (bust == null && value == null && hip == null) {
+    message.warning('请至少填写胸围 / 腰围 / 臀围中的一项')
+    return
+  }
+  const payload: any = {
     record_date: waistForm.value.date,
-    waist: waistForm.value.value,
     note: waistForm.value.note || undefined,
-  })
+  }
+  // 只提交真正填了的项，避免把用户没量的一项写成空值
+  if (bust != null) payload.bust = bust
+  if (value != null) payload.waist = value
+  if (hip != null) payload.hip = hip
+  const ok = await doUpsert(payload)
   if (ok) showWaistModal.value = false
 }
 
@@ -1257,7 +1310,9 @@ function hasData(metric: string): boolean {
     case 'hcg': return statsRecords.value.some((r: any) => r.hcg_value != null)
     case 'uric_acid': return statsRecords.value.some((r: any) => r.uric_acid != null)
     case 'temp': return statsRecords.value.some((r: any) => r.body_temperature != null)
-    case 'waist': return statsRecords.value.some((r: any) => r.waist != null)
+    case 'waist': return statsRecords.value.some((r: any) => r.bust != null || r.waist != null || r.hip != null)
+    case 'bust': return statsRecords.value.some((r: any) => r.bust != null)
+    case 'hip': return statsRecords.value.some((r: any) => r.hip != null)
     case 'sleep': return statsRecords.value.some((r: any) => r.sleep_hours != null)
     case 'water': return statsRecords.value.some((r: any) => r.water_intake != null)
     case 'fm': return statsRecords.value.some((r: any) => r.fetal_movement_count != null)

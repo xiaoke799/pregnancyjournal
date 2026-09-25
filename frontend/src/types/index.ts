@@ -25,6 +25,10 @@ export interface DailyRecord {
   weight: number | null
   fetal_heart_rate: number | null
   body_temperature: number | null
+  /** 三围（cm）：胸围 / 腰围 / 臀围 */
+  bust: number | null
+  waist: number | null
+  hip: number | null
   blood_glucose_fasting: number | null
   blood_glucose_1h: number | null
   blood_glucose_2h: number | null

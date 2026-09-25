@@ -9,7 +9,51 @@ const logger = require('../logger');
 const heic = require('../services/heic');
 
 // ===== 版本标记：部署后可通过日志确认是否加载了最新代码 =====
-logger.info('daily-record', `模块加载 v0.0.28 [${new Date().toISOString()}]`);
+logger.info('daily-record', `模块加载 v0.0.29 [${new Date().toISOString()}]`);
+
+/**
+ * 数值字段「读时归一」
+ *
+ * 背景：老库升级时，缺失的列是由 db.js 的 migrateDb 用 ALTER TABLE ADD COLUMN 补出来的。
+ * 早期实现一律补成 TEXT，而 SQLite 按列亲和性存值 —— TEXT 列里写数字 92 会存成字符串 '92'，
+ * 读出来就是 "92"。前端拿它绑 n-input-number、画折线图都会出问题
+ * （实测：升级库 waist/bust/hip 读回是字符串，新装库是数字）。
+ *
+ * 现在两个层面都处理：
+ *  ① db.js 已改成「按建表语句声明的类型补列」→ 以后升级不会再产生 TEXT 数值列；
+ *  ② 这里在**读取出口**统一把数值列转回数字 —— 已经升级过的老库改不了列类型，
+ *     但用户读到的数据必须是数字。归一发生在读侧，不修改任何用户数据。
+ */
+const NUMERIC_FIELDS = [
+  'weight', 'fetal_heart_rate', 'body_temperature', 'bust', 'waist', 'hip',
+  'blood_glucose_fasting', 'blood_glucose_1h', 'blood_glucose_2h',
+  'sleep_hours', 'exercise_duration', 'hcg_value', 'hcg_weeks', 'uric_acid',
+  'is_plan_done', 'water_intake',
+  'contraction_count', 'contraction_interval', 'contraction_duration',
+  'fetal_movement_count', 'fetal_movement_duration',
+];
+
+function normalizeNumericFields(row) {
+  if (!row || typeof row !== 'object') return row;
+  for (const f of NUMERIC_FIELDS) {
+    const v = row[f];
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (s !== '' && !isNaN(Number(s))) row[f] = Number(s);
+    }
+  }
+  return row;
+}
+
+/** 单条记录出口统一走这里 */
+function shape(record) {
+  return normalizeNumericFields(record) || null;
+}
+
+/** 列表出口统一走这里 */
+function shapeList(records) {
+  return Array.isArray(records) ? records.map(r => normalizeNumericFields(r)) : [];
+}
 
 const DIARY_BASE = path.join(config.PHOTOS_DIR, 'diary');
 
@@ -182,7 +226,7 @@ router.post('/daily-records', (req, res) => {
  
       if (updates.length === 0) {
         logger.info('daily-record', `POST /daily-records - no fields to update for existing record`);
-        return res.json({ code: 0, data: existing, message: 'success' });
+        return res.json({ code: 0, data: shape(existing), message: 'success' });
       }
  
       updates.push("updated_at = datetime('now')");
@@ -193,7 +237,7 @@ router.post('/daily-records', (req, res) => {
  
       const updated = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [existing.id]);
       logger.info('daily-record', `POST /daily-records - record updated successfully (id=${existing.id})`);
-      return res.json({ code: 0, data: updated, message: 'success' });
+      return res.json({ code: 0, data: shape(updated), message: 'success' });
     }
 
     const id = db.generateId();
@@ -262,7 +306,7 @@ router.post('/daily-records', (req, res) => {
 
     const record = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [id]);
     logger.info('daily-record', `POST /daily-records - 新记录插入成功 (id=${id})`);
-    res.json({ code: 0, data: record, message: 'success' });
+    res.json({ code: 0, data: shape(record), message: 'success' });
   } catch (e) {
     // 错误时记录完整上下文（请求体关键字段 + SQL错误信息）
     const errFields = Object.keys(req.body).filter(k => req.body[k] != null);
@@ -311,7 +355,7 @@ router.get('/daily-records', (req, res) => {
     logger.info('daily-record', `GET /daily-records - found ${records.length} records, total=${total.count}`);
     res.json({
       code: 0,
-      data: { items: records, list: records, total: total.count, page: parseInt(page), page_size: limit },
+      data: { items: shapeList(records), list: shapeList(records), total: total.count, page: parseInt(page), page_size: limit },
       message: 'success'
     });
   } catch (e) {
@@ -333,7 +377,7 @@ router.get('/daily-records/by-date/:record_date', (req, res) => {
       [pregnancy_id, req.params.record_date]
     );
     logger.info('daily-record', `GET /daily-records/by-date - record ${record ? 'found' : 'not found'}`);
-    res.json({ code: 0, data: record || null, message: 'success' });
+    res.json({ code: 0, data: shape(record), message: 'success' });
   } catch (e) {
     logger.error('daily-record', `GET /daily-records/by-date error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
@@ -360,7 +404,7 @@ router.get('/daily-records/:record_date', (req, res) => {
     }
 
     logger.info('daily-record', `GET /daily-records/${req.params.record_date} - record found`);
-    res.json({ code: 0, data: record, message: 'success' });
+    res.json({ code: 0, data: shape(record), message: 'success' });
   } catch (e) {
     logger.error('daily-record', `GET /daily-records/:date error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
@@ -411,7 +455,7 @@ router.put('/daily-records/:record_id', (req, res) => {
 
     const updated = db.queryOne('SELECT * FROM daily_record WHERE id = ?', [recordId]);
     logger.info('daily-record', `PUT /daily-records/${recordId} - updated ${updates.length} fields successfully`);
-    res.json({ code: 0, data: updated, message: 'success' });
+    res.json({ code: 0, data: shape(updated), message: 'success' });
   } catch (e) {
     logger.error('daily-record', `PUT /daily-records/${req.params.record_id} error`, e);
     res.json({ code: 1001, data: null, message: e.message });

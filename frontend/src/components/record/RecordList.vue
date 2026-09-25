@@ -105,9 +105,13 @@ interface CategoryDef {
 
 const allCategories: CategoryDef[] = [
   { type: 'weight', icon: '⚖️', label: '体重', color: '#a78bfa', addable: true, actionType: 'add' },
-  // 腰围：与 RecordView 顶部「＋ 添加记录」菜单保持一致。
-  // 【历史问题】腰围只加进了那个小菜单，没加到本列表，用户在记录页主入口根本看不到它。
-  { type: 'waist', icon: '📏', label: '腰围', color: '#14b8a6', addable: true, actionType: 'add' },
+  // 三围（胸/腰/臀）：与 RecordView 顶部「＋ 添加记录」菜单保持一致。
+  // 【历史问题】腰围当初只加进了那个小菜单，没加到本列表，用户在记录页主入口根本看不到它。
+  { type: 'waist', icon: '📏', label: '三围', color: '#14b8a6', addable: true, actionType: 'add' },
+  { type: 'edema', icon: '🦵', label: '水肿', color: '#0ea5e9', addable: true, actionType: 'add' },
+  { type: 'discharge', icon: '💧', label: '分泌物', color: '#06b6d4', addable: true, actionType: 'add' },
+  { type: 'skin', icon: '✨', label: '皮肤状况', color: '#d946ef', addable: true, actionType: 'add' },
+  { type: 'urination', icon: '🚻', label: '排尿情况', color: '#22d3ee', addable: true, actionType: 'add' },
   { type: 'blood_pressure', icon: '🩺', label: '血压', color: '#ef4444', addable: true, actionType: 'add' },
   { type: 'supplement', icon: '💊', label: '营养补充', color: '#06b6d4', addable: true, actionType: 'add' },
   { type: 'hcg', icon: '🧬', label: 'hCG', color: '#8b5cf6', addable: true, actionType: 'link', linkTo: 'hcg' },
@@ -133,7 +137,12 @@ function hasDataForType(type: string): boolean {
   const r = record.value
   switch (type) {
     case 'weight': return !!r.weight
-    case 'waist': return r.waist != null && r.waist !== ''
+    // 三围：任一项有值就算有记录
+    case 'waist': return (r.bust != null && r.bust !== '') || (r.waist != null && r.waist !== '') || (r.hip != null && r.hip !== '')
+    case 'edema': return r.edema_level != null && r.edema_level !== ''
+    case 'discharge': return r.vaginal_discharge != null && r.vaginal_discharge !== ''
+    case 'skin': return r.skin_condition != null && r.skin_condition !== ''
+    case 'urination': return r.urination_frequency != null && r.urination_frequency !== ''
     case 'blood_pressure': return !!(r.blood_pressure_systolic || r.blood_pressure_diastolic)
     case 'blood_glucose': return !!(r.blood_glucose_fasting || r.blood_glucose_1h || r.blood_glucose_2h)
     case 'symptoms': {
@@ -180,8 +189,30 @@ function getPreview(type: string): string {
   switch (type) {
     case 'weight':
       return r.weight ? r.weight + ' kg' : ''
-    case 'waist':
-      return r.waist ? r.waist + ' cm' : ''
+    case 'waist': {
+      // 三围：只显示已填的那些，顺序固定为 胸/腰/臀
+      const parts: string[] = []
+      if (r.bust) parts.push('胸 ' + r.bust)
+      if (r.waist) parts.push('腰 ' + r.waist)
+      if (r.hip) parts.push('臀 ' + r.hip)
+      return parts.length ? parts.join(' ') + ' cm' : ''
+    }
+    case 'edema': {
+      const map: Record<string, string> = { none: '无水肿', mild: '轻度水肿', moderate: '中度水肿', severe: '重度水肿' }
+      return map[r.edema_level as string] || ''
+    }
+    case 'discharge': {
+      const map: Record<string, string> = { normal: '分泌物正常', more: '分泌物偏多', abnormal: '分泌物异常' }
+      return map[r.vaginal_discharge as string] || ''
+    }
+    case 'skin': {
+      const map: Record<string, string> = { normal: '皮肤正常', stretch_marks: '妊娠纹', itchy: '皮肤瘙痒', melasma: '色素沉着' }
+      return map[r.skin_condition as string] || ''
+    }
+    case 'urination': {
+      const map: Record<string, string> = { normal: '排尿正常', frequent: '尿频', painful: '尿痛' }
+      return map[r.urination_frequency as string] || ''
+    }
     case 'blood_pressure':
       return (r.blood_pressure_systolic || '--') + '/' + (r.blood_pressure_diastolic || '--') + ' mmHg'
     case 'blood_glucose': {
