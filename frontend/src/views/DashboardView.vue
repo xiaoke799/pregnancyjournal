@@ -24,7 +24,7 @@
     <!-- ===== 提醒看板（未来一个月） ===== -->
     <div class="section reminder-board">
       <div class="section-header">
-        <h3>📌 提醒看板</h3>
+        <h3>提醒看板</h3>
         <div class="header-actions">
           <span class="section-hint" v-if="todayTodos.length">未来30天 · {{ todayTodos.length }} 项</span>
           <n-button size="tiny" :loading="pushing" @click="pushToWecom" v-if="todayTodos.length">推送消息</n-button>
@@ -89,7 +89,7 @@
     <!-- ===== 孕期工具入口（独立全屏页：此前这两个页面没有任何入口，用户点不到）===== -->
     <div class="tool-row">
       <router-link to="/contraction-timer" class="tool-card">
-        <span class="tool-card-icon">⏱️</span>
+        <span class="tool-card-icon"><AppIcon name="timer" :size="18" /></span>
         <div class="tool-card-body">
           <strong>宫缩计时器</strong>
           <span>5-1-1 规律宫缩提醒</span>
@@ -107,7 +107,7 @@
     <!-- ===== 今日记录 ===== -->
     <div class="section record-section">
       <div class="section-header">
-        <h3>📊 今日记录</h3>
+        <h3>今日记录</h3>
         <router-link :to="{ path: '/record', query: { date: todayStr } }" class="view-all">
           {{ dashboardData?.has_today_record ? '查看详情 →' : '去记录 →' }}
         </router-link>
@@ -117,7 +117,6 @@
         <div class="health-grid">
           <!-- 体重 -->
           <div class="hg-card" v-if="todayRecord.weight != null">
-            <span class="hg-icon">⚖️</span>
             <span class="hg-val">{{ todayRecord.weight }}<small>kg</small></span>
             <span class="hg-label">体重</span>
           </div>
@@ -129,43 +128,36 @@
           </div>
           <!-- 胎心 -->
           <div class="hg-card" v-if="todayRecord.fetal_heart_rate != null">
-            <span class="hg-icon">💓</span>
             <span class="hg-val">{{ todayRecord.fetal_heart_rate }}<small>bpm</small></span>
             <span class="hg-label">胎心</span>
           </div>
           <!-- 睡眠 -->
           <div class="hg-card" v-if="todayRecord.sleep_hours != null || todayRecord.sleep_quality">
-            <span class="hg-icon">😴</span>
             <span class="hg-val">{{ todayRecord.sleep_hours ?? '--' }}<small>h</small></span>
             <span class="hg-label">睡眠 {{ sleepQualityLabel(todayRecord.sleep_quality) }}</span>
           </div>
           <!-- 血压 -->
           <div class="hg-card" v-if="todayRecord.blood_pressure_systolic">
-            <span class="hg-icon">❤️</span>
             <span class="hg-val">{{ todayRecord.blood_pressure_systolic }}/{{ todayRecord.blood_pressure_diastolic || '--' }}</span>
             <span class="hg-label">血压</span>
           </div>
           <!-- 体温 -->
           <div class="hg-card" v-if="todayRecord.body_temperature">
-            <span class="hg-icon">🌡️</span>
             <span class="hg-val">{{ todayRecord.body_temperature }}<small>°C</small></span>
             <span class="hg-label">体温</span>
           </div>
           <!-- 血糖（优先显示空腹，多值时合并） -->
           <div class="hg-card" v-if="hasGlucose">
-            <span class="hg-icon">🩸</span>
             <span class="hg-val">{{ glucoseDisplayText }}</span>
             <span class="hg-label">血糖</span>
           </div>
           <!-- 尿酸 -->
           <div class="hg-card" v-if="todayRecord.uric_acid != null">
-            <span class="hg-icon">🧪</span>
             <span class="hg-val">{{ todayRecord.uric_acid }}<small>μmol/L</small></span>
             <span class="hg-label">尿酸</span>
           </div>
           <!-- HCG -->
           <div class="hg-card" v-if="todayRecord.hcg_value != null">
-            <span class="hg-icon">🧬</span>
             <span class="hg-val">{{ todayRecord.hcg_value }}</span>
             <span class="hg-label">HCG</span>
           </div>
@@ -181,7 +173,7 @@
     <!-- ===== 宝宝成长曲线 ===== -->
     <div class="section" v-if="fetalCurveData.length > 0">
       <div class="section-header">
-        <h3>👶 宝宝成长曲线</h3>
+        <h3>宝宝成长曲线</h3>
         <span class="section-hint">第 {{ gestationalAge?.weeks }} 周</span>
       </div>
       <div class="dev-brief" v-if="development">
@@ -197,7 +189,7 @@
     <!-- ===== 产检建议 ===== -->
     <div class="section" v-if="recommendedTodos.length > 0">
       <div class="section-header">
-        <h3>🏥 产检建议</h3>
+        <h3>产检建议</h3>
         <router-link to="/checkup-schedule" class="view-all">全部 →</router-link>
       </div>
       <div class="checkup-list">
@@ -221,7 +213,7 @@
     <!-- ===== 准备清单 ===== -->
     <div class="section" v-if="checklistProgress && checklistProgress.total > 0">
       <div class="section-header">
-        <h3>📋 准备清单</h3>
+        <h3>准备清单</h3>
         <router-link to="/checklist" class="view-all">查看全部 →</router-link>
       </div>
       <div class="cl-bar-outer mandatory">
@@ -237,7 +229,7 @@
     <!-- ===== 最近产检 ===== -->
     <div class="section" v-if="lastCheckup">
       <div class="section-header">
-        <h3>🏥 最近产检</h3>
+        <h3>最近产检</h3>
         <router-link to="/checkup-schedule" class="view-all">全部 →</router-link>
       </div>
       <div class="lc-row">
@@ -252,33 +244,28 @@
     <!-- ===== 核心功能入口（底部） ===== -->
     <div class="section core-features">
       <div class="section-header">
-        <h3>🎯 核心功能</h3>
+        <h3>核心功能</h3>
       </div>
       <div class="core-grid">
         <router-link to="/record" class="core-card core-record">
-          <span class="core-icon">📝</span>
           <span class="core-label">记录</span>
           <span class="core-desc" v-if="dashboardData?.has_today_record">今日已记录</span>
           <span class="core-desc" v-else>今日未记录</span>
         </router-link>
         <router-link to="/diet" class="core-card core-diet">
-          <span class="core-icon">🍎</span>
           <span class="core-label">饮食</span>
           <span class="core-desc">今日吃什么</span>
         </router-link>
         <router-link to="/diary" class="core-card core-diary">
-          <span class="core-icon">📖</span>
           <span class="core-label">日记</span>
           <span class="core-desc">记录孕期点滴</span>
         </router-link>
         <router-link to="/checkup-schedule" class="core-card core-checkup">
-          <span class="core-icon">🏥</span>
           <span class="core-label">产检</span>
           <span class="core-desc" v-if="upcomingCheckupCount">{{ upcomingCheckupCount }}项待完成</span>
           <span class="core-desc" v-else>查看产检计划</span>
         </router-link>
         <router-link to="/settings" class="core-card core-settings">
-          <span class="core-icon">⚙️</span>
           <span class="core-label">设置</span>
           <span class="core-desc">数据与管理</span>
         </router-link>
@@ -307,6 +294,7 @@ import { use } from 'echarts/core'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, MarkLineComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 use([LineChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, CanvasRenderer])
 const pregnancyStore = usePregnancyStore()

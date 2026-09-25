@@ -2,8 +2,8 @@
   <div class="album-view">
     <!-- 顶部操作栏 -->
     <div class="album-header">
-      <h2 class="album-title">📷 孕期相册</h2>
-      <n-button type="primary" size="small" @click="showUploadDialog = true">➕ 上传</n-button>
+      <h2 class="album-title">孕期相册</h2>
+      <n-button type="primary" size="small" @click="showUploadDialog = true">上传</n-button>
     </div>
 
     <!-- 相册分类 Tab -->
@@ -15,7 +15,7 @@
 
     <!-- 空状态 -->
     <div v-if="filteredPhotos.length === 0 && !loading" class="empty-state">
-      <div class="empty-icon">📷</div>
+      <div class="empty-icon"><AppIcon name="camera" :size="48" /></div>
       <div class="empty-text">记录你珍贵的孕期时光</div>
       <n-button type="primary" @click="showUploadDialog = true">上传第一张照片</n-button>
       <div class="empty-hint">支持 JPG、PNG、WebP、GIF、BMP、HEIC/HEIF 与常见视频格式</div>
@@ -59,7 +59,7 @@
                 class="media-thumb media-fallback"
                 title="无法预览：文件缺失，或该格式浏览器不支持（如 TIFF）"
               >
-                📷
+                <AppIcon name="camera" :size="32" />
               </div>
               <!-- 视频缩略图：后端不做视频抽帧，直接让浏览器渲染首帧（#t 让浏览器去取那一帧） -->
               <div v-else class="video-thumb-wrapper">
@@ -77,7 +77,7 @@
                   class="media-thumb media-fallback"
                   title="无法预览：该视频编码浏览器不支持（常见于 iPhone 的 HEVC）"
                 >
-                  🎬
+                  <AppIcon name="video" :size="32" />
                 </div>
                 <div class="video-play-overlay">
                   <div class="play-icon">▶</div>
@@ -88,8 +88,8 @@
               <div class="card-date">{{ formatDate(item.created_at) }} · 孕{{ item.gestational_week || '?' }}周</div>
               <div v-if="item.note" class="card-note">{{ item.note }}</div>
               <div class="card-actions">
-                <button class="card-action-btn" @click.stop="editPhoto(item)">✏️ 编辑</button>
-                <button class="card-action-btn card-action-del" @click.stop="confirmDeletePhoto(item)">🗑️ 删除</button>
+                <button class="card-action-btn" @click.stop="editPhoto(item)">编辑</button>
+                <button class="card-action-btn card-action-del" @click.stop="confirmDeletePhoto(item)">删除</button>
               </div>
             </div>
           </div>
@@ -158,7 +158,7 @@
           @error="imagePreviewFailed = true"
         />
         <div v-else style="padding: 32px 16px; color: #64748b; font-size: 14px; line-height: 1.8;">
-          <div style="font-size: 32px; margin-bottom: 8px;">🖼️</div>
+          <div style="margin-bottom: 8px;"><AppIcon name="image" :size="32" /></div>
           <div>这个文件无法在浏览器里预览</div>
           <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">可能是文件已丢失，或该格式浏览器不支持（如 TIFF）</div>
           <a :href="previewImageUrl" download style="display: inline-block; margin-top: 12px; color: #7c3aed;">下载原文件</a>
@@ -182,7 +182,7 @@
         style="width: 100%; max-height: 80vh;"
       ></video>
       <div v-else-if="videoPreviewFailed" style="padding: 24px 8px; color: #64748b; font-size: 14px; line-height: 1.8;">
-        <div style="font-size: 32px; margin-bottom: 8px;">🎬</div>
+        <div style="margin-bottom: 8px;"><AppIcon name="video" :size="32" /></div>
         <div>当前浏览器无法播放这个视频</div>
         <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">
           常见于 iPhone 录制的 HEVC / H.265 格式：手机上的浏览器一般能播，电脑端的 Chrome / Edge 不行。
@@ -196,7 +196,7 @@
     <n-modal
       v-model:show="showEditDialog"
       preset="card"
-      title="✏️ 编辑照片信息"
+      title="编辑照片信息"
       style="max-width: 480px; width: 95vw;"
       :mask-closable="true"
     >
@@ -235,6 +235,7 @@ import { ref, computed, onMounted } from 'vue'
 import { NButton, NModal, NForm, NFormItem, NInput, NDatePicker, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { photoApi } from '@/api/photo'
+import AppIcon from '@/components/common/AppIcon.vue'
 import { usePhotoUpload } from '@/composables/usePhotoUpload'
 import dayjs from 'dayjs'
 

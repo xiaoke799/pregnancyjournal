@@ -1,10 +1,10 @@
 <template>
   <div class="settings-view">
-    <h2>⚙️ 设置</h2>
+    <h2>设置</h2>
     <div class="settings-sections">
       <!-- 孕期管理 -->
       <div class="section">
-        <h3>🤰 孕期管理</h3>
+        <h3>孕期管理</h3>
 
         <div v-if="pregnancyStore.currentPregnancy" class="pregnancy-status">
           <div class="status-row">
@@ -63,7 +63,7 @@
 
       <!-- 多孕期切换 -->
       <div v-if="allPregnancies.length > 1" class="section">
-        <h3>🔄 孕期切换</h3>
+        <h3>孕期切换</h3>
         <div
           v-for="p in allPregnancies"
           :key="p.id"
@@ -79,7 +79,7 @@
 
       <!-- 数据备份 -->
       <div class="section">
-        <h3>💾 数据备份与恢复</h3>
+        <h3>数据备份与恢复</h3>
 
         <div class="backup-simple">
           <div class="backup-card">
@@ -210,7 +210,7 @@
                       :disabled="!d.canRW"
                       @click="pickQuickDir(d)"
                     >
-                      <span class="db-quick-icon">{{ d.type === 'accessible' ? '📂' : '🗂️' }}</span>
+                      <span class="db-quick-icon"><AppIcon name="folder" :size="15" /></span>
                       <span class="db-quick-text">
                         <span class="db-quick-name">{{ d.name }}</span>
                         <span class="db-quick-desc">{{ d.path }}{{ d.canRW ? '' : '（只读）' }}</span>
@@ -220,7 +220,7 @@
                 </div>
 
                 <div class="db-path">
-                  <span class="db-path-text">📁 {{ currentBrowsePath }}</span>
+                  <span class="db-path-text">{{ currentBrowsePath }}</span>
                   <span v-if="currentCanRW === false" class="db-path-tag db-rw-no">只读，无法导出到这里</span>
                   <span v-else-if="currentCanRW === true" class="db-path-tag db-rw-ok">可写</span>
                 </div>
@@ -235,13 +235,13 @@
                     @click="selectDir(it.path)"
                     @dblclick="navigateTo(it.path)"
                   >
-                    <span>{{ it.canRW ? '📁' : '🔒' }}</span>
+                    <span><AppIcon :name="it.canRW ? 'folder' : 'lock'" :size="16" /></span>
                     <span>{{ it.name }}</span>
                   </div>
                 </div>
 
                 <div class="db-bar">
-                  <button class="db-nav-btn" :disabled="!canNavigateUp" @click="navigateUp">⬆ 上一级</button>
+                  <button class="db-nav-btn" :disabled="!canNavigateUp" @click="navigateUp">上一级</button>
                   <span class="db-bar-tip">单击选中 · 双击进入</span>
                   <button class="db-confirm-btn" :disabled="currentCanRW === false" @click="confirmExportDir">
                     用这个目录
@@ -270,16 +270,16 @@
 
       <!-- 数据导出 -->
       <div class="section">
-        <h3>📊 数据导出</h3>
+        <h3>数据导出</h3>
         <div class="setting-item" style="flex-wrap: wrap; gap: 10px;">
           <n-button type="primary" @click="handleExportCsv" :loading="exportingCsv">
-            📋 导出健康记录 CSV
+            <AppIcon name="clipboard" :size="15" /> 导出健康记录 CSV
           </n-button>
           <n-button type="info" @click="handleExportDiaryPdf" :loading="exportingDiary">
-            📖 导出日记 PDF
+            <AppIcon name="book" :size="15" /> 导出日记 PDF
           </n-button>
           <n-button @click="handleGeneratePdf" :loading="generatingPdf">
-            📄 生成纪念册
+            <AppIcon name="image" :size="15" /> 生成纪念册
           </n-button>
         </div>
         <div class="setting-hint">CSV 包含所有健康指标数据，可用 Excel 打开；日记和相册导出为 PDF 文件</div>
@@ -287,7 +287,7 @@
 
       <!-- 推送渠道：企业微信 / 飞书（结构一致，共用一套模板） -->
       <div v-for="ch in pushChannelMeta" :key="ch.key" class="section wecom-section">
-        <h3>{{ ch.icon }} {{ ch.name }}推送</h3>
+        <h3>{{ ch.name }}推送</h3>
         <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
           <label>Webhook URL</label>
           <n-input
@@ -342,7 +342,7 @@
       <!-- 推送记录（两个渠道合并展示，可按渠道筛选） -->
       <div v-if="anyChannelConfigured" class="section">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <h3 style="margin:0;">📋 推送记录</h3>
+          <h3 style="margin:0;">推送记录</h3>
           <n-button size="small" @click="loadPushLogs">刷新</n-button>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
@@ -379,7 +379,7 @@
       <!-- 软件日志 -->
       <div class="section">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h3>📋 软件日志</h3>
+          <h3>软件日志</h3>
           <div style="display:flex; gap:8px;">
             <n-button size="small" @click="loadLogs" :loading="logLoading">刷新</n-button>
             <n-button size="small" @click="clearLogs" type="error" ghost>清空</n-button>
@@ -396,7 +396,7 @@
 
       <!-- 关于 -->
       <div class="section">
-        <h3>ℹ️ 关于</h3>
+        <h3>关于</h3>
         <div class="setting-item">
           <label>应用</label>
           <span>孕程记 (Pregnancy Journal)</span>
@@ -444,7 +444,7 @@
     <n-modal
       v-model:show="showDonateQr"
       preset="card"
-      :title="'❤️ ' + activeDonate.label"
+      :title="activeDonate.label"
       style="max-width: 420px;"
     >
       <img class="donate-large" :src="activeDonate.img" :alt="activeDonate.label" />
@@ -457,6 +457,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { NInput, NButton, NRadioGroup, NRadioButton, NTag, NSwitch, NCheckboxGroup, NCheckbox, NSpace, NModal, useMessage } from 'naive-ui'
 import dayjs from 'dayjs'
+import AppIcon from '@/components/common/AppIcon.vue'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { pregnancyApi } from '@/api/pregnancy'
 import { exportApi } from '@/api/export'
@@ -1441,7 +1442,14 @@ function formatLogTime(t?: string): string {
   list-style: none; user-select: none;
 }
 .export-diag > summary::-webkit-details-marker { display: none; }
-.export-diag > summary::before { content: '🔍 '; }
+.export-diag > summary::before {
+    content: ''; display: inline-block; width: 0; height: 0;
+    margin-right: 6px; vertical-align: middle;
+    border-left: 5px solid #94a3b8;
+    border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+    transition: transform 0.15s ease;
+  }
+  .export-diag[open] > summary::before { transform: rotate(90deg); }
 .export-diag[open] > summary {
   border-bottom: 1px solid #e2e8f0; background: #f1f5f9;
   color: #1e293b; font-weight: 600;

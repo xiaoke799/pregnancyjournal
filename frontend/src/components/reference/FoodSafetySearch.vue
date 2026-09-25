@@ -1,7 +1,7 @@
 <template>
   <div class="food-safety-search">
     <n-input v-model:value="keyword" placeholder="搜索食材，如：螃蟹、咖啡..." @input="handleSearch">
-      <template #prefix>🔍</template>
+      <template #prefix><AppIcon name="search" :size="16" /></template>
     </n-input>
     <div v-if="results.length > 0" class="food-results">
       <div v-for="item in results" :key="item.name" class="food-item">
@@ -23,6 +23,7 @@
 import { ref } from 'vue'
 import { NInput } from 'naive-ui'
 import { referenceApi } from '@/api/reference'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 const keyword = ref('')
 const results = ref<any[]>([])

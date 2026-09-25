@@ -17,7 +17,7 @@
     <!-- 日记 PDF -->
     <div class="export-item">
       <div class="export-info">
-        <span class="export-icon">📖</span>
+        <span class="export-icon"><AppIcon name="book" :size="18" /></span>
         <div>
           <span class="export-title">孕期日记 (PDF)</span>
           <span class="export-desc">按日期排版生成 PDF 文档</span>
@@ -29,7 +29,7 @@
     <!-- 纪念相册 PDF -->
     <div class="export-item">
       <div class="export-info">
-        <span class="export-icon">📷</span>
+        <span class="export-icon"><AppIcon name="camera" :size="18" /></span>
         <div>
           <span class="export-title">纪念相册 (PDF)</span>
           <span class="export-desc">按时间线排列照片，生成纪念册 PDF</span>
@@ -45,6 +45,7 @@ import { ref } from 'vue'
 import { NButton, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { exportApi } from '@/api/export'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 const pregnancyStore = usePregnancyStore()
 const message = useMessage()

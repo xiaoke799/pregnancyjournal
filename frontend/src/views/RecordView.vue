@@ -26,7 +26,7 @@
             class="type-menu-item"
             @click="openQuickAdd(t.value)"
           >
-            <span class="type-menu-icon">{{ t.icon }}</span>
+            <span class="type-menu-icon"><AppIcon :name="t.icon" :size="16" /></span>
             <span class="type-menu-label">{{ t.label }}</span>
           </div>
         </div>
@@ -44,7 +44,7 @@
           class="preview-card"
           :style="{ '--preview-color': item.color }"
         >
-          <span class="preview-icon">{{ item.icon }}</span>
+          <span class="preview-icon"><AppIcon :name="item.icon" :size="16" /></span>
           <span class="preview-value">{{ item.value }}</span>
           <span class="preview-label">{{ item.label }}</span>
         </div>
@@ -647,6 +647,7 @@ import MiniCalendar from '@/components/record/MiniCalendar.vue'
 import RecordList from '@/components/record/RecordList.vue'
 import AddRecordDialog from '@/components/record/AddRecordDialog.vue'
 import MetricCard from './StatsView/MetricCard.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 const pregnancyStore = usePregnancyStore()
 const { isMobile } = useResize()
@@ -763,7 +764,7 @@ const waistForm = ref({ date: '', bust: null as number | null, value: null as nu
 
 // ====== 类型菜单定义 ======
 const quickTypes = [
-  { value: 'weight', icon: '⚖️', label: '体重' },
+  { value: 'weight', icon: 'weight', label: '体重' },
   { value: 'waist', icon: '📏', label: '三围' },
   { value: 'edema', icon: '🦵', label: '水肿' },
   { value: 'discharge', icon: '💧', label: '分泌物' },
@@ -771,19 +772,19 @@ const quickTypes = [
   { value: 'urination', icon: '🚻', label: '排尿情况' },
   { value: 'blood_pressure', icon: '🩺', label: '血压' },
   { value: 'blood_glucose', icon: '🩸', label: '血糖' },
-  { value: 'fetal_heart_rate', icon: '❤️', label: '胎心' },
+  { value: 'fetal_heart_rate', icon: 'heart', label: '胎心' },
   { value: 'stool', icon: '💩', label: '便便' },
   { value: 'mood', icon: '😊', label: '心情' },
-  { value: 'symptoms', icon: '📋', label: '症状' },
+  { value: 'symptoms', icon: 'clipboard', label: '症状' },
   { value: 'supplement', icon: '💊', label: '补充剂' },
   { value: 'habit', icon: '✅', label: '好习惯' },
-  { value: 'temperature', icon: '🌡️', label: '体温' },
+  { value: 'temperature', icon: 'thermometer', label: '体温' },
   { value: 'sleep', icon: '😴', label: '睡眠' },
   { value: 'water', icon: '💧', label: '饮水' },
   { value: 'diet', icon: '🍎', label: '饮食' },
   { value: 'exercise', icon: '🏃', label: '运动' },
   { value: 'fetal_movement', icon: '🦶', label: '胎动' },
-  { value: 'contraction', icon: '⏱️', label: '宫缩' },
+  { value: 'contraction', icon: 'timer', label: '宫缩' },
   { value: 'plan', icon: '📌', label: '计划' },
   { value: 'intimacy', icon: '💑', label: '爱爱' },
 ]
@@ -801,7 +802,7 @@ const previewItems = computed<PreviewItem[]>(() => {
   const r = currentRecords.value.length > 0 ? currentRecords.value[0] : {}
   const items: PreviewItem[] = []
 
-  if (r.weight) items.push({ type: 'weight', icon: '⚖️', label: '体重', value: r.weight + ' kg', color: '#a78bfa' })
+  if (r.weight) items.push({ type: 'weight', icon: 'weight', label: '体重', value: r.weight + ' kg', color: '#a78bfa' })
   if (r.blood_pressure_systolic || r.blood_pressure_diastolic) {
     items.push({
       type: 'blood_pressure', icon: '🩺', label: '血压',
@@ -816,7 +817,7 @@ const previewItems = computed<PreviewItem[]>(() => {
     if (r.blood_glucose_2h) parts.push('2h' + r.blood_glucose_2h)
     items.push({ type: 'blood_glucose', icon: '🩸', label: '血糖', value: parts.join(' ') + ' mmol/L', color: '#f59e0b' })
   }
-  if (r.fetal_heart_rate) items.push({ type: 'fetal_heart_rate', icon: '❤️', label: '胎心', value: r.fetal_heart_rate + ' bpm', color: '#f472b6' })
+  if (r.fetal_heart_rate) items.push({ type: 'fetal_heart_rate', icon: 'heart', label: '胎心', value: r.fetal_heart_rate + ' bpm', color: '#f472b6' })
   // 三围合并成一张预览卡（预览位有限，最多 6 张），只显示已填的那些
   {
     const parts: string[] = []

@@ -2,7 +2,7 @@
   <div class="diet-view">
     <n-tabs v-model:value="activeTab" type="line" animated>
       <!-- ===== 原有：今日吃什么 ===== -->
-      <n-tab-pane name="spin" tab="🎲 今日吃什么">
+      <n-tab-pane name="spin" tab="今日吃什么">
         <div class="spin-section">
           <div class="random-area">
             <div class="random-icon">🍳</div>
@@ -40,7 +40,7 @@
       </n-tab-pane>
 
       <!-- ===== 原有：能不能吃 ===== -->
-      <n-tab-pane name="safety" tab="🔍 能不能吃">
+      <n-tab-pane name="safety" tab="能不能吃">
         <div class="safety-section">
           <div v-if="safetyLoading" class="loading-hint-center">
             <n-spin size="large" />
@@ -54,7 +54,7 @@
             @keyup.enter="doSearch"
             @clear="clearSearch"
           >
-            <template #prefix>🔍</template>
+            <template #prefix><AppIcon name="search" :size="16" /></template>
             <template #suffix>
               <span v-if="searchKeyword" class="search-hint" @click="doSearch">搜索</span>
             </template>
@@ -100,7 +100,7 @@
       </n-tab-pane>
 
       <!-- ===== 新增：孕期食谱 ===== -->
-      <n-tab-pane name="pregnancy-diet" tab="📖 孕期食谱">
+      <n-tab-pane name="pregnancy-diet" tab="孕期食谱">
         <div class="guide-body">
 
           <!-- 智能推荐卡片 -->
@@ -114,9 +114,8 @@
 
           <n-collapse :default-expanded-names="[dietStageKey]" accordion>
             <!-- 备孕期 -->
-            <n-collapse-item name="preconception" title="🌱 备孕期 · 为宝宝准备最好的土壤">
+            <n-collapse-item name="preconception" title="备孕期·为宝宝准备最好的土壤">
               <div class="dg-tip dg-tip-pink">
-                <span class="tip-icon">💡</span>
                 <span><strong>重点：</strong>孕前3-6个月开始调整饮食，叶酸是第一优先级。</span>
               </div>
 
@@ -139,15 +138,13 @@
               </div>
 
               <div class="dg-tip dg-tip-yellow">
-                <span class="tip-icon">⚠️</span>
                 <span>男性也需补叶酸——提高精子浓度和活力。戒烟戒酒，避免熬夜。</span>
               </div>
             </n-collapse-item>
 
             <!-- 孕早期 -->
-            <n-collapse-item name="early" title="🌸 孕早期（1-12周）· 安胎固本">
+            <n-collapse-item name="early" title="孕早期（1-12周）·安胎固本">
               <div class="dg-tip dg-tip-pink">
-                <span class="tip-icon">💡</span>
                 <span><strong>核心原则：</strong>不需要过度进补，正常均衡饮食即可。少食多餐应对孕吐。</span>
               </div>
 
@@ -179,9 +176,8 @@
             </n-collapse-item>
 
             <!-- 孕中期 -->
-            <n-collapse-item name="mid" title="🌿 孕中期（13-28周）· 快速增长期">
+            <n-collapse-item name="mid" title="孕中期（13-28周）·快速增长期">
               <div class="dg-tip dg-tip-green">
-                <span class="tip-icon">✅</span>
                 <span>胎儿骨骼肌肉大脑快速发育期。重点：补铁防贫血、补钙强骨骼、优质蛋白+DHA。</span>
               </div>
 
@@ -215,9 +211,8 @@
             </n-collapse-item>
 
             <!-- 孕晚期 -->
-            <n-collapse-item name="late" title="🍂 孕晚期（29-40周）· 冲刺待产">
+            <n-collapse-item name="late" title="孕晚期（29-40周）·冲刺待产">
               <div class="dg-tip dg-tip-yellow">
-                <span class="tip-icon">⚠️</span>
                 <span>胎儿迅速增重，为分娩储备能量。控制盐分防水肿，多吃高锌食物助自然分娩。</span>
               </div>
 
@@ -240,15 +235,13 @@
               </div>
 
               <div class="dg-tip dg-tip-warn">
-                <span class="tip-icon">⚠️</span>
                 <span><strong>禁忌：</strong>高盐饮食（防水肿和高血压）、含咖啡因饮料、禁烟禁酒、暴饮暴食。</span>
               </div>
             </n-collapse-item>
 
             <!-- 月子餐 -->
-            <n-collapse-item name="postpartum" title="🍲 月子餐 · 42天科学调理">
+            <n-collapse-item name="postpartum" title="月子餐·42天科学调理">
               <div class="dg-tip dg-tip-blue">
-                <span class="tip-icon">📅</span>
                 <span>四阶段调理：<strong>排毒修复(1-7天)</strong> → 净化(8-14天) → 基础进补(15-30天) → 强化(30-42天)</span>
               </div>
 
@@ -262,7 +255,6 @@
                     <div class="ft-row"><span>点心</span><span>养肝汤 + 生化汤</span><span>养肝解毒</span></div>
                   </div>
                   <div class="dg-tip dg-tip-yellow">
-                    <span class="tip-icon">💡</span>
                     <span>产前三天喝红枣养肝汤；产后米酒水代替普通水烹饪；老姜必须用胡麻油爆透至起皱皮。</span>
                   </div>
                 </n-collapse-item>
@@ -276,7 +268,6 @@
                     <div class="ft-row"><span>晚上</span><span>水果 + 热鲜牛奶</span><span>补充维C钙质</span></div>
                   </div>
                   <div class="dg-tip dg-tip-pink">
-                    <span class="tip-icon">⚠️</span>
                     <span>每餐配合生化汤吃杜仲粉一钱，有助于腰肾功能恢复。</span>
                   </div>
                 </n-collapse-item>
@@ -290,7 +281,6 @@
                     <div class="ft-row"><span>点心</span><span>红豆汤 + 姜丝麻油煎蛋 + 红枣燕窝</span></div>
                   </div>
                   <div class="dg-tip dg-tip-green">
-                    <span class="tip-icon">✅</span>
                     <span>水果可吃哈密瓜、猕猴桃、葡萄。鸡汤可用黄芪当归党参等烹饪。</span>
                   </div>
                 </n-collapse-item>
@@ -298,7 +288,6 @@
                 <n-collapse-item name="s4" title="第四阶段：30-42天 强化进补">
                   <p style="color:#888;font-size:13px;margin-bottom:10px;">与第三阶段基本相同，保持高营养高蛋白摄入，逐步过渡到正常饮食。</p>
                   <div class="dg-tip dg-tip-blue">
-                    <span class="tip-icon">📋</span>
                     <span><strong>月子餐总体原则：</strong>忌放盐酱油醋；忌韭菜辣椒大蒜胡椒凉水；绑缚带产后4-7天24小时绑。</span>
                   </div>
                 </n-collapse-item>
@@ -319,14 +308,13 @@
       </n-tab-pane>
 
       <!-- ===== 新增：婴儿喂养 ===== -->
-      <n-tab-pane name="baby-feed" tab="👶 婴儿喂养">
+      <n-tab-pane name="baby-feed" tab="婴儿喂养">
         <div class="guide-body baby-theme">
 
           <n-collapse :default-expanded-names="['b-newborn']" accordion>
             <!-- 新生儿 -->
-            <n-collapse-item name="b-newborn" title="👶 新生儿（0-1月）· 初乳与开奶">
+            <n-collapse-item name="b-newborn" title="新生儿（0-1月）·初乳与开奶">
               <div class="dg-tip dg-tip-blue">
-                <span class="tip-icon">🌟</span>
                 <span><strong>初乳 = 液体黄金</strong> — 产后前3天的乳汁呈水样黄色，富含蛋白质和酶类，极大提高宝宝免疫能力！千万不要错过。</span>
               </div>
 
@@ -340,9 +328,9 @@
 
               <h4 class="sec-title">三种哺乳姿势</h4>
               <div class="pos-grid">
-                <div class="pos-card"><span class="pos-icon">🤗</span><strong>摇篮式</strong><p>坐直抱宝宝，后背靠前臂手掌托头颈，U形手托乳房。公开场合最理想。</p></div>
-                <div class="pos-card"><span class="pos-icon">😴</span><strong>侧卧式</strong><p>侧卧床上，宝宝面对乳房。适合疲倦时、剖宫产妈妈。</p></div>
-                <div class="pos-card"><span class="pos-icon">⚽</span><strong>足球式</strong><p>宝宝抱在身体一侧面对乳房。适合剖宫产、乳房较大妈妈。</p></div>
+                <div class="pos-card"><strong>摇篮式</strong><p>坐直抱宝宝，后背靠前臂手掌托头颈，U形手托乳房。公开场合最理想。</p></div>
+                <div class="pos-card"><strong>侧卧式</strong><p>侧卧床上，宝宝面对乳房。适合疲倦时、剖宫产妈妈。</p></div>
+                <div class="pos-card"><strong>足球式</strong><p>宝宝抱在身体一侧面对乳房。适合剖宫产、乳房较大妈妈。</p></div>
               </div>
 
               <h4 class="sec-title">判断母乳充足（五点法）</h4>
@@ -356,13 +344,12 @@
               </div>
 
               <div class="dg-tip dg-tip-info">
-                <span class="tip-icon">💡</span>
                 <span>喂完奶后将宝宝趴在肩上轻拍后背打嗝，避免吐奶溢奶。</span>
               </div>
             </n-collapse-item>
 
             <!-- 1-3月 -->
-            <n-collapse-item name="b-early" title="🍼 1-3月 · 哺乳进阶">
+            <n-collapse-item name="b-early" title="1-3月·哺乳进阶">
               <h4 class="sec-title">各月龄喂养频率</h4>
               <div class="food-table">
                 <div class="ft-row ft-head"><span>月龄</span><span>次数</span><span>间隔</span><span>每次时长</span></div>
@@ -375,25 +362,23 @@
               <h4 class="sec-title">优质母乳怎么来</h4>
               <div class="two-col-box">
                 <div class="col-box col-pink">
-                  <strong>🥗 吃出来</strong>
+                  <strong>吃出来</strong>
                   <ul><li>充足碳水：米面杂粮土豆番薯</li><li>优质蛋白：鱼禽肉蛋奶豆</li><li>足够矿物质：瘦肉补铁、牛奶补钙</li><li>深色蔬果补维A，晒太阳补维D</li></ul>
                 </div>
                 <div class="col-box col-blue">
-                  <strong>😊 笑出来</strong>
+                  <strong>笑出来</strong>
                   <ul><li>情绪直接影响乳汁质量和产量</li><li>压力焦虑抑郁会减少泌乳</li><li>适量运动提高乳糖和脂肪质量</li></ul>
                 </div>
               </div>
 
               <div class="dg-tip dg-tip-warn">
-                <span class="tip-icon">⚠️</span>
                 <span><strong>奶水不足信号：</strong>乳房空空、听不到连续吞咽声、睡不沉总哭闹找乳头、大小便次数少量少、体重不增。<strong>补救：</strong>24小时内喂12次以上，坚持3天见效。</span>
               </div>
             </n-collapse-item>
 
             <!-- 辅食初添 4-6月 -->
-            <n-collapse-item name="b-transition" title="🥄 4-6月 · 辅食初添">
+            <n-collapse-item name="b-transition" title="4-6月·辅食初添">
               <div class="dg-tip dg-tip-blue">
-                <span class="tip-icon">📌</span>
                 <span><strong>添加信号：</strong>宝宝能靠坐、对大人吃饭感兴趣、推舌反射消失、体重达出生2倍以上（约6kg）。最早不早于4月，最晚不晚于6月。</span>
               </div>
 
@@ -416,20 +401,18 @@
               </div>
 
               <div class="dg-tip dg-tip-green">
-                <span class="tip-icon">✅</span>
                 <span>每次只添加一种新食物，观察3-5天无过敏再换下一种。第一口辅食用米粉糊。</span>
               </div>
             </n-collapse-item>
 
             <!-- 7-8月 -->
-            <n-collapse-item name="b-growing" title="🥣 7-8月 · 辅食丰富">
+            <n-collapse-item name="b-growing" title="7-8月·辅食丰富">
               <div class="food-table">
                 <div class="ft-row ft-head"><span>月龄</span><span>奶量</span><span>辅食</span></div>
                 <div class="ft-row"><span>7月</span><span>600-800ml / 4次</span><span>2次/天 泥糊→碎末</span></div>
                 <div class="ft-row"><span>8月</span><span>600-700ml / 3-4次</span><span>2-3次/天 碎末状</span></div>
               </div>
               <div class="dg-tip dg-tip-info">
-                <span class="tip-icon">📌</span>
                 <span>可开始添加<strong>蛋黄、鱼泥、肉泥、肝泥</strong>，质地从泥糊向碎末过渡。</span>
               </div>
 
@@ -445,14 +428,13 @@
             </n-collapse-item>
 
             <!-- 9-12月 -->
-            <n-collapse-item name="b-advanced" title="🍗 9-12月 · 辅食升级">
+            <n-collapse-item name="b-advanced" title="9-12月·辅食升级">
               <div class="food-table">
                 <div class="ft-row ft-head"><span>月龄</span><span>奶量</span><span>辅食</span></div>
                 <div class="ft-row"><span>9-10月</span><span>500-600ml / 3次</span><span>3次/天 碎丁状</span></div>
                 <div class="ft-row"><span>11-12月</span><span>400-500ml / 2-3次</span><span>3餐+点心 小块状</span></div>
               </div>
               <div class="dg-tip dg-tip-blue">
-                <span class="tip-icon">📌</span>
                 <span>辅食逐渐成为主食。可尝试<strong>手指食物</strong>（蒸软的胡萝卜条、西兰花等），锻炼自主进食。</span>
               </div>
 
@@ -468,14 +450,14 @@
             </n-collapse-item>
 
             <!-- 催奶食谱 -->
-            <n-collapse-item name="b-boost" title="🥘 催奶食谱大全">
+            <n-collapse-item name="b-boost" title="催奶食谱大全">
               <div class="boost-cats">
                 <n-radio-group v-model="boostCat" size="small">
-                  <n-radio-button value="pig">🐷 猪蹄系列</n-radio-button>
-                  <n-radio-button value="fish">🐟 鱼类系列</n-radio-button>
-                  <n-radio-button value="chicken">🐔 禽肉类</n-radio-button>
-                  <n-radio-button value="veg">🥜 素食谷物</n-radio-button>
-                  <n-radio-button value="tips">📋 宜忌速查</n-radio-button>
+                  <n-radio-button value="pig">猪蹄系列</n-radio-button>
+                  <n-radio-button value="fish">鱼类系列</n-radio-button>
+                  <n-radio-button value="chicken">禽肉类</n-radio-button>
+                  <n-radio-button value="veg">素食谷物</n-radio-button>
+                  <n-radio-button value="tips">宜忌速查</n-radio-button>
                 </n-radio-group>
               </div>
 
@@ -531,11 +513,11 @@
               <template v-if="boostCat === 'tips'">
                 <div class="two-col-box">
                   <div class="col-box col-green">
-                    <strong>✅ 宜食物品</strong>
+                    <strong>宜食物品</strong>
                     <ul><li>猪蹄、羊肉、鲫鱼、鲇鱼、虾子、泥鳅</li><li>鸡肉、牛乳、鸡蛋、猪瘦肉</li><li>花生、黑芝麻、豌豆、赤小豆、豆腐</li><li>茭白、莴苣、丝瓜、木瓜、桂圆、大枣</li><li>党参、黄芪、当归、通草</li></ul>
                   </div>
                   <div class="col-box col-red">
-                    <strong>❌ 忌食物品</strong>
+                    <strong>忌食物品</strong>
                     <ul><li><strong>大麦芽</strong>：有回乳作用</li><li>韭菜、辣椒、桂皮、大蒜、花椒等刺激性食物</li><li>香烟、烈酒、咖啡、浓茶</li><li>冰镇冷饮、苦瓜、西瓜、生黄瓜</li><li>柿子、螃蟹、田螺等寒性食物</li></ul>
                   </div>
                 </div>
@@ -556,6 +538,7 @@ import {
 } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { getAllRecipes, getFoodSafety, searchFood } from '@/api/diet'
+import AppIcon from '@/components/common/AppIcon.vue'
 import FoodSafetyCard from '@/components/FoodSafetyCard.vue'
 
 const pregnancyStore = usePregnancyStore()

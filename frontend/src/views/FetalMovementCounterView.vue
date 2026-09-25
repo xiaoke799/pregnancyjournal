@@ -1,8 +1,8 @@
 <template>
   <div class="fetal-counter">
     <div class="counter-header">
-      <button class="close-btn" @click="goBack">✕ 关闭</button>
-      <h2>🦶 胎动计数</h2>
+      <button class="close-btn" @click="goBack">关闭</button>
+      <h2>胎动计数</h2>
     </div>
 
     <div class="counter-main">

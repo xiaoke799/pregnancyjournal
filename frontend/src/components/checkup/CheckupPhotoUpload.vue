@@ -1,11 +1,11 @@
 <template>
   <div class="checkup-photo-upload">
     <input ref="fileInput" type="file" accept="image/*" style="display: none" @change="handleUpload" />
-    <n-button size="small" @click="fileInput?.click()">📷 上传检查单</n-button>
+    <n-button size="small" @click="fileInput?.click()">上传检查单</n-button>
     <div v-if="photos.length > 0" class="photo-grid">
       <div v-for="p in photos" :key="p.id" class="photo-thumb-wrapper">
         <img :src="photoUrl(p.id)" :alt="p.note || ''" class="photo-thumb" />
-        <button class="delete-btn" @click="$emit('deletePhoto', p.id)">✕</button>
+        <button class="delete-btn" @click="$emit('deletePhoto', p.id)"><AppIcon name="close" :size="12" /></button>
       </div>
     </div>
   </div>
@@ -16,6 +16,7 @@ import { ref, onMounted } from 'vue'
 import { NButton } from 'naive-ui'
 import { checkupApi } from '@/api/checkup'
 import { getApiBase } from '@/utils/api-base'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 // 必须带网关前缀，否则图片请求打到飞牛系统 API 返回 401
 const photoUrl = (id: string) => `${getApiBase()}/checkups/photos/${id}/file`

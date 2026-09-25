@@ -4,7 +4,7 @@
     <div class="progress-overview" v-if="checklists.length > 0">
       <div class="overview-stats">
         <div class="stat-num">{{ mandatoryChecked }}/{{ mandatoryTotal }}</div>
-        <div class="stat-label">🔥 必备已准备</div>
+        <div class="stat-label">必备已准备</div>
       </div>
       <div class="overview-bar">
         <div class="bar-fill" :style="{ width: mandatoryPercent + '%' }"></div>
@@ -19,7 +19,7 @@
     <div class="refresh-section">
       <button class="refresh-btn" @click="refreshAllDefaults" :disabled="refreshing">
         <span v-if="refreshing">刷新中...</span>
-        <span v-else>🔄 刷新默认清单（含必备标签）</span>
+        <span v-else>刷新默认清单（含必备标签）</span>
       </button>
     </div>
 
@@ -30,7 +30,7 @@
           <span class="expand-icon" :class="{ 'expanded': expandedLists.has(cl.id) }">▶</span>
           <span class="card-icon">{{ getChecklistIcon(cl.type) }}</span>
           <h3 class="card-title">{{ cl.name }}</h3>
-          <n-tag size="tiny" type="error" :bordered="false" v-if="clProgress(cl) && clProgress(cl).mandatory_total > 0">🔥 {{ clProgress(cl).mandatory_checked }}/{{ clProgress(cl).mandatory_total }}</n-tag>
+          <n-tag size="tiny" type="error" :bordered="false" v-if="clProgress(cl) && clProgress(cl).mandatory_total > 0">{{ clProgress(cl).mandatory_checked }}/{{ clProgress(cl).mandatory_total }}</n-tag>
         </div>
         <!-- 始终可见的快捷操作栏 -->
         <div class="card-quick-actions">
@@ -41,7 +41,7 @@
           <div class="card-bar-wrap">
             <div class="card-bar-fill" :style="{ width: clProgress(cl).mandatory_percentage + '%' }"></div>
           </div>
-          <span class="progress-text">🔥 {{ clProgress(cl).mandatory_percentage }}%</span>
+          <span class="progress-text">{{ clProgress(cl).mandatory_percentage }}%</span>
         </div>
       </div>
 
@@ -60,7 +60,7 @@
           <select v-model="newItemCats[cl.id]" class="add-cat-select" v-if="!newItemCats[cl.id]?.startsWith('__new__:')">
             <option value="">选择分类</option>
             <option v-for="cat in getCategories(cl)" :key="cat" :value="cat">{{ cat }}</option>
-            <option value="__new__:👩 妈妈">👩 新分类</option>
+            <option value="__new__:👩 妈妈">新分类</option>
             <option value="__new__:_none_">不分类</option>
           </select>
           <input
@@ -78,7 +78,6 @@
           <div v-for="(group, catName) in groupedItems(cl.id)" :key="catName" class="item-group">
             <div class="group-header" @click="toggleGroup(cl.id, catName)">
               <span class="expand-icon group-expand" :class="{ 'expanded': expandedGroups[cl.id]?.has(catName) }">▶</span>
-              <span class="group-icon">📁</span>
               <span class="group-name">{{ catName }}</span>
               <span class="group-count">{{ group.checked }}/{{ group.items.length }}</span>
               <span class="group-percentage" v-if="catName !== '_none_'">{{ group.percentage }}%</span>
@@ -103,7 +102,7 @@
                   v-if="item.is_custom === 1"
                   class="delete-custom-btn"
                   @click.prevent="deleteItem(item)"
-                >✕</button>
+                ><AppIcon name="close" :size="12" /></button>
               </label>
             </div>
           </div>
@@ -121,7 +120,7 @@
             class="filter-btn mandatory-filter"
             :class="{ active: getChecklistFilter(cl.id).status === 'mandatory' }"
             @click="getChecklistFilter(cl.id).status = 'mandatory'"
-          >🔥 必备</button>
+          >必备</button>
           <button
             class="filter-btn"
             :class="{ active: getChecklistFilter(cl.id).status === 'unchecked' }"
@@ -141,7 +140,7 @@
             placeholder="搜索物品..."
             class="search-input"
           />
-          <button v-if="getChecklistFilter(cl.id).search" class="clear-search" @click="getChecklistFilter(cl.id).search = ''">✕</button>
+          <button v-if="getChecklistFilter(cl.id).search" class="clear-search" @click="getChecklistFilter(cl.id).search = ''"><AppIcon name="close" :size="12" /></button>
         </div>
 
       </div>
@@ -160,6 +159,7 @@ import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { NTag, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { checklistApi } from '@/api/checklist'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 const pregnancyStore = usePregnancyStore()
 const message = useMessage()

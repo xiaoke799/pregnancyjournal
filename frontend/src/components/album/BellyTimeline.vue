@@ -1,6 +1,6 @@
 <template>
   <div class="belly-timeline" v-if="photos.length > 0">
-    <h4>🤰 孕肚成长时间线</h4>
+    <h4>孕肚成长时间线</h4>
     <div class="timeline">
       <div v-for="photo in sortedPhotos" :key="photo.id" class="timeline-item">
         <div class="timeline-line">

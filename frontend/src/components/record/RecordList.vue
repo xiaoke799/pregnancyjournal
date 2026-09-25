@@ -12,14 +12,14 @@
             <span
               class="row-icon"
               :style="{ background: cat.color + '15', color: cat.color }"
-            >{{ cat.icon }}</span>
+            ><AppIcon :name="cat.icon" :size="16" /></span>
             <span class="row-label">{{ cat.label }}</span>
             <span v-if="cat.badge" class="row-badge" :style="{ background: cat.badgeColor || '#ff6b35', color: '#fff' }">{{ cat.badge }}</span>
           </div>
           <div class="row-right">
             <template v-if="cat.hasData">
               <span class="row-preview">{{ getPreview(cat.type) }}</span>
-              <span class="row-edit-icon">✏️</span>
+              <span class="row-edit-icon"><AppIcon name="edit" :size="14" /></span>
             </template>
             <template v-else>
               <span class="add-circle" :style="{ color: cat.color, borderColor: cat.color }">+</span>
@@ -35,6 +35,7 @@
 import { ref, computed, h, watch, onMounted, onUnmounted } from 'vue'
 import { dailyRecordApi } from '@/api/daily-record'
 import { usePregnancyStore } from '@/stores/pregnancy'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 const props = defineProps<{
   date: string
@@ -104,7 +105,7 @@ interface CategoryDef {
 }
 
 const allCategories: CategoryDef[] = [
-  { type: 'weight', icon: '⚖️', label: '体重', color: '#a78bfa', addable: true, actionType: 'add' },
+  { type: 'weight', icon: 'weight', label: '体重', color: '#a78bfa', addable: true, actionType: 'add' },
   // 三围（胸/腰/臀）：与 RecordView 顶部「＋ 添加记录」菜单保持一致。
   // 【历史问题】腰围当初只加进了那个小菜单，没加到本列表，用户在记录页主入口根本看不到它。
   { type: 'waist', icon: '📏', label: '三围', color: '#14b8a6', addable: true, actionType: 'add' },
@@ -119,17 +120,17 @@ const allCategories: CategoryDef[] = [
   { type: 'blood_glucose', icon: '🩸', label: '孕期血糖', color: '#f59e0b', addable: true, actionType: 'add' },
   { type: 'habit', icon: '✅', label: '好习惯', color: '#6366f1', addable: true, actionType: 'add' },
   { type: 'stool', icon: '💩', label: '便便', color: '#a3e635', addable: true, actionType: 'add' },
-  { type: 'symptoms', icon: '📋', label: '症状', color: '#34d399', addable: true, actionType: 'add' },
+  { type: 'symptoms', icon: 'clipboard', label: '症状', color: '#34d399', addable: true, actionType: 'add' },
   { type: 'mood', icon: '😊', label: '心情', color: '#f87171', addable: true, actionType: 'add' },
-  { type: 'fetal_heart_rate', icon: '❤️', label: '测胎心', color: '#f472b6', addable: true, actionType: 'link', linkTo: 'fetal_heart_rate' },
+  { type: 'fetal_heart_rate', icon: 'heart', label: '测胎心', color: '#f472b6', addable: true, actionType: 'link', linkTo: 'fetal_heart_rate' },
   { type: 'intimacy', icon: '💑', label: '爱爱', color: '#f43f5e', addable: true, actionType: 'add' },
-  { type: 'temperature', icon: '🌡️', label: '体温', color: '#ef4444', addable: true, actionType: 'add' },
+  { type: 'temperature', icon: 'thermometer', label: '体温', color: '#ef4444', addable: true, actionType: 'add' },
   { type: 'plan', icon: '📌', label: '计划', color: '#14b8a6', addable: true, actionType: 'add' },
   { type: 'sleep', icon: '😴', label: '睡眠', color: '#818cf8', addable: true, actionType: 'add' },
   { type: 'exercise', icon: '🏃', label: '运动', color: '#22c55e', addable: true, actionType: 'add' },
   { type: 'diet', icon: '🍎', label: '饮食备注', color: '#fb923c', addable: true, actionType: 'add' },
   { type: 'water', icon: '💧', label: '饮水', color: '#38bdf8', addable: true, actionType: 'add' },
-  { type: 'contraction', icon: '⏱️', label: '宫缩', color: '#f43f5e', addable: true, actionType: 'add' },
+  { type: 'contraction', icon: 'timer', label: '宫缩', color: '#f43f5e', addable: true, actionType: 'add' },
   { type: 'fetal_movement', icon: '🦶', label: '胎动', color: '#a78bfa', addable: true, actionType: 'add' },
 ]
 
