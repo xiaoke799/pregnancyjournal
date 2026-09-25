@@ -276,20 +276,43 @@ router.get('/diet/food-safety/search', (req, res) => {
     }
 
     const foodSafetyData = loadFoodSafety();
-    const results = [];
+    const scored = [];
 
     (foodSafetyData.categories || []).forEach(cat => {
       (cat.items || []).forEach(item => {
-        if ((item.name || '').includes(keyword) || (item.note || '').includes(keyword)) {
-          results.push({
-            name: item.name,
+        const name = item.name || '';
+        const aliases = Array.isArray(item.aliases) ? item.aliases : [];
+        const note = item.note || '';
+
+        // 相关度打分：同名 > 别名同名 > 名称前缀 > 名称包含 > 别名包含 > 备注包含。
+        // 「别名同名」必须排在「名称包含」之上 —— 用户搜「木耳」时要先看到「黑木耳」，
+        // 而不是碰巧含这两个字的「木耳菜」。以前不排序、按分类顺序原样返回，就是这个毛病。
+        let score = 0;
+        if (name === keyword) score = 100;
+        else if (aliases.some(a => a === keyword)) score = 90;
+        else if (name.startsWith(keyword)) score = 80;
+        else if (name.includes(keyword)) score = 60;
+        else if (aliases.some(a => (a || '').includes(keyword))) score = 40;
+        else if (note.includes(keyword)) score = 20;
+        if (!score) return;
+
+        scored.push({
+          score,
+          len: name.length, // 同分时名称短的优先（更接近用户要找的那个）
+          item: {
+            name,
+            aliases,
+            category: cat.name,
             safety_by_stage: item.safety_by_stage || _convertSafetyToByStage(item.safety),
-            note: item.note || '',
+            note,
             image: item.image || null,
-          });
-        }
+          },
+        });
       });
     });
+
+    scored.sort((a, b) => (b.score - a.score) || (a.len - b.len));
+    const results = scored.map(s => s.item);
 
     logger.info('diet', `GET /food-safety/search - found ${results.length} results for keyword="${keyword}"`);
     res.json({ code: 0, data: results, message: 'success' });
