@@ -18,6 +18,7 @@
       <div class="empty-icon">📷</div>
       <div class="empty-text">记录你珍贵的孕期时光</div>
       <n-button type="primary" @click="showUploadDialog = true">上传第一张照片</n-button>
+      <div class="empty-hint">支持 JPG、PNG、WebP、GIF、BMP、HEIC/HEIF 与常见视频格式</div>
     </div>
 
     <!-- 时间线视图 -->
@@ -115,6 +116,11 @@
               @change="onFileSelect"
             />
             <div v-if="uploadFile" class="file-name">{{ uploadFile.name }}</div>
+            <div class="format-hint">
+              <div><span class="fh-label">照片</span>JPG、PNG、WebP、GIF、BMP、HEIC/HEIF —— iPhone 拍的 HEIC 会自动转成 JPG 保存（原图保留）</div>
+              <div><span class="fh-label">视频</span>MP4、MOV、WebM、M4V 等常见格式</div>
+              <div class="fh-muted">iPhone 录的 HEVC 视频（.MOV）在电脑浏览器上放不出来，手机上或下载后可正常观看；TIFF 图片暂不支持（浏览器无法预览）</div>
+            </div>
           </n-form-item>
           <n-form-item label="分类">
             <div class="photo-type-select">
@@ -555,6 +561,12 @@ onMounted(async () => {
   text-align: center;
 }
 
+.empty-hint {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
 .empty-icon {
   font-size: 64px;
   margin-bottom: 16px;
@@ -741,6 +753,28 @@ onMounted(async () => {
   font-size: 13px;
   color: var(--text-secondary, #64748b);
   margin-top: 4px;
+}
+
+/* 上传对话框里的「支持格式」说明 */
+.format-hint {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #64748b;
+}
+.format-hint .fh-label {
+  display: inline-block;
+  min-width: 34px;
+  margin-right: 6px;
+  color: #7c3aed;
+  font-weight: 500;
+}
+.format-hint .fh-muted {
+  color: #94a3b8;
 }
 
 /* 卡片操作按钮 */
