@@ -244,9 +244,29 @@ router.get('/dashboard', async function(req, res) {
     );
     var weightHistory = weightHistoryRows.filter(function(r) { return r.weight != null; }).map(function(r) { return { date: r.record_date, weight: r.weight }; });
     var lastCheckup = await db.queryOne(
-      'SELECT * FROM prenatal_checkup WHERE pregnancy_id = ? ORDER BY checkup_date DESC LIMIT 1',
+      'SELECT * FROM prenatal_checkup WHERE pregnancy_id = ? AND is_completed = 1 ORDER BY checkup_date DESC, created_at DESC LIMIT 1',
       [pregnancy_id]
     );
+    // ⚠️ 读数时归一（老数据救援，2026-09-26 用户反馈「首页最近产检内容不对」）：
+    //    ① 原查询没有 is_completed 过滤 ⇒「取消完成」过的记录照样被当成最近产检显示，
+    //       还会挡住真正更早的有效记录；
+    //    ② v0.0.28 及更早，后端「标记完成」用的是另一份 16 条排期（cs_00N 与界面的 15 条
+    //       整体错位一项）⇒ 历史记录里存的是**邻居项目的名字与周数**：用户勾的是「大排畸」，
+    //       存进去的却是「中期唐筛/无创DNA · 15 周」。这里按 notes 里的 [cs_xxx] 标记回
+    //       当前排期表重解析名字与建议周数；解析不到的（用户自填记录等）保持原样。
+    if (lastCheckup) {
+      var lcMark = /\[(cs_[A-Za-z0-9_-]+)\]/.exec(String(lastCheckup.notes || ''));
+      if (lcMark) {
+        var lcItem = null;
+        for (var ls = 0; ls < scheduleItems.length; ls++) {
+          if (scheduleItems[ls].id === lcMark[1]) { lcItem = scheduleItems[ls]; break; }
+        }
+        if (lcItem) {
+          lastCheckup.checkup_type = lcItem.name || lcItem.title || lastCheckup.checkup_type;
+          if (lcItem.week_start != null) lastCheckup.gestational_week = lcItem.week_start;
+        }
+      }
+    }
     var checklists = await db.queryAll(
       `SELECT c.type,
               COUNT(ci.id) as total,
@@ -271,24 +291,39 @@ router.get('/dashboard', async function(req, res) {
       [pregnancy_id, todayStr, monthLaterStr]
     );
 
+    // 完成口径（与产检页「周区间命中 ∪ [cs_xxx] 标记命中」一致），供下方「产检提醒」与
+    // 「产检建议」共用 —— 两个列表都不能把已完成的项目再当成待办/建议列出来。
+    // （旧实现只有「周数精确相等」一条路：历史错位记录（周数被写成了邻居项目的）匹配不上，
+    //   已做过的项目会一直赖在首页建议里。）
+    var completedRowsAll = await db.queryAll(
+      'SELECT gestational_week, notes FROM prenatal_checkup WHERE pregnancy_id = ? AND is_completed = 1',
+      [pregnancy_id]
+    );
+    var completedWeeksSet = {};
+    var completedItemIdSet = {};
+    for (var cw = 0; cw < completedRowsAll.length; cw++) {
+      completedWeeksSet[completedRowsAll[cw].gestational_week] = true;
+      var cwNotes = String(completedRowsAll[cw].notes || '');
+      if (cwNotes.indexOf('从产检时间表标记完成') === -1) continue; // 只认「标记完成」产生的记录
+      var cwTags = cwNotes.match(/\[cs_[A-Za-z0-9_-]+\]/g) || [];
+      for (var ct = 0; ct < cwTags.length; ct++) completedItemIdSet[cwTags[ct].slice(1, -1)] = true;
+    }
+    var isScheduleItemDone = function (sitem) {
+      var ws = sitem.week_start || 0;
+      var we = sitem.week_end || ws;
+      for (var w = ws; w <= we; w++) { if (completedWeeksSet[w]) return true; }
+      return !!completedItemIdSet[sitem.id];
+    };
+
     // 合并产检提醒：未来一个月内应该做的产检
     var checkupReminders = [];
     if (scheduleItems.length > 0 && gestationalAge.weeks > 0) {
       var lmpForCheckup = pregnancy.last_period_date ? new Date(pregnancy.last_period_date) : null;
-      // 获取已完成产检周数
-      var completedWeeksResult = await db.queryAll(
-        'SELECT DISTINCT gestational_week FROM prenatal_checkup WHERE pregnancy_id = ? AND is_completed = 1',
-        [pregnancy_id]
-      );
-      var completedWeeksSet = {};
-      for (var cw = 0; cw < completedWeeksResult.length; cw++) {
-        completedWeeksSet[completedWeeksResult[cw].gestational_week] = true;
-      }
       for (var ci = 0; ci < scheduleItems.length; ci++) {
         var citem = scheduleItems[ci];
         var cws = citem.week_start || 0;
         // 跳过已完成的
-        if (completedWeeksSet[cws]) continue;
+        if (isScheduleItemDone(citem)) continue;
         // 显示当前孕周前后4周内（覆盖约一个月）
         if (cws < gestationalAge.weeks - 2 || cws > gestationalAge.weeks + 6) continue;
         var cEstDate = lmpForCheckup ? new Date(lmpForCheckup.getTime() + cws * 7 * 24 * 60 * 60 * 1000) : null;
@@ -394,6 +429,7 @@ router.get('/dashboard', async function(req, res) {
       var todayDate = new Date(todayStr);
       recommendedTodos = scheduleItems.filter(function(item) {
         var ws = item.week_start || 0;
+        if (isScheduleItemDone(item)) return false; // 已完成的（含历史标记）不再建议去做
         return ws >= minWeek && ws <= maxWeek;
       }).slice(0, 5).map(function(item) {
         var ws = item.week_start || 0;
