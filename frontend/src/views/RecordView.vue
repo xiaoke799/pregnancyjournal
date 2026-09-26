@@ -843,13 +843,10 @@ async function doUpsert(data: any) {
   data.record_date = (rawDate && dayjs(rawDate, 'YYYY-MM-DD', true).isValid())
     ? dayjs(rawDate).format('YYYY-MM-DD')
     : dayjs().format('YYYY-MM-DD')
-  const fields = Object.keys(data).filter(k => !['pregnancy_id', 'record_date'].includes(k))
-  console.log('[Record] doUpsert:', { date: data.record_date, fields })
   saving.value = true
   try {
     data.pregnancy_id = pregnancyStore.currentPregnancy.id
     const res: any = await dailyRecordApi.upsert(data)
-    console.log('[Record] doUpsert 响应:', res.code, res.message || 'OK')
     if (res.code === 0) {
       message.success('已保存')
       onRecordSaved()
@@ -968,7 +965,6 @@ async function saveSupplement() {
 
 async function saveHabit() {
   if (!habitForm.value.text.trim()) { message.warning('请输入内容'); return }
-  console.log('[Record] saveHabit:', habitForm.value.text.slice(0, 30))
   const ok = await doUpsert({
     record_date: habitForm.value.date,
     habit_text: habitForm.value.text,
@@ -1013,7 +1009,6 @@ async function saveSleep() {
     if (diff < 0) diff += 24 * 60 // 跨天
     hours = Math.round((diff / 60) * 10) / 10 // 保留一位小数
   }
-  console.log('[Record] saveSleep:', { bedtime: sleepForm.value.bedtime, waketime: sleepForm.value.waketime, hours, quality: sleepForm.value.quality })
   const ok = await doUpsert({
     record_date: sleepForm.value.date,
     sleep_hours: hours,
@@ -1031,14 +1026,12 @@ async function saveWater() {
 
 async function saveDiet() {
   if (!dietForm.value.content.trim()) { message.warning('请输入饮食内容'); return }
-  console.log('[Record] saveDiet:', { meal: dietForm.value.meal, content: dietForm.value.content.slice(0, 30) })
   const ok = await doUpsert({ record_date: dietForm.value.date, diet_note: dietForm.value.content })
   if (ok) showDietModal.value = false
 }
 
 async function saveExercise() {
   if (!exerciseForm.value.duration) { message.warning('请输入运动时长'); return }
-  console.log('[Record] saveExercise:', { type: exerciseForm.value.type, duration: exerciseForm.value.duration })
   const ok = await doUpsert({
     record_date: exerciseForm.value.date,
     exercise_type: exerciseForm.value.type,
@@ -1050,7 +1043,6 @@ async function saveExercise() {
 
 async function saveFm() {
   if (!fmForm.value.count) { message.warning('请输入胎动次数'); return }
-  console.log('[Record] saveFetalMovement:', { count: fmForm.value.count, duration: fmForm.value.duration })
   const ok = await doUpsert({
     record_date: fmForm.value.date,
     fetal_movement_count: fmForm.value.count,
@@ -1061,7 +1053,6 @@ async function saveFm() {
 }
 
 async function saveContr() {
-  console.log('[Record] saveContraction:', { duration: contrForm.value.duration, interval: contrForm.value.interval, pain: contrForm.value.pain })
   const ok = await doUpsert({
     record_date: contrForm.value.date,
     contraction_count: contrForm.value.duration ? 1 : 0,
@@ -1075,7 +1066,6 @@ async function saveContr() {
 
 async function savePlan() {
   if (!planForm.value.text.trim()) { message.warning('请输入计划内容'); return }
-  console.log('[Record] savePlan:', planForm.value.text.slice(0, 30))
   const ok = await doUpsert({
     record_date: planForm.value.date,
     plan_text: planForm.value.text,
@@ -1100,7 +1090,6 @@ function resetWaistForm() { waistForm.value = { date: '', bust: null, value: nul
 
 async function saveHcg() {
   if (!hcgForm.value.value) { message.warning('请输入HCG值'); return }
-  console.log('[Record] saveHCG:', { value: hcgForm.value.value, weeks: hcgForm.value.weeks })
   const ok = await doUpsert({
     record_date: hcgForm.value.date,
     hcg_value: hcgForm.value.value,
@@ -1112,7 +1101,6 @@ async function saveHcg() {
 
 async function saveUa() {
   if (!uaForm.value.value) { message.warning('请输入尿酸值'); return }
-  console.log('[Record] saveUricAcid:', { value: uaForm.value.value, period: uaForm.value.period })
   const ok = await doUpsert({
     record_date: uaForm.value.date,
     uric_acid: uaForm.value.value,

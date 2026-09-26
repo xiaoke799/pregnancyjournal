@@ -344,7 +344,6 @@ async function addCustomItem(cl: any) {
 }
 
 function showAddItemFor(cl: any) {
-  console.log('[Checklist] showAddItemFor:', cl.id, cl.name)
   // 如果已经激活了这个清单，关闭它
   if (activeAddChecklistId.value === cl.id) {
     activeAddChecklistId.value = null
