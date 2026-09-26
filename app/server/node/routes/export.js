@@ -1229,6 +1229,11 @@ router.get('/export/csv', verifyAuth, async (req, res) => {
     while (stmt.step()) rows.push(stmt.getAsObject());
     stmt.free();
 
+    // 轻量预检（手机端下载前先问一句「有没有数据」）：只回报条数，不生成文件
+    if (req.query.check === '1') {
+      return res.json({ code: 0, data: { count: rows.length }, message: 'success' });
+    }
+
     if (rows.length === 0) {
       return res.json({ code: 1001, data: null, message: '没有可导出的记录数据' });
     }
@@ -1242,7 +1247,9 @@ router.get('/export/csv', verifyAuth, async (req, res) => {
     const csvContent = '\uFEFF' + csvLines.join('\n');
     const filename = `孕程记_健康记录_${config.localToday()}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    // 中文文件名要用 RFC 5987 的 filename* 形式；只给一个 URL 编码的 filename 会让浏览器
+    // 把文件名显示成一串 %E5%AD%95…（前端改成「直接让浏览器下载」后，文件名完全由这里决定）
+    res.setHeader('Content-Disposition', `attachment; filename="pregnancyjournal-records-${config.localToday()}.csv"; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.send(csvContent);
 
     log.api('CSV导出', '成功', { count: rows.length });
@@ -1349,6 +1356,11 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
     const rows = [];
     while (stmt.step()) rows.push(stmt.getAsObject());
     stmt.free();
+
+    // 轻量预检（手机端下载前先问一句「有没有数据」）：只回报条数，不生成文件
+    if (req.query.check === '1') {
+      return res.json({ code: 0, data: { count: rows.length }, message: 'success' });
+    }
 
     if (rows.length === 0) {
       return res.json({ code: 1001, data: null, message: '没有可导出的日记内容' });
@@ -1472,7 +1484,8 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
         const pdfBuf = Buffer.concat(chunks);
         const filename = `孕程记_日记_${config.localToday()}.pdf`;
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+        // 中文名用 RFC 5987 的 filename*（否则浏览器显示一串 %E5%AD…）
+        res.setHeader('Content-Disposition', `attachment; filename="pregnancyjournal-diary-${config.localToday()}.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}`);
         res.setHeader('Content-Length', pdfBuf.length);
         res.send(pdfBuf);
         log.api('日记PDF导出', '成功', { count: rows.length, size: pdfBuf.length });
@@ -1496,7 +1509,7 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
   try {
     const pregnancyId = req.query.pregnancy_id;
 
-    let sql = 'SELECT * FROM pregnancy_photo WHERE media_type = \'photo\'';
+    let sql = 'SELECT * FROM pregnancy_photo WHERE media_type IS NULL OR media_type != \'video\'';
     const params = [];
     if (pregnancyId) { sql += ' AND pregnancy_id = ?'; params.push(pregnancyId); }
     sql += ' ORDER BY gestational_week ASC, gestational_day ASC, created_at ASC';
@@ -1506,6 +1519,11 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
     const photos = [];
     while (stmt.step()) photos.push(stmt.getAsObject());
     stmt.free();
+
+    // 轻量预检（手机端下载前先问一句「有没有数据」）：只回报条数，不生成文件
+    if (req.query.check === '1') {
+      return res.json({ code: 0, data: { count: photos.length }, message: 'success' });
+    }
 
     if (photos.length === 0) {
       return res.json({ code: 1001, data: null, message: '没有可导出的照片' });
@@ -1635,7 +1653,8 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
         const pdfBuf = Buffer.concat(chunks);
         const filename = `孕程记_纪念相册_${config.localToday()}.pdf`;
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+        // 中文名用 RFC 5987 的 filename*（否则浏览器显示一串 %E5%AD…）
+        res.setHeader('Content-Disposition', `attachment; filename="pregnancyjournal-album-${config.localToday()}.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}`);
         res.setHeader('Content-Length', pdfBuf.length);
         res.send(pdfBuf);
         log.api('相册PDF导出', '成功', { count: photos.length, size: pdfBuf.length });

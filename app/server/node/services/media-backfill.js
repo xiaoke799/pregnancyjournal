@@ -142,8 +142,10 @@ async function _convertOne(db, job) {
 async function _backfillThumbnails(db) {
   let rows = [];
   try {
+    // 用「非视频」而不是「= 'photo'」：上传接口在客户端没传 media_type 时会存成 'image'
+    // （见 photo.js 的 _detectMediaType），还有老记录可能是 NULL —— 按 'photo' 过滤会漏掉它们。
     rows = db.queryAll(
-      "SELECT id, file_path, thumbnail_path FROM pregnancy_photo WHERE media_type = 'photo'"
+      "SELECT id, file_path, thumbnail_path FROM pregnancy_photo WHERE media_type IS NULL OR media_type != 'video'"
     ) || [];
   } catch (e) {
     logger.warn('媒体补齐', `查询相册照片失败: ${e.message}`);
