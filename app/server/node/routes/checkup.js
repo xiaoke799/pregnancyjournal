@@ -27,6 +27,50 @@ function _isAllowedUpload(file, allowedMimes, allowedExts) {
   return false;
 }
 
+// ========== 产检子项「旧名 -> 现名」别名（读时归一，不改写数据库） ==========
+// 背景：产检排期按国标校正时，个别子项改过名（如 cs_009 的 GBS 由「24-28周补做」改为「35-37周」）。
+// 报告是按 sub_item 的【中文字符串】挂在子项行上的，老报告若仍用旧名，就会匹配不上任何子项行。
+// 处理原则（保证用户数据迁移稳定）：
+//   1) 只做【读取时归一】，绝不 UPDATE/DELETE 用户数据 —— 幂等、可逆、无半迁移状态；
+//   2) 只处理【同一条目内改名】；已下架的子项不在此表登记，前端会归入「其他报告」；
+//   3) 任何异常都退化为"原样返回"，绝不因为这张表让接口报错。
+const SUBITEM_ALIAS_FILE = path.join(config.ASSETS_DIR, 'checkup_subitem_aliases.json');
+let _subItemAliasCache = null;
+let _subItemAliasMtime = -1;
+function getSubItemAliases() {
+  try {
+    const mtime = fs.existsSync(SUBITEM_ALIAS_FILE) ? fs.statSync(SUBITEM_ALIAS_FILE).mtimeMs : 0;
+    if (_subItemAliasCache && _subItemAliasMtime === mtime) return _subItemAliasCache;
+    let aliases = {};
+    if (mtime) {
+      const parsed = JSON.parse(fs.readFileSync(SUBITEM_ALIAS_FILE, 'utf-8'));
+      if (parsed && parsed.aliases && typeof parsed.aliases === 'object') aliases = parsed.aliases;
+    }
+    _subItemAliasCache = aliases;
+    _subItemAliasMtime = mtime;
+    return _subItemAliasCache;
+  } catch (e) {
+    logger.warn('checkup', 'load checkup_subitem_aliases.json failed, fallback to raw sub_item', e && e.message);
+    return _subItemAliasCache || {};
+  }
+}
+// 归一单条报告的 sub_item 字段（就地修改传入行对象；无映射时原样返回）
+function normalizeReportSubItem(row) {
+  try {
+    if (!row || !row.sub_item) return row;
+    const map = getSubItemAliases()[row.checkup_id];
+    if (!map) return row;
+    const next = map[row.sub_item];
+    if (typeof next === 'string' && next && next !== row.sub_item) {
+      row.sub_item_original = row.sub_item;
+      row.sub_item = next;
+    }
+    return row;
+  } catch (e) {
+    return row;
+  }
+}
+
 const upload = multer({
   dest: UPLOAD_TMP_DIR,
   limits: { fileSize: 50 * 1024 * 1024 },
@@ -392,6 +436,22 @@ router.put('/checkups/custom/:id/complete', async (req, res) => {
   }
 });
 
+// 取消完成（给「标记完成」误按兜底）。只把 is_completed 改回 0，记录本身保留，随时可以再标记回来。
+router.put('/checkups/custom/:id/uncomplete', async (req, res) => {
+  try {
+    logger.info('checkup', `PUT /checkups/custom/${req.params.id}/uncomplete`);
+    const existing = await db.queryOne('SELECT id FROM custom_checkup WHERE id = ?', [req.params.id]);
+    if (!existing) return res.json({ code: 1001, data: null, message: '记录不存在' });
+    await db.run('UPDATE custom_checkup SET is_completed = 0, updated_at = datetime(\'now\') WHERE id = ?', [req.params.id]);
+    const row = await db.queryOne('SELECT * FROM custom_checkup WHERE id = ?', [req.params.id]);
+    logger.info('checkup', `PUT /checkups/custom/${req.params.id}/uncomplete - marked as not completed`);
+    res.json({ code: 0, data: row, message: 'success' });
+  } catch (e) {
+    logger.error('checkup', `PUT /checkups/custom/:id/uncomplete error: ${e.message}`);
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
 const ALLOWED_REPORT_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'application/pdf'];
 const REPORT_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.heic', '.heif', '.pdf'];
 
@@ -458,6 +518,8 @@ router.get('/checkups/:id/reports', async (req, res) => {
     const params = [req.params.id];
     if (checkup_type) { where += ' AND checkup_type = ?'; params.push(checkup_type); }
     const rows = await db.queryAll(`SELECT * FROM checkup_report ${where} ORDER BY created_at DESC`, params);
+    // 读时把历史子项旧名归一到现名，保证老报告仍能挂回正确的子项行（不写库）
+    rows.forEach(normalizeReportSubItem);
     res.json({ code: 0, data: rows, message: 'success' });
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
