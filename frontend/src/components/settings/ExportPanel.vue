@@ -45,6 +45,7 @@ import { ref } from 'vue'
 import { NButton, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { exportApi } from '@/api/export'
+import { localToday } from '@/utils/date'
 import AppIcon from '@/components/common/AppIcon.vue'
 
 const pregnancyStore = usePregnancyStore()
@@ -67,7 +68,7 @@ async function handleExportCsv() {
       const url = window.URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }))
       const a = document.createElement('a')
       a.href = url
-      a.download = `孕程记_健康记录_${new Date().toISOString().slice(0,10)}.csv`
+      a.download = `孕程记_健康记录_${localToday()}.csv`
       a.click()
       window.URL.revokeObjectURL(url)
       message.success('CSV 导出成功')
@@ -98,7 +99,7 @@ async function handleExportDiary() {
       const url = window.URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }))
       const a = document.createElement('a')
       a.href = url
-      a.download = `孕程记_日记_${new Date().toISOString().slice(0,10)}.pdf`
+      a.download = `孕程记_日记_${localToday()}.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
       message.success('日记 PDF 导出成功')
@@ -128,7 +129,7 @@ async function handleExportAlbum() {
       const url = window.URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }))
       const a = document.createElement('a')
       a.href = url
-      a.download = `孕程记_纪念相册_${new Date().toISOString().slice(0,10)}.pdf`
+      a.download = `孕程记_纪念相册_${localToday()}.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
       message.success('纪念相册 PDF 导出成功')
