@@ -129,7 +129,7 @@ router.post('/photos', uploadSingle('file'), async (req, res) => {
     const ext = path.extname(req.file.originalname);
     const filename = uuidv4() + ext;
     // 使用前端传入的 photo_date（格式 YYYY-MM-DD）作为存储目录和记录日期，缺失则用今天
-    const effectiveDate = (photo_date && /^\d{4}-\d{2}-\d{2}$/.test(photo_date)) ? photo_date : new Date().toISOString().slice(0, 10);
+    const effectiveDate = (photo_date && /^\d{4}-\d{2}-\d{2}$/.test(photo_date)) ? photo_date : config.localToday();
     const dateDir = `${effectiveDate.slice(0, 4)}/${effectiveDate.slice(5, 7)}`;
     let destPath, thumbnail_path;
     if (finalMediaType === 'video') {

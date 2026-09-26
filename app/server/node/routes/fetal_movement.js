@@ -8,7 +8,8 @@ router.post('/fetal-movements/sessions', async (req, res) => {
     const { pregnancy_id, session_date, start_time } = req.body;
     if (!pregnancy_id) return res.json({ code: 1001, data: null, message: '缺少pregnancy_id' });
     const now = new Date();
-    const dateStr = session_date || now.toISOString().slice(0, 10);
+    // 用本地日期：toISOString 是 UTC，东八区凌晨会把会话记成前一天
+    const dateStr = session_date || config.localToday(now);
     const timeStr = start_time || now.toTimeString().slice(0, 8);
     const id = db.generateId();
     await db.run(

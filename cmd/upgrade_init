@@ -56,7 +56,7 @@ for entry in "${LEGACY}"/* "${LEGACY}"/.[!.]*; do
         *.jsonl|*.log)          continue ;;   # 日志无迁移价值
         *.js)                   continue ;;   # 打包时误混入的开发脚本
         # 随包发布的只读知识库（旧版把内置资源与可写目录混在一起），不是用户数据
-        recipes.json|food_safety_v3.json|checkup_schedule.json) continue ;;
+        recipes.json|food_safety_v3.json|checkup_schedule.json|checkup_subitem_aliases.json) continue ;;
         default_checklist_*.json) continue ;;
     esac
     if [ -d "${entry}" ]; then
