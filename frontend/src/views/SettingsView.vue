@@ -349,6 +349,7 @@
             推送记录
             <span v-if="pushLogs.length" class="push-log-count">
               共 {{ pushLogs.length }} 条<template v-if="pushLogs.length >= PUSH_LOG_LIMIT">（仅显示最近 {{ PUSH_LOG_LIMIT }} 条）</template>
+              · 只保留最近 {{ PUSH_LOG_RETENTION_DAYS }} 天
             </span>
           </h3>
           <n-button size="small" @click="loadPushLogs">刷新</n-button>
@@ -1173,6 +1174,9 @@ async function saveChannelPrefs(chKey: string) {
 // 一次最多取多少条（与后端默认一致）。应用每天推送，「全部」拿全量会把页面撑爆，
 // 所以这里显式限量，并在标题处注明「仅显示最近 N 条」。
 const PUSH_LOG_LIMIT = 300
+// 后端只保留最近 30 天的推送记录（push-engine.js 的 PUSH_LOG_RETENTION_DAYS），
+// 这里仅用于把策略告诉用户 —— 免得他们以为旧记录丢了。
+const PUSH_LOG_RETENTION_DAYS = 30
 
 async function loadPushLogs() {
   try {
