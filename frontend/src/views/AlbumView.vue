@@ -120,10 +120,17 @@
                 class="file-input"
                 @change="onFileSelect"
               />
-              <div v-if="uploadFile" class="file-name">{{ uploadFile.name }}</div>
+              <div v-if="uploadFile" class="file-name">{{ uploadFile.name }}（{{ fileSizeText }}）</div>
+              <!-- 上传中的进度反馈（用户实测反馈：点「上传」后毫无变化，像没反应。
+                   视频常有几十 MB，必须有可见的"在传、传到哪了"，否则会被当成卡死） -->
+              <div v-if="uploading" class="upload-progress">
+                <n-progress type="line" :percentage="uploadProgress" :height="8" :border-radius="4"
+                  color="#c44680" rail-color="#f1ebf2" :show-indicator="false" />
+                <div class="upload-progress-text">正在上传 {{ uploadProgress }}% —— 视频较大时请稍等，不要关闭页面</div>
+              </div>
               <div class="format-hint">
                 <div><span class="fh-label">照片</span>JPG、PNG、WebP、GIF、BMP、HEIC/HEIF —— iPhone 拍的 HEIC 会自动转成 JPG 保存（原图保留）</div>
-                <div><span class="fh-label">视频</span>MP4、MOV、WebM、M4V 等常见格式</div>
+                <div><span class="fh-label">视频</span>MP4、MOV、WebM、M4V 等常见格式，单个文件最大 100MB</div>
                 <div class="fh-muted">iPhone 录的 HEVC 视频（.MOV）在电脑浏览器上放不出来，手机上或下载后可正常观看；TIFF 图片暂不支持（浏览器无法预览）</div>
               </div>
             </div>
@@ -238,7 +245,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { NButton, NModal, NForm, NFormItem, NInput, NDatePicker, useMessage } from 'naive-ui'
+import { NButton, NModal, NForm, NFormItem, NInput, NProgress, NDatePicker, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { photoApi } from '@/api/photo'
 import AppIcon from '@/components/common/AppIcon.vue'
@@ -246,7 +253,7 @@ import { usePhotoUpload } from '@/composables/usePhotoUpload'
 import dayjs from 'dayjs'
 
 const pregnancyStore = usePregnancyStore()
-const { upload, uploading } = usePhotoUpload()
+const { uploading } = usePhotoUpload()
 const message = useMessage()
 
 interface PhotoItem {
@@ -275,6 +282,16 @@ const showUploadDialog = ref(false)
 const uploadFile = ref<File | null>(null)
 const uploadNote = ref('')
 const uploadDate = ref<string>(dayjs().format('YYYY-MM-DD'))
+/** 上传进度（0-100），由 photoApi.upload 的 onUploadProgress 回调驱动 */
+const uploadProgress = ref(0)
+
+/** 已选文件的大小文案（选中那一刻就能看到，方便判断大视频要等多久） */
+const fileSizeText = computed(() => {
+  const f = uploadFile.value
+  if (!f) return ''
+  const mb = f.size / 1024 / 1024
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB`
+})
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 // 照片预览
@@ -430,13 +447,31 @@ function onFileSelect(e: Event) {
 
 /** 提交上传 */
 async function handleUploadSubmit(): Promise<boolean> {
-  if (!uploadFile.value || !pregnancyStore.currentPregnancy) return false
+  // ⚠️ 这里的每个提前退出都必须给人话提示 —— 静默 return 会让用户觉得"点了没反应"
+  //    （2026-09-26 用户实测：上传视频点击后毫无反馈。复现脚本 repro_album_video_upload.js：
+  //      ① 无孕期档案时静默 return（请求不发、零提示）；② 上传全程按钮无 loading；
+  //      ③ 超 100MB 被后端拒绝，但原因被 catch 吞掉只显示"上传失败"。）
+  if (!uploadFile.value) { message.warning('请先选择要上传的文件'); return false }
+  if (!pregnancyStore.currentPregnancy) {
+    // 直链/刷新进来时档案可能还没加载：补取一次；仍没有则明确提示（不再静默返回）
+    try { await pregnancyStore.fetchActivePregnancy() } catch { /* 下面统一提示 */ }
+  }
+  if (!pregnancyStore.currentPregnancy) { message.warning('请先在首页创建孕期档案，再来上传'); return false }
 
   const file = uploadFile.value
+  // 与后端一致的上限（photo.js: multer limits.fileSize = 100MB）。
+  // 超限的文件后端会拒绝，但"先传完 100MB 再被拒"对手机流量极不友好 —— 选中后立刻判、立刻说。
+  const MAX_UPLOAD_MB = 100
+  if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+    message.error(`文件过大（${(file.size / 1024 / 1024).toFixed(1)} MB），最大支持 ${MAX_UPLOAD_MB}MB —— 请先压缩或裁剪后再上传`)
+    return false
+  }
   const isVideo = file.type.startsWith('video/')
   const pregnancyId = pregnancyStore.currentPregnancy.id
   const currentWeek = pregnancyStore.gestationalAge?.weeks
 
+  uploading.value = true
+  uploadProgress.value = 0
   try {
     const formData = new FormData()
     formData.append('file', file)
@@ -447,17 +482,29 @@ async function handleUploadSubmit(): Promise<boolean> {
     if (uploadDate.value) formData.append('photo_date', uploadDate.value)
     if (uploadNote.value) formData.append('note', uploadNote.value)
 
-    await photoApi.upload(formData)
-    message.success('上传成功')
+    await photoApi.upload(formData, (pct) => { uploadProgress.value = pct })
+    message.success(isVideo ? '视频上传成功' : '照片上传成功')
     uploadFile.value = null
     uploadNote.value = ''
-    uploadDate.value = null
+    uploadDate.value = dayjs().format('YYYY-MM-DD')
+    uploadProgress.value = 0
     if (fileInputRef.value) fileInputRef.value.value = ''
+    showUploadDialog.value = false
     await loadPhotos()
     return true
-  } catch {
-    message.error('上传失败，请重试')
+  } catch (e: any) {
+    // 透传后端给出的真实原因（如「文件过大，最大支持 100MB」）；
+    // axios 自身的英文错误（timeout / Network Error）翻译成人话，不要把原因吞成一句泛泛的失败
+    const raw = String(e?.message || '')
+    const msg = /timeout/i.test(raw)
+      ? '上传超时（网络慢或文件较大）—— 请重试，或先压缩文件再传'
+      : /network/i.test(raw)
+        ? '网络中断，上传没有完成，请重试'
+        : (raw || '上传失败，请重试')
+    message.error(msg)
     return false
+  } finally {
+    uploading.value = false
   }
 }
 
@@ -769,6 +816,17 @@ onMounted(async () => {
   color: var(--text-secondary, #64748b);
   margin-top: 4px;
   word-break: break-all;
+}
+
+/* 上传进度（大文件/视频时给"确实在传"的反馈） */
+.upload-progress {
+  margin: 2px 0 8px;
+}
+.upload-progress-text {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  margin-top: 4px;
+  overflow-wrap: anywhere;
 }
 
 /* 上传对话框里的「支持格式」说明 */

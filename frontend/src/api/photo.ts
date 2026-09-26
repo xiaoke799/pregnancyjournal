@@ -4,10 +4,14 @@ import client from './client'
 import { getApiBase } from '@/utils/api-base'
 
 export const photoApi = {
-  upload: (formData: FormData) =>
+  /** 上传照片/视频。onProgress：上传进度百分比回调（视频常有几十 MB，界面靠它显示「在传、传到哪了」） */
+  upload: (formData: FormData, onProgress?: (pct: number) => void) =>
     client.post('/photos', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 120000,
+      onUploadProgress: (e: any) => {
+        if (onProgress && e && e.total) onProgress(Math.round((e.loaded / e.total) * 100))
+      },
     }),
   list: (pregnancyId: string, params?: { photo_type?: string; gestational_week?: number }) =>
     client.get('/photos', { params: { pregnancy_id: pregnancyId, ...params } }),
