@@ -9,7 +9,9 @@ const logger = require('../logger');
 const heic = require('../services/heic');
 
 // ===== 版本标记：部署后可通过日志确认是否加载了最新代码 =====
-logger.info('daily-record', `模块加载 v0.0.29 [${new Date().toISOString()}]`);
+// ⚠️ 不要在这里写死版本号（曾因写死旧版本号导致「升级没生效」的误判）；
+// 版本号唯一真源 = manifest，config.APP_VERSION 即取自它。
+logger.info('daily-record', `模块加载 v${config.APP_VERSION} [${new Date().toISOString()}]`);
 
 /**
  * 数值字段「读时归一」

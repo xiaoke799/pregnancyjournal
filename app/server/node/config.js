@@ -69,7 +69,7 @@ const config = {
   PORT: parseInt(process.env.TRIM_SERVICE_PORT || process.env.PORT || '3867', 10),
   TRIM_SERVICE_PORT: process.env.TRIM_SERVICE_PORT || '3867',
   APP_MODE: process.env.APP_MODE || 'dev',
-  APP_VERSION: '0.0.29',
+  APP_VERSION: '0.0.30',
   // FnOS 统一网关模式：优先用 FNOS_SOCKET_PATH（由 cmd/main 导出）
   FNOS_SOCKET_PATH: process.env.FNOS_SOCKET_PATH || '',
   TRIM_APPDEST: process.env.TRIM_APPDEST || '',

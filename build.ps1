@@ -11,7 +11,7 @@ $ServerDir = Join-Path $PkgDir "app\server\node"
 $AppUi     = Join-Path $PkgDir "app\ui"
 # 注：不再有 $RootUi（根 ui/ 是历史死重，既不进包也不是运行时目录；
 # 运行时 STATIC_DIR = ${TRIM_APPDEST}/ui，来自 app.tgz:ui，即 app/ui）。
-$Version   = "0.0.29"   # 版本号锁定，禁止改动
+$Version   = "0.0.30"   # 发版同步：必须与 manifest 的 version 一致（唯一真源=manifest）
 if ($PkgDir -eq $PSScriptRoot) { $Parent = $PSScriptRoot } else { $Parent = Split-Path $PkgDir -Parent }
 $Stage     = Join-Path $env:TEMP "pregnancyjournal_stage_$Version"
 
