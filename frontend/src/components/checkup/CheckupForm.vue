@@ -54,6 +54,7 @@ import { ref, computed, watch } from 'vue'
 import { NModal, NButton, NForm, NFormItem, NInput, NInputNumber, NSelect } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { checkupApi } from '@/api/checkup'
+import { localToday } from '@/utils/date'
 import dayjs from 'dayjs'
 
 const props = defineProps<{
@@ -134,7 +135,7 @@ watch(() => props.show, (val) => {
     }
   } else if (val) {
     form.value = {
-      checkup_date: new Date().toISOString().split('T')[0],
+      checkup_date: localToday(),
       checkup_type: null, hospital: '',
       blood_pressure_systolic: null, blood_pressure_diastolic: null,
       weight: null, fundal_height: null, abdominal_circumference: null,

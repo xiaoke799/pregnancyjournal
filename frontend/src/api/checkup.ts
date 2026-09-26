@@ -30,6 +30,8 @@ export const checkupApi = {
   updateCustom: (id: string, data: any) => client.put(`/checkups/custom/${id}`, data),
   deleteCustom: (id: string) => client.delete(`/checkups/custom/${id}`),
   markCustomComplete: (id: string) => client.put(`/checkups/custom/${id}/complete`),
+  /** 取消完成自定义产检（误按兜底） */
+  unmarkCustomComplete: (id: string) => client.put(`/checkups/custom/${id}/uncomplete`),
 
   // 产检报告附件（支持分类 + NAS上传）
   uploadReport: (checkupId: string, file: File, checkupType: string = 'standard', category: string = '其他', subItem?: string) => {

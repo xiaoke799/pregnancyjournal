@@ -13,3 +13,10 @@ export function markCheckupCompleted(itemId: string, pregnancyId: string) {
     params: { pregnancy_id: pregnancyId },
   })
 }
+
+/** 取消完成（撤销「标记完成」，误按兜底） */
+export function unmarkCheckupCompleted(itemId: string, pregnancyId: string) {
+  return client.delete(`/checkup-schedule/${itemId}/complete`, {
+    params: { pregnancy_id: pregnancyId },
+  })
+}

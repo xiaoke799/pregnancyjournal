@@ -3,123 +3,32 @@ const router = express.Router();
 const db = require('../db');
 const logger = require('../logger');
 
-// 产检时间表（内嵌数据，不依赖外部文件）
-const DEFAULT_SCHEDULE = [
-  {
-    id: "cs_001", week_range: "6-8", week_start: 6, week_end: 8,
-    name: "早孕检查",
-    items: ["B超确认宫内妊娠", "血常规", "尿常规", "甲状腺功能"],
-    is_mandatory: true,
-    description: "确认宫内妊娠，检查胚胎发育情况，排除异位妊娠"
-  },
-  {
-    id: "cs_002", week_range: "8-10", week_start: 8, week_end: 10,
-    name: "早孕期筛查",
-    items: ["B超检查胎心胎芽", "血型及Rh因子", "肝肾功能", "乙肝五项", "梅毒筛查", "HIV筛查"],
-    is_mandatory: true,
-    description: "全面基础检查，了解孕妇身体状况，建立孕期档案"
-  },
-  {
-    id: "cs_003", week_range: "11-13", week_start: 11, week_end: 13,
-    name: "NT检查（早期唐筛）",
-    items: ["NTB超测量胎儿颈项透明层", "早期唐氏综合征筛查", "血常规", "尿常规"],
-    is_mandatory: true,
-    description: "通过NT值和血液指标评估胎儿染色体异常风险"
-  },
-  {
-    id: "cs_004", week_range: "15-20", week_start: 15, week_end: 20,
-    name: "中期唐筛/无创DNA",
-    items: ["中期唐氏综合征筛查", "血常规", "尿常规", "血压体重", "宫高腹围"],
-    is_mandatory: true,
-    description: "如早期唐筛高风险，可做无创DNA或羊水穿刺进一步确诊"
-  },
-  {
-    id: "cs_005", week_range: "20-24", week_start: 20, week_end: 24,
-    name: "大排畸（系统B超）",
-    items: ["系统超声检查（大排畸）", "血常规", "尿常规", "血压体重"],
-    is_mandatory: true,
-    description: "详细检查胎儿各器官发育情况，排查重大结构畸形"
-  },
-  {
-    id: "cs_006", week_range: "24-28", week_start: 24, week_end: 28,
-    name: "妊娠期糖尿病筛查",
-    items: ["OGTT糖耐量试验（75g）", "血常规", "尿常规", "血压体重", "宫高腹围"],
-    is_mandatory: true,
-    description: "口服葡萄糖耐量试验，筛查妊娠期糖尿病，需空腹"
-  },
-  {
-    id: "cs_007", week_range: "28-30", week_start: 28, week_end: 30,
-    name: "晚孕初期检查",
-    items: ["B超检查胎儿发育", "血常规", "尿常规", "血压体重", "宫高腹围", "胎位检查"],
-    is_mandatory: true,
-    description: "进入孕晚期，开始两周一次产检，关注胎儿发育和胎位"
-  },
-  {
-    id: "cs_008", week_range: "30-32", week_start: 30, week_end: 32,
-    name: "晚孕常规检查",
-    items: ["血常规", "尿常规", "血压体重", "宫高腹围", "胎心监护"],
-    is_mandatory: true,
-    description: "定期监测孕妇血压、体重增长，关注胎儿发育情况"
-  },
-  {
-    id: "cs_009", week_range: "32-34", week_start: 32, week_end: 34,
-    name: "晚孕复查",
-    items: ["B超检查（胎儿大小、羊水、胎盘）", "血常规", "尿常规", "血压体重", "胎心监护"],
-    is_mandatory: true,
-    description: "评估胎儿生长情况、羊水量及胎盘成熟度"
-  },
-  {
-    id: "cs_010", week_range: "34-36", week_start: 34, week_end: 36,
-    name: "B族链球菌筛查",
-    items: ["GBS（B族链球菌）筛查", "血常规", "尿常规", "血压体重", "胎心监护"],
-    is_mandatory: true,
-    description: "筛查B族链球菌感染，阳性者分娩时需预防性使用抗生素"
-  },
-  {
-    id: "cs_011", week_range: "36-37", week_start: 36, week_end: 37,
-    name: "分娩前评估",
-    items: ["B超评估胎儿体重", "骨盆测量", "血常规", "凝血功能", "心电图", "胎心监护"],
-    is_mandatory: true,
-    description: "评估分娩方式，确定顺产或剖宫产，做好分娩准备"
-  },
-  {
-    id: "cs_012", week_range: "37-38", week_start: 37, week_end: 38,
-    name: "足月检查",
-    items: ["血常规", "尿常规", "血压体重", "胎心监护", "宫颈检查", "分娩征兆评估"],
-    is_mandatory: true,
-    description: "胎儿已足月，每周检查一次，关注分娩征兆"
-  },
-  {
-    id: "cs_013", week_range: "38-39", week_start: 38, week_end: 39,
-    name: "临产前检查",
-    items: ["血常规", "尿常规", "血压体重", "胎心监护", "B超（如需要）", "宫颈评分"],
-    is_mandatory: true,
-    description: "密切关注临产征兆，评估宫颈条件，随时准备入院"
-  },
-  {
-    id: "cs_014", week_range: "39-40", week_start: 39, week_end: 40,
-    name: "预产期检查",
-    items: ["血常规", "尿常规", "血压体重", "胎心监护", "宫颈检查", "羊水和胎盘评估"],
-    is_mandatory: true,
-    description: "到达预产期，如未发动需评估是否需要催产，超过41周需住院"
-  },
-  {
-    id: "cs_015", week_range: "41", week_start: 41, week_end: 41,
-    name: "催产评估",
-    items: ["胎心监护（NST）", "B超评估羊水量", "胎盘功能评估", "宫颈成熟度评分（Bishop评分）", "血压体重", "尿常规"],
-    is_mandatory: true,
-    description: "超过预产期1周，住院评估胎儿状况与宫颈条件，依据结果决定催产方式（缩宫素或人工破膜）"
-  },
-  {
-    id: "cs_016", week_range: "42", week_start: 42, week_end: 42,
-    name: "过期妊娠处理",
-    items: ["持续胎心监护", "B超监测羊水量与胎盘钙化", "OCT催产素激惹试验", "血压体重", "尿常规", "凝血功能与肝肾功能复查"],
-    is_mandatory: true,
-    description: "已达过期妊娠（≥42周），需住院严密监护，积极催产或剖宫产终止妊娠，避免胎盘功能下降与胎儿窘迫"
-  }
-];
+// 产检时间表：唯一数据源 = 随包发布的只读资源 checkup_schedule.json（config.ASSETS_DIR）
+// 原内嵌 DEFAULT_SCHEDULE 数组已移除，改为读该文件；产检页 / 首页 / 推送 / 导出 共用此一份。
+const fs = require('fs');
+const path = require('path');
+const config = require('../config');
 
-function getSchedule() { return DEFAULT_SCHEDULE; }
+let _scheduleCache = null;
+let _scheduleMtime = -1;
+function getSchedule() {
+  try {
+    const jsonPath = path.join(config.ASSETS_DIR, 'checkup_schedule.json');
+    const mtime = fs.existsSync(jsonPath) ? fs.statSync(jsonPath).mtimeMs : 0;
+    if (_scheduleCache && _scheduleMtime === mtime) return _scheduleCache;
+    const list = mtime ? JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) : [];
+    _scheduleCache = Array.isArray(list) ? list : [];
+    _scheduleMtime = mtime;
+    return _scheduleCache;
+  } catch (e) {
+    logger.error('checkup-schedule', 'load checkup_schedule.json failed', e);
+    return _scheduleCache || [];
+  }
+}
+
+// 本地日期统一由 config.localToday() 提供（唯一实现，避免各处再写一份）。
+// ⚠️ 不能用 new Date().toISOString().split('T')[0] —— 那是 UTC，东八区 00:00~08:00 会差一天，
+// 会导致「前端按本地算的完成日期」与「后端记录里的完成日期」对不上。
 
 router.get('/checkup-schedule/completed-weeks', async (req, res) => {
   try {
@@ -149,27 +58,57 @@ router.get('/checkup-schedule', async (req, res) => {
   try {
     const { pregnancy_id } = req.query;
     logger.info('checkup-schedule', `GET /checkup-schedule - pregnancy_id=${pregnancy_id}`);
+    const schedule = getSchedule();
+
+    // ⚠️ 未传 pregnancy_id（用户还没建档/还没选孕期）时也返回排期本体，
+    // 只是不带完成状态 —— 保证产检页在任何情况下都有内容，不会白屏/空白。
     if (!pregnancy_id) {
-      logger.warn('checkup-schedule', 'GET /checkup-schedule - missing pregnancy_id');
-      return res.json({ code: 1001, data: null, message: '缺少pregnancy_id参数' });
+      const plain = schedule.map(item => ({ ...item, is_completed: false, is_recommended: true, completed_at: null }));
+      logger.info('checkup-schedule', `GET /checkup-schedule - no pregnancy_id, returned ${plain.length} items (no status)`);
+      return res.json({ code: 0, data: plain, message: 'success' });
     }
 
-    const schedule = getSchedule();
+    // 完成判定取【周区间命中】∪【条目 id 命中】两条口径，互为兜底：
+    //   - 周区间命中：老口径，兼容用户在产检页外自行添加的记录；
+    //   - 条目 id 命中：从 notes 里的 [cs_00X] 标记取（那条标记正是「标记完成」的去重键）。
+    // 之所以要加第二条：排期孕周若发生调整（如 cs_001 早孕检查由第 5 周校正为第 6 周），
+    // 老记录写入的 gestational_week 可能已不在新区间内，但标记本身仍明确指向同一条目。
     const completedCheckups = await db.queryAll(
-      'SELECT gestational_week FROM prenatal_checkup WHERE pregnancy_id = ? AND is_completed = 1',
+      'SELECT gestational_week, notes, checkup_date FROM prenatal_checkup WHERE pregnancy_id = ? AND is_completed = 1',
       [pregnancy_id]
     );
     const completedWeeks = new Set(completedCheckups.map(c => c.gestational_week));
+    const completedItemIds = new Set();
+    const completedAtById = {};
+    const MARK = '从产检时间表标记完成';
+    for (const row of completedCheckups) {
+      const notes = String((row && row.notes) || '');
+      if (notes.indexOf(MARK) === -1) continue; // 只认「标记完成」产生的记录，避免误判用户自填备注
+      const found = notes.match(/\[cs_[A-Za-z0-9_-]+\]/g) || [];
+      const day = String((row && row.checkup_date) || '').slice(0, 10);
+      for (const tag of found) {
+        const id = tag.slice(1, -1);
+        completedItemIds.add(id);
+        // 实际完成日期：纯读取推导（不改写任何数据），同一项目有多条记录时取最早那次。
+        // 老用户没手填过「完成日期」也能拿到真实完成时间 —— 就是当初点「标记完成」产生的记录日期。
+        if (/^\d{4}-\d{2}-\d{2}$/.test(day) && (!completedAtById[id] || day < completedAtById[id])) {
+          completedAtById[id] = day;
+        }
+      }
+    }
 
     const itemsWithStatus = schedule.map(item => {
       const weekStart = item.week_start || 0;
       const weekEnd = item.week_end || item.week_start || 0;
-      const isCompleted = Array.from({ length: weekEnd - weekStart + 1 }, (_, i) => weekStart + i)
+      const hitByWeek = Array.from({ length: weekEnd - weekStart + 1 }, (_, i) => weekStart + i)
         .some(w => completedWeeks.has(w));
+      const isCompleted = hitByWeek || completedItemIds.has(item.id);
       return {
         ...item,
         is_completed: isCompleted,
         is_recommended: !isCompleted,
+        // 实际完成日期（YYYY-MM-DD），未完成/推导不出时为 null。前端优先用用户手填的「完成日期」。
+        completed_at: completedAtById[item.id] || null,
       };
     });
 
@@ -253,7 +192,7 @@ router.put('/checkup-schedule/:item_id/complete', async (req, res) => {
           [
             checkupId,
             pregnancy_id,
-            new Date().toISOString().split('T')[0],
+            config.localToday(),
             weekStart,
             item.name || item.title || '',
             '从产检时间表标记完成: ' + itemNamesStr + ' [' + item_id + ']',
@@ -276,6 +215,107 @@ router.put('/checkup-schedule/:item_id/complete', async (req, res) => {
     });
   } catch (error) {
     logger.error('checkup-schedule', 'PUT /:item_id/complete unexpected error', error);
+    res.status(500).json({ code: 1001, data: null, message: error.message || '服务器内部错误' });
+  }
+});
+
+// 取消完成（撤销「标记完成」，给误按兜底）
+// 只回退【本应用「标记完成」自己产生的记录】——判定依据是 notes 里那句 MARK，
+// 用户手动添加/自己写了备注的产检记录一律不碰，避免误删用户数据。
+// 「标记完成」当时顺带写的完成日期也会一起清掉，但仅当它正好等于被撤销那条记录的日期
+// （即确认是我们自动写的）；用户手填的完成日期保留不动。
+router.delete('/checkup-schedule/:item_id/complete', async (req, res) => {
+  try {
+    const { item_id } = req.params;
+    const { pregnancy_id } = req.query;
+    logger.info('checkup-schedule', `DELETE /:item_id/complete - pregnancy_id=${pregnancy_id}, item_id=${item_id}`);
+
+    if (!pregnancy_id) {
+      logger.warn('checkup-schedule', 'DELETE /:item_id/complete - missing pregnancy_id');
+      return res.json({ code: 1001, data: null, message: '缺少pregnancy_id参数' });
+    }
+
+    const MARK = '从产检时间表标记完成';
+    const completed = await db.queryAll(
+      'SELECT id, checkup_date, notes, gestational_week FROM prenatal_checkup WHERE pregnancy_id = ? AND is_completed = 1',
+      [pregnancy_id]
+    );
+
+    // 主口径：notes 里同时带 MARK 和 [本条目的 id] —— 就是「标记完成」写的那条
+    const markerId = '[' + item_id + ']';
+    let targets = completed.filter(r => {
+      const n = String((r && r.notes) || '');
+      return n.indexOf(MARK) !== -1 && n.indexOf(markerId) !== -1;
+    });
+
+    // 兜底口径：极早期版本写的记录可能没带 [cs_00X] 标记，只在孕周区间上命中。
+    // 仍然要求带 MARK 字样（确认是本应用生成的），且不带动任何 [cs_xxx] 标记（否则属于别的条目）。
+    if (!targets.length) {
+      let item = null;
+      try { item = getSchedule().find(s => s.id === item_id) || null; } catch (schedErr) {
+        logger.warn('checkup-schedule', `DELETE /:item_id/complete - getSchedule failed: ${schedErr.message}`);
+      }
+      if (item) {
+        const ws = item.week_start || 0;
+        const we = item.week_end || item.week_start || 0;
+        targets = completed.filter(r => {
+          const n = String((r && r.notes) || '');
+          if (n.indexOf(MARK) === -1) return false;
+          if (/\[cs_[A-Za-z0-9_-]+\]/.test(n)) return false;
+          const w = Number(r && r.gestational_week);
+          return Number.isFinite(w) && w >= ws && w <= we;
+        });
+      }
+    }
+
+    if (!targets.length) {
+      logger.info('checkup-schedule', `DELETE /:item_id/complete - no app-generated record to undo for ${item_id}`);
+      return res.json({
+        code: 0,
+        data: { item_id, is_completed: false, changed: 0, date_cleared: null, reason: 'not_found' },
+        message: '没有可取消的完成记录'
+      });
+    }
+
+    const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    for (const t of targets) {
+      await db.run('UPDATE prenatal_checkup SET is_completed = 0, updated_at = ? WHERE id = ?', [nowStr, t.id]);
+    }
+
+    // 清「标记完成」顺带写的完成日期（仅当它等于被撤销记录的日期）
+    let dateCleared = null;
+    try {
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS schedule_dates (
+          pregnancy_id TEXT NOT NULL,
+          schedule_id TEXT NOT NULL,
+          checkup_date TEXT NOT NULL,
+          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          PRIMARY KEY (pregnancy_id, schedule_id),
+          FOREIGN KEY (pregnancy_id) REFERENCES pregnancy(id) ON DELETE CASCADE
+        )
+      `);
+      const autoDays = new Set(targets.map(t => String((t && t.checkup_date) || '').slice(0, 10)));
+      const sd = await db.queryOne(
+        'SELECT checkup_date FROM schedule_dates WHERE pregnancy_id = ? AND schedule_id = ?',
+        [pregnancy_id, item_id]
+      );
+      if (sd && autoDays.has(String(sd.checkup_date || '').slice(0, 10))) {
+        await db.run('DELETE FROM schedule_dates WHERE pregnancy_id = ? AND schedule_id = ?', [pregnancy_id, item_id]);
+        dateCleared = String(sd.checkup_date).slice(0, 10);
+      }
+    } catch (dateErr) {
+      logger.warn('checkup-schedule', `DELETE /:item_id/complete - clear schedule_date failed: ${dateErr.message}`);
+    }
+
+    logger.info('checkup-schedule', `DELETE /:item_id/complete - undone ${targets.length} record(s), date_cleared=${dateCleared}`);
+    res.json({
+      code: 0,
+      data: { item_id, is_completed: false, changed: targets.length, date_cleared: dateCleared },
+      message: '已取消完成'
+    });
+  } catch (error) {
+    logger.error('checkup-schedule', 'DELETE /:item_id/complete unexpected error', error);
     res.status(500).json({ code: 1001, data: null, message: error.message || '服务器内部错误' });
   }
 });

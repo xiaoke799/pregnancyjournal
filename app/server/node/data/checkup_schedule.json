@@ -1,162 +1,276 @@
 [
   {
     "id": "cs_001",
-    "week_range": "6-8",
+    "week_range": "6-8周(孕2月)",
     "week_start": 6,
     "week_end": 8,
-    "name": "早孕检查",
-    "items": ["B超确认宫内妊娠", "血常规", "尿常规", "甲状腺功能"],
+    "name": "早孕检查（首次产检·建档）",
+    "items": [
+      { "name": "建档/建母子健康手册", "required": true },
+      { "name": "经阴道B超确认宫内妊娠", "required": true },
+      { "name": "血HCG+孕酮", "required": true },
+      { "name": "血常规(五分类)", "required": true },
+      { "name": "尿常规", "required": false },
+      { "name": "甲状腺功能(TSH/FT3/FT4/TPOAb)", "required": true },
+      { "name": "肝功能(全套)", "required": true },
+      { "name": "肾功能(肌酐/尿素氮/尿酸)", "required": true },
+      { "name": "空腹血糖(FPG)", "required": true },
+      { "name": "血型(ABO+Rh)", "required": true },
+      { "name": "乙肝五项+丙肝抗体", "required": true },
+      { "name": "梅毒筛查+HIV抗体", "required": true },
+      { "name": "心电图(ECG)", "required": false },
+      { "name": "基础血压体重测量", "required": true }
+    ],
     "is_mandatory": true,
-    "description": "确认宫内妊娠，检查胚胎发育情况，排除异位妊娠"
+    "description": "首次产检，确认宫内妊娠、核实孕周、排除异位妊娠、建立母子健康手册",
+    "preparation": ["经阴道B超无需憋尿（经腹部需憋尿）", "空腹抽血（肝肾功能/血糖/甲状腺功能等均需空腹）", "带好身份证、医保卡、结婚证等建档资料", "建议早上空腹前往，抽血后可进食"]
   },
   {
     "id": "cs_002",
-    "week_range": "8-10",
-    "week_start": 8,
-    "week_end": 10,
-    "name": "早孕期筛查",
-    "items": ["B超检查胎心胎芽", "血型及Rh因子", "肝肾功能", "乙肝五项", "梅毒筛查", "HIV筛查"],
-    "is_mandatory": true,
-    "description": "全面基础检查，了解孕妇身体状况，建立孕期档案"
-  },
-  {
-    "id": "cs_003",
-    "week_range": "11-13",
+    "week_range": "11-13+6周(孕3月)",
     "week_start": 11,
     "week_end": 13,
     "name": "NT检查（早期唐筛）",
-    "items": ["NTB超测量胎儿颈项透明层", "早期唐氏综合征筛查", "血常规", "尿常规"],
+    "items": [
+      { "name": "NT超声测量(颈项透明层厚度)", "required": true },
+      { "name": "早期唐氏筛查(血清学PAPP-A+游离β-HCG)", "required": true },
+      { "name": "血常规", "required": false },
+      { "name": "尿常规", "required": false },
+      { "name": "子痫前期联合筛查(可选)", "required": false }
+    ],
     "is_mandatory": true,
-    "description": "通过NT值和血液指标评估胎儿染色体异常风险"
+    "description": "通过NT值和血清学指标评估胎儿染色体异常风险。NT最佳时间窗11w+0~13w+6天，CRL 45~84mm",
+    "preparation": ["NT超声无需空腹无需憋尿", "早期唐筛血清学部分需空腹抽血", "⚠️ 必须在14周前完成，过期颈项透明层消失无法检测", "建议提前预约，NT有时间窗限制"]
   },
   {
-    "id": "cs_004",
-    "week_range": "15-20",
+    "id": "cs_003",
+    "week_range": "15-20周(孕4-5月)",
     "week_start": 15,
     "week_end": 20,
     "name": "中期唐筛/无创DNA",
-    "items": ["中期唐氏综合征筛查", "血常规", "尿常规", "血压体重", "宫高腹围"],
+    "items": [
+      { "name": "中期唐氏筛查(二联/三联)", "required": true },
+      { "name": "无创DNA(NIPT)(替代方案)", "required": false },
+      { "name": "无创DNA-PLUS(≥35岁首选)", "required": false },
+      { "name": "羊水穿刺(介入性产前诊断)", "required": false },
+      { "name": "血常规", "required": false },
+      { "name": "尿常规", "required": false },
+      { "name": "血压体重宫高腹围", "required": true }
+    ],
     "is_mandatory": true,
-    "description": "如早期唐筛高风险，可做无创DNA或羊水穿刺进一步确诊"
+    "description": "评估21三体、18三体、开放性神经管缺陷风险。≥35岁或唐筛高风险者选无创DNA或羊穿",
+    "preparation": ["中期唐筛需空腹", "无创DNA无需空腹", "携带身份证和医保卡", "高龄孕妇(≥35岁)建议直接选择无创DNA-PLUS或羊水穿刺", "唐筛和无创二选一即可"]
+  },
+  {
+    "id": "cs_004",
+    "week_range": "20-24周(孕5-6月)",
+    "week_start": 20,
+    "week_end": 24,
+    "name": "大排畸（系统超声）",
+    "items": [
+      { "name": "系统超声检查(大排畸)", "required": true },
+      { "name": "胎儿心脏彩超(如有指征)", "required": false },
+      { "name": "血常规", "required": false },
+      { "name": "尿常规", "required": false },
+      { "name": "血压体重宫高腹围", "required": true }
+    ],
+    "is_mandatory": true,
+    "description": "详细检查胎儿各器官结构发育，排查重大畸形。最佳时间22-26周",
+    "preparation": ["无需空腹", "无需憋尿（中晚期B超不需充盈膀胱）", "穿着宽松便于暴露腹部", "胎儿不配合时可能需要走动后再查", "⚠️ 建议提前预约，检查时间较长(30-60分钟)"]
   },
   {
     "id": "cs_005",
-    "week_range": "20-24",
-    "week_start": 20,
-    "week_end": 24,
-    "name": "大排畸（系统B超）",
-    "items": ["系统超声检查（大排畸）", "血常规", "尿常规", "血压体重"],
+    "week_range": "24-28周(孕6-7月)",
+    "week_start": 24,
+    "week_end": 28,
+    "name": "糖耐量筛查(OGTT)",
+    "items": [
+      { "name": "OGTT糖耐量试验(75g×3次抽血)", "required": true },
+      { "name": "血常规(排查贫血)", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "血压体重宫高腹围", "required": true }
+    ],
     "is_mandatory": true,
-    "description": "详细检查胎儿各器官发育情况，排查重大结构畸形"
+    "description": "口服葡萄糖耐量试验筛查妊娠期糖尿病，需空腹",
+    "preparation": ["⚠️ 前一天晚10点后禁食禁水", "⚠️ 空腹至少8-10小时（非常重要！）", "OGTT前3天保持正常饮食，不要刻意减少碳水", "当天带一杯温水（医院可能提供糖水）", "OGTT全程约3小时（空腹+1h+2h三次抽血）", "期间不能进食饮水，可少量活动", "可自带零食，结束后补充能量"]
   },
   {
     "id": "cs_006",
-    "week_range": "24-28",
-    "week_start": 24,
-    "week_end": 28,
-    "name": "妊娠期糖尿病筛查",
-    "items": ["OGTT糖耐量试验（75g）", "血常规", "尿常规", "血压体重", "宫高腹围"],
+    "week_range": "28-30周(孕7-8月)",
+    "week_start": 28,
+    "week_end": 30,
+    "name": "晚孕初期检查（小排畸）",
+    "items": [
+      { "name": "B超检查胎儿生长发育(小排畸)", "required": true },
+      { "name": "血常规(重点排查贫血)", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "血压体重宫高腹围", "required": true },
+      { "name": "胎位检查", "required": true },
+      { "name": "乙肝/HIV/梅毒复查", "required": true }
+    ],
     "is_mandatory": true,
-    "description": "口服葡萄糖耐量试验，筛查妊娠期糖尿病，需空腹"
+    "description": "进入孕晚期，开始每两周一次产检。关注胎儿生长发育、胎位及贫血情况",
+    "preparation": ["一般无需空腹", "⚠️ 从28周起每天自数胎动（早中晚各1小时）", "记录近期体重变化（每周增重不超过0.5kg为宜）", "如有水肿、头痛、视力模糊及时告知医生"]
   },
   {
     "id": "cs_007",
-    "week_range": "28-30",
-    "week_start": 28,
-    "week_end": 30,
-    "name": "晚孕初期检查",
-    "items": ["B超检查胎儿发育", "血常规", "尿常规", "血压体重", "宫高腹围", "胎位检查"],
-    "is_mandatory": true,
-    "description": "进入孕晚期，开始两周一次产检，关注胎儿发育和胎位"
-  },
-  {
-    "id": "cs_008",
-    "week_range": "30-32",
+    "week_range": "30-32周(孕8月)",
     "week_start": 30,
     "week_end": 32,
     "name": "晚孕常规检查",
-    "items": ["血常规", "尿常规", "血压体重", "宫高腹围", "胎心监护"],
+    "items": [
+      { "name": "血常规", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "血压体重宫高腹围", "required": true }
+    ],
     "is_mandatory": true,
-    "description": "定期监测孕妇血压、体重增长，关注胎儿发育情况"
+    "description": "定期监测孕妇血压、体重增长、胎心状况",
+    "preparation": ["胎心监护前适当进食（避免低血糖导致胎动减少）", "胎心监护约20-40分钟，可带点零食和水", "自备胎动计数记录给医生参考"]
   },
   {
-    "id": "cs_009",
-    "week_range": "32-34",
+    "id": "cs_008",
+    "week_range": "32-34周(孕8-9月)",
     "week_start": 32,
     "week_end": 34,
     "name": "晚孕复查",
-    "items": ["B超检查（胎儿大小、羊水、胎盘）", "血常规", "尿常规", "血压体重", "胎心监护"],
+    "items": [
+      { "name": "B超(胎儿大小/羊水量/胎盘成熟度/脐血流S/D比值)", "required": true },
+      { "name": "血常规", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "血压体重宫高腹围", "required": true },
+      { "name": "骨盆测量(外测量)", "required": false }
+    ],
     "is_mandatory": true,
-    "description": "评估胎儿生长情况、羊水量及胎盘成熟度"
+    "description": "评估胎儿生长曲线、羊水量、胎盘成熟度及脐血流情况",
+    "preparation": ["B超无需特殊准备", "胎心监护前适当进食活动", "关注是否有规律宫缩感或下坠感"]
+  },
+  {
+    "id": "cs_009",
+    "week_range": "34-36周(孕9月)",
+    "week_start": 34,
+    "week_end": 36,
+    "name": "分娩前准备检查",
+    "items": [
+      { "name": "GBS筛查(35-37周)(阴道拭子)", "required": true },
+      { "name": "血常规+凝血功能", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "血压体重宫高腹围", "required": true },
+      { "name": "胎心监护(NST)", "required": true },
+      { "name": "B超评估胎儿体重及入盆情况", "required": true },
+      { "name": "骨盆测量(内/外测量)", "required": true },
+      { "name": "心电图(ECG)", "required": true }
+    ],
+    "is_mandatory": true,
+    "description": "全面评估分娩条件，确定分娩方式意向，做好待产准备",
+    "preparation": ["心电图穿宽松衣物勿佩戴金属饰品", "GBS采样前避免阴道冲洗或用药", "与医生讨论分娩方式意向（顺产/剖宫产/无痛分娩）", "确认待产包清单是否齐全"]
   },
   {
     "id": "cs_010",
-    "week_range": "34-36",
-    "week_start": 34,
-    "week_end": 36,
-    "name": "B族链球菌筛查",
-    "items": ["GBS（B族链球菌）筛查", "血常规", "尿常规", "血压体重", "胎心监护"],
+    "week_range": "37周(孕10月·足月)",
+    "week_start": 37,
+    "week_end": 37,
+    "name": "足周初检",
+    "items": [
+      { "name": "血常规", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "血压体重宫高腹围", "required": true },
+      { "name": "胎心监护(NST)", "required": true },
+      { "name": "宫颈检查(Bishop评分)", "required": true },
+      { "name": "分娩征兆评估(见红/破水/规律宫缩)", "required": true }
+    ],
     "is_mandatory": true,
-    "description": "筛查B族链球菌感染，阳性者分娩时需预防性使用抗生素"
+    "description": "胎儿足月！从本周起每周产检直至分娩。随时可能临产",
+    "preparation": ["每周一次产检直至分娩", "密切关注破水、见红、规律宫缩(5-6分钟/次)等临产信号", "随身携带待产包、证件、医保卡", "每天认真数胎动（异常立即就医）"]
   },
   {
     "id": "cs_011",
-    "week_range": "36-37",
-    "week_start": 36,
-    "week_end": 37,
-    "name": "分娩前评估",
-    "items": ["B超评估胎儿体重", "骨盆测量", "血常规", "凝血功能", "心电图", "胎心监护"],
+    "week_range": "38周(孕10月)",
+    "week_start": 38,
+    "week_end": 38,
+    "name": "足周复检",
+    "items": [
+      { "name": "血常规", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "血压体重宫高腹围", "required": true },
+      { "name": "胎心监护(NST)", "required": true },
+      { "name": "宫颈评分(Bishop)", "required": true },
+      { "name": "B超(羊水/胎盘/脐带)(如需要)", "required": false }
+    ],
     "is_mandatory": true,
-    "description": "评估分娩方式，确定顺产或剖宫产，做好分娩准备"
+    "description": "继续每周产检，评估宫颈条件和临产征兆",
+    "preparation": ["继续每周产检", "超过预产期(40+1周)未发动需讨论催产方案", "确认入院路线和联系方式"]
   },
   {
     "id": "cs_012",
-    "week_range": "37-38",
-    "week_start": 37,
-    "week_end": 38,
-    "name": "足月检查",
-    "items": ["血常规", "尿常规", "血压体重", "胎心监护", "宫颈检查", "分娩征兆评估"],
+    "week_range": "39周(孕10月)",
+    "week_start": 39,
+    "week_end": 39,
+    "name": "预产期前检查",
+    "items": [
+      { "name": "血常规", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "血压体重宫高腹围", "required": true },
+      { "name": "胎心监护(NST)", "required": true },
+      { "name": "宫颈检查", "required": true },
+      { "name": "B超(羊水和胎盘评估)", "required": false }
+    ],
     "is_mandatory": true,
-    "description": "胎儿已足月，每周检查一次，关注分娩征兆"
+    "description": "接近预产期，密切观察临产信号",
+    "preparation": ["到达预产期附近！随时可能临产", "41周未分娩通常需住院引产", "每天认真数胎动（早中晚各1小时）", "确保所有入院物品已打包就绪"]
   },
   {
     "id": "cs_013",
-    "week_range": "38-39",
-    "week_start": 38,
-    "week_end": 39,
-    "name": "临产前检查",
-    "items": ["血常规", "尿常规", "血压体重", "胎心监护", "B超（如需要）", "宫颈评分"],
+    "week_range": "40周(预产期)",
+    "week_start": 40,
+    "week_end": 40,
+    "name": "预产期检查",
+    "items": [
+      { "name": "血常规", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "血压体重宫高腹围", "required": true },
+      { "name": "胎心监护(NST)", "required": true },
+      { "name": "宫颈评分(Bishop)", "required": true },
+      { "name": "B超(羊水量/胎盘钙化程度)", "required": true }
+    ],
     "is_mandatory": true,
-    "description": "密切关注临产征兆，评估宫颈条件，随时准备入院"
+    "description": "预产期当天！如未发动需评估是否需要催产",
+    "preparation": ["预产期到了！大多数宝宝会在前后两周内出生", "超过41周需住院处理", "保持良好心态，准备好迎接宝宝"]
   },
   {
     "id": "cs_014",
-    "week_range": "39-40",
-    "week_start": 39,
-    "week_end": 40,
-    "name": "预产期检查",
-    "items": ["血常规", "尿常规", "血压体重", "胎心监护", "宫颈检查", "羊水和胎盘评估"],
-    "is_mandatory": true,
-    "description": "到达预产期，如未发动需评估是否需要催产，超过41周需住院"
-  },
-  {
-    "id": "cs_015",
-    "week_range": "41",
+    "week_range": "41周(过期妊娠)",
     "week_start": 41,
     "week_end": 41,
     "name": "催产评估",
-    "items": ["胎心监护（NST）", "B超评估羊水量", "胎盘功能评估", "宫颈成熟度评分（Bishop评分）", "血压体重", "尿常规"],
+    "items": [
+      { "name": "胎心监护(NST)", "required": true },
+      { "name": "B超评估羊水量", "required": true },
+      { "name": "胎盘功能评估", "required": true },
+      { "name": "宫颈成熟度评分(Bishop评分)", "required": true },
+      { "name": "血压体重", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "凝血功能复查", "required": false }
+    ],
     "is_mandatory": true,
-    "description": "超过预产期1周，住院评估胎儿状况与宫颈条件，依据结果决定催产方式（缩宫素或人工破膜）"
+    "description": "超过预产期1周，住院评估胎儿状况与宫颈条件，决定催产方式",
+    "preparation": ["通常需住院观察", "了解缩宫素静滴和人工破膜的过程", "做好心理准备，过期妊娠风险略增"]
   },
   {
-    "id": "cs_016",
-    "week_range": "42",
+    "id": "cs_015",
+    "week_range": "42周(过期妊娠)",
     "week_start": 42,
     "week_end": 42,
     "name": "过期妊娠处理",
-    "items": ["持续胎心监护", "B超监测羊水量与胎盘钙化", "OCT催产素激惹试验", "血压体重", "尿常规", "凝血功能与肝肾功能复查"],
+    "items": [
+      { "name": "持续电子胎心监护", "required": true },
+      { "name": "B超(羊水量与胎盘钙化)", "required": true },
+      { "name": "OCT催产素激惹试验", "required": true },
+      { "name": "血压体重", "required": true },
+      { "name": "尿常规", "required": true },
+      { "name": "凝血功能与肝肾功能复查", "required": true }
+    ],
     "is_mandatory": true,
-    "description": "已达过期妊娠（≥42周），需住院严密监护，积极催产或剖宫产终止妊娠，避免胎盘功能下降与胎儿窘迫"
+    "description": "已达过期妊娠（≥42周），需严密监护，积极催产或剖宫产终止妊娠",
+    "preparation": ["必须住院处理", "持续电子胎心监护", "胎盘功能下降风险高，密切观察胎动", "做好剖宫产准备"]
   }
 ]

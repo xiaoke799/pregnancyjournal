@@ -53,22 +53,15 @@
             <span v-else-if="item._type === 'custom' && item.week_start" class="week-badge">孕{{ item.week_start }}周</span>
             <span v-else class="week-badge">自定义</span>
             <span class="checkup-name">{{ item.name }}</span>
-            <!-- 预计检查日期 + 倒计时 -->
-            <span v-if="item.expected_date" class="expected-date-tag" :class="{ 'is-urgent': daysUntilExpected(item.expected_date) <= 7 && daysUntilExpected(item.expected_date) >= 0 }">
-              预计 {{ dayjs(item.expected_date).format('MM-DD') }}
-              <template v-if="daysUntilExpected(item.expected_date) === 0"> · 📍今天</template>
-              <template v-else-if="daysUntilExpected(item.expected_date) === 1"> · ⏰明天</template>
-              <template v-else-if="daysUntilExpected(item.expected_date) > 1 && daysUntilExpected(item.expected_date) <= 7"> · 还有{{ daysUntilExpected(item.expected_date) }}天</template>
-              <template v-else-if="daysUntilExpected(item.expected_date) > 7"> · 还有{{ daysUntilExpected(item.expected_date) }}天</template>
-              <template v-else-if="daysUntilExpected(item.expected_date) < 0"> · 已过{{ Math.abs(daysUntilExpected(item.expected_date)) }}天</template>
-            </span>
-            <n-tag v-if="item._type === 'standard' && item.is_recommended !== false" size="tiny" type="warning" :bordered="false">⭐ 推荐</n-tag>
+            <!-- ⚠️「预计日期」只在 .card-right 保留一处（紧挨着完成日期输入框）。
+                 这里原来还有一个重复的，移动端会多占一整行，已按用户要求去掉。 -->
+            <n-tag v-if="item._type === 'standard' && item.is_recommended !== false" size="tiny" type="warning" :bordered="false">推荐</n-tag>
             <n-tag v-if="item._type === 'custom'" size="tiny" type="info" :bordered="false">自定义</n-tag>
           </div>
           <div class="card-right">
-            <!-- 预计日期倒计时（只读） -->
+            <!-- 预计日期 + 倒计时（只读），紧挨着完成日期输入框 -->
             <span v-if="item.expected_date" class="expected-date-tag" :class="{ 'is-urgent': daysUntilExpected(item.expected_date) <= 7 && daysUntilExpected(item.expected_date) >= 0 }">
-              {{ dayjs(item.expected_date).format('MM/DD') }}
+              预计 {{ dayjs(item.expected_date).format('MM/DD') }}
               <template v-if="daysUntilExpected(item.expected_date) === 0"> · 今天</template>
               <template v-else-if="daysUntilExpected(item.expected_date) > 0"> · 还有{{ daysUntilExpected(item.expected_date) }}天</template>
               <template v-else-if="daysUntilExpected(item.expected_date) < 0"> · 已过{{ Math.abs(daysUntilExpected(item.expected_date)) }}天</template>
@@ -77,7 +70,7 @@
             <input
               type="date"
               class="date-input-small"
-              :value="scheduleDates[item.id] || ''"
+              :value="scheduleDates[item.id] || completionDateOf(item)"
               :placeholder="'完成日期'"
               @change="(e) => onDateChange(item, (e.target as HTMLInputElement).value)"
               @click.stop
@@ -189,7 +182,7 @@
               <input type="file" accept="image/*,.pdf" style="display:none" @change="(e) => handleReportUpload(e, item)" />
               <span>本地上传</span>
             </label>
-            <span class="upload-link nas-upload" @click.stop="openNasBrowser(item)">🖥 NAS选择</span>
+            <span class="upload-link nas-upload" @click.stop="openNasBrowser(item)">NAS选择</span>
             <span class="current-cat-hint">当前: {{ getCurrentCatLabel(item) }}</span>
           </div>
           <div class="report-grid" v-if="filteredReports(item).length">
@@ -213,11 +206,23 @@
             size="small"
             type="primary"
             ghost
+            :loading="!!pendingComplete[item._key]"
+            :disabled="!!pendingComplete[item._key]"
             @click="markComplete(item)"
           >
             标记完成
           </n-button>
-          <span v-else class="completed-text">已完成</span>
+          <template v-else>
+            <span class="completed-text">已完成</span>
+            <!-- 误按「标记完成」的兜底：可撤销。只回退本应用自己产生的那条完成记录，用户手填的数据不动。 -->
+            <n-button
+              size="tiny"
+              quaternary
+              :loading="!!pendingComplete[item._key]"
+              :disabled="!!pendingComplete[item._key]"
+              @click="cancelComplete(item)"
+            >取消完成</n-button>
+          </template>
         </div>
       </div>
     </div>
@@ -304,7 +309,7 @@
     <n-modal v-model:show="showNasBrowser" preset="card" title="从NAS选择文件" style="max-width: 600px; height: 70vh">
       <div class="nas-browser">
         <div class="nas-breadcrumb">
-          <n-button size="tiny" quaternary @click="nasGoUp" :disabled="!nasParent">⬆ 上层</n-button>
+          <n-button size="tiny" quaternary @click="nasGoUp" :disabled="!nasParent">上层</n-button>
           <span class="nas-current-path">{{ nasCurrentPath }}</span>
         </div>
         <div v-if="nasLoading" class="nas-loading">加载中...</div>
@@ -334,8 +339,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { NTag, NButton, NModal, NForm, NFormItem, NInput, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
+import { markCheckupCompleted, unmarkCheckupCompleted, getCheckupSchedule } from '@/api/checkup-schedule'
 import AppIcon from '@/components/common/AppIcon.vue'
-import { markCheckupCompleted } from '@/api/checkup-schedule'
 import { checkupApi } from '@/api/checkup'
 import dayjs from 'dayjs'
 
@@ -346,225 +351,7 @@ const message = useMessage()
 // 检查子项结构：{ name: 名称, required: true(必检) | false(推荐) }
 interface CheckupSubItem { name: string; required: boolean }
 
-const DEFAULT_SCHEDULE = [
-  {
-    id: "cs_001", week_range: "5-8周(孕2月)", week_start: 5, week_end: 8,
-    name: "早孕检查（首次产检·建档）",
-    items: [
-      { name: "建档/建母子健康手册", required: true },
-      { name: "经阴道B超确认宫内妊娠", required: true },
-      { name: "血HCG+孕酮", required: true },
-      { name: "血常规(五分类)", required: true },
-      { name: "尿常规", required: false },
-      { name: "甲状腺功能(TSH/FT3/FT4/TPOAb)", required: true },
-      { name: "肝功能(全套)", required: true },
-      { name: "肾功能(肌酐/尿素氮/尿酸)", required: true },
-      { name: "空腹血糖(FPG)", required: true },
-      { name: "血型(ABO+Rh)", required: true },
-      { name: "乙肝五项+丙肝抗体", required: true },
-      { name: "梅毒筛查+HIV抗体", required: true },
-      { name: "心电图(ECG)", required: false },
-      { name: "基础血压体重测量", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "首次产检，确认宫内妊娠、核实孕周、排除异位妊娠、建立母子健康手册",
-    preparation: ["经阴道B超无需憋尿（经腹部需憋尿）", "空腹抽血（肝肾功能/血糖/甲状腺功能等均需空腹）", "带好身份证、医保卡、结婚证等建档资料", "建议早上空腹前往，抽血后可进食"]
-  },
-  {
-    id: "cs_002", week_range: "11-13+6周(孕3月)", week_start: 11, week_end: 13,
-    name: "NT检查（早期唐筛）",
-    items: [
-      { name: "NT超声测量(颈项透明层厚度)", required: true },
-      { name: "早期唐氏筛查(血清学PAPP-A+游离β-HCG)", required: true },
-      { name: "血常规", required: false },
-      { name: "尿常规", required: false },
-      { name: "子痫前期联合筛查(可选)", required: false },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "通过NT值和血清学指标评估胎儿染色体异常风险。NT最佳时间窗11w+0~13w+6天，CRL 45~84mm",
-    preparation: ["NT超声无需空腹无需憋尿", "早期唐筛血清学部分需空腹抽血", "⚠️ 必须在14周前完成，过期颈项透明层消失无法检测", "建议提前预约，NT有时间窗限制"]
-  },
-  {
-    id: "cs_003", week_range: "15-20周(孕4-5月)", week_start: 15, week_end: 20,
-    name: "中期唐筛/无创DNA",
-    items: [
-      { name: "中期唐氏筛查(二联/三联)", required: true },
-      { name: "无创DNA(NIPT)(替代方案)", required: false },
-      { name: "无创DNA-PLUS(≥35岁首选)", required: false },
-      { name: "羊水穿刺(介入性产前诊断)", required: false },
-      { name: "血常规", required: false },
-      { name: "尿常规", required: false },
-      { name: "血压体重宫高腹围", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "评估21三体、18三体、开放性神经管缺陷风险。≥35岁或唐筛高风险者选无创DNA或羊穿",
-    preparation: ["中期唐筛需空腹", "无创DNA无需空腹", "携带身份证和医保卡", "高龄孕妇(≥35岁)建议直接选择无创DNA-PLUS或羊水穿刺", "唐筛和无创二选一即可"]
-  },
-  {
-    id: "cs_004", week_range: "20-24周(孕5-6月)", week_start: 20, week_end: 24,
-    name: "大排畸（系统超声）",
-    items: [
-      { name: "系统超声检查(大排畸)", required: true },
-      { name: "胎儿心脏彩超(如有指征)", required: false },
-      { name: "血常规", required: false },
-      { name: "尿常规", required: false },
-      { name: "血压体重宫高腹围", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "详细检查胎儿各器官结构发育，排查重大畸形。最佳时间22-26周",
-    preparation: ["无需空腹", "无需憋尿（中晚期B超不需充盈膀胱）", "穿着宽松便于暴露腹部", "胎儿不配合时可能需要走动后再查", "⚠️ 建议提前预约，检查时间较长(30-60分钟)"]
-  },
-  {
-    id: "cs_005", week_range: "24-28周(孕6-7月)", week_start: 24, week_end: 28,
-    name: "糖耐量筛查(OGTT)",
-    items: [
-      { name: "OGTT糖耐量试验(75g×3次抽血)", required: true },
-      { name: "GBS(B族链球菌)筛查(新指南推荐提前至24-28周)", required: true },
-      { name: "血常规(排查贫血)", required: true },
-      { name: "尿常规", required: true },
-      { name: "血压体重宫高腹围", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "口服葡萄糖耐量试验筛查妊娠期糖尿病；GBS筛查阳性分娩时需预防性使用抗生素",
-    preparation: ["⚠️ 前一天晚10点后禁食禁水", "⚠️ 空腹至少8-10小时（非常重要！）", "OGTT前3天保持正常饮食，不要刻意减少碳水", "当天带一杯温水（医院可能提供糖水）", "OGTT全程约3小时（空腹+1h+2h三次抽血）", "期间不能进食饮水，可少量活动", "可自带零食，结束后补充能量"]
-  },
-  {
-    id: "cs_006", week_range: "28-30周(孕7-8月)", week_start: 28, week_end: 30,
-    name: "晚孕初期检查（小排畸）",
-    items: [
-      { name: "B超检查胎儿生长发育(小排畸)", required: true },
-      { name: "血常规(重点排查贫血)", required: true },
-      { name: "尿常规", required: true },
-      { name: "血压体重宫高腹围", required: true },
-      { name: "胎位检查", required: true },
-      { name: "乙肝/HIV/梅毒复查", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "进入孕晚期，开始每两周一次产检。关注胎儿生长发育、胎位及贫血情况",
-    preparation: ["一般无需空腹", "⚠️ 从28周起每天自数胎动（早中晚各1小时）", "记录近期体重变化（每周增重不超过0.5kg为宜）", "如有水肿、头痛、视力模糊及时告知医生"]
-  },
-  {
-    id: "cs_007", week_range: "30-32周(孕8月)", week_start: 30, week_end: 32,
-    name: "晚孕常规检查",
-    items: [
-      { name: "血常规", required: true },
-      { name: "尿常规", required: true },
-      { name: "血压体重宫高腹围", required: true },
-      { name: "胎心监护(NST,20分钟)", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "定期监测孕妇血压、体重增长、胎心状况",
-    preparation: ["胎心监护前适当进食（避免低血糖导致胎动减少）", "胎心监护约20-40分钟，可带点零食和水", "自备胎动计数记录给医生参考"]
-  },
-  {
-    id: "cs_008", week_range: "32-34周(孕8-9月)", week_start: 32, week_end: 34,
-    name: "晚孕复查",
-    items: [
-      { name: "B超(胎儿大小/羊水量/胎盘成熟度/脐血流S/D比值)", required: true },
-      { name: "血常规", required: true },
-      { name: "尿常规", required: true },
-      { name: "血压体重宫高腹围", required: true },
-      { name: "胎心监护(NST)", required: true },
-      { name: "骨盆测量(外测量)", required: false },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "评估胎儿生长曲线、羊水量、胎盘成熟度及脐血流情况",
-    preparation: ["B超无需特殊准备", "胎心监护前适当进食活动", "关注是否有规律宫缩感或下坠感"]
-  },
-  {
-    id: "cs_009", week_range: "34-36周(孕9月)", week_start: 34, week_end: 36,
-    name: "分娩前准备检查",
-    items: [
-      { name: "GBS筛查(如24-28周未做则补做)(阴道拭子)", required: true },
-      { name: "血常规+凝血功能", required: true },
-      { name: "尿常规", required: true },
-      { name: "血压体重宫高腹围", required: true },
-      { name: "胎心监护(NST)", required: true },
-      { name: "B超评估胎儿体重及入盆情况", required: true },
-      { name: "骨盆测量(内/外测量)", required: true },
-      { name: "心电图(ECG)", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "全面评估分娩条件，确定分娩方式意向，做好待产准备",
-    preparation: ["心电图穿宽松衣物勿佩戴金属饰品", "GBS采样前避免阴道冲洗或用药", "与医生讨论分娩方式意向（顺产/剖宫产/无痛分娩）", "确认待产包清单是否齐全"]
-  },
-  {
-    id: "cs_010", week_range: "37周(孕10月·足月)", week_start: 37, week_end: 37,
-    name: "足周初检",
-    items: [
-      { name: "血常规", required: true },
-      { name: "尿常规", required: true },
-      { name: "血压体重宫高腹围", required: true },
-      { name: "胎心监护(NST)", required: true },
-      { name: "宫颈检查(Bishop评分)", required: true },
-      { name: "分娩征兆评估(见红/破水/规律宫缩)", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "胎儿足月！从本周起每周产检直至分娩。随时可能临产",
-    preparation: ["每周一次产检直至分娩", "密切关注破水、见红、规律宫缩(5-6分钟/次)等临产信号", "随身携带待产包、证件、医保卡", "每天认真数胎动（异常立即就医）"]
-  },
-  {
-    id: "cs_011", week_range: "38周(孕10月)", week_start: 38, week_end: 38,
-    name: "足周复检",
-    items: [
-      { name: "血常规", required: true },
-      { name: "尿常规", required: true },
-      { name: "血压体重宫高腹围", required: true },
-      { name: "胎心监护(NST)", required: true },
-      { name: "宫颈评分(Bishop)", required: true },
-      { name: "B超(羊水/胎盘/脐带)(如需要)", required: false },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "继续每周产检，评估宫颈条件和临产征兆",
-    preparation: ["继续每周产检", "超过预产期(40+1周)未发动需讨论催产方案", "确认入院路线和联系方式"]
-  },
-  {
-    id: "cs_012", week_range: "39周(孕10月)", week_start: 39, week_end: 39,
-    name: "预产期前检查",
-    items: [
-      { name: "血常规", required: true },
-      { name: "尿常规", required: true },
-      { name: "血压体重宫高腹围", required: true },
-      { name: "胎心监护(NST)", required: true },
-      { name: "宫颈检查", required: true },
-      { name: "B超(羊水和胎盘评估)", required: false },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "接近预产期，密切观察临产信号",
-    preparation: ["到达预产期附近！随时可能临产", "41周未分娩通常需住院引产", "每天认真数胎动（早中晚各1小时）", "确保所有入院物品已打包就绪"]
-  },
-  {
-    id: "cs_013", week_range: "40周(预产期)", week_start: 40, week_end: 40,
-    name: "预产期检查",
-    items: [
-      { name: "血常规", required: true },
-      { name: "尿常规", required: true },
-      { name: "血压体重宫高腹围", required: true },
-      { name: "胎心监护(NST)", required: true },
-      { name: "宫颈评分(Bishop)", required: true },
-      { name: "B超(羊水量/胎盘钙化程度)", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "预产期当天！如未发动需评估是否需要催产",
-    preparation: ["预产期到了！大多数宝宝会在前后两周内出生", "超过41周需住院处理", "保持良好心态，准备好迎接宝宝"]
-  },
-  {
-    id: "cs_014", week_range: "41周(过期妊娠)", week_start: 41, week_end: 41,
-    name: "催产评估",
-    items: [
-      { name: "胎心监护(NST)", required: true },
-      { name: "B超评估羊水量", required: true },
-      { name: "胎盘功能评估", required: true },
-      { name: "宫颈成熟度评分(Bishop评分)", required: true },
-      { name: "血压体重", required: true },
-      { name: "尿常规", required: true },
-      { name: "凝血功能复查", required: false },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "超过预产期1周，住院评估胎儿状况与宫颈条件，决定催产方式",
-    preparation: ["通常需住院观察", "了解缩宫素静滴和人工破膜的过程", "做好心理准备，过期妊娠风险略增"]
-  },
-  {
-    id: "cs_015", week_range: "42周(过期妊娠)", week_start: 42, week_end: 42,
-    name: "过期妊娠处理",
-    items: [
-      { name: "持续电子胎心监护", required: true },
-      { name: "B超(羊水量与胎盘钙化)", required: true },
-      { name: "OCT催产素激惹试验", required: true },
-      { name: "血压体重", required: true },
-      { name: "尿常规", required: true },
-      { name: "凝血功能与肝肾功能复查", required: true },
-    ] as CheckupSubItem[],
-    is_mandatory: true, description: "已达过期妊娠（≥42周），需严密监护，积极催产或剖宫产终止妊娠",
-    preparation: ["必须住院处理", "持续电子胎心监护", "胎盘功能下降风险高，密切观察胎动", "做好剖宫产准备"]
-  },
-]
+// 产检时间表已改为唯一数据源：后端 checkup_schedule.json（经 /checkup-schedule 接口下发），页面不再内嵌。
 
 interface MergedItem {
   _key: string
@@ -583,6 +370,7 @@ interface MergedItem {
   is_recommended?: boolean
   preparation?: string[]
   expected_date?: string  // 预计检查日期（基于LMP推算）
+  completed_at?: string | null  // 实际完成日期（后端从"标记完成"的产检记录推导，纯读取）
 }
 
 interface ReportItem {
@@ -594,10 +382,15 @@ interface ReportItem {
 interface NasEntry { name: string; path: string; type: 'dir' | 'file'; size: number; mtime: number }
 
 // ========== 状态 ==========
-const schedule = ref<any[]>([...DEFAULT_SCHEDULE])  // 初始化就有数据！
+const schedule = ref<any[]>([])  // 数据来自后端 /checkup-schedule（唯一数据源：checkup_schedule.json）
 const customCheckups = ref<any[]>([])
 const reportMap = ref<Record<string, ReportItem[]>>({})
 const loading = ref(false)
+
+// 数据版本号（非响应式）：任何「用户操作造成的本地乐观改动」或「新一轮 loadAll」都会把它 +1。
+// loadAll 在把网络结果写回 schedule / customCheckups / scheduleDates 之前，先核对序号：
+// 若期间已被更新的操作/刷新取代，就丢弃本次结果 —— 避免「过期的后台刷新把刚变绿/刚取消的状态覆盖回去」。
+let dataSeq = 0
 const currentEl = ref<HTMLElement | null>(null)
 const showAddDialog = ref(false)
 const customForm = ref({ name: '', items: [] as string[], checkup_date: '', notes: '' })
@@ -722,6 +515,8 @@ const filteredPresetCategories = computed(() => {
 })
 
 const scheduleDates = ref<Record<string, string>>({})
+/** 每张卡片「标记完成 / 取消完成」的在途标志：置位时按钮转圈并禁用，避免手机端连点重复请求。 */
+const pendingComplete = ref<Record<string, boolean>>({})
 const collapsedItems = ref<Record<string, boolean>>({})
 const prepCollapsed = ref<Record<string, boolean>>({})
 const subItemsCollapsed = ref<Record<string, boolean>>({})
@@ -745,6 +540,47 @@ const nasTargetSubItem = ref<string | null>(null)
 // ========== 计算属性 ==========
 const currentWeek = computed(() => pregnancyStore.gestationalAge?.weeks ?? 0)
 
+/** 实际完成日期（YYYY-MM-DD）：优先用户手填的「完成日期」，其次后端从"标记完成"记录推导的日期。
+ *  纯读取，不写入任何数据 —— 老用户没手填过也能拿到真实完成时间。
+ *  manualDates 仅用于测试注入，默认读组件内的 scheduleDates。 */
+function completionDateOf(item: MergedItem, manualDates?: Record<string, string>): string {
+  if (!item.is_completed) return ''
+  const map = manualDates || scheduleDates.value
+  const manual = item.id ? (map[item.id] || '') : ''
+  if (manual) return manual
+  return item._type === 'standard' ? (item.completed_at || '') : ''
+}
+
+/** 排序用日期：已完成的用【实际完成日期】，未完成的用【计划日期】
+ *  （标准 = LMP 推算的预计日期；自定义 = 约定的检查日期）。 */
+function sortDateOf(item: MergedItem, manualDates?: Record<string, string>): string {
+  const done = completionDateOf(item, manualDates)
+  if (done) return done
+  return item._type === 'standard' ? (item.expected_date || '') : (item.checkup_date || '')
+}
+
+/** 产检列表排序比较器：以「真实日期」为准 —— 已完成按实际完成日期、未完成按计划日期。
+ *  传 hasLmp 才启用日期排序：没设置孕期时标准条目推不出计划日期，此时保持原有的孕周顺序。
+ *  为什么不再用 week_start（计划孕周）当主键：那是"整周取整"，会让 5月1日 的条目
+ *  挤到 4月10日 与 4月28日 之间（周号相邻/相同），顺序和真实时间对不上。
+ *  manualDates 仅用于测试注入。 */
+function compareCheckupItems(a: MergedItem, b: MergedItem, hasLmp: boolean, manualDates?: Record<string, string>): number {
+  if (hasLmp) {
+    const da = sortDateOf(a, manualDates)
+    const db = sortDateOf(b, manualDates)
+    const hasA = da !== ''
+    const hasB = db !== ''
+    if (hasA !== hasB) return hasA ? -1 : 1          // 有日期的在前，推不出日期的沉底
+    if (hasA && da !== db) return da < db ? -1 : 1   // YYYY-MM-DD 可直接按字典序比
+  }
+  // 同日期（或未设置孕期、拿不到计划日期）时的稳定次序，保持原有相对顺序
+  const aWeek = a.week_start ?? 999
+  const bWeek = b.week_start ?? 999
+  if (aWeek !== bWeek) return aWeek - bWeek
+  if (a._type !== b._type) return a._type === 'standard' ? -1 : 1
+  return (a.checkup_date || '').localeCompare(b.checkup_date || '')
+}
+
 const mergedList = computed<MergedItem[]>(() => {
   const lmp = pregnancyStore.currentPregnancy?.last_period_date
   function dateToWeek(dateStr?: string | null): number | undefined {
@@ -765,6 +601,7 @@ const mergedList = computed<MergedItem[]>(() => {
       is_completed: s.is_completed, is_recommended: s.is_recommended ?? true,
       preparation: s.preparation,
       expected_date: expectedDate,
+      completed_at: s.completed_at ?? null,
     }
   })
   const custom: MergedItem[] = customCheckups.value.map(c => {
@@ -780,13 +617,7 @@ const mergedList = computed<MergedItem[]>(() => {
   })
   const all = [...standard, ...custom]
   console.log('[mergedList] standard=', standard.length, 'custom=', custom.length, 'total=', all.length)
-  all.sort((a, b) => {
-    const aWeek = a.week_start ?? 999
-    const bWeek = b.week_start ?? 999
-    if (aWeek !== bWeek) return aWeek - bWeek
-    if (a._type !== b._type) return a._type === 'standard' ? -1 : 1
-    return (a.checkup_date || '').localeCompare(b.checkup_date || '')
-  })
+  all.sort((a, b) => compareCheckupItems(a, b, !!lmp))
   return all
 })
 
@@ -814,10 +645,19 @@ const nextCheckup = computed(() => {
   return mergedList.value.find(s => !s.is_completed) || null
 })
 
+/** 摘要卡片的底色跟着孕期阶段走，但只取全局的「浅色底」token（--bg-tint-*）。
+ *  原来用的是 --stage-*-bg（橙 #fff5e8 / 蓝 #e8f5fc / 粉 #fde7ed），
+ *  三块饱和底色随孕期整块变，是全页最扎眼、也最"换一页换一个色"的一处；
+ *  而且 --stage-*-bg 没有深色适配。现在色相只作很弱的提示，
+ *  主体仍是中性卡 + 品牌粉进度条。（深色模式若接上，--bg-tint-* 会自动跟随） */
 const summaryStyle = computed(() => {
   const stage = pregnancyStore.gestationalAge?.trimester || 'early'
-  const bgMap: Record<string, string> = { early: 'var(--stage-early-bg)', mid: 'var(--stage-mid-bg)', late: 'var(--stage-late-bg)' }
-  return { background: bgMap[stage] || bgMap.early }
+  const tintMap: Record<string, string> = {
+    early: 'var(--bg-tint-cream)',
+    mid: 'var(--bg-tint-blue)',
+    late: 'var(--bg-tint-pink)',
+  }
+  return { background: tintMap[stage] || tintMap.early }
 })
 
 // ========== 工具函数 ==========
@@ -893,7 +733,13 @@ function isSubItemRequired(item: MergedItem, subItem: string | CheckupSubItem): 
 }
 function getSubItemReports(item: MergedItem, subItem: string): ReportItem[] { return getItemReports(item).filter(r => r.sub_item === subItem) }
 function getSubItemReportCount(item: MergedItem, subItem: string): number { return getSubItemReports(item, subItem).length }
-function getUncategorizedReports(item: MergedItem): ReportItem[] { return getItemReports(item).filter(r => !r.sub_item) }
+// 「其他报告」兜底：凡是没有 sub_item、或 sub_item 未匹配上本条目【当前任何子项名】的报告，都收进来。
+// 目的：排期按国标校正时删/改过子项名（cs_005 删 GBS、cs_007/cs_008 删 NST、cs_009 GBS 改名），
+// 老报告若只按旧名匹配会既不在子项行、也不在兜底行，界面上彻底失去入口。这里保证它一定可见、可点开、可删。
+function getUncategorizedReports(item: MergedItem): ReportItem[] {
+  const currentNames = new Set((item.items || []).map((si: any) => subItemName(item, si)))
+  return getItemReports(item).filter(r => !r.sub_item || !currentNames.has(r.sub_item))
+}
 
 // ========== 操作函数 ==========
 async function handleSubItemUpload(e: Event, item: MergedItem, subItem: string) {
@@ -920,22 +766,112 @@ function scrollToCurrent() { if (currentEl.value) currentEl.value.scrollIntoView
 
 async function markComplete(item: MergedItem) {
   if (!pregnancyStore.currentPregnancy) { message.warning('请先设置孕期信息'); return }
+  if (pendingComplete.value[item._key]) return   // 在途，忽略连点
+  const pid = pregnancyStore.currentPregnancy.id
+
+  // ① 先做本地「乐观更新」：卡片立刻变绿，不等网络。
+  //    ⚠️ 原实现把状态更新写在 await 之后 —— 手机端一次请求 1~3 秒，点完界面毫无变化、
+  //    按钮也不 loading，用户以为没点上就去点下一条；等第一条响应回来才变绿 ⇒
+  //    「点下一条，上一条才显示完成」。改动日期 2026-09-26（复现脚本 repro_checkup_complete.js）。
+  const prevCompleted = item.is_completed
+  const prevDate = scheduleDates.value[item.id]
+  const todayStr = dayjs().format('YYYY-MM-DD')
+  if (item._type === 'custom') {
+    const c = customCheckups.value.find(c => c.id === item.id); if (c) c.is_completed = 1
+  } else {
+    const s = schedule.value.find(s => s.id === item.id); if (s) s.is_completed = true
+  }
+  // 完成日期：只在用户【还没填过】时垫上，绝不覆盖手填值（保证原有数据不被改动）。
+  // 垫上后列表立刻按真实完成时间重排。
+  if (!prevDate) scheduleDates.value[item.id] = todayStr
+
+  dataSeq++   // 本轮乐观改动作数：让任何在途的旧 loadAll 结果作废
+  pendingComplete.value[item._key] = true
   try {
     if (item._type === 'custom') {
       await checkupApi.markCustomComplete(item.id)
-      // 立即更新自定义产检的响应式状态
-      const c = customCheckups.value.find(c => c.id === item.id)
-      if (c) c.is_completed = 1
     } else {
-      await markCheckupCompleted(item.id, pregnancyStore.currentPregnancy.id)
-      // 立即更新标准产检的响应式状态
-      const s = schedule.value.find(s => s.id === item.id)
-      if (s) s.is_completed = true
+      await markCheckupCompleted(item.id, pid)
+    }
+    // 完成日期落库（既有接口、幂等）；写库失败也不影响"已完成"状态，排序会自动退回计划日期。
+    if (!prevDate) {
+      try { await checkupApi.setScheduleDate(pid, item.id, todayStr) } catch { /* 忽略：不影响完成状态 */ }
     }
     message.success('已标记完成')
     // 后台同步后端状态（不阻塞 UI 更新）
     loadAll().catch(() => {})
-  } catch (e: any) { message.error(e.message || '操作失败，请重试') }
+  } catch (e: any) {
+    // ② 失败必须回滚本地乐观状态，界面绝不停在"假已完成"
+    if (item._type === 'custom') {
+      const c = customCheckups.value.find(c => c.id === item.id); if (c) c.is_completed = prevCompleted ? 1 : 0
+    } else {
+      const s = schedule.value.find(s => s.id === item.id); if (s) s.is_completed = !!prevCompleted
+    }
+    if (!prevDate) delete scheduleDates.value[item.id]
+    message.error(e?.message || '操作失败，请重试')
+  } finally {
+    delete pendingComplete.value[item._key]
+  }
+}
+
+/** 取消完成 —— 给「标记完成」误按兜底。
+ *  只回退【本应用「标记完成」自己产生的那条完成记录】；用户手填的「完成日期」后端不会删，
+ *  这里也就不动本地 scheduleDates（只有后端明确回报 date_cleared 时才删）。 */
+async function cancelComplete(item: MergedItem) {
+  if (!pregnancyStore.currentPregnancy) { message.warning('请先设置孕期信息'); return }
+  if (pendingComplete.value[item._key]) return
+  const pid = pregnancyStore.currentPregnancy.id
+
+  // 本地快照，用于「后端说不是本页标记的」或请求失败时回滚
+  const prevCompleted = item.is_completed
+  const prevCompletedAt: any = item._type === 'standard' ? (item.completed_at ?? null) : null
+  const prevDate = scheduleDates.value[item.id]
+
+  const applyLocal = (done: boolean) => {
+    if (item._type === 'custom') {
+      const c = customCheckups.value.find(c => c.id === item.id); if (c) c.is_completed = done ? 1 : 0
+    } else {
+      const s: any = schedule.value.find(s => s.id === item.id)
+      if (s) { s.is_completed = done; if (!done) s.completed_at = null }
+    }
+  }
+  const restoreCompletedAt = () => {
+    const s: any = schedule.value.find(s => s.id === item.id)
+    if (s && prevCompletedAt) s.completed_at = prevCompletedAt
+  }
+
+  // 乐观更新：先本地取消，避免手机端等网络（与 markComplete 同理）
+  applyLocal(false)
+  dataSeq++   // 本轮乐观改动作数：让任何在途的旧 loadAll 结果作废
+  pendingComplete.value[item._key] = true
+  try {
+    if (item._type === 'custom') {
+      await checkupApi.unmarkCustomComplete(item.id)
+    } else {
+      const res: any = await unmarkCheckupCompleted(item.id, pid)
+      // 没有找到"标记完成"写下的那条记录 ⇒ 这条完成状态来自别处（如用户自己添加的产检记录），
+      // 不在本页悄悄改用户数据：回滚本地状态并如实告知。
+      if (res && res.data && res.data.changed === 0) {
+        applyLocal(!!prevCompleted)
+        restoreCompletedAt()
+        message.warning('这条完成记录不是在本页标记的，无法在这里取消')
+        return
+      }
+      // 只有后端明确回报清掉了自动写入的日期，才删本地日期缓存；用户手填的日期保留
+      const cleared = res && res.data ? res.data.date_cleared : null
+      if (cleared) delete scheduleDates.value[item.id]
+    }
+    message.success('已取消完成')
+    loadAll().catch(() => {})
+  } catch (e: any) {
+    applyLocal(!!prevCompleted)
+    restoreCompletedAt()
+    if (prevDate) scheduleDates.value[item.id] = prevDate
+    else delete scheduleDates.value[item.id]
+    message.error(e?.message || '操作失败，请重试')
+  } finally {
+    delete pendingComplete.value[item._key]
+  }
 }
 
 function togglePresetItem(item: string) {
@@ -1021,53 +957,54 @@ async function nasSelectFile(entry: NasEntry) {
   } catch (e: any) { message.error('添加失败：' + (e?.message || '未知原因')) }
 }
 
-async function loadScheduleDates() {
+async function loadScheduleDates(seqGuard?: number) {
   if (!pregnancyStore.currentPregnancy) return
   try {
     const res: any = await checkupApi.getScheduleDates(pregnancyStore.currentPregnancy.id)
-    if (res.code === 0 && res.data) scheduleDates.value = res.data
+    // seqGuard 存在时：只有仍是同一轮刷新才写回，避免「过期刷新」覆盖用户最新操作。
+    if ((seqGuard === undefined || seqGuard === dataSeq) && res.code === 0 && res.data) scheduleDates.value = res.data
   } catch { /* ignore */ }
 }
 
 // ========== 核心加载逻辑：默认数据始终可用，后端只补充完成状态 ==========
 async function loadAll() {
+  // 记下本轮序号：网络往返期间若用户又做了「标记完成/取消完成」等操作（或触发了更新的刷新），
+  // 序号会变，本次结果即视为过期而丢弃 —— 这是「点了没反应 / 状态被刷回去」类问题的根因护栏。
+  const mySeq = ++dataSeq
   loading.value = true
   // 默认数据已经内嵌在 schedule 中了，列表一定有内容
   try {
     const pid = pregnancyStore.currentPregnancy?.id
 
-    // 从后端获取完成状态（如果后端不可用也不影响显示）
-    if (pid) {
-      try {
-        const res: any = await checkupApi.getCompletedWeeks(pid)
-        if (res.code === 0 && Array.isArray(res.data)) {
-          const completedWeeks = new Set(res.data)
-          schedule.value = DEFAULT_SCHEDULE.map(item => ({
-            ...item,
-            is_completed: (() => {
-              const ws = item.week_start || 0; const we = item.week_end || item.week_start || 0
-              return Array.from({ length: we - ws + 1 }, (_, i) => ws + i).some(w => completedWeeks.has(w))
-            })(),
-            is_recommended: false,
-          }))
-        }
-      } catch (e) {
-        console.warn('获取完成状态失败，使用默认未完成状态:', e)
+    // 产检时间表：唯一数据源 = 后端 checkup_schedule.json（经 /checkup-schedule 接口下发，含完成状态）。
+    // ⚠️ 必须放在 if (pid) 之外：未设置孕期的用户也要能看到完整排期。
+    // 后端已允许省略 pregnancy_id（只回排期本体、不带完成状态）。
+    try {
+      const res: any = await getCheckupSchedule(pid)
+      if (res.code === 0 && Array.isArray(res.data)) {
+        if (mySeq === dataSeq) schedule.value = res.data
+        else console.log('[loadAll] 结果已过期（期间有更新的操作），跳过写回 schedule')
+      } else {
+        console.warn('[loadAll] getCheckupSchedule unexpected format: code=', res?.code)
       }
+    } catch (e) {
+      console.warn('获取产检时间表失败:', e)
+    }
 
+    if (pid) {
       // 获取自定义产检
       try {
         const res: any = await checkupApi.listCustom(pid)
         console.log('[loadAll] listCustom raw response:', JSON.stringify(res)?.slice(0, 300))
         if (res.code === 0 && Array.isArray(res.data)) {
-          customCheckups.value = res.data
+          if (mySeq === dataSeq) customCheckups.value = res.data
           console.log('[loadAll] customCheckups assigned:', res.data.length, 'items:', res.data.map((c: any) => ({ id: c.id, name: c.name, date: c.checkup_date })))
         } else {
           console.warn('[loadAll] listCustom unexpected format: code=', res?.code, 'dataType=', Array.isArray(res?.data) ? 'array' : typeof res?.data)
         }
       } catch (e) { console.warn('获取自定义产检失败:', e) }
 
-      await loadScheduleDates()
+      await loadScheduleDates(mySeq)
     }
 
     // 加载报告
@@ -1082,119 +1019,218 @@ async function loadAll() {
       })())
     }
     await Promise.all(reportPromises)
-    reportMap.value = newReportMap
+    if (mySeq === dataSeq) reportMap.value = newReportMap
 
-    // 默认收起所有检查内容
+    // 默认收起所有检查内容（只在用户没手动展开过时生效 —— 否则每次刷新/标记完成
+    // 都会把用户已展开的「检查内容」重新折叠，界面无故跳动）。
     mergedList.value.forEach(item => {
-      if (item.items?.length) {
+      if (item.items?.length && subItemsCollapsed.value[item._key] === undefined) {
         subItemsCollapsed.value[item._key] = true
       }
     })
   } finally { loading.value = false }
 }
 
-onMounted(() => { loadAll() })
+onMounted(() => {
+  loadAll()
+  // 直接进入/刷新本页时，pregnancyStore 可能还是空的（它只在首页等页面被加载过）。
+  // 本页的「预计日期」要用 LMP 推算，「完成日期 / 自定义产检」要用 pregnancy_id 拉取，
+  // 所以这里自己补拉一次；拿到后下面的 watch 会自动再 loadAll 一遍。
+  if (!pregnancyStore.currentPregnancy) {
+    pregnancyStore.fetchActivePregnancy().catch(() => { /* 没有档案就保持空，不影响排期展示 */ })
+  }
+})
 watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() })
 </script>
 
 <style scoped>
+/* ============================================================================
+   产检排期页 · 配色令牌（本页唯一色彩来源）
+   ----------------------------------------------------------------------------
+   这一页历史上硬写了 60 余种颜色，混了 4 套互不相干的色板（Tailwind slate、
+   Material 彩虹、另一套 Material 分类色、Tailwind amber/red），但只用了 21 处
+   全局变量 —— 所以看着"杂"，也和 App 其它页面不是一套。
+
+   现在收敛成 5 个角色（与 App.vue 里的 Naive 主题色一一对应，组件与自写样式
+   因此自动同色）：
+
+     粉 --ck-accent   可操作 / 选中 / 必检竖条   （= primaryColor #c44680）
+     蓝 --ck-info     孕周 / 信息 / 自定义标识   （= infoColor    #4fb6e8）
+     绿 --ck-done     已完成                     （= successColor #4ea750）
+     琥 --ck-attn     待办 / 提醒 / 本次推荐      （= warningColor #f0a020）
+     红 --ck-danger   必检标记 / 逾期 / 删除      （= errorColor   #e64646）
+
+   其余一律走灰阶（--ck-ink-* / --ck-line-* / --ck-surface*）。
+
+   ⚠️ 令牌挂在 :global(:root) 而不是组件根类上：Naive 的 n-modal 会把弹窗内容
+      teleport 到 body 之外，挂在组件根上的自定义属性继承不进去（弹窗里有
+      「选择检查项目」「从NAS选择」两个界面）。--ck- 前缀保证不与全局 token 冲突。
+   ⚠️ 深浅底一律取全局的 --bg-tint-* 与 --text-* / --border-*：将来若真的接上
+      深色模式（目前 html.dark 只是预留，currentTheme 还没接到 DOM 上），
+      这些变量会被自动覆盖，本页不需要再维护第二套深色值。
+   ============================================================================ */
+:global(:root) {
+  /* 表面与线条 */
+  --ck-surface: var(--bg-card, #ffffff);
+  --ck-surface-2: var(--bg-color-2, #f6f1ee);
+  --ck-line: var(--border-color, #efe7ef);
+  --ck-line-soft: var(--divider-color, #f1ebf2);
+  --ck-line-strong: var(--border-color-strong, #e1d5e3);
+  /* 文字三级 */
+  --ck-ink: var(--text-color, #1f1730);
+  --ck-ink-2: var(--text-secondary, #5c5275);
+  --ck-ink-3: var(--text-hint, #6b6480);
+  /* 粉：可操作 / 选中 / 必检 */
+  --ck-accent: var(--primary-color, #c44680);
+  --ck-accent-soft: var(--primary-soft, #e8a0bf);
+  --ck-accent-bg: var(--bg-tint-pink, #fff5fa);
+  /* 蓝：孕周 / 信息。
+     ⚠️ ink 比 fill(--ck-info #4fb6e8) 明显更深：fill 是给图形（描边、圆点）用的，
+     用来写字对比度只有 2 出头（原生 #4FC3F7 on #E1F5FE 实测 1.78，严重不达标）。
+     #17709b on --ck-info-bg 实测 5.15:1，11px 小字也够。 */
+  --ck-info: var(--info-color, #4fb6e8);
+  --ck-info-bg: var(--bg-tint-blue, #f4f8ff);
+  --ck-info-ink: #17709b;
+  /* 绿：已完成 */
+  --ck-done: var(--success-color, #4ea750);
+  --ck-done-bg: var(--bg-tint-mint, #f1faf4);
+  --ck-done-ink: #3f7f42;
+  /* 琥珀：待办 / 提醒 / 本次推荐 */
+  --ck-attn: var(--warning-color, #f0a020);
+  --ck-attn-bg: var(--bg-tint-cream, #fff9ec);
+  --ck-attn-line: #f0dfb8;
+  /* ink 在 --ck-attn-line 上原本 4.49（差一点点不达标），压深到 #7d4f0d 后 5.32 */
+  --ck-attn-ink: #7d4f0d;
+  /* 红：危险 / 逾期 / 删除 */
+  --ck-danger: var(--error-color, #e64646);
+  --ck-danger-bg: #fdf2f2;
+  --ck-danger-line: #f3d6d6;
+  --ck-danger-ink: #b32d2d;
+}
+
 .checkup-schedule-view { max-width: 800px; margin: 0 auto; padding: 16px; }
 
-.summary-section { border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.04); }
+/* ---------- 顶部摘要（底色由 summaryStyle 按孕期阶段给浅色底） ---------- */
+.summary-section {
+  border-radius: 16px; padding: 24px; margin-bottom: 16px;
+  border: 1px solid var(--ck-line-soft);
+  box-shadow: var(--shadow-sm);
+}
 .summary-stats { display: flex; align-items: center; gap: 24px; margin-bottom: 12px; }
 .stat-item { display: flex; flex-direction: column; }
-.stat-value { font-size: 28px; font-weight: 800; color: var(--text-color, #1e293b); }
-.stat-label { font-size: 13px; color: var(--text-secondary, #64748b); }
+.stat-value { font-size: 28px; font-weight: 800; color: var(--ck-ink); }
+.stat-label { font-size: 13px; color: var(--ck-ink-3); }
 .stat-progress { flex: 1; display: flex; align-items: center; gap: 12px; }
-.progress-bar-wrapper { flex: 1; height: 10px; background: rgba(255,255,255,.6); border-radius: 5px; overflow: hidden; }
-.progress-bar-fill { height: 100%; background: linear-gradient(90deg, #66BB6A, #4FC3F7); border-radius: 5px; transition: width .5s; }
-.progress-text { font-size: 14px; font-weight: 700; min-width: 40px; }
-.next-checkup { padding-top: 12px; border-top: 1px solid rgba(0,0,0,.06); }
-.next-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
-.next-name { font-size: 16px; font-weight: 600; }
+.progress-bar-wrapper { flex: 1; height: 10px; background: var(--ck-line); border-radius: 5px; overflow: hidden; }
+/* 进度条用品牌粉的同族渐变（原来是"绿→蓝"两色渐变，跟页面里任何东西都不同族） */
+.progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--ck-accent-soft), var(--ck-accent)); border-radius: 5px; transition: width .5s; }
+/* 百分比用主文字色而不是品牌粉：粉字在浅底上只有 4.41（< 4.5），而进度条本身就是粉的，
+   不差这一处品牌色，数字清楚更重要。 */
+.progress-text { font-size: 14px; font-weight: 700; min-width: 40px; color: var(--ck-ink); }
+.next-checkup { padding-top: 12px; border-top: 1px solid var(--ck-line); }
+.next-label { font-size: 13px; color: var(--ck-ink-3); margin-bottom: 4px; }
+.next-name { font-size: 16px; font-weight: 600; color: var(--ck-ink); }
 
-.current-recommend { background: var(--stage-early-bg, #FFF3E0); border: 1px solid var(--stage-early-color, #FFB74D); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--stage-early-color); }
+/* ---------- 本次推荐 ---------- */
+/* 原来是写死的"孕早期"橙（孕中晚期也是橙的），现在统一成琥珀=提醒，语义一致 */
+.current-recommend {
+  background: var(--ck-attn-bg);
+  border: 1px solid var(--ck-attn-line);
+  border-left: 3px solid var(--ck-attn);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+  cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ck-attn-ink);
+}
 
 .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.action-bar-title { font-size: 16px; font-weight: 700; }
+.action-bar-title { font-size: 16px; font-weight: 700; color: var(--ck-ink); }
 
 .checkup-list { display: flex; flex-direction: column; gap: 12px; }
 
-.checkup-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.05); border-left: 4px solid #e2e8f0; }
-.checkup-card.is-mandatory { border-left-color: #F06292; }
-.checkup-card.is-custom { border-left-color: #4FC3F7; border-left-style: dashed; }
-.checkup-card.is-completed { background: #E8F5E9; border-left-color: #66BB6A; }
-.checkup-card.is-current { box-shadow: 0 0 0 2px #FFB74D, 0 4px 12px rgba(0,0,0,.08); }
+/* ---------- 卡片 ---------- */
+/* 左竖条只表达状态，颜色全部来自令牌：中性=普通 粉=必检 蓝虚线=自定义 绿=已完成。
+   加了一圈 1px 描边：原来只靠 box-shadow 分层，深底上阴影几乎看不见。 */
+.checkup-card {
+  background: var(--ck-surface);
+  border-radius: 12px; padding: 16px;
+  border: 1px solid var(--ck-line-soft);
+  border-left: 4px solid var(--ck-line-strong);
+  box-shadow: var(--shadow-xs);
+}
+.checkup-card.is-mandatory { border-left-color: var(--ck-accent); }
+.checkup-card.is-custom { border-left-color: var(--ck-info); border-left-style: dashed; }
+.checkup-card.is-completed { background: var(--ck-done-bg); border-left-color: var(--ck-done); }
+.checkup-card.is-current { box-shadow: 0 0 0 2px var(--ck-attn), var(--shadow-md); }
 
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
 .card-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.card-right { display: flex; align-items: center; gap: 8px; }
+.card-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-.week-badge { background: #E1F5FE; color: #4FC3F7; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
-.is-custom .week-badge { background: rgba(79,195,247,.12); }
-.is-completed .week-badge { background: #E8F5E9; color: #66BB6A; }
-.checkup-name { font-size: 15px; font-weight: 700; }
-/* 预计日期标签 */
+.week-badge { background: var(--ck-info-bg); color: var(--ck-info-ink); padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+/* 完成卡整体已是浅绿底，徽章改用卡片同色才看得见（原来徽章和卡片同色，等于隐形） */
+.is-completed .week-badge { background: var(--ck-surface); color: var(--ck-done-ink); }
+.checkup-name { font-size: 15px; font-weight: 700; color: var(--ck-ink); }
+
+/* 预计日期标签 —— 与「孕周」徽章同属"时间/信息"，统一用蓝（原来两个蓝不一样） */
 .expected-date-tag {
   display: inline-flex; align-items: center; gap: 2px;
   padding: 1px 7px; border-radius: 10px; font-size: 11px;
-  background: #e0f2fe; color: #0369a1; margin-left: 4px;
+  background: var(--ck-info-bg); color: var(--ck-info-ink); margin-left: 4px;
   transition: background .25s, color .25s, font-weight .25s;
 }
-.expected-date-tag.is-urgent { background: #fef3c7; color: #b45309; font-weight: 600; }
-.expected-date-tag.is-urgent:has(.is-overdue) { background: #fee2e2; color: #dc2626; }
+.expected-date-tag.is-urgent { background: var(--ck-attn-bg); color: var(--ck-attn-ink); font-weight: 600; }
 .completed-mark { font-size: 18px; }
 
 .date-input-small {
   padding: 4px 8px;
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: 1px solid var(--ck-line);
   border-radius: 8px;
   font-size: 13px;
-  background: white;
-  color: var(--text-color, #1e293b);
-  width: 130px;
+  background: var(--ck-surface);
+  color: var(--ck-ink);
+  width: 148px;
+  /* 原生 type=date 控件要放下「日历图标 + yyyy/mm/dd」，太窄会被截掉最后一位。
+     给一个下限，宁可让它换行到下一行也不要把控件压扁。 */
+  min-width: 138px;
+  box-sizing: border-box;
 }
 .custom-date-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: 1px solid var(--ck-line);
   border-radius: 10px;
   font-size: 14px;
-  background: white;
-  color: var(--text-color, #1e293b);
+  background: var(--ck-surface);
+  color: var(--ck-ink);
   outline: none;
   transition: border-color .2s;
 }
-.custom-date-input:focus { border-color: var(--primary-color); }
+.custom-date-input:focus { border-color: var(--ck-accent); }
 
-.card-body { margin-bottom: 12px; }
-.checkup-items { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.checkup-item-tag { background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 6px; font-size: 12px; color: #64748b; }
-.is-completed .checkup-item-tag { background: rgba(102,187,106,.1); border-color: rgba(102,187,106,.3); color: #66BB6A; }
-.checkup-desc { font-size: 13px; color: #94a3b8; line-height: 1.6; }
+/* 说明：以下 5 条（.card-body / .checkup-items / .checkup-item-tag / .is-completed .checkup-item-tag /
+   .checkup-desc）在模板里已无对应元素（「检查项平铺成标签」被下面的子项列表取代了），
+   本次审查发现后删除，不再为死规则维护颜色。 */
 
-/* 子项分类上传 */
+/* ---------- 子项分类上传 ---------- */
 .sub-items-section { margin-bottom: 12px; }
 /* 子项折叠头 */
 .sub-items-toggle {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 12px; cursor: pointer; user-select: none;
-  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+  background: var(--ck-surface-2); border: 1px solid var(--ck-line); border-radius: 8px;
   transition: background .15s;
 }
-.sub-items-toggle:hover { background: #f1f5f9; }
-.sub-items-icon { font-size: 14px; }
-.sub-items-title { font-size: 13px; font-weight: 600; color: #475569; flex: 1; }
-.sub-items-count { font-size: 11px; color: #64748b; background: #e2e8f0; padding: 1px 7px; border-radius: 10px; }
+.sub-items-toggle:hover { background: var(--ck-line-soft); }
+.sub-items-title { font-size: 13px; font-weight: 600; color: var(--ck-ink-2); flex: 1; }
+.sub-items-count { font-size: 11px; color: var(--ck-ink-3); background: var(--ck-line); padding: 1px 7px; border-radius: 10px; }
 .sub-items-badge-required {
-  font-size: 11px; color: #dc2626; font-weight: 600;
-  background: #fef2f2; padding: 1px 7px; border-radius: 10px;
+  font-size: 11px; color: var(--ck-danger-ink); font-weight: 600;
+  background: var(--ck-danger-bg); padding: 1px 7px; border-radius: 10px;
 }
-.sub-items-arrow { font-size: 11px; color: #94a3b8; white-space: nowrap; }
+.sub-items-arrow { font-size: 11px; color: var(--ck-ink-3); white-space: nowrap; }
 /* 子项内容区 */
 .sub-items-body { padding-top: 4px; }
-.sub-items-empty { font-size: 12px; color: #94a3b8; text-align: center; padding: 12px 0; }
-.sub-item-row { padding: 6px 0; border-bottom: 1px solid #f1f5f9; transition: background .15s; }
+.sub-items-empty { font-size: 12px; color: var(--ck-ink-3); text-align: center; padding: 12px 0; }
+.sub-item-row { padding: 6px 0; border-bottom: 1px solid var(--ck-line-soft); transition: background .15s; }
 .sub-item-row:last-child { border-bottom: none; }
 .sub-item-row.collapsed { opacity: .75; }
 .sub-item-header {
@@ -1202,34 +1238,31 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
   padding: 4px 0; border-radius: 6px; transition: background .15s;
 }
 .sub-item-header:hover { background: rgba(0,0,0,.02); }
-.sub-item-name { font-size: 13px; font-weight: 500; color: #334155; flex: 1; min-width: 80px; }
+.sub-item-name { font-size: 13px; font-weight: 500; color: var(--ck-ink); flex: 1; min-width: 80px; }
 /* 子项必检/推荐标签 */
 .sub-item-required-tag {
   font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 700;
-  background: #fef2f2; color: #dc2626; flex-shrink: 0;
+  background: var(--ck-danger-bg); color: var(--ck-danger-ink); flex-shrink: 0;
 }
 .sub-item-recommended-tag {
   font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 600;
-  background: #fefce8; color: #ca8a04; flex-shrink: 0;
+  background: var(--ck-attn-bg); color: var(--ck-attn-ink); flex-shrink: 0;
 }
+/* 分类标签：原来 6 个分类各用一种 Material 彩虹色（b超蓝 / 血检粉 / 尿检橙 /
+   血压紫 / 血糖绿 / 胎心黄），是全页最"花"的地方。分类名字本来就在标签文字里，
+   不靠颜色区分，统一收成中性小标签。 */
 .sub-item-cat-tag {
   font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 600;
-  background: #f1f5f9; color: #64748b; flex-shrink: 0;
+  background: var(--ck-surface-2); color: var(--ck-ink-3); flex-shrink: 0;
 }
-.sub-item-cat-tag.cat-b超 { background: #E1F5FE; color: #0288D1; }
-.sub-item-cat-tag.cat-血检 { background: #FCE4EC; color: #C62828; }
-.sub-item-cat-tag.cat-尿检 { background: #FFF3E0; color: #E65100; }
-.sub-item-cat-tag.cat-血压 { background: #F3E5F5; color: #7B1FA2; }
-.sub-item-cat-tag.cat-血糖 { background: #E8F5E9; color: #2E7D32; }
-.sub-item-cat-tag.cat-胎心 { background: #FFF8E1; color: #F57F17; }
-.sub-item-count { font-size: 11px; color: var(--primary-color, #c44680); font-weight: 600; flex-shrink: 0; }
-.sub-item-fold { font-size: 10px; color: #94a3b8; flex-shrink: 0; transition: transform .2s; }
+.sub-item-count { font-size: 11px; color: var(--ck-accent); font-weight: 600; flex-shrink: 0; }
+.sub-item-fold { font-size: 10px; color: var(--ck-ink-3); flex-shrink: 0; transition: transform .2s; }
 .sub-item-upload-btn {
-  font-size: 11px; color: var(--primary-color, #c44680); cursor: pointer;
-  padding: 2px 8px; border: 1px dashed var(--primary-color, #c44680); border-radius: 6px;
+  font-size: 11px; color: var(--ck-accent); cursor: pointer;
+  padding: 2px 8px; border: 1px dashed var(--ck-accent); border-radius: 6px;
   transition: background .2s; white-space: nowrap; flex-shrink: 0;
 }
-.sub-item-upload-btn:hover { background: rgba(232,160,191,.08); }
+.sub-item-upload-btn:hover { background: var(--ck-accent-bg); }
 .sub-item-nas-btn {
   font-size: 12px; cursor: pointer; padding: 2px 4px; opacity: .6;
   transition: opacity .2s; flex-shrink: 0;
@@ -1237,20 +1270,20 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
 .sub-item-nas-btn:hover { opacity: 1; }
 .sub-item-reports {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px;
-  margin-top: 8px; padding: 8px; background: #fafbfc; border-radius: 8px; border: 1px solid #f1f5f9;
+  margin-top: 8px; padding: 8px; background: var(--ck-surface-2); border-radius: 8px; border: 1px solid var(--ck-line-soft);
 }
 .report-thumb-sm {
   position: relative; width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden;
-  cursor: pointer; border: 1px solid #e2e8f0; background: white;
+  cursor: pointer; border: 1px solid var(--ck-line); background: var(--ck-surface);
   transition: border-color .15s, transform .15s;
 }
-.report-thumb-sm:hover { border-color: var(--primary-color, #c44680); transform: scale(1.05); }
+.report-thumb-sm:hover { border-color: var(--ck-accent); transform: scale(1.05); }
 .report-img-sm { width: 100%; height: 100%; object-fit: cover; }
 .report-pdf-sm { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; font-size: 20px; }
-.pdf-label-sm { font-size: 8px; color: #94a3b8; display: block; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+.pdf-label-sm { font-size: 8px; color: var(--ck-ink-3); display: block; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 .report-del-sm {
   position: absolute; top: 2px; right: 2px; width: 18px; height: 18px;
-  border-radius: 50%; background: rgba(255,77,79,.85); color: white;
+  border-radius: 50%; background: var(--ck-danger); color: #fff;
   border: none; cursor: pointer; font-size: 9px; display: flex;
   align-items: center; justify-content: center; opacity: 0; transition: opacity .15s;
 }
@@ -1258,144 +1291,149 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
 
 /* 自定义子项编辑器 */
 .custom-items-editor { width: 100%; }
-.preset-items-section { margin-bottom: 10px; }
-.preset-items-label { font-size: 12px; color: #64748b; margin-bottom: 6px; font-weight: 500; }
 .preset-items-grid {
   display: flex; flex-wrap: wrap; gap: 5px;
-  padding: 8px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;
+  padding: 8px; background: var(--ck-surface-2); border-radius: 8px; border: 1px solid var(--ck-line);
 }
 .preset-item-tag {
   display: inline-block; padding: 3px 10px; border-radius: 14px; font-size: 12px;
-  background: white; border: 1px solid #cbd5e1; color: #475569; cursor: pointer;
+  background: var(--ck-surface); border: 1px solid var(--ck-line-strong); color: var(--ck-ink-2); cursor: pointer;
   transition: all .15s; user-select: none; line-height: 1.6;
 }
-.preset-item-tag:hover { border-color: var(--primary-color, #c44680); color: var(--primary-color, #c44680); }
+.preset-item-tag:hover { border-color: var(--ck-accent); color: var(--ck-accent); }
 .preset-item-tag.is-added {
-  background: var(--primary-color, #c44680); color: white; border-color: transparent;
+  background: var(--ck-accent); color: #fff; border-color: transparent;
 }
 .custom-items-list { margin-top: 8px; }
 
-/* 准备事项区域 */
+/* ---------- 检查准备 ---------- */
+/* 原来这一个小黄块里塞了 8 种颜色（#fef3c7/#fffbeb/#fde68a/#92400e/#b45309/#78350f/
+   #fbbf24/#ef4444），现在收敛成"琥珀=待办 + 红=警告"两组。 */
 .preparation-section {
   margin: 0 0 10px; padding: 0;
   border-radius: 8px; overflow: hidden;
-  border: 1px solid #fef3c7; background: #fffbeb;
+  border: 1px solid var(--ck-attn-line); background: var(--ck-attn-bg);
 }
 .preparation-toggle {
   display: flex; align-items: center; gap: 6px; padding: 8px 12px;
   cursor: pointer; user-select: none; transition: background .15s;
 }
-.preparation-toggle:hover { background: #fde68a33; }
-.prep-icon { font-size: 14px; }
-.prep-title { font-size: 13px; font-weight: 600; color: #92400e; flex: 1; }
-.prep-count { font-size: 11px; color: #b45309; background: #fde68a; padding: 1px 7px; border-radius: 10px; }
-.prep-arrow { font-size: 11px; color: #92400e; transition: transform .2s; }
+.preparation-toggle:hover { background: rgba(0,0,0,.04); }
+.prep-title { font-size: 13px; font-weight: 600; color: var(--ck-attn-ink); flex: 1; }
+.prep-count { font-size: 11px; color: var(--ck-attn-ink); background: var(--ck-attn-line); padding: 1px 7px; border-radius: 10px; }
+.prep-arrow { font-size: 11px; color: var(--ck-attn-ink); transition: transform .2s; }
 .preparation-list { padding: 0 12px 10px 28px; }
 .prep-item {
   display: flex; align-items: flex-start; gap: 6px; padding: 3px 0;
-  font-size: 12.5px; line-height: 1.6; color: #78350f;
+  font-size: 12.5px; line-height: 1.6; color: var(--ck-ink-2);
 }
-.prep-item.is-warning { color: #dc2626; font-weight: 600; }
+.prep-item.is-warning { color: var(--ck-danger-ink); font-weight: 600; }
+/* 圆点里的字形用深色：白字在琥珀上只有 2.15（改前 #fbbf24 更低，1.67），
+   深色 --ck-ink 是 7.97。警告那条保留白字（白 on 红 3.94，作为图形符号达标）。 */
 .prep-bullet {
   flex-shrink: 0; width: 16px; height: 16px; line-height: 16px; text-align: center;
   border-radius: 50%; font-size: 11px; font-weight: 700; margin-top: 1px;
-  background: #fbbf24; color: white;
+  background: var(--ck-attn); color: var(--ck-ink);
 }
-.is-warning .prep-bullet { background: #ef4444; }
+.is-warning .prep-bullet { background: var(--ck-danger); color: #fff; }
 .prep-text { flex: 1; }
 .custom-item-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
 .custom-item-del {
-  width: 20px; height: 20px; border-radius: 50%; background: #fee2e2; color: #ef4444;
+  width: 20px; height: 20px; border-radius: 50%; background: var(--ck-danger-bg); color: var(--ck-danger);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
   font-size: 11px; flex-shrink: 0; transition: background .15s;
 }
-.custom-item-del:hover { background: #fecaca; }
-.custom-items-hint { font-size: 11px; color: #94a3b8; margin-top: 4px; }
-.no-items-hint { font-size: 12px; color: #94a3b8; padding: 12px 0; text-align: center; background: #f8fafc; border-radius: 8px; border: 1px dashed #e2e8f0; }
+.custom-item-del:hover { background: var(--ck-danger-line); }
+.custom-items-hint { font-size: 11px; color: var(--ck-ink-3); margin-top: 4px; }
+.no-items-hint { font-size: 12px; color: var(--ck-ink-3); padding: 12px 0; text-align: center; background: var(--ck-surface-2); border-radius: 8px; border: 1px dashed var(--ck-line); }
 
 /* 检查项目选择子弹窗 */
 .preset-picker-body { max-height: 55vh; overflow-y: auto; }
-.preset-search { margin-bottom: 12px; position: sticky; top: 0; background: white; z-index: 1; padding-bottom: 4px; }
+.preset-search { margin-bottom: 12px; position: sticky; top: 0; background: var(--ck-surface); z-index: 1; padding-bottom: 4px; }
 .preset-category-list { display: flex; flex-direction: column; gap: 14px; }
 .preset-category-group { }
 .preset-category-title {
-  font-size: 13px; font-weight: 700; color: #334155;
-  padding-bottom: 4px; border-bottom: 1px solid #f1f5f9; margin-bottom: 6px;
+  font-size: 13px; font-weight: 700; color: var(--ck-ink);
+  padding-bottom: 4px; border-bottom: 1px solid var(--ck-line-soft); margin-bottom: 6px;
 }
 .preset-picker-footer {
   display: flex; justify-content: space-between; align-items: center;
-  margin-top: 14px; padding-top: 10px; border-top: 1px solid #f1f5f9;
+  margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--ck-line-soft);
 }
-.preset-selected-count { font-size: 13px; color: #64748b; font-weight: 500; }
+.preset-selected-count { font-size: 13px; color: var(--ck-ink-3); font-weight: 500; }
 .preset-no-result {
-  text-align: center; padding: 30px 0; font-size: 13px; color: #94a3b8;
+  text-align: center; padding: 30px 0; font-size: 13px; color: var(--ck-ink-3);
 }
 
-.report-section { margin-bottom: 12px; padding: 12px 14px; background: #f8fafc; border-radius: 10px; }
+.report-section { margin-bottom: 12px; padding: 12px 14px; background: var(--ck-surface-2); border-radius: 10px; }
 .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.report-label { font-size: 13px; font-weight: 600; color: #64748b; }
+.report-label { font-size: 13px; font-weight: 600; color: var(--ck-ink-3); }
 
 /* 分类标签平铺 */
 .category-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .cat-tab {
   display: flex; align-items: center; gap: 4px;
-  padding: 5px 12px; border: 1px solid #e2e8f0; border-radius: 16px;
-  background: white; font-size: 12px; cursor: pointer;
-  transition: background-color .2s, border-color .2s, color .2s; color: #64748b; font-weight: 500;
+  padding: 5px 12px; border: 1px solid var(--ck-line); border-radius: 16px;
+  background: var(--ck-surface); font-size: 12px; cursor: pointer;
+  transition: background-color .2s, border-color .2s, color .2s; color: var(--ck-ink-3); font-weight: 500;
 }
-.cat-tab:hover { border-color: var(--primary-color); }
+.cat-tab:hover { border-color: var(--ck-accent); color: var(--ck-accent); }
 .cat-tab.active {
-  background: var(--primary-color, #c44680); color: white; border-color: transparent;
+  background: var(--ck-accent); color: #fff; border-color: transparent;
 }
 .cat-count { background: rgba(0,0,0,.1); font-size: 10px; padding: 0 5px; border-radius: 8px; min-width: 16px; text-align: center; }
 .cat-tab.active .cat-count { background: rgba(255,255,255,.3); }
 
 /* 上传按钮区 */
 .upload-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-.upload-link { font-size: 12px; color: var(--primary-color, #c44680); font-weight: 600; cursor: pointer; white-space: nowrap; padding: 5px 12px; border: 1px dashed var(--primary-color, #c44680); border-radius: 8px; transition: background .2s; text-decoration: none; }
-.upload-link:hover { background: rgba(232,160,191,.08); }
-.nas-upload { color: var(--stage-mid-color, #4FC3F7) !important; border-color: #4FC3F7 !important; }
-.nas-upload:hover { background: rgba(79,195,247,.06) !important; }
-.current-cat-hint { font-size: 11px; color: #94a3b8; margin-left: auto; }
+.upload-link { font-size: 12px; color: var(--ck-accent); font-weight: 600; cursor: pointer; white-space: nowrap; padding: 5px 12px; border: 1px dashed var(--ck-accent); border-radius: 8px; transition: background .2s; text-decoration: none; }
+.upload-link:hover { background: var(--ck-accent-bg); }
+/* NAS 选择用蓝（信息色），跟"本地/主色"的粉区分开 */
+.nas-upload { color: var(--ck-info) !important; border-color: var(--ck-info) !important; }
+.nas-upload:hover { background: var(--ck-info-bg) !important; }
+.current-cat-hint { font-size: 11px; color: var(--ck-ink-3); margin-left: auto; }
 
 /* 报告缩略图 */
 .report-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-.report-thumb { position: relative; width: 84px; height: 84px; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: white; transition: transform .15s, border-color .15s; }
-.report-thumb:hover { transform: scale(1.05); border-color: var(--primary-color, #c44680); }
+.report-thumb { position: relative; width: 84px; height: 84px; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: var(--ck-surface); transition: transform .15s, border-color .15s; }
+.report-thumb:hover { transform: scale(1.05); border-color: var(--ck-accent); }
 .report-img { width: 100%; height: 100%; object-fit: cover; }
 .report-pdf-icon { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 2px; padding: 4px; }
-.pdf-icon { font-size: 28px; }
-.pdf-name { font-size: 9px; color: #94a3b8; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 74px; }
+.pdf-name { font-size: 9px; color: var(--ck-ink-3); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 74px; }
 .thumb-cat-tag {
   position: absolute; top: 0; left: 0; right: 0;
   background: linear-gradient(transparent, rgba(0,0,0,.55));
-  color: white; font-size: 9px; padding: 10px 4px 3px; text-align: center;
+  color: #fff; font-size: 9px; padding: 10px 4px 3px; text-align: center;
   z-index: 1; font-weight: 600;
 }
-.report-delete-btn { position: absolute; top: -2px; right: -2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(255,77,79,.9); color: white; border: none; cursor: pointer; font-size: 9px; display: flex; align-items: center; justify-content: center; z-index: 2; }
-.report-empty { font-size: 12px; color: #94a3b8; text-align: center; padding: 12px 0; }
+.report-delete-btn { position: absolute; top: -2px; right: -2px; width: 18px; height: 18px; border-radius: 50%; background: var(--ck-danger); color: #fff; border: none; cursor: pointer; font-size: 9px; display: flex; align-items: center; justify-content: center; z-index: 2; }
+.report-empty { font-size: 12px; color: var(--ck-ink-3); text-align: center; padding: 12px 0; }
 
-.card-footer { display: flex; justify-content: flex-end; }
-.completed-text { font-size: 13px; color: #66BB6A; font-weight: 600; }
+.card-footer { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.completed-text { font-size: 13px; color: var(--ck-done-ink); font-weight: 600; }
+/* 「取消完成」做成次要按钮：能点到，但不抢「标记完成」的视觉重量 */
+.card-footer .n-button { flex-shrink: 0; }
 
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; }
 .empty-icon { font-size: 64px; opacity: .5; margin-bottom: 16px; }
-.empty-text { font-size: 16px; color: #64748b; }
+.empty-text { font-size: 16px; color: var(--ck-ink-3); }
 
 /* NAS browser */
 .nas-browser { display: flex; flex-direction: column; height: 100%; }
-.nas-breadcrumb { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px; }
-.nas-current-path { font-size: 13px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nas-breadcrumb { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--ck-line); margin-bottom: 8px; }
+.nas-current-path { font-size: 13px; color: var(--ck-ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nas-file-list { flex: 1; overflow-y: auto; }
 .nas-entry { display: flex; align-items: center; gap: 10px; padding: 10px 8px; cursor: pointer; border-radius: 8px; }
-.nas-entry:hover { background: #f1f5f9; }
+.nas-entry:hover { background: var(--ck-surface-2); }
 .nas-entry-icon { font-size: 20px; }
-.nas-entry-name { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nas-entry-size { font-size: 12px; color: #94a3b8; }
-.nas-empty { text-align: center; padding: 40px; color: #94a3b8; }
-.nas-loading { text-align: center; padding: 40px; color: #94a3b8; }
+.nas-entry-name { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ck-ink); }
+.nas-entry-size { font-size: 12px; color: var(--ck-ink-3); }
+.nas-empty { text-align: center; padding: 40px; color: var(--ck-ink-3); }
+.nas-loading { text-align: center; padding: 40px; color: var(--ck-ink-3); }
 
-.native-date-input { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
+/* ⚠️ 这里原本有一条 `.native-date-input`：本文件模板用的是 `.date-input-small`，
+   SetupWizardView 里虽然也有同名类，但那是它自己的 scoped 规则、管不到这里 ——
+   即本文件这条是死规则。本次审查发现后删除。 */
 
 @media (max-width: 768px) {
   .checkup-schedule-view { padding: 8px; }
@@ -1405,7 +1443,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
   .stat-value { font-size: 24px; }
   .card-header { flex-direction: column; align-items: flex-start; }
   .card-left { width: 100%; }
-  .card-right { width: 100%; justify-content: space-between; }
+  .card-right { width: 100%; justify-content: space-between; row-gap: 8px; }
   .report-section { padding: 10px 8px; }
   .report-header { flex-wrap: wrap; gap: 4px; }
 
@@ -1421,7 +1459,20 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
   /* 报告缩略图 */
   .report-thumb { width: 64px; height: 64px; }
   .pdf-name { max-width: 54px; font-size: 8px; }
-  .date-input-small { width: 100px; font-size: 12px; }
+  /* 完成日期：手机上独占一整行、占满宽度。
+     原生 type=date 控件要放下日历图标 + "yyyy/mm/dd"，原来写死 100px 会被截成
+     "yyyy/mm"（显示不全）；给满宽度既能完整显示，点按区域也更大更好用。
+     字号不在这里设：global.css 已用 input{font-size:16px!important} 防 iOS 聚焦缩放。 */
+  .date-input-small {
+    order: 9;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 280px;   /* 平板宽度下别拉成一整行；手机最窄 320px 时仍能拿到 228px */
+    min-width: 0;
+    padding: 6px 10px;
+  }
+  /* 输入框换到第二行后，把「必检/选检 + ✅」推到右侧，视觉上仍然成组 */
+  .card-right .n-tag { margin-left: auto; }
   .checkup-card { padding: 12px; }
   .sub-item-name { font-size: 12px; min-width: 60px; }
   .sub-item-reports { gap: 4px; padding: 6px; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
