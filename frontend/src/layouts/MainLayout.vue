@@ -16,7 +16,7 @@
           :key="item.path"
           :to="item.path"
           class="nav-item"
-          active-class="active"
+          :class="{ active: isNavActive(item) }"
         >
           <span class="nav-indicator"></span>
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -49,7 +49,7 @@
         :key="item.path"
         :to="item.path"
         class="tabbar-item"
-        active-class="tabbar-active"
+        :class="{ 'tabbar-active': isNavActive(item) }"
       >
         <svg class="tabbar-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path v-for="(d, di) in item.paths" :key="di" :d="d" />
@@ -63,14 +63,29 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import { useResize } from '@/composables/useResize'
 
 const appStore = useAppStore()
 const { isMobile } = useResize()
+const route = useRoute()
+
+/**
+ * 导航高亮判定。
+ *
+ * ⚠️ 这里**不能用 router-link 的 `active-class`**：它是「前缀匹配」，
+ * 而首页的路径是 `/` —— 任何页面都以 `/` 开头，于是首页会**永远高亮**。
+ * 所以改为自己判：**精确匹配当前路径**，再叠加一组显式的「子页面」映射
+ * （例如「运动指南」是从首页点进去的，进去后首页仍应保持高亮）。
+ */
+function isNavActive(item: { path: string; extraPaths?: string[] }): boolean {
+  if (route.path === item.path) return true
+  return (item.extraPaths || []).includes(route.path)
+}
 
 const navItems = [
-  { path: '/', label: '首页', paths: [
+  { path: '/', label: '首页', extraPaths: ['/exercise-guide'], paths: [
     'M3 9.5L12 3l9 6.5V19a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2z',
   ] },
   { path: '/record', label: '记录', paths: [
