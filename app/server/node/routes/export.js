@@ -26,19 +26,42 @@ const ALL_TABLES = [
   'contraction', 'pregnancy_photo', 'diary_entry', 'checklist',
   'checklist_item', 'reminder', 'fetal_movement_session', 'fetal_movement',
   'habit_checkin', 'supplement_checkin', 'app_config', 'schedule_dates',
+  // 推送流水（设置页「推送记录」与手动重试都读它）。补入备份：
+  //  · 纯新增 —— 老备份里没有这张表，恢复时按「缺表跳过」处理，不会清空现有记录；
+  //  · 新备份恢复时按「恢复至该备份状态」语义整表替换，与其它表一致。
+  'push_log',
 ];
 
 // 恢复备份里的 files/config/* 时的落点分流：
 //  · 可写状态文件（企业微信配置、推送状态）→ config.DATA_DIR（持久化目录）
 //  · 内置只读知识库（菜谱/食材安全/产检计划）→ config.ASSETS_DIR（安装目录，写失败仅告警）
-const WRITABLE_CONFIG_FILES = new Set(['wecom.json', 'daily_push_state.json', 'schedule_dates.json']);
+// ⚠️ 每新增一个「用户在界面上填写、存在 DATA_DIR 的配置文件」都必须登记进来，
+// 否则恢复时会走 else 分支落到 ASSETS_DIR（安装目录）：那里随升级被覆盖，
+// 用户填的东西等于没了。飞书渠道就是漏了这一条出的线上问题（2026-09-26 修）。
+const WRITABLE_CONFIG_FILES = new Set([
+  'wecom.json',
+  'feishu.json',
+  'daily_push_state.json',
+  'schedule_dates.json',
+  // 用户在「备份/导出 → 手动指定目录」里添加的目录（写入测试通过才记下来）。
+  // 同属用户填写的配置：不登记就会被当成内置资源写到安装目录，升级即丢。
+  'trusted_dirs.json',
+]);
 
 // 内置知识库：随安装包发布、随升级更新的「只读资源」，不是用户数据。
 // ⚠️ 恢复备份时**绝不覆盖**它们（只在文件缺失时补写）：
 // 备份里带的往往是**旧版本**的副本（菜谱更少、食材库更薄、产检表结构更旧），
 // 一旦覆盖，用户就会遇到「恢复了备份，内容反而退回旧版」——静默、无提示、且难以自查。
 // 曾经踩过同类的「升级后内置知识库丢失」，正是同一类问题的另一面。
-const BUILTIN_RESOURCE_FILES = new Set(['checkup_schedule.json', 'recipes.json', 'food_safety_v3.json']);
+const BUILTIN_RESOURCE_FILES = new Set([
+  'checkup_schedule.json', 'recipes.json', 'food_safety_v3.json',
+  // 同类只读资源：产检子项旧名归一表、待产清单模板（随包发布、随升级更新，非用户数据）。
+  // 目前备份侧不打包它们（见下方 configSources），登记在此是防御性的：
+  // 一旦今后被纳入备份，恢复时也不会用旧副本把新版覆盖回去。
+  'checkup_subitem_aliases.json',
+  'default_checklist_hospital.json', 'default_checklist_confinement.json',
+  'default_checklist_delivery_room.json',
+]);
 
 function restoreConfigDir(srcConfigDir) {
   if (!fs.existsSync(srcConfigDir)) return 0;
@@ -251,6 +274,7 @@ const TABLE_COLUMNS = {
   habit_checkin: ['id','pregnancy_id','date','items','notes','created_at','updated_at'],
   supplement_checkin: ['id','pregnancy_id','date','items','notes','created_at','updated_at'],
   app_config: ['id','key','value','description','created_at','updated_at'],
+  push_log: ['id','push_type','push_content','status','error_message','pushed_at','created_at','payload','channel'],
 };
 
 function sanitizeColumns(table, row) {
@@ -350,7 +374,7 @@ router.post('/export/full', async (req, res) => {
     exportData.photos = photos.filter(p => p.file_path && fs.existsSync(p.file_path)).map(p => p.file_path);
     log.api('导出', `全量导出完成`, { tables: Object.keys(exportData.stats).length, totalRows: Object.values(exportData.stats).reduce((a, b) => a + b, 0) });
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="pregnancyjournal-backup-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="pregnancyjournal-backup-${config.localToday()}.json"`);
     res.json({ code: 0, data: exportData, message: 'success' });
   } catch (error) {
     log.error('导出', '全量导出失败', { error: error.message });
@@ -361,7 +385,7 @@ router.post('/export/full', async (req, res) => {
 router.post('/export/with-photos', async (req, res) => {
   try {
     log.api('导出', '全量+原图导出开始');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const timestamp = config.localFileTimestamp();
     // 导出落盘目录：优先应用共享目录（用户可见），否则退回备份目录
     let exportBase = path.join(config.DATA_DIR || '.', 'backups');
     if (config.SHARE_DIR) {
@@ -633,7 +657,7 @@ router.post('/export/category', async (req, res) => {
 
     log.api('导出', `分类导出: ${category}`);
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="pregnancy-${category}-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="pregnancy-${category}-${config.localToday()}.json"`);
     res.json({ code: 0, data: exportData, message: 'success' });
   } catch (error) {
     log.error('导出', '分类导出失败', { error: error.message });
@@ -655,7 +679,7 @@ router.post('/export/backup-db', async (req, res) => {
     // 先强制落盘一次，保证备份内容与当前内存状态一致。
     try { db.saveDb(); } catch (e) { log.warn('备份', `强制落盘失败（备份可能偏旧）: ${e.message}`); }
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const timestamp = config.localFileTimestamp();
     const backupPath = path.join(backupsDir, `backup_${timestamp}.db`);
     fs.copyFileSync(dbPath, backupPath);
     const size = fs.statSync(backupPath).size;
@@ -684,7 +708,7 @@ router.post('/export/restore-db', async (req, res) => {
     const dbPath = config.DATABASE_PATH;
     const backupsDirForPre = path.join(config.DATA_DIR || '.', 'backups');
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const timestamp = config.localFileTimestamp();
     const preRestore = path.join(backupsDirForPre, `pre_restore_${timestamp}.db`);
     // 回滚副本也要先落盘，否则「恢复失败回滚」会把数据退回到最多 30 秒前的状态
     try { db.saveDb(); } catch (e) { log.warn('恢复', `回滚副本落盘失败: ${e.message}`); }
@@ -796,7 +820,7 @@ router.post('/backup', async (req, res) => {
         return res.json({ code: 1001, data: null, message: '无法创建备份目录，请检查存储权限' });
       }
     }
-    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const ts = config.localFileTimestamp();
     const backupDir = path.join(backupBase, `backup_${ts}`);
     fs.mkdirSync(backupDir, { recursive: true });
 
@@ -809,7 +833,8 @@ router.post('/backup', async (req, res) => {
       tables: {},
       file_manifest: { total: 0, by_type: {} },
       // 文件路径映射表：旧绝对路径 -> 备份中的相对路径（用于跨机器恢复时重写数据库路径）
-      _file_map: { album: {}, checkup_photos: {}, checkup_reports: {}, config: {} },
+      // album=相册图片、media=相册视频（须与恢复时的落点分流一致，见下方第 1 步）
+      _file_map: { album: {}, media: {}, checkup_photos: {}, checkup_reports: {}, config: {} },
     };
 
     for (const table of ALL_TABLES) {
@@ -835,22 +860,34 @@ router.post('/backup', async (req, res) => {
 
     let count = 0;
 
-    // ====== 1. 相册照片 → files/album/<filename> ======
+    // ====== 1. 相册媒体 → files/album（图片）/ files/media（视频） ======
+    // ⚠️ 视频必须与图片**分流到不同子目录**：恢复时 files/album/ → PHOTOS_DIR、
+    // files/media/ → MEDIA_DIR，这与数据库里「视频路径改写到 MEDIA_DIR」的口径一致。
+    // 旧实现把视频也塞进 files/album/，恢复后文件落在 photos/ 而记录指向 media/，
+    // 只能靠 media-backfill 的文件名自愈兜底才能显示 —— 能救回，但不规范。
+    let albumCount = 0;
+    let mediaCount = 0;
     const allPhotos = readTable('pregnancy_photo');
     for (const p of allPhotos) {
       if (p.file_path && fs.existsSync(p.file_path)) {
-        const fn = copyToBackup(p.file_path, 'album');
-        if (fn) { exportData._file_map.album[p.file_path] = fn; count++; }
+        const isVideo = p.media_type === 'video';
+        const fn = copyToBackup(p.file_path, isVideo ? 'media' : 'album');
+        if (fn) {
+          if (isVideo) { exportData._file_map.media[p.file_path] = fn; mediaCount++; }
+          else { exportData._file_map.album[p.file_path] = fn; albumCount++; }
+        }
       }
       // 我们自己生成的 `_thumb.jpg` 缩略图是**可再生**的派生文件，不进备份（否则每份备份都会
       // 白白大出几十上百 MB）；恢复之后由 services/media-backfill.js 自动补回来。
       const isDerivedThumb = /_thumb\.jpg$/i.test(p.thumbnail_path || '');
       if (p.thumbnail_path && p.thumbnail_path !== p.file_path && !isDerivedThumb && fs.existsSync(p.thumbnail_path)) {
         const fn = copyToBackup(p.thumbnail_path, 'album');
-        if (fn) { exportData._file_map.album[p.thumbnail_path] = `thumb_${fn}`; count++; }
+        if (fn) { exportData._file_map.album[p.thumbnail_path] = `thumb_${fn}`; albumCount++; }
       }
     }
-    trackCount('album', count); count = 0;
+    trackCount('album', albumCount);
+    trackCount('media', mediaCount);
+    count = 0;
 
     // ====== 2. 产检照片 → files/checkup_photos/<filename> ======
     const checkupPhotos = readTable('checkup_photo');
@@ -898,9 +935,16 @@ router.post('/backup', async (req, res) => {
     // ====== 4. 配置文件 → files/config/ （确保跨机器迁移完整） ======
     // 注意分流：wecom.json 是「可写状态文件」（在 DATA_DIR），
     // 其余是「内置只读知识库」（在 ASSETS_DIR）。
+    // ⚠️ 必须与上面的 WRITABLE_CONFIG_FILES 保持同步：
+    // 这里漏一个，该配置就**不进备份**（用户填的推送地址/密钥恢复后丢失）；
+    // 那边漏一个，恢复时会写错目录（落到安装目录、下次升级被冲掉）。
+    // 飞书渠道两个都漏了，2026-09-26 一并补上。
     const configSources = [
       { name: 'wecom.json', srcPath: path.join(config.DATA_DIR, 'wecom.json') },
+      { name: 'feishu.json', srcPath: path.join(config.DATA_DIR, 'feishu.json') },
       { name: 'daily_push_state.json', srcPath: path.join(config.DATA_DIR, 'daily_push_state.json') },
+      { name: 'schedule_dates.json', srcPath: path.join(config.DATA_DIR, 'schedule_dates.json') },
+      { name: 'trusted_dirs.json', srcPath: path.join(config.DATA_DIR, 'trusted_dirs.json') },
       { name: 'checkup_schedule.json', srcPath: path.join(config.ASSETS_DIR, 'checkup_schedule.json') },
       { name: 'recipes.json', srcPath: path.join(config.ASSETS_DIR, 'recipes.json') },
       { name: 'food_safety_v3.json', srcPath: path.join(config.ASSETS_DIR, 'food_safety_v3.json') },
@@ -991,7 +1035,7 @@ router.post('/restore', async (req, res) => {
       }
 
       // ====== 2. 获取路径映射表（跨机器迁移核心） ======
-      const fileMap = importData._file_map || { album: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
+      const fileMap = importData._file_map || { album: {}, media: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
 
       // ====== 3. 重写数据库中的绝对路径 → 本机路径 ======
       function rewriteTablePaths(table, pathColumn, mapObj, newBaseDir) {
@@ -1006,11 +1050,13 @@ router.post('/restore', async (req, res) => {
       }
 
       // 3a. 先缓存视频的路径映射（在通用重写前读取原始旧路径）
+      // 新版备份把视频放进 _file_map.media；旧备份把视频也放在 _file_map.album —— 两者都要认。
       const videoPathUpdates = [];
       const videoRows = db.queryAll('SELECT id, file_path FROM pregnancy_photo WHERE media_type = \'video\'');
       for (const r of videoRows) {
-        if (r.file_path && fileMap.album[r.file_path]) {
-          videoPathUpdates.push({ id: r.id, newPath: path.join(config.MEDIA_DIR, fileMap.album[r.file_path]) });
+        const mapped = (fileMap.media && fileMap.media[r.file_path]) || (fileMap.album && fileMap.album[r.file_path]);
+        if (r.file_path && mapped) {
+          videoPathUpdates.push({ id: r.id, newPath: path.join(config.MEDIA_DIR, mapped) });
         }
       }
 
@@ -1043,6 +1089,14 @@ router.post('/restore', async (req, res) => {
     const srcAlbumDir = path.join(restoreDir, 'files', 'album');
     if (fs.existsSync(srcAlbumDir)) {
       fileCount += copyDirFiles(srcAlbumDir, config.PHOTOS_DIR);
+    }
+
+    // 4a-2. 相册视频 files/media/ → MEDIA_DIR
+    // 新版备份把视频分流到此处；旧备份的视频仍在 files/album/ 里（会被 4a 复制到 PHOTOS_DIR，
+    // 再由 media-backfill 按文件名自愈）。两种布局都兼容，不会丢视频。
+    const srcMediaDir = path.join(restoreDir, 'files', 'media');
+    if (fs.existsSync(srcMediaDir)) {
+      fileCount += copyDirFiles(srcMediaDir, config.MEDIA_DIR);
     }
 
     // 4b. 产检照片 files/checkup_photos/ → PHOTOS_DIR
@@ -1186,7 +1240,7 @@ router.get('/export/csv', verifyAuth, async (req, res) => {
     }
 
     const csvContent = '\uFEFF' + csvLines.join('\n');
-    const filename = `孕程记_健康记录_${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `孕程记_健康记录_${config.localToday()}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.send(csvContent);
@@ -1416,7 +1470,7 @@ router.get('/export/diary-pdf', verifyAuth, async (req, res) => {
     doc.on('end', () => {
       try {
         const pdfBuf = Buffer.concat(chunks);
-        const filename = `孕程记_日记_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const filename = `孕程记_日记_${config.localToday()}.pdf`;
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
         res.setHeader('Content-Length', pdfBuf.length);
@@ -1579,7 +1633,7 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
     doc.on('end', () => {
       try {
         const pdfBuf = Buffer.concat(chunks);
-        const filename = `孕程记_纪念相册_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const filename = `孕程记_纪念相册_${config.localToday()}.pdf`;
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
         res.setHeader('Content-Length', pdfBuf.length);
@@ -1949,15 +2003,17 @@ router.post('/restore-latest', async (req, res) => {
       }
 
       // ====== 路径重写（同一事务内） ======
-      const fileMap = importData._file_map || { album: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
+      const fileMap = importData._file_map || { album: {}, media: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
 
       // 先缓存视频的路径映射（在通用重写前读取原始旧路径）
+      // 新版备份把视频放进 _file_map.media；旧备份把视频也放在 _file_map.album —— 两者都要认。
       const videoUpdates = [];
       try {
         const vids = db.queryAll("SELECT id, file_path FROM pregnancy_photo WHERE media_type = 'video'");
         for (const v of vids) {
-          if (v.file_path && fileMap.album[v.file_path]) {
-            videoUpdates.push({ id: v.id, newPath: path.join(config.MEDIA_DIR, fileMap.album[v.file_path]) });
+          const mapped = (fileMap.media && fileMap.media[v.file_path]) || (fileMap.album && fileMap.album[v.file_path]);
+          if (v.file_path && mapped) {
+            videoUpdates.push({ id: v.id, newPath: path.join(config.MEDIA_DIR, mapped) });
           }
         }
       } catch {}
@@ -1999,6 +2055,9 @@ router.post('/restore-latest', async (req, res) => {
     // 相册照片 → PHOTOS_DIR
     const srcAlbum = path.join(latestBackup, 'files', 'album');
     if (fs.existsSync(srcAlbum)) fileCount += copyDirFiles(srcAlbum, config.PHOTOS_DIR);
+    // 相册视频 → MEDIA_DIR（新版备份的分流目录；旧备份的视频在 files/album/ 里，靠自愈兜底）
+    const srcMedia = path.join(latestBackup, 'files', 'media');
+    if (fs.existsSync(srcMedia)) fileCount += copyDirFiles(srcMedia, config.MEDIA_DIR);
     // 产检照片 → PHOTOS_DIR
     const srcCkPhoto = path.join(latestBackup, 'files', 'checkup_photos');
     if (fs.existsSync(srcCkPhoto)) fileCount += copyDirFiles(srcCkPhoto, config.PHOTOS_DIR);
