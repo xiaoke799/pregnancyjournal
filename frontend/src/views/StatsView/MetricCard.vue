@@ -5,6 +5,14 @@
       <span class="card-unit">{{ unit }}</span>
     </div>
 
+    <!-- 汇总数字：一眼看清「现在多少 / 平均多少 / 涨了还是降了」 -->
+    <div v-if="summaryItems.length" class="summary-strip">
+      <div v-for="(s, i) in summaryItems" :key="i" class="sum-item">
+        <span class="sum-label">{{ s.label }}</span>
+        <span class="sum-value">{{ s.value }}</span>
+      </div>
+    </div>
+
     <!-- 折线图 -->
     <div class="chart-wrap" ref="chartWrapRef">
       <v-chart v-if="chartOption" :option="chartOption" autoresize class="echart" />
@@ -63,6 +71,8 @@ const props = defineProps({
   values3: { type: Array as () => (number | null)[], default: () => [] },
   legend: { type: Array as () => string[], default: () => [] },
   tableData: { type: Array as any, required: true },
+  /** 额外想展示的汇总项（如体重的「较首次」增重），格式 { label, value } */
+  extraStats: { type: Array as () => Array<{ label: string; value: string }>, default: () => [] },
 })
 
 const showTable = ref(false)
@@ -70,6 +80,61 @@ const chartWrapRef = ref<HTMLDivElement>()
 
 const hasExtra = computed(() => props.tableData.some((r: any) => r.extra))
 const hasNote = computed(() => props.tableData.some((r: any) => r.note))
+
+// ====== 汇总数字 ======
+/** 只统计非空值；取不到有效数据时返回 null（该序列不参与汇总） */
+function statsOf(arr: (number | null)[]) {
+  const nums = (arr || [])
+    .filter((v) => v != null && v !== ('' as any) && !isNaN(Number(v)))
+    .map(Number)
+  if (!nums.length) return null
+  const first = nums[0]
+  const last = nums[nums.length - 1]
+  return {
+    first,
+    last,
+    avg: nums.reduce((a, b) => a + b, 0) / nums.length,
+    min: Math.min(...nums),
+    max: Math.max(...nums),
+    delta: last - first,
+  }
+}
+
+/** 整数原样显示，小数保留 1 位（避免 62.300000000000004 这类浮点噪声） */
+function fmt(n: number): string {
+  if (n == null || isNaN(n)) return '--'
+  return Number.isInteger(n) ? String(n) : (Math.round(n * 10) / 10).toFixed(1)
+}
+
+/** 实际有几条曲线在画（第二条/第三条全空就不算） */
+const seriesList = computed(() => {
+  const out: Array<{ name: string; v: (number | null)[] }> = [
+    { name: props.legend[0] || props.title, v: props.values },
+  ]
+  if (props.values2?.some((v) => v != null)) out.push({ name: props.legend[1] || '第二项', v: props.values2 })
+  if (props.values3?.some((v) => v != null)) out.push({ name: props.legend[2] || '第三项', v: props.values3 })
+  return out
+})
+
+const summaryItems = computed(() => {
+  const items: Array<{ label: string; value: string }> = []
+  const multi = seriesList.value.length > 1
+  for (const s of seriesList.value) {
+    const st = statsOf(s.v)
+    if (!st) continue
+    // 多曲线时（血压收缩/舒张、血糖三个时点）先标出是哪条线，避免数字张冠李戴
+    const pre = multi ? s.name + ' ' : ''
+    items.push({ label: pre + '最新', value: fmt(st.last) })
+    items.push({ label: pre + '平均', value: fmt(st.avg) })
+    if (!multi) {
+      items.push({ label: '范围', value: `${fmt(st.min)}~${fmt(st.max)}` })
+      const d = st.delta
+      items.push({ label: '变化', value: (d > 0 ? '+' : d < 0 ? '−' : '±') + fmt(Math.abs(d)) })
+    }
+  }
+  for (const e of props.extraStats || []) items.push(e)
+  return items
+})
 
 // 构建单条线
 function buildSeries(data: (number | null)[], name: string, lineColor: string, idx: number) {
@@ -201,6 +266,35 @@ function adjustColor(hex: string, amount: number): string {
   background: #f1f5f9;
   padding: 2px 8px;
   border-radius: 8px;
+}
+
+/* 汇总数字条：横向可换行，不挤压图表高度 */
+.summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.sum-item {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--bg-color-2, #f6f1ee);
+  border: 1px solid var(--divider-color, #f1ebf2);
+}
+.sum-label {
+  font-size: 11px;
+  color: var(--text-hint, #6b6480);
+  white-space: nowrap;
+}
+.sum-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-color, #1f1730);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* 图表 */
