@@ -91,8 +91,14 @@ const upload = multer({
 });
 
 // 把 multer 的错误（体积超限 / 类型不符）转成 JSON，避免前端只看到「服务器内部错误」
+//
+// ⚠️ 字段名必须是 'file'：本项目所有上传接口都用 'file'
+// （`checkup.js` 的 /checkups/:id/photos、/checkups/:id/reports，`photo.js` 的 /photos，
+// 前端 `api/checkup.ts` 与日记的调用点也都是 append('file')）。
+// 这里曾写成 'image' ⇒ multer 抛 `Unexpected field` ⇒ **日记插图上传从来没成功过**
+// （HTTP 仍是 200，只带业务码 1001，日志里只有一行 warn，极难发现）。
 function uploadDiaryImage(req, res, next) {
-  const mw = upload.single('image');
+  const mw = upload.single('file');
   return mw(req, res, (err) => {
     if (err) {
       const msg = err.code === 'LIMIT_FILE_SIZE'
