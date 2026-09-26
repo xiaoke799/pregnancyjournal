@@ -1,4 +1,10 @@
 :root {
+  /* 显式声明本主题为亮色（深色主题在 html.dark 里声明 dark）。
+     ⚠️ 必须声明：部分安卓厂商浏览器/WebView（如 vivo）在页面未声明 color-scheme 时，
+     会自作主张对网页做「强制反色 / 夜间模式」，导致 position:fixed 的半透明导航栏
+     反色异常，表现为「导航栏透明」或整块看不清。声明后浏览器不再强制处理。 */
+  color-scheme: light;
+
   /* ============ 基础颜色 ============ */
   --bg-color: #fdfaf7;
   --bg-color-2: #f6f1ee;
@@ -143,6 +149,8 @@
 }
 
 html.dark {
+  color-scheme: dark;
+
   --bg-color: #0f0d1a;
   --bg-color-2: #161324;
   --bg-card: #1a1730;

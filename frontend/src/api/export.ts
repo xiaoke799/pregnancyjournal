@@ -23,15 +23,6 @@ export const exportApi = {
   exportAlbumPdf: (params?: Record<string, any>) =>
     client.get('/export/album-pdf', { params, responseType: 'blob' }),
 
-  generatePdf: (pregnancyId: string) =>
-    client.post('/pdf/generate', { pregnancy_id: pregnancyId }),
-
-  getPdfProgress: (taskId: string) =>
-    client.get(`/pdf/progress/${taskId}`),
-
-  downloadPdf: (taskId: string) =>
-    client.get(`/pdf/download/${taskId}`, { responseType: 'blob' }),
-
   getLogs: (lines?: number) =>
     client.get('/logs', { params: lines ? { lines } : {} }),
 

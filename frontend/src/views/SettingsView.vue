@@ -86,7 +86,7 @@
             <div class="backup-card-icon">💾</div>
             <div class="backup-card-body">
               <div class="backup-card-title">创建备份</div>
-              <div class="backup-card-desc">自动备份全部数据（记录、日记、相册等），覆盖上一次备份</div>
+              <div class="backup-card-desc">自动备份全部数据（记录、日记、相册等）。每次都会新建一份带时间戳的备份，<b>历史备份会一直保留、不会覆盖</b>，都放在下方「保存位置」里（可在文件管理器中查看；长期使用建议偶尔清理较早的备份）</div>
               <div v-if="defaultBackupDir" class="backup-path-hint">
                 📍 保存位置：<code>{{ defaultBackupDir }}</code>
               </div>
@@ -408,9 +408,9 @@
         <div class="setting-item">
           <label>反馈</label>
           <div style="display:flex; flex-direction:column; gap:8px;">
-            <a class="feedback-link" href="mailto:celiang-xiang@foxmail.com">✉️ 邮箱：celiang-xiang@foxmail.com</a>
-            <a class="feedback-link" href="https://github.com/xiaoke799" target="_blank" rel="noopener">🐙 GitHub：github.com/xiaoke799</a>
-            <a class="feedback-link" href="https://qm.qq.com/q/BYvbmcnI4g" target="_blank" rel="noopener">💬 QQ群：689881692（xiaoke799 开发学习）</a>
+            <a class="feedback-link" href="mailto:celiang-xiang@foxmail.com">邮箱：celiang-xiang@foxmail.com</a>
+            <a class="feedback-link" href="https://github.com/xiaoke799" target="_blank" rel="noopener">GitHub：github.com/xiaoke799</a>
+            <a class="feedback-link" href="https://qm.qq.com/q/BYvbmcnI4g" target="_blank" rel="noopener">QQ群：689881692（xiaoke799 开发学习）</a>
           </div>
         </div>
 
@@ -457,12 +457,13 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { NInput, NButton, NRadioGroup, NRadioButton, NTag, NSwitch, NCheckboxGroup, NCheckbox, NSpace, NModal, useMessage } from 'naive-ui'
 import dayjs from 'dayjs'
-import AppIcon from '@/components/common/AppIcon.vue'
 import { usePregnancyStore } from '@/stores/pregnancy'
+import AppIcon from '@/components/common/AppIcon.vue'
 import { pregnancyApi } from '@/api/pregnancy'
 import { exportApi } from '@/api/export'
 import client from '@/api/client'
 import { pushApi } from '@/api/push'
+import { localToday } from '@/utils/date'
 
 const logText = ref('')
 const logInfo = ref<any>(null)
@@ -954,13 +955,13 @@ async function handleExportCsv() {
   try {
     const res: any = await exportApi.exportCsv({ pregnancy_id: pregnancyStore.currentPregnancy.id })
     if (res instanceof Blob) {
-      downloadBlob(res, `孕程记_健康记录_${new Date().toISOString().slice(0, 10)}.csv`)
+      downloadBlob(res, `孕程记_健康记录_${localToday()}.csv`)
       message.success('CSV 导出成功')
     } else if (res && typeof res === 'object' && res.code !== undefined) {
       message.warning(res.message || '没有可导出的数据')
     } else if (res) {
       const blob = new Blob([res], { type: 'text/csv;charset=utf-8;' })
-      downloadBlob(blob, `孕程记_健康记录_${new Date().toISOString().slice(0, 10)}.csv`)
+      downloadBlob(blob, `孕程记_健康记录_${localToday()}.csv`)
       message.success('CSV 导出成功')
     } else {
       message.warning('没有可导出的数据')
@@ -977,13 +978,13 @@ async function handleExportDiaryPdf() {
   try {
     const res: any = await exportApi.exportDiaryPdf({ pregnancy_id: pregnancyStore.currentPregnancy.id })
     if (res instanceof Blob) {
-      downloadBlob(res, `孕程记_日记_${new Date().toISOString().slice(0,10)}.pdf`)
+      downloadBlob(res, `孕程记_日记_${localToday()}.pdf`)
       message.success('日记 PDF 导出成功')
     } else if (res && typeof res === 'object' && res.code !== undefined) {
       message.warning(res.message || '没有可导出的日记内容')
     } else if (res) {
       const blob = new Blob([res], { type: 'application/pdf' })
-      downloadBlob(blob, `孕程记_日记_${new Date().toISOString().slice(0,10)}.pdf`)
+      downloadBlob(blob, `孕程记_日记_${localToday()}.pdf`)
       message.success('日记 PDF 导出成功')
     } else {
       message.warning(res?.message || '没有可导出的日记内容')
@@ -1003,13 +1004,13 @@ async function handleGeneratePdf() {
   try {
     const res: any = await exportApi.exportAlbumPdf({ pregnancy_id: pregnancyStore.currentPregnancy.id })
     if (res instanceof Blob) {
-      downloadBlob(res, `孕程记_纪念相册_${new Date().toISOString().slice(0,10)}.pdf`)
+      downloadBlob(res, `孕程记_纪念相册_${localToday()}.pdf`)
       message.success('纪念相册 PDF 生成成功')
     } else if (res && typeof res === 'object' && res.code !== undefined) {
       message.error('生成失败' + (res.message ? ': ' + res.message : ''))
     } else if (res) {
       const blob = new Blob([res], { type: 'application/pdf' })
-      downloadBlob(blob, `孕程记_纪念相册_${new Date().toISOString().slice(0,10)}.pdf`)
+      downloadBlob(blob, `孕程记_纪念相册_${localToday()}.pdf`)
       message.success('纪念相册 PDF 生成成功')
     } else {
       message.error('生成失败，没有可导出的相册内容')
@@ -1194,10 +1195,10 @@ function formatLogTime(t?: string): string {
 </script>
 
 <style scoped>
-.settings-view { max-width: 600px; margin: 0 auto; padding: 16px; }
+.settings-view { max-width: 600px; margin: 0 auto; padding: 16px; overflow-x: hidden; }
 .section { background: var(--bg-card, white); border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
 .section h3 { margin-bottom: 16px; font-size: 16px; }
-.setting-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-color, #e2e8f0); }
+.setting-item { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-color, #e2e8f0); }
 .setting-item:last-child { border-bottom: none; }
 .setting-item label { min-width: 72px; color: var(--text-secondary, #64748b); font-size: 14px; flex-shrink: 0; }
 .feedback-link { color: var(--primary-color, #c44680); text-decoration: none; font-size: 14px; transition: opacity .15s; word-break: break-all; }
@@ -1273,6 +1274,11 @@ function formatLogTime(t?: string): string {
 .pregnancy-due { color: var(--text-secondary, #64748b); font-size: 13px; flex: 1; }
 
 .wecom-section { border-left: 4px solid #07c160; }
+/* 状态行的 n-tag 常常是一长串（"已配置，可正常推送（每日 08:00） · 最近成功：…"），
+   n-tag 默认不换行、flex 里又不收缩，会把整页撑出横向滚动。
+   允许它在行内换行；放不下时整行折行（配合 .setting-item 的 flex-wrap）。 */
+.wecom-section .n-tag { max-width: 100%; white-space: normal; height: auto; min-height: 24px; }
+.wecom-section .n-tag .n-tag__content { white-space: normal; word-break: break-all; }
 
 .push-log-list { display: flex; flex-direction: column; gap: 6px; }
 .push-log-item { background: #f8fafc; border-radius: 8px; padding: 10px 12px; font-size: 13px; }

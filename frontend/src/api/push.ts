@@ -20,6 +20,18 @@ export interface PushChannelConfig {
   status?: { success: boolean; message: string }
 }
 
+/** 手动产检提醒的入参（后端从 query 读取，不是 body） */
+export interface PushCheckupReminder {
+  /** 产检名称，如「NT 检查」；后端缺省会用「产检」 */
+  checkup_name: string
+  /** 孕周 */
+  gestational_week?: number
+  /** 计划日期，如 2026-10-01 */
+  checkup_date?: string
+  /** 检查项目，多个用顿号/逗号分隔 */
+  items?: string
+}
+
 export interface PushPrefs {
   enabled?: boolean
   push_checkup?: boolean
@@ -36,6 +48,13 @@ export const pushApi = {
 
   /** 单个渠道的配置（URL 脱敏） */
   getChannelConfig: (channel: PushChannelKey) => client.get(`/${channel}/config`),
+
+  /**
+   * 单个渠道的「是否已配置 + 最近一次推送结果」。
+   * 与 getChannels() 的区别：getChannels 一次拿全部渠道的摘要，
+   * 这个只查一个渠道，适合单独刷新某个渠道卡片。
+   */
+  getChannelStatus: (channel: PushChannelKey) => client.get(`/${channel}/status`),
 
   /**
    * 保存渠道配置。
@@ -57,4 +76,16 @@ export const pushApi = {
 
   /** 手动推送到所有已启用渠道 */
   dailyPushAll: (pregnancyId: string) => client.post('/push/daily-push', { pregnancy_id: pregnancyId }),
+
+  /**
+   * 手动发一条产检提醒。
+   *
+   * ⚠️ 只有「按渠道」的版本（`/${channel}/send-checkup-reminder`），
+   * 后端没有跨渠道的 /push/send-checkup-reminder —— 要同时发两个渠道就调两次。
+   * （后端注释：该接口目前前端未调用，属于保留能力。）
+   */
+  sendCheckupReminder: (
+    channel: PushChannelKey,
+    payload: PushCheckupReminder
+  ) => client.post(`/${channel}/send-checkup-reminder`, undefined, { params: payload }),
 }

@@ -14,6 +14,12 @@ export function useResize(callback?: (width: number, height: number) => void, de
   }, delay)
 
   onMounted(() => {
+    // ⚠️ 挂载时先立即重算一次。个别 WebView / 厂商浏览器首屏拿到的 innerWidth 不可靠
+    // （或被嵌入 iframe、容器时初值不对），若只等 resize 事件，手机上可能被误判为桌面端
+    // 而渲染出侧边栏（而不是底部 tab 栏），窄屏布局直接崩坏。
+    width.value = window.innerWidth
+    height.value = window.innerHeight
+    isMobile.value = width.value < 768
     window.addEventListener('resize', debouncedHandler)
   })
 

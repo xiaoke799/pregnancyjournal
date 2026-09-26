@@ -3,7 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover：没有它时 env(safe-area-inset-*) 恒为 0，
+         安卓/iOS 全面屏底部安全区失效（导航栏会贴住系统手势条）。 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- 声明配色方案：显式注明「亮色」，可让 WebView 不再对页面做「强制反色」。
+         vivo 等厂商的 WebView 在系统深色模式下会反色整个页面，导致 position:fixed 的
+         半透明导航栏渲染成透明。应用内的深色主题由 html.dark 的 color-scheme:dark 覆盖，
+         不依赖系统深色设置。 -->
+    <meta name="color-scheme" content="light" />
     <title>孕程记</title>
   </head>
   <body>

@@ -166,6 +166,13 @@ html.dark .glass {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* 不支持 backdrop-filter 的浏览器兜底：0.7/0.6 的半透明会变成「透明块」。
+   支持毛玻璃的设备不受影响。 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: rgba(255, 255, 255, 0.97); }
+  html.dark .glass { background: rgba(26, 23, 48, 0.97); }
+}
+
 .pink-glow {
   box-shadow: var(--glow-pink);
 }

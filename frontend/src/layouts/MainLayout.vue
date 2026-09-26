@@ -175,6 +175,7 @@ const tabbarItems = computed(() => navItems.filter(i =>
   filter: drop-shadow(0 2px 6px rgba(196, 70, 128, 0.3));
   animation: floatY 4s ease-in-out infinite;
 }
+
 /* 导航/标签栏用线性矢量图标（统一 fill:none + stroke），
    不依赖系统 emoji 字体 —— 各家系统/Android WebView 强制反色都不会变形 */
 .logo-icon,
@@ -186,7 +187,6 @@ const tabbarItems = computed(() => navItems.filter(i =>
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-
 
 .app-title {
   font-size: 19px;
@@ -352,10 +352,17 @@ const tabbarItems = computed(() => navItems.filter(i =>
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--tabbar-height, 60px);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  /* height 必须把安全区算进去：全局是 box-sizing: border-box，
+     若只写 60px 而 padding-bottom 等于安全区高度，内容区会被压扁（全面屏尤其明显）。 */
+  height: calc(var(--tabbar-height, 60px) + var(--safe-bottom, 0px));
+  /* 用【不透明】背景，不再依赖 backdrop-filter：
+     部分安卓机型（如 vivo 的浏览器 / 系统 WebView）对 backdrop-filter 支持不完整，
+     半透明背景 + 毛玻璃失效时会表现为「导航栏透明 / 发虚」；
+     若再叠加安卓的强制反色，问题更明显。纯不透明背景在所有机型上表现一致。 */
+  /* 走令牌而非硬写色值：--bg-card 在亮色是 #ffffff、在 html.dark 是 #1a1730，
+     两者恰好就是原来的硬写值。这样深色模式无需额外的 .tabbar 覆盖规则，
+     将来主题色一改即自动跟随（铁律 17：配色一律走令牌）。 */
+  background: var(--bg-card);
   border-top: 1px solid var(--border-color-soft);
   display: flex;
   justify-content: space-around;
@@ -433,6 +440,8 @@ const tabbarItems = computed(() => navItems.filter(i =>
 
   .main-content {
     padding: 0;
+    /* 顶部安全区：viewport-fit=cover 后页面会延伸到状态栏下方，不补会被遮挡 */
+    padding-top: var(--safe-top, 0px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -449,9 +458,5 @@ html.dark .sidebar {
 
 html.dark .sidebar::after {
   background: radial-gradient(circle at top right, rgba(240, 166, 200, 0.1), transparent 70%);
-}
-
-html.dark .tabbar {
-  background: rgba(26, 23, 48, 0.88);
 }
 </style>

@@ -148,4 +148,11 @@ const { age, displayText, countdownText, trimesterText } = useGestationalAge()
   .week-display { font-size: 32px; }
   .countdown { font-size: 14px; }
 }
+
+/* 不支持毛玻璃的浏览器（部分安卓机型 / vivo 等）：
+   .trimester-badge 的 0.22 白色会近乎全透明、文字几乎看不见，这里退回较高不透明度。
+   支持毛玻璃的设备不受影响，视觉保持不变。 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .trimester-badge { background: rgba(255, 255, 255, 0.42); }
+}
 </style>
