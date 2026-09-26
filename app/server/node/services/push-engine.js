@@ -838,6 +838,36 @@ function queryPushLogs(filter = 'all', channelKey = '', limit = 300) {
 
 // ========== 定时调度（一个调度器管理所有渠道）==========
 let schedulerStarted = false;
+let lastPruneDate = '';   // 每天只清理一次推送记录
+
+/** 推送记录保留天数：**只记录最近一个月**（更早的没人看，也没必要一直占地方） */
+const PUSH_LOG_RETENTION_DAYS = 30;
+
+/**
+ * 清理超出保留期的推送记录（默认 30 天）。
+ *
+ * 应用是每天定时推送的，记录会无限增长；一个月前的推送结果没有查看价值，
+ * 留着只会让表越来越大、列表越来越长（另外查询侧还有 300 条的显示上限兜底）。
+ * 幂等、随时可重复调用；任何失败都不影响推送业务。
+ */
+function pruneOldPushLogs(retentionDays = PUSH_LOG_RETENTION_DAYS) {
+  try {
+    const days = Number(retentionDays) > 0 ? Number(retentionDays) : PUSH_LOG_RETENTION_DAYS;
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const cutoff = localStamp(cutoffDate);   // 与 created_at 同格式（本地时间）
+    // db.run() 不返回影响行数，所以先数再删
+    const row = db.queryOne('SELECT COUNT(*) AS n FROM push_log WHERE created_at < ?', [cutoff]);
+    const n = (row && row.n) || 0;
+    if (n > 0) {
+      db.run('DELETE FROM push_log WHERE created_at < ?', [cutoff]);
+      log.info('推送', `清理历史推送记录 ${n} 条（只保留最近 ${days} 天）`);
+    }
+    return n;
+  } catch (e) {
+    log.warn('推送', `清理历史推送记录失败: ${e.message}`);
+    return 0;
+  }
+}
 
 const CATCHUP_WINDOW_MIN = 180;      // 到达推送时间后 3 小时内仍会补推
 const MAX_ATTEMPTS_PER_DAY = 6;      // 每个渠道每天最多尝试 6 次（含自动重试）
@@ -860,6 +890,12 @@ async function schedulerTick() {
     const now = new Date();
     const today = localDateStr(now);
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // 每天清理一次超期推送记录（只记录最近一个月）；用日期守卫避免每分钟都删一遍
+    if (lastPruneDate !== today) {
+      lastPruneDate = today;
+      pruneOldPushLogs();
+    }
 
     for (const channel of channelList()) {
       try {
@@ -925,6 +961,9 @@ function startScheduler() {
     log.warn('推送', `启动检查推送状态失败: ${e.message}`);
   }
 
+  // 启动时清一次超期记录（应用可能几个月不重启，所以 tick 里还会每天再清一次）
+  pruneOldPushLogs();
+
   setInterval(schedulerTick, 60000); // 每分钟检查一次
 }
 
@@ -954,6 +993,8 @@ module.exports = {
   pushToAllChannels,
   startScheduler,
   schedulerTick,
+  pruneOldPushLogs,
+  PUSH_LOG_RETENTION_DAYS,
   // 对外能力（路由层用）
   channelStatus,
   channelConfigSummary,
