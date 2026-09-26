@@ -615,7 +615,6 @@ const mergedList = computed<MergedItem[]>(() => {
     }
   })
   const all = [...standard, ...custom]
-  console.log('[mergedList] standard=', standard.length, 'custom=', custom.length, 'total=', all.length)
   all.sort((a, b) => compareCheckupItems(a, b, !!lmp))
   return all
 })
@@ -899,19 +898,16 @@ async function handleAddCustom() {
   savingCustom.value = true
   try {
     const filteredItems = customForm.value.items.filter(i => i.trim())
-    console.log('[handleAddCustom] sending:', { name, itemsCount: filteredItems.length, date: customForm.value.checkup_date })
-    const res: any = await checkupApi.createCustom({
+    await checkupApi.createCustom({
       pregnancy_id: pregnancyStore.currentPregnancy.id,
       name,
       items: filteredItems.length ? filteredItems : undefined,
       checkup_date: customForm.value.checkup_date,
       notes: customForm.value.notes || undefined,
     })
-    console.log('[handleAddCustom] response:', res)
     message.success('添加成功'); showAddDialog.value = false
     customForm.value = { name: '', items: [], checkup_date: '', notes: '' }
     await loadAll()
-    console.log('[handleAddCustom] loadAll done, customCheckups count:', customCheckups.value.length)
   } catch (e: any) {
     console.error('[handleAddCustom] error:', e)
     message.error(e.message || '添加失败，请重试')
@@ -991,8 +987,8 @@ async function loadAll() {
     try {
       const res: any = await getCheckupSchedule(pid)
       if (res.code === 0 && Array.isArray(res.data)) {
+        // 相等才写回；否则本轮结果已过期（期间有更新的操作），丢弃以免覆盖用户最新状态。
         if (mySeq === dataSeq) schedule.value = res.data
-        else console.log('[loadAll] 结果已过期（期间有更新的操作），跳过写回 schedule')
       } else {
         console.warn('[loadAll] getCheckupSchedule unexpected format: code=', res?.code)
       }
@@ -1004,10 +1000,8 @@ async function loadAll() {
       // 获取自定义产检
       try {
         const res: any = await checkupApi.listCustom(pid)
-        console.log('[loadAll] listCustom raw response:', JSON.stringify(res)?.slice(0, 300))
         if (res.code === 0 && Array.isArray(res.data)) {
           if (mySeq === dataSeq) customCheckups.value = res.data
-          console.log('[loadAll] customCheckups assigned:', res.data.length, 'items:', res.data.map((c: any) => ({ id: c.id, name: c.name, date: c.checkup_date })))
         } else {
           console.warn('[loadAll] listCustom unexpected format: code=', res?.code, 'dataType=', Array.isArray(res?.data) ? 'array' : typeof res?.data)
         }

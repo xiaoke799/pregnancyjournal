@@ -295,7 +295,6 @@ async function loadDiaries() {
       pregnancyStore.currentPregnancy.id,
       { page: 1, page_size: 100 }
     )
-    console.log('[Diary] loadDiaries:', res)
     if (res.code === 0) {
       const raw = res.data?.items || res.data?.list || res.data || []
       diaries.value = raw.sort((a: any, b: any) => {

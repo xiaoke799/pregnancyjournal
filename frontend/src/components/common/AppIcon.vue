@@ -93,7 +93,7 @@ const paths = computed(() => ICONS[props.name] || [])
 // 存在的意义：界面上有一批「内容型」图标（记录类型的心情、症状、便便、服药、运动…），
 // 用彩色符号比线稿更容易一眼认出，所以它们不进 ICONS，直接带原始字符进来。
 // ⚠️ 之前没有这层兜底 —— 字典未命中就渲染空 SVG，
-// 结果记录页一大片格子是空白（填上钻井符号的位置全都空了）。
+// 结果记录页一大片格子是空白（本该显示符号的位置全都空了）。
 const isGlyph = computed(() => paths.value.length === 0 && !!props.name)
 const glyphStyle = computed(() => ({
   fontSize: typeof props.size === 'number' ? `${props.size}px` : props.size,
