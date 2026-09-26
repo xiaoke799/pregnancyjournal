@@ -282,6 +282,34 @@ router.delete('/checkup-schedule/:item_id/complete', async (req, res) => {
       await db.run('UPDATE prenatal_checkup SET is_completed = 0, updated_at = ? WHERE id = ?', [nowStr, t.id]);
     }
 
+    // ⚠️ 撤销后重算该项按显示口径是否**仍然**完成。
+    // 显示层判定是「周区间命中 ∪ 标记命中」，其中「周区间命中」会把**用户自己填写的**
+    // 产检记录也算进去 —— 那是真实做过的检查，不该被「取消完成」动掉。
+    // 于是存在这种情况：用户手填过该孕周的记录，点「标记完成」再点「取消完成」，
+    // 自动记录确实被撤销了，但界面刷新回来依然是「已完成」—— 用户视角就是
+    // 「提示已取消，状态却没变」。这里把真实结果带回给前端，让它给出准确的文案，
+    // 而不是「成功提示 + 状态原地不动」的自相矛盾。
+    let stillCompleted = false;
+    try {
+      const item = getSchedule().find(s => s.id === item_id) || null;
+      if (item) {
+        const ws = item.week_start || 0;
+        const we = item.week_end || item.week_start || 0;
+        const undoneIds = new Set(targets.map(t => t.id));
+        const remaining = await db.queryAll(
+          'SELECT gestational_week FROM prenatal_checkup WHERE pregnancy_id = ? AND is_completed = 1',
+          [pregnancy_id]
+        );
+        stillCompleted = remaining.some(r => {
+          if (undoneIds.has(r.id)) return false; // id 不在查询里也没关系，被撤销的已置 0
+          const w = Number(r && r.gestational_week);
+          return Number.isFinite(w) && w >= ws && w <= we;
+        });
+      }
+    } catch (stillErr) {
+      logger.warn('checkup-schedule', `DELETE /:item_id/complete - still_completed check failed: ${stillErr.message}`);
+    }
+
     // 清「标记完成」顺带写的完成日期（仅当它等于被撤销记录的日期）
     let dateCleared = null;
     try {
@@ -308,11 +336,19 @@ router.delete('/checkup-schedule/:item_id/complete', async (req, res) => {
       logger.warn('checkup-schedule', `DELETE /:item_id/complete - clear schedule_date failed: ${dateErr.message}`);
     }
 
-    logger.info('checkup-schedule', `DELETE /:item_id/complete - undone ${targets.length} record(s), date_cleared=${dateCleared}`);
+    logger.info('checkup-schedule', `DELETE /:item_id/complete - undone ${targets.length} record(s), date_cleared=${dateCleared}, still_completed=${stillCompleted}`);
     res.json({
       code: 0,
-      data: { item_id, is_completed: false, changed: targets.length, date_cleared: dateCleared },
-      message: '已取消完成'
+      data: {
+        item_id,
+        // still_completed=true 时显示层仍会判为完成（用户手填的记录命中该孕周），
+        // 前端据此决定本地状态与提示文案 —— 不要盲目把界面置成未完成。
+        is_completed: stillCompleted,
+        changed: targets.length,
+        date_cleared: dateCleared,
+        still_completed: stillCompleted,
+      },
+      message: stillCompleted ? '已撤销本页标记，但该项仍有你填写的产检记录' : '已取消完成'
     });
   } catch (error) {
     logger.error('checkup-schedule', 'DELETE /:item_id/complete unexpected error', error);

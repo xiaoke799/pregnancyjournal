@@ -1287,7 +1287,10 @@ onBeforeUnmount(() => {
 }
 
 .type-icon {
-  font-size: 14px;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .type-label {

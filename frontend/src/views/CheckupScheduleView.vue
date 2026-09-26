@@ -77,7 +77,6 @@
             />
             <n-tag v-if="item.is_mandatory" size="small" type="error" :bordered="false">必检</n-tag>
             <n-tag v-else-if="item._type === 'standard'" size="small" type="default" :bordered="false">选检</n-tag>
-            <span v-if="item.is_completed" class="completed-mark">✅</span>
             <n-button
               v-if="item._type === 'custom'"
               size="tiny"
@@ -213,7 +212,7 @@
             标记完成
           </n-button>
           <template v-else>
-            <span class="completed-text">已完成</span>
+            <span class="completed-text"><AppIcon name="check" :size="12" />已完成</span>
             <!-- 误按「标记完成」的兜底：可撤销。只回退本应用自己产生的那条完成记录，用户手填的数据不动。 -->
             <n-button
               size="tiny"
@@ -860,6 +859,16 @@ async function cancelComplete(item: MergedItem) {
       // 只有后端明确回报清掉了自动写入的日期，才删本地日期缓存；用户手填的日期保留
       const cleared = res && res.data ? res.data.date_cleared : null
       if (cleared) delete scheduleDates.value[item.id]
+      // ⚠️ 后端撤销了本页的标记，但如果用户自己填写的产检记录仍命中该孕周，
+      // 显示口径下这项**依然算完成**。此时本地状态不要置成未完成 —— 否则 loadAll()
+      // 拉回来又变绿，用户看到的就是「提示已取消、状态没变」的自相矛盾。
+      // 如实保持完成态，并告诉用户真实原因。
+      if (res && res.data && res.data.still_completed) {
+        applyLocal(true)
+        restoreCompletedAt()
+        message.info('已撤销本页的标记；不过你在该孕周还有自己填写的产检记录，所以仍显示为已完成')
+        return
+      }
     }
     message.success('已取消完成')
     loadAll().catch(() => {})
@@ -1158,7 +1167,20 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
 }
 .checkup-card.is-mandatory { border-left-color: var(--ck-accent); }
 .checkup-card.is-custom { border-left-color: var(--ck-info); border-left-style: dashed; }
-.checkup-card.is-completed { background: var(--ck-done-bg); border-left-color: var(--ck-done); }
+/* 完成态必须「一眼可辨」（用户反馈：取消完成后看不出和完成有什么区别 ⇒ 说明完成态本身太弱）。
+   三层信号，全部用现有绿系令牌，不引入新色值：
+   ① 整圈绿色描边（原来只有极浅的底色 #f1faf4，和白底几乎无差）；
+   ② 标题删除线并压淡 —— 「这一项已经过去了」；
+   ③ 底部「已完成」做成绿描边徽章（原先是 13px 浅色小字，手机上几乎看不见）。 */
+.checkup-card.is-completed {
+  background: var(--ck-done-bg);
+  border-color: var(--ck-done);
+  border-left-color: var(--ck-done);
+}
+.is-completed .checkup-name {
+  text-decoration: line-through;
+  color: var(--ck-ink-3);
+}
 .checkup-card.is-current { box-shadow: 0 0 0 2px var(--ck-attn), var(--shadow-md); }
 
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
@@ -1178,8 +1200,6 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
   transition: background .25s, color .25s, font-weight .25s;
 }
 .expected-date-tag.is-urgent { background: var(--ck-attn-bg); color: var(--ck-attn-ink); font-weight: 600; }
-.completed-mark { font-size: 18px; }
-
 .date-input-small {
   padding: 4px 8px;
   border: 1px solid var(--ck-line);
@@ -1410,7 +1430,16 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
 .report-empty { font-size: 12px; color: var(--ck-ink-3); text-align: center; padding: 12px 0; }
 
 .card-footer { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
-.completed-text { font-size: 13px; color: var(--ck-done-ink); font-weight: 600; }
+/* 「已完成」徽章：绿描边 + 浅绿底 + 深绿字（--ck-done-ink on --ck-done-bg 实测约 4.7:1，达标）。
+   原先是 13px 浅色小字 —— 完成态在手机上几乎没有存在感。 */
+.completed-text {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px; border-radius: 999px;
+  background: var(--ck-done-bg); color: var(--ck-done-ink);
+  border: 1px solid var(--ck-done);
+  font-size: 12px; font-weight: 600; line-height: 1.6;
+  white-space: nowrap;
+}
 /* 「取消完成」做成次要按钮：能点到，但不抢「标记完成」的视觉重量 */
 .card-footer .n-button { flex-shrink: 0; }
 

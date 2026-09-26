@@ -108,18 +108,24 @@
       <div style="padding: 8px 0;">
         <n-form label-placement="top">
           <n-form-item label="选择文件">
-            <input
-              ref="fileInputRef"
-              type="file"
-              accept="image/*,video/*"
-              class="file-input"
-              @change="onFileSelect"
-            />
-            <div v-if="uploadFile" class="file-name">{{ uploadFile.name }}</div>
-            <div class="format-hint">
-              <div><span class="fh-label">照片</span>JPG、PNG、WebP、GIF、BMP、HEIC/HEIF —— iPhone 拍的 HEIC 会自动转成 JPG 保存（原图保留）</div>
-              <div><span class="fh-label">视频</span>MP4、MOV、WebM、M4V 等常见格式</div>
-              <div class="fh-muted">iPhone 录的 HEVC 视频（.MOV）在电脑浏览器上放不出来，手机上或下载后可正常观看；TIFF 图片暂不支持（浏览器无法预览）</div>
+            <!-- ⚠️ 这里必须包一层纵向容器：n-form-item 的内容区是横向 flex，
+                 把格式说明和文件框平铺在一起的话，说明会被挤成一条 63px 宽的
+                 "竖排文字"（手机端实测），整块还把对话框顶出屏幕 —— 就是用户
+                 反馈的「提示撑大页面」。包起来后各占一行，宽度跟随对话框。 -->
+            <div class="file-col">
+              <input
+                ref="fileInputRef"
+                type="file"
+                accept="image/*,video/*"
+                class="file-input"
+                @change="onFileSelect"
+              />
+              <div v-if="uploadFile" class="file-name">{{ uploadFile.name }}</div>
+              <div class="format-hint">
+                <div><span class="fh-label">照片</span>JPG、PNG、WebP、GIF、BMP、HEIC/HEIF —— iPhone 拍的 HEIC 会自动转成 JPG 保存（原图保留）</div>
+                <div><span class="fh-label">视频</span>MP4、MOV、WebM、M4V 等常见格式</div>
+                <div class="fh-muted">iPhone 录的 HEVC 视频（.MOV）在电脑浏览器上放不出来，手机上或下载后可正常观看；TIFF 图片暂不支持（浏览器无法预览）</div>
+              </div>
             </div>
           </n-form-item>
           <n-form-item label="分类">
@@ -732,8 +738,16 @@ onMounted(async () => {
 }
 
 /* 上传表单 */
+.file-col {
+  /* n-form-item 内容区默认横向 flex：这里竖排，且宽度吃满对话框（防挤扁/溢出） */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
 .file-input {
   margin-bottom: 8px;
+  max-width: 100%;
 }
 
 .album-date-input {
@@ -754,6 +768,7 @@ onMounted(async () => {
   font-size: 13px;
   color: var(--text-secondary, #64748b);
   margin-top: 4px;
+  word-break: break-all;
 }
 
 /* 上传对话框里的「支持格式」说明 */
@@ -766,6 +781,8 @@ onMounted(async () => {
   font-size: 12px;
   line-height: 1.7;
   color: #64748b;
+  /* 中英混排的长说明：允许在任意字符间断行，杜绝撑宽容器 */
+  overflow-wrap: anywhere;
 }
 .format-hint .fh-label {
   display: inline-block;
@@ -818,12 +835,20 @@ onMounted(async () => {
   .album-title { font-size: 17px; }
   .album-tabs { gap: 4px; }
   .album-tab { padding: 5px 10px; font-size: 12px; }
-  /* 手机端：卡片上下布局（图片在上，文字在下） */
-  .timeline-card { flex-direction: column; gap: 10px; }
+  /* 手机端：卡片上下布局（图片在上，文字在下）。
+     整体目标：一屏能看到约两张卡片（用户反馈「页面很大、交互难」）——
+     图更矮、内边距更小、时间线轴收窄，把宽度还给内容。 */
+  .timeline-card { flex-direction: column; gap: 8px; padding: 10px; margin-bottom: 10px; }
   .card-media { width: 100%; max-width: none; }
-  .media-thumb { max-height: 200px; width: 100%; object-fit: cover; }
-  .timeline-item { gap: 8px; }
-  .month-header { font-size: 14px; }
+  .media-thumb { max-height: 150px; width: 100%; object-fit: cover; }
+  .timeline-item { gap: 6px; }
+  .timeline-axis { width: 14px; }
+  .axis-dot { width: 8px; height: 8px; margin-top: 18px; border-width: 1px; }
+  .month-header { font-size: 14px; padding: 10px 0 6px; }
   .card-date { font-size: 12px; }
+  .card-actions { margin-top: 6px; }
+  .card-action-btn { padding: 4px 10px; }
+  /* 空状态与提示：长英文词组（HEIC/HEIF 等）不允许撑破窄屏 */
+  .empty-hint { padding: 0 12px; overflow-wrap: anywhere; }
 }
 </style>
