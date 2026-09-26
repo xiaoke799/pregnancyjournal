@@ -345,7 +345,12 @@
       <!-- 推送记录（两个渠道合并展示，可按渠道筛选） -->
       <div v-if="anyChannelConfigured" class="section">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <h3 style="margin:0;">推送记录</h3>
+          <h3 style="margin:0;">
+            推送记录
+            <span v-if="pushLogs.length" class="push-log-count">
+              共 {{ pushLogs.length }} 条<template v-if="pushLogs.length >= PUSH_LOG_LIMIT">（仅显示最近 {{ PUSH_LOG_LIMIT }} 条）</template>
+            </span>
+          </h3>
           <n-button size="small" @click="loadPushLogs">刷新</n-button>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
@@ -1165,9 +1170,13 @@ async function saveChannelPrefs(chKey: string) {
 }
 
 // ========== 推送记录 ==========
+// 一次最多取多少条（与后端默认一致）。应用每天推送，「全部」拿全量会把页面撑爆，
+// 所以这里显式限量，并在标题处注明「仅显示最近 N 条」。
+const PUSH_LOG_LIMIT = 300
+
 async function loadPushLogs() {
   try {
-    const res: any = await pushApi.getLogs(pushLogFilter.value, pushLogChannel.value as any)
+    const res: any = await pushApi.getLogs(pushLogFilter.value, pushLogChannel.value as any, PUSH_LOG_LIMIT)
     pushLogs.value = res?.data || []
   } catch (e: any) { console.error('加载推送记录失败:', e?.message) }
 }
@@ -1291,7 +1300,19 @@ function formatLogTime(t?: string): string {
 .wecom-section .n-tag { max-width: 100%; white-space: normal; height: auto; min-height: 24px; }
 .wecom-section .n-tag .n-tag__content { white-space: normal; word-break: break-all; }
 
-.push-log-list { display: flex; flex-direction: column; gap: 6px; }
+/* 推送记录列表：**在区域内滚动**，不把设置页无限拉长（与 .preset-picker-body 同为 55vh）。
+   · max-height + overflow-y ⇒ 条数再多也只占这么高，列表内部上下滑动；
+   · scrollbar-gutter: stable ⇒ 预留滚动条宽度，从「今天」切到「全部」时卡片不会左右跳；
+   · overscroll-behavior: contain ⇒ 滚到底不会把整页带着一起滚（手机端尤其明显）。 */
+.push-log-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 55vh;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 2px;
+  overscroll-behavior: contain;
+}
+.push-log-count { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--text-tertiary, #94a3b8); }
 .push-log-item { background: #f8fafc; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
 .push-log-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .push-log-type { font-weight: 500; color: #333; font-size: 12px; }

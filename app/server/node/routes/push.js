@@ -29,7 +29,9 @@ router.get('/push/channels', (req, res) => {
 /** 推送记录 */
 router.get('/push/logs', (req, res) => {
   try {
-    const rows = engine.queryPushLogs(req.query.filter || 'all', req.query.channel || '');
+    const raw = Number(req.query.limit);
+    const limit = Number.isFinite(raw) && raw > 0 ? Math.min(raw, 2000) : 300;
+    const rows = engine.queryPushLogs(req.query.filter || 'all', req.query.channel || '', limit);
     res.json({ code: 0, data: rows, message: 'success' });
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });

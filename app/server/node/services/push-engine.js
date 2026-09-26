@@ -801,7 +801,14 @@ async function retryLog(logId) {
 }
 
 /** 推送记录列表（支持按渠道过滤） */
-function queryPushLogs(filter = 'all', channelKey = '') {
+/**
+ * 查询推送记录（默认**限量**返回）。
+ *
+ * ⚠️ 为什么必须限量：应用是每天定时推送的，「全部」若不限量会把这辈子所有记录
+ * 一次性查出来并返回 —— 前端再全部渲染成 DOM，设置页会越来越卡、越滚越长。
+ * 默认最多返回最近 300 条（按时间倒序）。`limit <= 0` 表示不限量，仅供内部使用。
+ */
+function queryPushLogs(filter = 'all', channelKey = '', limit = 300) {
   let sql = 'SELECT * FROM push_log';
   const where = [];
   const params = [];
@@ -821,6 +828,11 @@ function queryPushLogs(filter = 'all', channelKey = '') {
   }
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   sql += ' ORDER BY created_at DESC';
+  const n = Number(limit);
+  if (Number.isFinite(n) && n > 0) {
+    sql += ' LIMIT ?';
+    params.push(n);
+  }
   return db.queryAll(sql, params);
 }
 

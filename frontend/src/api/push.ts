@@ -67,9 +67,15 @@ export const pushApi = {
   /** 指定渠道发测试消息 */
   sendTest: (channel: PushChannelKey) => client.post(`/push/test/${channel}`),
 
-  /** 推送记录（可按渠道过滤） */
-  getLogs: (filter?: 'today' | 'week7' | 'all', channel?: PushChannelKey | '') =>
-    client.get('/push/logs', { params: { filter: filter || 'all', channel: channel || '' } }),
+  /**
+   * 推送记录（可按渠道过滤）。
+   *
+   * ⚠️ `limit` 对应后端的条数上限（默认 300），**拿不到全量**：
+   * 应用是每天定时推送的，「全部」若不限量会把所有历史记录一次性返回、
+   * 前端再全部渲染成 DOM，设置页会越来越卡、越滚越长。
+   */
+  getLogs: (filter?: 'today' | 'week7' | 'all', channel?: PushChannelKey | '', limit = 300) =>
+    client.get('/push/logs', { params: { filter: filter || 'all', channel: channel || '', limit } }),
 
   /** 重试某条记录（渠道由记录自身决定） */
   retry: (logId: string) => client.post(`/push/retry/${logId}`),
