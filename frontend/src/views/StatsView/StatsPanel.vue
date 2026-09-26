@@ -21,7 +21,7 @@
     <div v-if="!loading && records.length === 0" class="empty-state">
       <span class="empty-icon">📈</span>
       <span class="empty-text">
-        {{ period === 'month' && allRecords.length > 0 ? '本月暂无记录，可切换到「孕期全部」' : '暂无数据，先去记录一些吧' }}
+        {{ period !== 'all' && allRecords.length > 0 ? '该时段暂无记录，可切换到「孕期全部」' : '暂无数据，先去记录一些吧' }}
       </span>
     </div>
 
@@ -70,18 +70,21 @@
         :dates="chartDates" :values="chartValues('body_temperature')"
         :table-data="tableData('temp', 'body_temperature')" />
 
-      <!-- 三围（胸围 / 腰围 / 臀围）各一条曲线便于对比 -->
-      <MetricCard v-if="hasData('waist')" title="腰围变化" unit="cm" color="#14b8a6"
-        :dates="chartDates" :values="chartValues('waist')"
-        :table-data="tableData('waist', 'waist')" />
-
-      <MetricCard v-if="hasData('bust')" title="胸围变化" unit="cm" color="#0d9488"
-        :dates="chartDates" :values="chartValues('bust')"
-        :table-data="tableData('bust', 'bust')" />
-
-      <MetricCard v-if="hasData('hip')" title="臀围变化" unit="cm" color="#0f766e"
-        :dates="chartDates" :values="chartValues('hip')"
-        :table-data="tableData('hip', 'hip')" />
+      <!-- 三围：胸围 / 腰围 / 臀围 三条曲线同图对比（此前是三张独立卡片，看不出相互走势） -->
+      <MetricCard v-if="hasData('girth')" title="三围变化" unit="cm" color="#0d9488"
+        :dates="chartDates"
+        :values="chartValues('bust')"
+        :values2="chartValues('waist')"
+        :values3="chartValues('hip')"
+        :legend="['胸围', '腰围', '臀围']"
+        :table-data="tableData('girth', 'bust', {
+          cols: [
+            { key: 'bust', label: '胸围' },
+            { key: 'waist', label: '腰围' },
+            { key: 'hip', label: '臀围' },
+          ],
+          format: girthText,
+        })" />
 
       <!-- 睡眠 -->
       <MetricCard v-if="hasData('sleep')" title="睡眠时长" unit="小时" color="#8b5cf6"
@@ -135,29 +138,46 @@ const titleTag = computed(() => (props.size === 'page' ? 'h2' : 'h3'))
 
 const pregnancyStore = usePregnancyStore()
 
+/**
+ * 时段档位。
+ * ⚠️ 档位直接决定「取哪一段数据」（本地过滤），**不是**靠图表内部缩放去遮住其余数据。
+ *    老实现只有「本月 / 孕期全部」两档，且「孕期全部」是把 200+ 个点丢给图表、
+ *    由 echarts 的 dataZoom 默认只显示末尾约 20 个点 —— 后果是血糖这种每 45 天才测一次的
+ *    指标整张图**空白**（6 条数据全在视窗外），看起来像"数据丢了"。
+ */
+type Period = '7d' | '30d' | '90d' | 'all'
+const PERIODS: Array<{ value: Period; label: string; days: number | null; short: string }> = [
+  { value: '7d', label: '近7天', days: 7, short: '最近 7 天' },
+  { value: '30d', label: '近30天', days: 30, short: '最近 30 天' },
+  { value: '90d', label: '近90天', days: 90, short: '最近 90 天' },
+  { value: 'all', label: '孕期全部', days: null, short: '孕期全部' },
+]
+
 const loading = ref(false)
 /** 该孕期的全部记录（一次取回，切时段在本地过滤 —— 顺带让「孕期增重」的基准稳定） */
 const allRecords = ref<any[]>([])
-const period = ref<'month' | 'pregnancy'>('month')
+const period = ref<Period>('30d')
+const periodOptions = PERIODS
 
-const periodOptions = [
-  { value: 'month' as const, label: '本月' },
-  { value: 'pregnancy' as const, label: '孕期全部' },
-]
-
-const periodLabel = computed(() => {
-  if (period.value === 'month') return dayjs().format('YYYY年MM月')
-  if (pregnancyStore.currentPregnancy?.last_period_date) {
-    return `从 ${dayjs(pregnancyStore.currentPregnancy.last_period_date).format('YYYY-MM')} 至今`
-  }
-  return '孕期全部记录'
+/** 按所选时段过滤（近 N 天 = 含今天在内往前数 N 天，按字符串比较 YYYY-MM-DD） */
+const records = computed(() => {
+  const p = PERIODS.find((x) => x.value === period.value)
+  if (!p || p.days == null) return allRecords.value
+  const start = dayjs().subtract(p.days - 1, 'day').format('YYYY-MM-DD')
+  return allRecords.value.filter((r: any) => String(r.record_date || '') >= start)
 })
 
-/** 按所选时段过滤（本月 = 当前自然月） */
-const records = computed(() => {
-  if (period.value !== 'month') return allRecords.value
-  const prefix = dayjs().format('YYYY-MM')
-  return allRecords.value.filter((r: any) => String(r.record_date || '').startsWith(prefix))
+const periodLabel = computed(() => {
+  const rows = records.value
+  const head = period.value === 'all'
+    ? (pregnancyStore.currentPregnancy?.last_period_date
+        ? `从 ${dayjs(pregnancyStore.currentPregnancy.last_period_date).format('YYYY-MM')} 至今`
+        : '孕期全部记录')
+    : (PERIODS.find((p) => p.value === period.value)?.short || '')
+  if (!rows.length) return `${head} · 暂无记录`
+  const a = dayjs(rows[0].record_date).format('MM/DD')
+  const b = dayjs(rows[rows.length - 1].record_date).format('MM/DD')
+  return `${head} · 有记录 ${rows.length} 天（${a} ~ ${b}）`
 })
 
 // ====== 数据加载 ======
@@ -198,7 +218,7 @@ async function loadData() {
   }
 }
 
-function switchPeriod(p: 'month' | 'pregnancy') {
+function switchPeriod(p: Period) {
   if (period.value === p) return
   period.value = p
 }
@@ -229,10 +249,8 @@ function hasData(metric: string): boolean {
     case 'hcg': return any((r) => r.hcg_value != null)
     case 'uric_acid': return any((r) => r.uric_acid != null)
     case 'temp': return any((r) => r.body_temperature != null)
-    // 三围：任一项有值即展示（三条曲线各自独立成图）
-    case 'waist': return any((r) => r.bust != null || r.waist != null || r.hip != null)
-    case 'bust': return any((r) => r.bust != null)
-    case 'hip': return any((r) => r.hip != null)
+    // 三围：胸/腰/臀任一项有值即出图（三条曲线各自独立，缺的那条自然断开）
+    case 'girth': return any((r) => r.bust != null || r.waist != null || r.hip != null)
     case 'sleep': return any((r) => r.sleep_hours != null)
     case 'water': return any((r) => r.water_intake != null)
     case 'fhr': return any((r) => r.fetal_heart_rate != null)
@@ -259,6 +277,14 @@ interface TableCol {
   value: string | number
   extra?: string
   note?: string
+}
+
+/** 三围的「数值」列：三条曲线的值一起列，并带短标签，避免只显示胸围看不出另外两项 */
+function girthText(r: any): string {
+  const parts: Array<[string, any]> = [['胸', r.bust], ['腰', r.waist], ['臀', r.hip]]
+  const shown = parts.filter(([, v]) => v != null && v !== '')
+  if (!shown.length) return '--'
+  return shown.map(([k, v]) => k + v).join(' / ')
 }
 
 function tableData(
@@ -316,11 +342,12 @@ function tableData(
 }
 .period-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 6px;
 }
 .period-tab {
-  padding: 6px 18px;
+  padding: 6px 14px;
   border: 1.5px solid #e2e8f0;
   border-radius: 20px;
   background: white;

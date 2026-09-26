@@ -2,7 +2,10 @@
   <div class="metric-card">
     <div class="card-head">
       <h3 class="card-title">{{ title }}</h3>
-      <span class="card-unit">{{ unit }}</span>
+      <div class="head-right">
+        <span v-if="metaText" class="card-meta">{{ metaText }}</span>
+        <span class="card-unit">{{ unit }}</span>
+      </div>
     </div>
 
     <!-- 汇总数字：一眼看清「现在多少 / 平均多少 / 涨了还是降了」 -->
@@ -14,7 +17,7 @@
     </div>
 
     <!-- 折线图 -->
-    <div class="chart-wrap" ref="chartWrapRef">
+    <div class="chart-wrap" ref="chartWrapRef" :class="{ 'has-zoom': showZoom }">
       <v-chart v-if="chartOption" :option="chartOption" autoresize class="echart" />
       <div v-else class="no-data">数据不足，无法绘制图表</div>
     </div>
@@ -136,6 +139,27 @@ const summaryItems = computed(() => {
   return items
 })
 
+/**
+ * 卡片头的小字：「起止日期 · N 条」。
+ * 取的是**该指标真正有值的首末两条**（不是坐标轴范围），所以一眼能看出这张图覆盖了哪一段、
+ * 以及"看起来空"到底是没数据、还是数据在所选时段之外。
+ */
+const metaText = computed(() => {
+  const td = (props.tableData || []) as Array<{ date: string }>
+  if (!td.length) return ''
+  if (td.length === 1) return `${td[0].date} · 1 条`
+  return `${td[0].date}~${td[td.length - 1].date} · ${td.length} 条`
+})
+
+/**
+ * 是否给「可见的缩放条」。
+ * ⚠️ 只在点多（>40）时出现，且**默认显示全部（start:0 / end:100）**。
+ *    老实现是 `type:'inside'` 且默认只显示末尾约 20 个点 —— 于是血糖这类每 45 天测一次的指标
+ *    6 个点全被挪到视窗外，整张图空白，看起来像"数据丢了"（数据其实都在）。
+ *    另外把 `zoomOnMouseWheel` 关掉：否则鼠标停在图上滚轮会变成缩放，长页面滚不下去。
+ */
+const showZoom = computed(() => props.dates.length > 40)
+
 // 构建单条线
 function buildSeries(data: (number | null)[], name: string, lineColor: string, idx: number) {
   return {
@@ -191,7 +215,7 @@ const chartOption = computed(() => {
     },
     legend: {
       show: series.length > 1,
-      bottom: 0,
+      bottom: showZoom.value ? 24 : 0,
       textStyle: { fontSize: 11, color: '#64748b' },
       itemWidth: 16,
       itemHeight: 3,
@@ -200,7 +224,7 @@ const chartOption = computed(() => {
       top: 12,
       left: 8,
       right: 8,
-      bottom: series.length > 1 ? 28 : 8,
+      bottom: (series.length > 1 ? 28 : 8) + (showZoom.value ? 30 : 0),
       containLabel: true,
     },
     xAxis: {
@@ -209,21 +233,53 @@ const chartOption = computed(() => {
       axisLabel: {
         fontSize: 10,
         color: '#94a3b8',
-        interval: props.dates.length > 15 ? Math.ceil(props.dates.length / 10) - 1 : 0,
-        rotate: props.dates.length > 20 ? 45 : 0,
+        // 不再手算 interval：以前按「总点数」算，一缩放窗口里就只剩一个标签。
+        // 交给 echarts 按**当前可见窗口**自动排布并隐藏重叠标签。
+        hideOverlap: true,
+        rotate: props.dates.length > 12 ? 45 : 0,
       },
       axisLine: { lineStyle: { color: '#e2e8f0' } },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value',
+      // scale: true = 轴上下界贴合数据范围。原来一律从 0 起，
+      // 体温 36.1~36.7 被画在 0~40 的轴上、三围 87~104 画在 0~120 的轴上 —— 全被压成一条直线。
+      scale: true,
       axisLabel: { fontSize: 10, color: '#94a3b8' },
       splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' as const } },
       axisLine: { show: false },
       axisTick: { show: false },
     },
-    dataZoom: props.dates.length > 15 ? [
-      { type: 'inside', start: Math.max(0, 100 - (20 / props.dates.length * 100)), end: 100 },
+    // 点数多时给一条「看得见、拖得动」的缩放条；默认显示全部，不偷偷裁掉数据
+    dataZoom: showZoom.value ? [
+      {
+        type: 'inside',
+        start: 0,
+        end: 100,
+        // 关掉滚轮缩放：否则鼠标停在图上滚页面会变成缩放，长页面滚不动
+        zoomOnMouseWheel: false,
+        moveOnMouseWheel: false,
+        moveOnMouseMove: true,
+      },
+      {
+        type: 'slider',
+        start: 0,
+        end: 100,
+        height: 16,
+        bottom: 4,
+        borderColor: 'transparent',
+        handleSize: 16,
+        handleStyle: { color: '#fff', borderColor: '#c44680', borderWidth: 1.5 },
+        moveHandleStyle: { color: '#e8d9e3' },
+        // 关掉缩放条里的"数据小预览"：多条曲线/大量空值时它会被画成锯齿状的一团，很噪，
+        // 而卡片本身已经把这些信息画清楚了。
+        showDataShadow: false,
+        backgroundColor: '#f1ebf2',
+        fillerColor: 'rgba(196, 70, 128, 0.14)',
+        textStyle: { fontSize: 10, color: '#94a3b8' },
+        brushSelect: false,
+      },
     ] : [],
     series,
   }
@@ -259,6 +315,21 @@ function adjustColor(hex: string, amount: number): string {
   font-weight: 700;
   margin: 0;
   color: #1e293b;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.head-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.card-meta {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
 }
 .card-unit {
   font-size: 11px;
@@ -301,6 +372,10 @@ function adjustColor(hex: string, amount: number): string {
 .chart-wrap {
   height: 220px;
   margin-bottom: 4px;
+}
+/* 带缩放条时给图表让出位置，否则绘图区被压缩 */
+.chart-wrap.has-zoom {
+  height: 264px;
 }
 .echart {
   width: 100%;
@@ -360,6 +435,8 @@ function adjustColor(hex: string, amount: number): string {
 @media (max-width: 768px) {
   .metric-card { padding: 12px; border-radius: 12px; }
   .chart-wrap { height: 180px; }
+  .chart-wrap.has-zoom { height: 226px; }
   .card-title { font-size: 14px; }
+  .card-meta { font-size: 10px; }
 }
 </style>
