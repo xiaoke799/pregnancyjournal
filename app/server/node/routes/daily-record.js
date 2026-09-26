@@ -101,9 +101,13 @@ function uploadDiaryImage(req, res, next) {
   const mw = upload.single('file');
   return mw(req, res, (err) => {
     if (err) {
+      // 三类错误都要给人话：体积超限、字段名不匹配（曾把英文原文 "Unexpected field" 直接弹给用户）、
+      // 以及其它来自 fileFilter 的中文提示（不支持的图片类型）。
       const msg = err.code === 'LIMIT_FILE_SIZE'
         ? '图片过大，最大支持 5MB（可先压缩或改用其它图片）'
-        : (err.message || '图片上传失败');
+        : err.code === 'LIMIT_UNEXPECTED_FILE'
+          ? '图片上传失败：上传字段不匹配（这是程序问题，请反馈）'
+          : (err.message || '图片上传失败');
       logger.warn('daily-record', `日记插图上传失败: ${msg}`);
       return res.json({ code: 1001, data: null, message: msg });
     }
