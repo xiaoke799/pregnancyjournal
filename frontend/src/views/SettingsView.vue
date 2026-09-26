@@ -282,7 +282,10 @@
             <AppIcon name="image" :size="15" /> 生成纪念册
           </n-button>
         </div>
-        <div class="setting-hint">CSV 包含所有健康指标数据，可用 Excel 打开；日记和相册导出为 PDF 文件</div>
+        <div class="setting-hint">
+          CSV 包含所有健康指标数据，可用 Excel 打开；日记和相册导出为 PDF 文件。<br />
+          手机端点一下就会交给浏览器/系统下载，文件在下载列表或「文件」应用里。
+        </div>
       </div>
 
       <!-- 推送渠道：企业微信 / 飞书（结构一致，共用一套模板） -->
@@ -463,7 +466,7 @@ import { pregnancyApi } from '@/api/pregnancy'
 import { exportApi } from '@/api/export'
 import client from '@/api/client'
 import { pushApi } from '@/api/push'
-import { localToday } from '@/utils/date'
+import { getApiBase } from '@/utils/api-base'
 
 const logText = ref('')
 const logInfo = ref<any>(null)
@@ -935,90 +938,98 @@ async function handleRestoreLatest() {
   importing.value = false
 }
 
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.style.display = 'none'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  // 延迟释放：立即 revokeObjectURL 会让部分浏览器（尤其 iframe/WebView）取消下载，
-  // 表现为「提示成功但找不到文件」
-  setTimeout(() => URL.revokeObjectURL(url), 10000)
+/**
+ * 导出下载（手机端友好）
+ *
+ * 先向服务端「预检」有没有数据（只数条数、不生成文件），有数据再把**接口地址直接交给浏览器**：
+ * 服务端响应带 `Content-Disposition: attachment`，这是各端（含手机 WebView / 系统浏览器）
+ * 都认的标准下载路径，安装包里的 WebView 会把下载交给系统处理。
+ *
+ * 为什么不再走 fetch + Blob + <a download>：手机端 WebView 对 blob 下载支持很差 ——
+ * 典型表现就是「点了没反应」或「提示成功但找不到文件」（电脑端一直正常，所以很难发现）。
+ */
+async function exportViaDownload(opts: {
+  endpoint: string
+  params: Record<string, any>
+  emptyTip: string
+  okTip: string
+}): Promise<void> {
+  try {
+    const check: any = await client.get(opts.endpoint, { params: { ...opts.params, check: 1 } })
+    if (!check || check.code !== 0) {
+      message.warning(check?.message || opts.emptyTip)
+      return
+    }
+    if (!Number(check.data?.count)) {
+      message.warning(opts.emptyTip)
+      return
+    }
+    const qs = new URLSearchParams(
+      Object.entries(opts.params)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => [k, String(v)])
+    ).toString()
+    const url = `${getApiBase()}${opts.endpoint}${qs ? '?' + qs : ''}`
+    // 用隐藏链接点一下即可触发下载：同源 + attachment 响应头，不会把当前页面导航走
+    const a = document.createElement('a')
+    a.href = url
+    a.rel = 'noopener'
+    a.style.display = 'none'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    message.success(opts.okTip)
+  } catch (e: any) {
+    message.error('导出失败: ' + (e?.message || ''))
+  }
 }
 
 async function handleExportCsv() {
   if (!pregnancyStore.currentPregnancy?.id) { message.warning('请先创建孕期档案'); return }
   exportingCsv.value = true
   try {
-    const res: any = await exportApi.exportCsv({ pregnancy_id: pregnancyStore.currentPregnancy.id })
-    if (res instanceof Blob) {
-      downloadBlob(res, `孕程记_健康记录_${localToday()}.csv`)
-      message.success('CSV 导出成功')
-    } else if (res && typeof res === 'object' && res.code !== undefined) {
-      message.warning(res.message || '没有可导出的数据')
-    } else if (res) {
-      const blob = new Blob([res], { type: 'text/csv;charset=utf-8;' })
-      downloadBlob(blob, `孕程记_健康记录_${localToday()}.csv`)
-      message.success('CSV 导出成功')
-    } else {
-      message.warning('没有可导出的数据')
-    }
-  } catch (e: any) {
-    message.error('导出失败: ' + (e?.message || ''))
+    await exportViaDownload({
+      endpoint: '/export/csv',
+      params: { pregnancy_id: pregnancyStore.currentPregnancy.id },
+      emptyTip: '还没有健康记录，先去记录几笔再导出',
+      okTip: '已开始下载 CSV，稍等片刻（文件在浏览器的下载列表里）',
+    })
+  } finally {
+    exportingCsv.value = false
   }
-  exportingCsv.value = false
 }
 
 async function handleExportDiaryPdf() {
   if (!pregnancyStore.currentPregnancy?.id) { message.warning('请先创建孕期档案'); return }
   exportingDiary.value = true
   try {
-    const res: any = await exportApi.exportDiaryPdf({ pregnancy_id: pregnancyStore.currentPregnancy.id })
-    if (res instanceof Blob) {
-      downloadBlob(res, `孕程记_日记_${localToday()}.pdf`)
-      message.success('日记 PDF 导出成功')
-    } else if (res && typeof res === 'object' && res.code !== undefined) {
-      message.warning(res.message || '没有可导出的日记内容')
-    } else if (res) {
-      const blob = new Blob([res], { type: 'application/pdf' })
-      downloadBlob(blob, `孕程记_日记_${localToday()}.pdf`)
-      message.success('日记 PDF 导出成功')
-    } else {
-      message.warning(res?.message || '没有可导出的日记内容')
-    }
-  } catch (e: any) {
-    message.error('导出失败: ' + (e?.message || ''))
+    await exportViaDownload({
+      endpoint: '/export/diary-pdf',
+      params: { pregnancy_id: pregnancyStore.currentPregnancy.id },
+      emptyTip: '还没有写日记，先记几篇再导出',
+      okTip: '已开始生成并下载日记 PDF，稍等片刻',
+    })
+  } finally {
+    exportingDiary.value = false
   }
-  exportingDiary.value = false
 }
 
 async function handleGeneratePdf() {
-  if (!pregnancyStore.currentPregnancy) {
+  if (!pregnancyStore.currentPregnancy?.id) {
     message.warning('请先创建孕期档案')
     return
   }
   generatingPdf.value = true
   try {
-    const res: any = await exportApi.exportAlbumPdf({ pregnancy_id: pregnancyStore.currentPregnancy.id })
-    if (res instanceof Blob) {
-      downloadBlob(res, `孕程记_纪念相册_${localToday()}.pdf`)
-      message.success('纪念相册 PDF 生成成功')
-    } else if (res && typeof res === 'object' && res.code !== undefined) {
-      message.error('生成失败' + (res.message ? ': ' + res.message : ''))
-    } else if (res) {
-      const blob = new Blob([res], { type: 'application/pdf' })
-      downloadBlob(blob, `孕程记_纪念相册_${localToday()}.pdf`)
-      message.success('纪念相册 PDF 生成成功')
-    } else {
-      message.error('生成失败，没有可导出的相册内容')
-    }
-  } catch (e: any) {
-    message.error('生成失败: ' + (e?.message || ''))
+    await exportViaDownload({
+      endpoint: '/export/album-pdf',
+      params: { pregnancy_id: pregnancyStore.currentPregnancy.id },
+      emptyTip: '相册里还没有照片，先上传几张再生成',
+      okTip: '已开始生成并下载纪念册 PDF，照片较多时需要等一会儿',
+    })
+  } finally {
+    generatingPdf.value = false
   }
-  generatingPdf.value = false
 }
 
 // ========== 推送渠道（企业微信 / 飞书）==========
