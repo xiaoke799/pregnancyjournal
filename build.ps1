@@ -11,7 +11,7 @@ $ServerDir = Join-Path $PkgDir "app\server\node"
 $AppUi     = Join-Path $PkgDir "app\ui"
 # 注：不再有 $RootUi（根 ui/ 是历史死重，既不进包也不是运行时目录；
 # 运行时 STATIC_DIR = ${TRIM_APPDEST}/ui，来自 app.tgz:ui，即 app/ui）。
-$Version   = "0.0.28"   # 版本号锁定，禁止改动
+$Version   = "0.0.29"   # 版本号锁定，禁止改动
 if ($PkgDir -eq $PSScriptRoot) { $Parent = $PSScriptRoot } else { $Parent = Split-Path $PkgDir -Parent }
 $Stage     = Join-Path $env:TEMP "pregnancyjournal_stage_$Version"
 
@@ -22,6 +22,7 @@ Step "1/6 源码完整性校验"
 $errors = @()
 # 后端静态数据（食谱/食品安全/产检表/待产清单）
 foreach ($f in @("recipes.json","food_safety_v3.json","checkup_schedule.json",
+                 "checkup_subitem_aliases.json",
                  "default_checklist_hospital.json","default_checklist_confinement.json",
                  "default_checklist_delivery_room.json")) {
     if (-not (Test-Path (Join-Path $ServerDir "data\$f"))) { $errors += "缺少后端静态数据: data/$f" }
@@ -34,6 +35,12 @@ foreach ($r in $routeFiles) {
 }
 if (-not (Test-Path (Join-Path $ServerDir "websocket.js"))) { $errors += "缺少 websocket.js" }
 if (-not (Test-Path (Join-Path $ServerDir "middleware\auth.js"))) { $errors += "缺少 middleware/auth.js" }
+# 包根图标（fnOS 约定的 ICON.png / ICON_256.png）。仓库里的实际文件名是大写 .PNG，
+# 大小写不敏感匹配，避免"文件名大小写不一致时静默跳过"。
+foreach ($f in @("ICON.png","ICON_256.png")) {
+    $hit = Get-ChildItem $PkgDir -File | Where-Object { $_.Name -ieq $f } | Select-Object -First 1
+    if (-not $hit) { $errors += "缺少包图标: $f" }
+}
 # 前端：index.html 入口与其引用的资产必须存在
 $indexHtml = Join-Path $AppUi "index.html"
 if (-not (Test-Path $indexHtml)) { $errors += "缺少前端 index.html" } else {
@@ -147,7 +154,10 @@ Remove-Item (Join-Path $Stage "app\server\node\data\logs") -Recurse -Force -Erro
 # 连目录本身一起删：只清内容会留下空目录，空目录也会作为条目进包。
 Remove-Item (Join-Path $Stage "app\server\node\data\photos") -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $Stage "app\server\node\data\uploads") -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host "stage 目录已组装（已排除 app\www 与运行时数据）"
+# data/ 目录里的一次性开发脚本（build-food-safety.js / fix-json.js）：仅本机建库用过，
+# 运行时从不 require，会随 app\server 整目录进包占体积 —— 显式排除。
+Remove-Item (Join-Path $Stage "app\server\node\data\*.js") -Force -ErrorAction SilentlyContinue
+Write-Host "stage 目录已组装（已排除 app\www、运行时数据与开发脚本）"
 
 # ---------- Step 5: fnpack 打包 ----------
 Step "5/6 fnpack 打包"
@@ -174,9 +184,9 @@ if (Test-Path $verify) { Remove-Item $verify -Recurse -Force }
 New-Item -ItemType Directory $verify | Out-Null
 Copy-Item $finalPath "$verify\pkg.tar.gz"
 $vErrors = @()
-# 外层清单
+# 外层清单（`-notcontains` 是大小写不敏感的，故 ICON.png 能匹配包里的 ICON.PNG）
 $outer = @(& tar -tzf "$verify\pkg.tar.gz")
-foreach ($f in @("manifest","cmd/main","LICENSE","config/privilege")) {
+foreach ($f in @("manifest","ICON.png","ICON_256.png","cmd/main","LICENSE","config/privilege")) {
     if ($outer -notcontains $f) { $vErrors += "包外层缺少: $f" }
 }
 # 内层清单（只抽 app.tgz，不解压）
@@ -204,6 +214,10 @@ foreach ($bad in @($inner | Where-Object { $_ -like "server/node/data/*.db" -or 
 # 包内不得含可写数据目录（photos/uploads 属于 ${TRIM_PKGVAR}，不是随包只读资源）
 foreach ($bad in @($inner | Where-Object { $_ -like "server/node/data/photos*" -or $_ -like "server/node/data/uploads*" })) {
     $vErrors += "包内混入可写数据目录: $bad"
+}
+# 包内不得含 data/ 下的一次性开发脚本
+foreach ($bad in @($inner | Where-Object { $_ -like "server/node/data/*.js" })) {
+    $vErrors += "包内混入开发脚本: $bad"
 }
 # 升级前抢救脚本必须在【两层】都在位且内容一致：
 #   外层 cmd/        -> fnOS 实际执行的那份（/var/apps/{appname}/cmd/）

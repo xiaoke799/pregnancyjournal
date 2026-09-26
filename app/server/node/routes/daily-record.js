@@ -170,16 +170,17 @@ router.post('/daily-records', (req, res) => {
     // 容错：确保 record_date 最终为有效 YYYY-MM-DD（任何异常都不应阻止保存）
     if (!record_date || typeof record_date !== 'string') {
       logger.info('daily-record', `record_date修复: raw=${JSON.stringify(rawRecordDate)}(type=${typeof rawRecordDate}) → 使用今天(缺失/非字符串)`);
-      record_date = new Date().toISOString().slice(0, 10);
+      record_date = config.localToday();
     } else if (!config.isValidDate(record_date)) {
       const parsed = new Date(record_date);
       if (!isNaN(parsed.getTime())) {
-        const fixed = parsed.toISOString().slice(0, 10);
+        // 用本地日期还原：toISOString 是 UTC，东八区凌晨会把日期减一天
+        const fixed = config.localToday(parsed);
         logger.info('daily-record', `record_date修复: raw=${JSON.stringify(rawRecordDate)} → ${fixed}(Date解析)`);
         record_date = fixed;
       } else {
         logger.info('daily-record', `record_date修复: raw=${JSON.stringify(rawRecordDate)} → 使用今天(解析完全失败)`);
-        record_date = new Date().toISOString().slice(0, 10);
+        record_date = config.localToday();
       }
     }
 

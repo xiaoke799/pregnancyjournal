@@ -15,6 +15,25 @@ function isValidDate(dateStr) {
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
+// 本地日期 YYYY-MM-DD —— 运行时「今天」的唯一正确取法。
+// ⚠️ 绝不能用 `new Date().toISOString().slice(0, 10)`：那是 **UTC**，
+// 东八区（及所有 UTC 以东时区）在 00:00~08:00 会算成**前一天**。
+// 受影响面：宫缩/胎动会话默认日期、提醒「今天到期」边界、照片归档目录、
+// 每日记录默认日期、导出文件名 —— 均曾因此差一天（2026-09-25 统一修复）。
+function localToday(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// 本地时间戳 "YYYY-MM-DDTHH-mm-ss"（文件名安全：不含冒号/点）。
+// 与旧写法 `new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)` 形状完全一致，
+// 只是改用本地时间，避免备份/导出目录名在凌晨落到前一天。
+function localFileTimestamp(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+       + `T${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+}
+
 // 业务数据根目录：优先 STORAGE_DIR（cmd/main 已导出为 ${TRIM_PKGVAR}/data，持久化、可写），
 // 否则退回 process.cwd()/data。
 // ⚠️ 关键：生产环境 cwd 是 ${TRIM_APPDEST}/server/node（应用安装目录），
@@ -50,7 +69,7 @@ const config = {
   PORT: parseInt(process.env.TRIM_SERVICE_PORT || process.env.PORT || '3867', 10),
   TRIM_SERVICE_PORT: process.env.TRIM_SERVICE_PORT || '3867',
   APP_MODE: process.env.APP_MODE || 'dev',
-  APP_VERSION: '0.0.28',
+  APP_VERSION: '0.0.29',
   // FnOS 统一网关模式：优先用 FNOS_SOCKET_PATH（由 cmd/main 导出）
   FNOS_SOCKET_PATH: process.env.FNOS_SOCKET_PATH || '',
   TRIM_APPDEST: process.env.TRIM_APPDEST || '',
@@ -58,6 +77,8 @@ const config = {
   TRIM_DATA_SHARE_PATHS: process.env.TRIM_DATA_SHARE_PATHS || '',
   DATE_REGEX,
   isValidDate,
+  localToday,
+  localFileTimestamp,
 };
 
 module.exports = config;

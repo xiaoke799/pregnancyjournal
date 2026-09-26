@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const logger = require('../logger');
+const config = require('../config');
 
 router.post('/reminders', (req, res) => {
   try {
@@ -68,10 +69,11 @@ router.get('/reminders/upcoming', (req, res) => {
       return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    // 边界用【本地】日期：toISOString 是 UTC，东八区凌晨会把「今天到期」的提醒漏掉
+    const today = config.localToday();
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + parseInt(days));
-    const futureStr = futureDate.toISOString().split('T')[0];
+    const futureStr = config.localToday(futureDate);
 
     const reminders = db.queryAll(
       `SELECT * FROM reminder
