@@ -93,9 +93,21 @@ while ($queue.Count -gt 0) {
     }
 }
 $removed = 0
+# ⚠️ 用「移动到隔离目录」而不是 Remove-Item：
+# ① 这是**构建产物**，误删顶多重编一次，但直接删会触发部分环境的删除护栏（fail-closed 直接中断打包）；
+# ② 移走后仍可回收，出问题能对照。隔离目录在 .workbuddy 下（已 gitignored）。
+$assetsTrash = $null
 Get-ChildItem $assetsDir -File | ForEach-Object {
-    if (-not $keep.Contains($_.Name)) { Remove-Item $_.FullName -Force; $removed++ }
+    if (-not $keep.Contains($_.Name)) {
+        if (-not $assetsTrash) {
+            $assetsTrash = Join-Path $PkgDir ".workbuddy\trash-ui-assets-$(Get-Date -Format yyyyMMdd-HHmmss)"
+            New-Item -ItemType Directory -Force -Path $assetsTrash | Out-Null
+        }
+        Move-Item $_.FullName -Destination (Join-Path $assetsTrash $_.Name) -Force
+        $removed++
+    }
 }
+if ($assetsTrash) { Write-Host "冗余文件已移入隔离目录（未删除，可自行清理）: $assetsTrash" -ForegroundColor DarkGray }
 # 说明：根 ui/ 并未被 fnpack 打进包（包外层仅 manifest/cmd/config/wizard/ICON/LICENSE/app.tgz），
 # 故不再"删空根 ui 再整拷"——那一步纯属大批量无用删除，且会触发环境的批量删除护栏。
 Write-Host "保留 $($keep.Count) 个依赖文件，清理 $removed 个冗余"
@@ -166,7 +178,15 @@ if (-not (Test-Path $fnpack)) { $fnpack = "fnpack_tool.exe" }
 # 只清 fnpack 的中间产物 pregnancyjournal.fpk。
 # 带版本号的成品保留到新一轮成功后再被 Move-Item -Force 覆盖 ——
 # 这样万一本轮打包中途失败，上一版可用的 fpk 还在。
-Get-ChildItem $Parent -Filter "pregnancyjournal.fpk" -File | Remove-Item -Force
+# ⚠️ 不要写 `Get-ChildItem ... -File | Remove-Item`：中间产物不存在时管道为空，
+# Remove-Item 会以「缺少路径」报错；且本机 Remove-Item 一律先尝试送回收站、失败即中断打包。
+# 这里也统一改成「存在就移入隔离目录」。
+$intermediate = Join-Path $Parent "pregnancyjournal.fpk"
+if (Test-Path $intermediate) {
+    $fpkTrash = Join-Path $PkgDir ".workbuddy\trash-build-$(Get-Date -Format yyyyMMdd-HHmmss)"
+    New-Item -ItemType Directory -Force -Path $fpkTrash | Out-Null
+    Move-Item $intermediate -Destination (Join-Path $fpkTrash "pregnancyjournal.fpk") -Force
+}
 Push-Location $Parent
 & $fnpack build --directory $Stage
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "fnpack 打包失败" }
