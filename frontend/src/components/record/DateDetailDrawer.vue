@@ -17,7 +17,7 @@
       <div v-if="records.length > 0" class="drawer-records">
         <div v-for="group in groupedRecords" :key="group.type" class="record-group">
           <div class="group-header">
-            <span class="group-icon"><AppIcon :name="group.icon" :size="16" /></span>
+            <span class="group-icon"><AppIcon :name="group.icon" :size="18" /></span>
             <span class="group-name">{{ group.label }}</span>
           </div>
           <div class="group-items">
@@ -220,6 +220,9 @@ function qualityLabel(quality: string): string {
 
 .group-icon {
   font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .group-name {

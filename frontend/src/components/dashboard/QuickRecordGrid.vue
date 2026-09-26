@@ -8,7 +8,7 @@
         class="grid-item"
         @click="$emit('select', item.key)"
       >
-        <span class="item-icon"><AppIcon :name="item.icon" :size="18" /></span>
+        <span class="item-icon"><AppIcon :name="item.icon" :size="26" /></span>
         <span class="item-label">{{ item.label }}</span>
       </div>
     </div>
@@ -44,6 +44,6 @@ const items = [
   border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;
 }
 .grid-item:hover { border-color: var(--primary-color); background: rgba(232,160,191,0.05); transform: translateY(-2px); }
-.item-icon { font-size: 28px; }
+.item-icon { font-size: 26px; display: flex; align-items: center; justify-content: center; }
 .item-label { font-size: 13px; color: var(--text-secondary); }
 </style>

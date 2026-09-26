@@ -12,7 +12,7 @@
             <span
               class="row-icon"
               :style="{ background: cat.color + '15', color: cat.color }"
-            ><AppIcon :name="cat.icon" :size="16" /></span>
+            ><AppIcon :name="cat.icon" :size="20" /></span>
             <span class="row-label">{{ cat.label }}</span>
             <span v-if="cat.badge" class="row-badge" :style="{ background: cat.badgeColor || '#ff6b35', color: '#fff' }">{{ cat.badge }}</span>
           </div>

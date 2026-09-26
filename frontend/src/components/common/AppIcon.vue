@@ -83,9 +83,21 @@ const ICONS: Record<string, string[]> = {
     'M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z',
     'M8 13h8M8 17h5',
   ],
+  // 对勾：已完成徽章
+  check: ['M20 6L9 17l-5-5'],
 }
 
 const paths = computed(() => ICONS[props.name] || [])
+
+// 兜底：字典里没有这个名字时，把 name 当**文本内容**渲染。
+// 存在的意义：界面上有一批「内容型」图标（记录类型的心情、症状、便便、服药、运动…），
+// 用彩色符号比线稿更容易一眼认出，所以它们不进 ICONS，直接带原始字符进来。
+// ⚠️ 之前没有这层兜底 —— 字典未命中就渲染空 SVG，
+// 结果记录页一大片格子是空白（填上钻井符号的位置全都空了）。
+const isGlyph = computed(() => paths.value.length === 0 && !!props.name)
+const glyphStyle = computed(() => ({
+  fontSize: typeof props.size === 'number' ? `${props.size}px` : props.size,
+}))
 </script>
 
 <template>
@@ -101,6 +113,12 @@ const paths = computed(() => ICONS[props.name] || [])
   >
     <path v-for="(d, i) in paths" :key="i" :d="d" />
   </svg>
+  <span
+    v-else-if="isGlyph"
+    class="app-icon app-icon-glyph"
+    :style="glyphStyle"
+    aria-hidden="true"
+  >{{ name }}</span>
 </template>
 
 <style scoped>
@@ -111,6 +129,15 @@ const paths = computed(() => ICONS[props.name] || [])
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
+  vertical-align: -0.15em;
+}
+
+/* 内容型符号（如心情、症状）走文本渲染，不需要描边属性 */
+.app-icon-glyph {
+  fill: none;
+  stroke: none;
+  line-height: 1;
+  text-align: center;
   vertical-align: -0.15em;
 }
 </style>
