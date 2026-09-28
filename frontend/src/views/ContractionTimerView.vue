@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDatePicker, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
@@ -137,9 +137,34 @@ const {
   startSession,
 } = useContractionTimer()
 
+/**
+ * 「本次已持续」要能走字，必须有一个每秒变化的**响应式**值参与计算。
+ *
+ * 之前这里直接用 `Date.now()`：它不是响应式依赖，而 computed 只在响应式依赖
+ * 变化时才重新求值 —— 于是只有「开始计时」和「结束计时」两个瞬间各算一次，
+ * 中间一直是同一个值，页面上的时长纹丝不动（diff≈0 时还会一直显示 '--'）。
+ * 现在用一个每秒更新的 nowTick 驱动，并在计时结束后停掉它、卸载时清理。
+ */
+const nowTick = ref(Date.now())
+let ticker: ReturnType<typeof setInterval> | null = null
+
+function stopTicker() {
+  if (ticker) { clearInterval(ticker); ticker = null }
+}
+
+watch(isRunning, (running) => {
+  if (running && !ticker) {
+    ticker = setInterval(() => { nowTick.value = Date.now() }, 1000)
+  } else if (!running) {
+    stopTicker()
+  }
+}, { immediate: true })
+
+onUnmounted(stopTicker)
+
 const currentElapsed = computed(() => {
   if (!currentStartTime.value) return ''
-  const diff = (Date.now() - new Date(currentStartTime.value).getTime()) / 1000
+  const diff = (nowTick.value - new Date(currentStartTime.value).getTime()) / 1000
   return formatDuration(diff)
 })
 

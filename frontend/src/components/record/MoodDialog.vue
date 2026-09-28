@@ -26,6 +26,7 @@ import { ref, computed, watch } from 'vue'
 import { NModal, NButton, NInput } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { dailyRecordApi } from '@/api/daily-record'
+import { MOOD_EMOJIS } from '@/utils/format'
 import dayjs from 'dayjs'
 
 const props = defineProps<{ show: boolean }>()
@@ -38,12 +39,14 @@ const pregnancyStore = usePregnancyStore()
 const mood = ref<number | null>(null)
 const moodNote = ref('')
 
+// 这里的顺序（倒序）和措辞比记录页更细，所以不直接复用 MOOD_OPTIONS；
+// 但 emoji 必须取自 MOOD_EMOJIS 同一个源 —— 各自写死必然漂移（首页就漂过一次）。
 const moods = [
-  { value: 5, emoji: '😄', label: '很开心' },
-  { value: 4, emoji: '😊', label: '开心' },
-  { value: 3, emoji: '😐', label: '一般' },
-  { value: 2, emoji: '😔', label: '低落' },
-  { value: 1, emoji: '😢', label: '很难过' },
+  { value: 5, emoji: MOOD_EMOJIS[5], label: '很开心' },
+  { value: 4, emoji: MOOD_EMOJIS[4], label: '开心' },
+  { value: 3, emoji: MOOD_EMOJIS[3], label: '一般' },
+  { value: 2, emoji: MOOD_EMOJIS[2], label: '低落' },
+  { value: 1, emoji: MOOD_EMOJIS[1], label: '很难过' },
 ]
 
 const visible = computed({

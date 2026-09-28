@@ -30,7 +30,11 @@
           <n-button size="tiny" :loading="pushing" @click="pushToWecom" v-if="todayTodos.length">推送消息</n-button>
         </div>
       </div>
-      <div v-if="todayTodos.length === 0" class="empty-hint">暂无提醒，快添加一条吧</div>
+      <!-- 三态而非两态：以前只有「有数据 / 暂无提醒」两种，数据还没回来时
+           会先闪一下「暂无提醒，快添加一条吧」，等接口返回才变成真实列表，
+           看着像凭空冒出来。先把「正在加载」这一步单独表示出来。 -->
+      <div v-if="loading && !dashboardData" class="empty-hint">正在加载…</div>
+      <div v-else-if="todayTodos.length === 0" class="empty-hint">暂无提醒，快添加一条吧</div>
       <div v-else class="plan-list">
         <div v-for="item in todayTodos" :key="item.id" class="plan-item" :class="{ 'is-today': item.days_until === 0, 'is-past': (item.days_until || 0) < 0, 'is-completed': item.is_completed }">
           <span class="plan-icon">{{ todoIcon(item) }}</span>
@@ -288,6 +292,7 @@ import { markCheckupCompleted } from '@/api/checkup-schedule'
 import { checkupApi } from '@/api/checkup'
 import client from '@/api/client'
 import { calculateGestationalAge } from '@/utils/gestational'
+import { getMoodEmoji as moodEmojiOf } from '@/utils/format'
 import dayjs from 'dayjs'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -538,9 +543,11 @@ const growthChartOption = computed(() => {
   }
 })
 
+// 心情 emoji 统一取自 utils/format 的唯一真源。
+// 以前这里自己抄了一份数组，字符与其它页面不一致（😕🙂 vs 😔😊），
+// 导致同一天的心情在首页和日记页显示的脸不一样。
 function moodEmoji(mood: number): string {
-  const emojis = ['', '😢', '😕', '😐', '🙂', '😄']
-  return emojis[mood] || '😐'
+  return moodEmojiOf(mood, '😐')
 }
 
 function moodLabel(mood: number): string {

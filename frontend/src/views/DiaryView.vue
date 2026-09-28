@@ -132,6 +132,7 @@ import client from '@/api/client'
 import { getApiBase } from '@/utils/api-base'
 import dayjs from 'dayjs'
 import { calculateGestationalAge } from '@/utils/gestational'
+import { getMoodEmoji as moodEmojiOf, MOOD_OPTIONS as moodOptions } from '@/utils/format'
 
 const pregnancyStore = usePregnancyStore()
 const message = useMessage()
@@ -153,13 +154,7 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim()
 }
 
-const moodOptions = [
-  { value: 1, emoji: '😢', label: '很差' },
-  { value: 2, emoji: '😔', label: '不好' },
-  { value: 3, emoji: '😐', label: '一般' },
-  { value: 4, emoji: '😊', label: '不错' },
-  { value: 5, emoji: '😄', label: '很好' },
-]
+// 心情选项统一取自 utils/format 的共享常量
 
 const gestationalAge = computed(() => {
   const lmp = pregnancyStore.currentPregnancy?.last_period_date
@@ -429,11 +424,12 @@ function getWeekInfo(dateStr: string): string {
   return String(age.weeks)
 }
 
-const moodEmojis: Record<string | number, string> = { 1: '😢', 2: '😔', 3: '😐', 4: '😊', 5: '😄' }
+// 心情 emoji 不再在本页另抄一份映射（此前 6 个文件各抄一份，字符已出现漂移），
+// 统一取自 utils/format 的唯一真源；兜底沿用本页原有的 '😐'
 const moodLabels: Record<string | number, string> = { 1: '很差', 2: '不好', 3: '一般', 4: '不错', 5: '很好' }
 
 function getMoodEmoji(mood: string | number): string {
-  return moodEmojis[mood] || '😐'
+  return moodEmojiOf(mood, '😐')
 }
 
 function getMoodLabel(mood: string | number): string {

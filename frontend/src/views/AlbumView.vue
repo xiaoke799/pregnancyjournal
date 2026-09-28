@@ -13,8 +13,16 @@
         @click="activeAlbumTab = tab.key">{{ tab.icon }} {{ tab.label }}</div>
     </div>
 
+    <!-- 三态：加载中 / 真的一张都没有 / 有时间线。
+         以前只有两种，加载期间落到 v-else 的空时间线里，下方一片空白，
+         要等照片全部回来才突然冒出来。 -->
+    <div v-if="loading && allPhotos.length === 0" class="empty-state">
+      <div class="empty-icon"><AppIcon name="camera" :size="48" /></div>
+      <div class="empty-text">正在加载照片…</div>
+    </div>
+
     <!-- 空状态 -->
-    <div v-if="filteredPhotos.length === 0 && !loading" class="empty-state">
+    <div v-else-if="filteredPhotos.length === 0 && !loading" class="empty-state">
       <div class="empty-icon"><AppIcon name="camera" :size="48" /></div>
       <div class="empty-text">记录你珍贵的孕期时光</div>
       <n-button type="primary" @click="showUploadDialog = true">上传第一张照片</n-button>
@@ -47,11 +55,16 @@
           <div class="timeline-card">
             <div class="card-media" @click="previewItem(item)">
               <!-- 照片 -->
+              <!-- loading="lazy"：相册一次返回全部照片，不懒加载的话进页面瞬间
+                   就会并发几十个图片请求（手机上尤其明显），把带宽挤光。
+                   decoding="async" 让解码不卡住主线程，滚动更顺。 -->
               <img
                 v-if="item.media_type !== 'video' && !item._imgFailed"
                 :src="thumbnailUrl(item.id)"
                 :alt="item.note || ''"
                 class="media-thumb"
+                loading="lazy"
+                decoding="async"
                 @error="onImageError(item)"
               />
               <div

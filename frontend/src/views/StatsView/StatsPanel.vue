@@ -223,8 +223,12 @@ function switchPeriod(p: Period) {
   period.value = p
 }
 
+// ⚠️ 这里曾经带 `{ immediate: true }`：watcher 在 setup 阶段就跑一次 loadData()，
+// 紧接着 onMounted 又跑一次 —— 同一个 pid、同一个 `page_size: 1000` 的列表请求
+// 每次进统计页都打两遍（记录页和独立统计页都挂了这个组件，两个入口都中招）。
+// 去掉 immediate 后：首次加载交给 onMounted，id 后续变化（切换孕期）交给 watch，各一次。
 onMounted(() => loadData())
-watch(() => pregnancyStore.currentPregnancy?.id, (id) => { if (id) loadData() }, { immediate: true })
+watch(() => pregnancyStore.currentPregnancy?.id, (id) => { if (id) loadData() })
 
 // ====== 图表数据提取 ======
 const chartDates = computed(() =>
