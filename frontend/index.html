@@ -12,9 +12,73 @@
          不依赖系统深色设置。 -->
     <meta name="color-scheme" content="light" />
     <title>孕程记</title>
+    <!-- 首屏加载骨架：主 JS 包下载 + 解析的这段时间里，#app 原本是空的，
+         页面就是一片纯白 —— 网络越慢白得越久，看着像坏了。
+         这里给一个内联占位，Vue 挂载时会清空 #app，骨架自然消失。
+         ⚠️ 必须内联：此刻外部 CSS 和 JS 都还没加载完，任何外链都指望不上。 -->
+    <style>
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #fdf7fa;
+        font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      }
+      #boot-splash .boot-name {
+        font-size: 19px;
+        font-weight: 600;
+        color: #c44680;
+        letter-spacing: 2px;
+      }
+      #boot-splash .boot-tip {
+        margin-top: 10px;
+        font-size: 13px;
+        color: #847a99;
+      }
+      #boot-splash .boot-bar {
+        margin-top: 18px;
+        width: 120px;
+        height: 3px;
+        border-radius: 999px;
+        background: #f1ebf2;
+        overflow: hidden;
+      }
+      #boot-splash .boot-bar i {
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: 999px;
+        background: #c44680;
+        animation: boot-slide 1.1s ease-in-out infinite;
+      }
+      @keyframes boot-slide {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(250%); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-splash .boot-bar i { animation: none; width: 100%; opacity: 0.5; }
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div id="boot-splash">
+        <div class="boot-name">孕程记</div>
+        <div class="boot-tip">正在加载…</div>
+        <div class="boot-bar"><i></i></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      // 加载超过 8 秒就把文案换一下，免得用户以为卡死了。
+      // Vue 挂载后 #boot-splash 会被移除，届时取不到节点，什么都不做。
+      setTimeout(function () {
+        var tip = document.querySelector('#boot-splash .boot-tip');
+        if (tip) tip.textContent = '加载较慢，请稍候…';
+      }, 8000);
+    </script>
   </body>
 </html>

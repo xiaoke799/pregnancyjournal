@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import { ref, watch, onErrorCaptured } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { usePregnancyStore } from '@/stores/pregnancy'
 import {
   NConfigProvider,
   NMessageProvider,
@@ -55,6 +56,16 @@ onErrorCaptured((err, _instance, info) => {
 
 // 跳转到其他路由时自动清除错误状态
 watch(() => route.fullPath, () => { hasError.value = false })
+
+// 孕期档案预取：**故意不 await**。
+// 以前这个请求要等首页组件下载完、挂载后才发出（首页 onMounted 里 await 它，
+// 拿到结果再去请求看板数据），等于把「下载组件」和「取数据」串成了两步。
+// 这里在应用壳层就先发出去，让它与首页组件的下载并行，首屏能省一个来回。
+// store 内部有并发去重，首页再调一次会复用同一个请求，不会打两遍。
+const pregnancyStore = usePregnancyStore()
+pregnancyStore.fetchActivePregnancy().catch(() => {
+  // 没有档案 / 网络异常都不影响渲染，各视图自己有兜底，这里静默即可
+})
 
 function reloadPage() { window.location.reload() }
 function goHome() {
