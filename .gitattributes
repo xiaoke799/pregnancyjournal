@@ -13,6 +13,7 @@ app/cmd/* text eol=lf
 # 二进制文件不转换
 *.png binary
 *.jpg binary
+*.heic binary
 *.ico binary
 *.fpk binary
 *.tgz binary

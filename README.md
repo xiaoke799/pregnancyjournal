@@ -185,12 +185,29 @@ fnpack build --directory <组装好的 stage 目录>
 > 打包细节（stage 要放哪些东西、为什么不能用"先整拷再删"、包内如何校验）见
 > `DEPLOY_NOTES.md`。
 
+### 回归测试 / Regression Tests
+
+仓库自带一套端到端回归与核查脚本（**40 套 / 756 项**），位于 `tools/verify/`：
+
+```bash
+node tools/verify/run_all_suites.js              # 全套，约 6–10 分钟
+node tools/verify/run_all_suites.js --only=HEIC  # 只跑名字含关键字的套件
+```
+
+它会真起后端服务（经 `tcp_shim.js` 把 Unix Socket 改写成 TCP 环回）、连真库、发真 HTTP，
+覆盖上传/导出/备份恢复/推送/HEIC/迁移/权限/路径穿越等链路。
+前置条件：`app/server/node` 依赖已安装、`app/ui` 已构建。详见 [`tools/verify/README.md`](tools/verify/README.md)。
+
+> This repo ships a 40-suite / 756-check regression harness under `tools/verify/`.
+> Run `node tools/verify/run_all_suites.js`. See `tools/verify/README.md` for details.
+
 ---
 
 ## 文档 / Documentation
 
 - [系统设计](docs/system_design.md) / System design
 - [开发日志](docs/DEVLOG.md) / Dev log
+- [回归与核查脚本](tools/verify/README.md) / Regression & verification harness
 
 ---
 
