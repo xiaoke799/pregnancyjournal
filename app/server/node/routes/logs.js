@@ -3,26 +3,62 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const logger = require('../logger');
+const config = require('../config');
 
-// 仅允许本地/网关访问
+// 日志接口的访问控制。
+//
+// ⚠️ 原实现是 `if (!req.ip || req.ip === 'unknown') return true;`——
+//    而真实部署下所有请求都从统一网关经 Unix Socket 进来，**根本没有 IP**，
+//    于是这条「仅允许本地访问」的判定在线上等于恒真、形同虚设。
+//    现在改为「按身份判定」：网关已鉴权放行 / dev 模式放行 / 直连本机或内网放行，
+//    其余一律拒绝。绝不再因为「拿不到 IP」就放行。
+function _identity(req) {
+  const st = req.state || {};
+  return {
+    user_id: st.user_id || '',
+    is_admin: st.is_admin === 'true',
+    source: st.auth_source || 'none',
+  };
+}
+
+function _isDirectLocal(req) {
+  // 只用 express 的 req.ip（它本身就是从 socket 派生的，并且会遵循 trust proxy 决策）。
+  // 不要再回退去读 req.socket.remoteAddress —— 那是第二处出处，且会绕开 trust proxy 的判断。
+  const ip = req.ip || '';
+  if (!ip || ip === 'unknown') return false; // 拿不到 IP ⇒ 不视为本地，绝不据此放行
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+  if (ip.startsWith('192.168.') || ip.startsWith('::ffff:192.168.')) return true;
+  if (ip.startsWith('10.') || ip.startsWith('::ffff:10.')) return true;
+  // 172.16.0.0/12
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  if (/^::ffff:172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  return false;
+}
+
 function checkAccess(req, res) {
-  // Unix Socket 连接（无 IP）始终允许
-  if (!req.ip || req.ip === 'unknown') return true;
-  const ip = req.ip;
-  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1'
-    || ip.startsWith('192.168.') || ip.startsWith('10.')
-    || ip.startsWith('::ffff:192.168.') || ip.startsWith('::ffff:10.')
-    || ip.startsWith('172.16.') || ip.startsWith('172.17.') || ip.startsWith('172.18.')
-    || ip.startsWith('172.19.') || ip.startsWith('172.20.') || ip.startsWith('172.21.')
-    || ip.startsWith('172.22.') || ip.startsWith('172.23.') || ip.startsWith('172.24.')
-    || ip.startsWith('172.25.') || ip.startsWith('172.26.') || ip.startsWith('172.27.')
-    || ip.startsWith('172.28.') || ip.startsWith('172.29.') || ip.startsWith('172.30.')
-    || ip.startsWith('172.31.') || ip.startsWith('::ffff:172.');
-  if (!isLocal) {
-    res.json({ code: 1001, data: null, message: '仅允许本地访问' });
+  // 1) 网关已鉴权（统一网关模式）→ 放行
+  if (_identity(req).source === 'gateway' && _identity(req).user_id) return true;
+  // 2) 开发模式（本地调试）
+  if (config.APP_MODE === 'dev') return true;
+  // 3) 直连且来自本机/内网
+  if (_isDirectLocal(req)) return true;
+  res.status(403).json({ code: 403, data: null, message: '仅允许本机访问' });
+  return false;
+}
+
+// 破坏性操作（清空日志）额外要求管理员身份：普通用户不该有能力抹掉排查线索。
+function checkAdmin(req, res) {
+  if (config.APP_MODE === 'dev') return true;
+  const id = _identity(req);
+  if (id.source === 'gateway') {
+    if (id.is_admin) return true;
+    res.status(403).json({ code: 403, data: null, message: '需要管理员权限' });
     return false;
   }
-  return true;
+  // 非网关（直连本机/内网）视为可信
+  if (_isDirectLocal(req)) return true;
+  res.status(403).json({ code: 403, data: null, message: '需要管理员权限' });
+  return false;
 }
 
 /** 读取 JSONL 日志文件末尾 N 行，支持级别/分类过滤 */
@@ -135,6 +171,7 @@ router.get('/logs', (req, res) => {
 // DELETE /api/v1/logs - 清空日志
 router.delete('/logs', (req, res) => {
   if (!checkAccess(req, res)) return;
+  if (!checkAdmin(req, res)) return;
   try {
     const { init } = require('../logger');
     init(); // 确保日志目录存在

@@ -5,8 +5,12 @@ const config = require('../config');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+// 用 Node 内置的 randomUUID 生成文件名，去掉第三方 uuid 包
+// （npm audit 里 uuid 的修复是 breaking 变更；内置实现同样产出 RFC 4122 v4 UUID）
+const uuidv4 = () => crypto.randomUUID();
 const logger = require('../logger');
+const { MIME_BY_EXT } = require('../services/media-types');
 const heic = require('../services/heic');
 
 const ALLOWED_PHOTO_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'application/pdf'];
@@ -624,7 +628,7 @@ router.post('/checkups/:id/reports/from-nas', async (req, res) => {
     const destPath = path.join(REPORTS_DIR, filename);
     _ensureDir(REPORTS_DIR);
     fs.copyFileSync(normalized, destPath);
-    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.heic': 'image/heic', '.pdf': 'application/pdf' };
+    const mimeMap = MIME_BY_EXT; // MIME 映射统一来自 services/media-types
     // HEIC/HEIF 报告：转成 JPEG 再入库（否则浏览器显示不出来；转码失败保留原图，不阻断导入）
     let reportPath = destPath;
     let reportName = path.basename(nas_path);
