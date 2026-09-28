@@ -10,7 +10,7 @@ router.post('/supplement-checkins', async (req, res) => {
       return res.json({ code: 1001, data: null, message: '缺少必要参数pregnancy_id或date' });
     }
 
-    db.getDb().run('BEGIN IMMEDIATE TRANSACTION');
+    // 读放在事务**之外**（与 habit-checkin 同一口径，见那边的说明）
     const existing = await db.queryOne(
       'SELECT id FROM supplement_checkin WHERE pregnancy_id = ? AND date = ?',
       [pregnancy_id, date]
@@ -19,23 +19,25 @@ router.post('/supplement-checkins', async (req, res) => {
     const itemsJson = JSON.stringify(items || []);
 
     if (existing) {
+      db.beginTransaction();
       await db.run(
         'UPDATE supplement_checkin SET items = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [itemsJson, note || '', existing.id]
       );
-      db.getDb().run('COMMIT');
+      db.commitTransaction();
       res.json({ code: 0, data: { id: existing.id, updated: true }, message: '更新成功' });
     } else {
       const id = db.generateId();
+      db.beginTransaction();
       await db.run(
         'INSERT INTO supplement_checkin (id, pregnancy_id, date, items, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
         [id, pregnancy_id, date, itemsJson, note || '']
       );
-      db.getDb().run('COMMIT');
+      db.commitTransaction();
       res.json({ code: 0, data: { id, created: true }, message: '创建成功' });
     }
   } catch (error) {
-    try { db.getDb().run('ROLLBACK'); } catch {}
+    db.rollbackTransaction();
     res.json({ code: 1001, data: null, message: error.message });
   }
 });

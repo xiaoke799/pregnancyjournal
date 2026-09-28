@@ -10,12 +10,19 @@ const PDFDocument = require('pdfkit');
 // 导入/恢复端点的最大请求体大小（100MB），防止内存耗尽
 const MAX_PAYLOAD_BYTES = 100 * 1024 * 1024;
 
-// 简单认证中间件（fnOS CGI已通过header传递用户信息）
-// 注意：此中间件在 fnOS 部署环境下由反向代理层鉴权，此处直接放行。
-// 若脱离 fnOS 环境（直连 Node 进程），需替换为实际 token 校验逻辑。
+// 认证中间件：fnOS 部署下由统一网关（app 级 authMiddleware）注入已认证身份。
+// ⚠️ 原实现是彻底的空操作（只打个 dev 日志就 next()），等于没有校验；
+//    这里补一道「必须存在已认证身份」的兜底，避免该中间件退化成摆设：
+//    · fnos 生产模式：authMiddleware 已强制要求网关 Header，这里再确认一次身份非空；
+//    · dev 开发模式：authMiddleware 会兜底成 local_user，本地调试不受影响。
 function verifyAuth(req, res, next) {
-  if (config.APP_MODE === 'dev') {
-    log.warn('安全', 'verifyAuth 为空操作模式，生产环境请确保上游已鉴权');
+  const st = req.state || {};
+  if (!st.user_id) {
+    log.warn('安全', `verifyAuth 拒绝：缺少已认证身份 ${req.method} ${req.path}`);
+    return res.status(401).json({ code: 401, data: null, message: 'Unauthorized' });
+  }
+  if (config.APP_MODE === 'dev' && st.auth_source === 'fallback') {
+    log.warn('安全', 'verifyAuth：开发模式使用本地兜底身份（无网关 Header）');
   }
   next();
 }
@@ -850,7 +857,7 @@ router.post('/backup', async (req, res) => {
       try {
         if (srcPath !== dest) fs.copyFileSync(srcPath, dest);
         return fileName;
-      } catch (e) { log.warn('文件', `复制文件失败 ${src} → ${destDir}`, { error: e.message }); return null; }
+      } catch (e) { log.warn('文件', `复制文件失败 ${srcPath} → ${dest}`, { error: e.message }); return null; }
     }
     function trackCount(type, n) {
       exportData.file_manifest.total += n;
@@ -1020,7 +1027,7 @@ router.post('/restore', async (req, res) => {
     let totalRows = 0;
     const results = {};
     try {
-      db.getDb().run('BEGIN TRANSACTION');
+      db.beginTransaction();
       for (const [table, rows] of Object.entries(importData.tables || {})) {
         if (ALL_TABLES.includes(table) && Array.isArray(rows)) {
           // 与 /restore-latest 保持一致：**先清空该表再按备份写入**（=「恢复到该备份的状态」）。
@@ -1074,9 +1081,9 @@ router.post('/restore', async (req, res) => {
       // 检查报告
       rewriteTablePaths('checkup_report', 'file_path', fileMap.checkup_reports, config.PHOTOS_DIR);
 
-      db.getDb().run('COMMIT');
+      db.commitTransaction();
     } catch (txError) {
-      try { db.getDb().run('ROLLBACK'); } catch {}
+      db.rollbackTransaction();
       db.unlockDb();
       log.error('恢复', '全量恢复事务回滚', { error: txError.message });
       return res.json({ code: 1001, data: null, message: `恢复失败（已回滚）: ${txError.message}` });
@@ -1138,8 +1145,12 @@ router.post('/restore', async (req, res) => {
     const legacyReportsDir = path.join(restoreDir, 'checkup_reports');
     if (fs.existsSync(legacyReportsDir)) fileCount += copyDirFiles(legacyReportsDir, path.join(config.PHOTOS_DIR, 'checkup_reports'));
 
-    db.saveDb();
+    // ⚠️ 顺序不能颠倒：saveDb() 内部遇到 _dbLocked 会直接 return，
+    // 写在 unlockDb() 前面等于根本没保存 —— 恢复结果只存在于内存，
+    // 要等下一个 30 秒定时落盘才真正上盘，这中间重启/停止应用就前功尽弃，
+    // 而接口已经回报「恢复完成」了。
     db.unlockDb();
+    db.saveDb();
     log.api('恢复', '全量恢复完成', { rows: totalRows, files: fileCount });
     res.json({
       code: 0,
@@ -1997,7 +2008,7 @@ router.post('/restore-latest', async (req, res) => {
     let restoreOk = false;
 
     try {
-      db.getDb().run('BEGIN TRANSACTION');
+      db.beginTransaction();
 
       for (const [table, rows] of Object.entries(importData.tables)) {
         if (!Array.isArray(rows) || rows.length === 0) continue;
@@ -2059,10 +2070,10 @@ router.post('/restore-latest', async (req, res) => {
       rewritePaths('checkup_photo', 'thumbnail_path', fileMap.checkup_photos, config.PHOTOS_DIR);
       rewritePaths('checkup_report', 'file_path', fileMap.checkup_reports, config.PHOTOS_DIR);
 
-      db.getDb().run('COMMIT');
+      db.commitTransaction();
       restoreOk = true;
     } catch (txError) {
-      try { db.getDb().run('ROLLBACK'); } catch {}
+      db.rollbackTransaction();
       db.unlockDb();
       log.error('恢复', '一键恢复事务回滚', { error: txError.message });
       return res.json({ code: 1001, data: null, message: `恢复失败（已回滚）: ${txError.message}` });
@@ -2102,8 +2113,9 @@ router.post('/restore-latest', async (req, res) => {
       fileCount += copyDirContentsRecursive(filesDir, config.PHOTOS_DIR);
     }
 
-    db.saveDb();
+    // 同上：必须先解锁再落盘，否则 saveDb() 被 _dbLocked 挡掉，恢复只落在内存里
     db.unlockDb();
+    db.saveDb();
     log.api('恢复', '一键恢复完成', { dir: latestBackup, rows: totalRows, files: fileCount });
     res.json({
       code: 0,

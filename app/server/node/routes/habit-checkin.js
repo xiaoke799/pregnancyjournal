@@ -10,7 +10,10 @@ router.post('/habit-checkins', async (req, res) => {
       return res.json({ code: 1001, data: null, message: '缺少必要参数pregnancy_id或date' });
     }
 
-    db.getDb().run('BEGIN IMMEDIATE TRANSACTION');
+    // 读放在事务**之外**：只有确实要写的时候才开事务。
+    // （原实现 BEGIN 之后紧跟 await，事务跨越了 await 点；虽然本项目 DB 调用全同步、
+    //   await 同步值只排微任务、真实并发下请求天然串行，但"事务里夹 await"属于必须避免的写法，
+    //   一旦以后中间插进真实 IO，就会互相踩事务。）
     const existing = await db.queryOne(
       'SELECT id FROM habit_checkin WHERE pregnancy_id = ? AND date = ?',
       [pregnancy_id, date]
@@ -19,23 +22,25 @@ router.post('/habit-checkins', async (req, res) => {
     const itemsJson = JSON.stringify(items || []);
 
     if (existing) {
+      db.beginTransaction();
       await db.run(
         'UPDATE habit_checkin SET items = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [itemsJson, note || '', existing.id]
       );
-      db.getDb().run('COMMIT');
+      db.commitTransaction();
       res.json({ code: 0, data: { id: existing.id, updated: true }, message: '更新成功' });
     } else {
       const id = db.generateId();
+      db.beginTransaction();
       await db.run(
         'INSERT INTO habit_checkin (id, pregnancy_id, date, items, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
         [id, pregnancy_id, date, itemsJson, note || '']
       );
-      db.getDb().run('COMMIT');
+      db.commitTransaction();
       res.json({ code: 0, data: { id, created: true }, message: '创建成功' });
     }
   } catch (error) {
-    try { db.getDb().run('ROLLBACK'); } catch {}
+    db.rollbackTransaction();
     res.json({ code: 1001, data: null, message: error.message });
   }
 });
