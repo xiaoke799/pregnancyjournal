@@ -1,5 +1,5 @@
 # ============================================================
-# 孕程记 v0.0.28 一键打包脚本（唯一打包入口）
+# 孕程记 一键打包脚本（唯一打包入口）
 # 流程：校验源码完整性 -> 安装生产依赖 -> 组装干净stage目录 -> fnpack打包 -> 解包验证
 # 用法：在项目根目录（含本脚本的目录）执行：pwsh -File build.ps1
 # ============================================================
@@ -11,7 +11,7 @@ $ServerDir = Join-Path $PkgDir "app\server\node"
 $AppUi     = Join-Path $PkgDir "app\ui"
 # 注：不再有 $RootUi（根 ui/ 是历史死重，既不进包也不是运行时目录；
 # 运行时 STATIC_DIR = ${TRIM_APPDEST}/ui，来自 app.tgz:ui，即 app/ui）。
-$Version   = "0.0.30"   # 发版同步：必须与 manifest 的 version 一致（唯一真源=manifest）
+$Version   = "0.0.31"   # 发版同步：必须与 manifest 的 version 一致（唯一真源=manifest）
 if ($PkgDir -eq $PSScriptRoot) { $Parent = $PSScriptRoot } else { $Parent = Split-Path $PkgDir -Parent }
 $Stage     = Join-Path $env:TEMP "pregnancyjournal_stage_$Version"
 
@@ -54,9 +54,18 @@ if (-not (Test-Path $indexHtml)) { $errors += "缺少前端 index.html" } else {
 # 版本号一致性：manifest 是唯一真源，build.ps1 的 $Version 必须与它相同；
 # 且前端产物必须真的带上了这个版本号（由 vite.config.ts 的 define 从 manifest 注入）。
 # 曾因前端没注入、main.ts 兜底写死 '0.0.27'，导致 v0.0.28 的包在日志里谎报 v0.0.27。
-$manifestVer = [regex]::Match([System.IO.File]::ReadAllText((Join-Path $PkgDir "manifest")),
-                              '(?m)^\s*version\s*=\s*([0-9][0-9.]*)').Groups[1].Value
+$manifestText = [System.IO.File]::ReadAllText((Join-Path $PkgDir "manifest"))
+$manifestVer = [regex]::Match($manifestText, '(?m)^\s*version\s*=\s*([0-9][0-9.]*)').Groups[1].Value
 if ($manifestVer -ne $Version) { $errors += "manifest 版本($manifestVer) 与脚本 `$Version($Version) 不一致" }
+# sub_version 也要一起校验：①与 version 相同；②必须是 3 段式。
+# 历史坑：v0.0.30 首发包把 sub_version 写成 4 段式 0.0.30.0（上架无效），
+# 而当时只校验了 version，这道漏网之鱼直到发布后才被发现。
+$manifestSub = [regex]::Match($manifestText, '(?m)^\s*sub_version\s*=\s*([0-9][0-9.]*)').Groups[1].Value
+if ($manifestSub -ne $Version) { $errors += "manifest sub_version($manifestSub) 与 `$Version($Version) 不一致" }
+if (($manifestSub -split '\.').Count -ne 3) { $errors += "manifest sub_version($manifestSub) 必须是 3 段式（如 0.0.31）" }
+# changelog 必须与本版同步：版本号改了但说明还停在上版的话，
+# 用户在应用中心看到的「更新说明」会是上一版的内容。
+if ($manifestText -notmatch [regex]::Escape("V$Version")) { $errors += "manifest changelog 未包含 V$Version（说明还停在上一个版本）" }
 $entryJs = [regex]::Match($html, '/assets/(index-[A-Za-z0-9._-]+\.js)').Groups[1].Value
 if (-not $entryJs) {
     $errors += "index.html 未引用 index-*.js 入口"
@@ -169,6 +178,35 @@ Remove-Item (Join-Path $Stage "app\server\node\data\uploads") -Recurse -Force -E
 # data/ 目录里的一次性开发脚本（build-food-safety.js / fix-json.js）：仅本机建库用过，
 # 运行时从不 require，会随 app\server 整目录进包占体积 —— 显式排除。
 Remove-Item (Join-Path $Stage "app\server\node\data\*.js") -Force -ErrorAction SilentlyContinue
+
+# sql.js 的 dist 里塞了同一份 SQLite 的多种构建变体（约 19MB）：
+# 调试版（*-debug）、浏览器版（*-browser）、Web Worker 版（worker.*）、asm.js 版。
+# 运行时只加载 dist/sql-wasm.js + dist/sql-wasm.wasm 两个文件（约 0.7MB），
+# 其余永远不会被执行，却跟着整个 node_modules 进包。这里只保留这三个：
+#   sql-wasm.js / sql-wasm.wasm（真正在用的）
+#   sql-asm.js（无 WebAssembly 环境下的纯 JS 兜底，留着保险）
+$sqlDist = Join-Path $Stage "app\server\node\node_modules\sql.js\dist"
+if (Test-Path $sqlDist) {
+    $keepSql = @('sql-wasm.js', 'sql-wasm.wasm', 'sql-asm.js')
+    $before  = (Get-ChildItem $sqlDist -File | Measure-Object -Property Length -Sum).Sum
+    Get-ChildItem $sqlDist -File | Where-Object { $keepSql -notcontains $_.Name } | ForEach-Object {
+        Remove-Item $_.FullName -Force
+    }
+    $after = (Get-ChildItem $sqlDist -File | Measure-Object -Property Length -Sum).Sum
+    $saved = [math]::Round(($before - $after) / 1MB, 1)
+    Write-Host ("sql.js 冗余变体已剔除：{0} MB → {1} MB（省 {2} MB）" -f `
+        [math]::Round($before / 1MB, 1), [math]::Round($after / 1MB, 1), $saved) -ForegroundColor DarkGray
+}
+
+# source map（*.map）：只有排查压缩后代码时才用得上，运行时从不加载。
+# 后端依赖里带了 200 多个，合计约 7 MB，纯属占体积。
+# （test/ example/ docs 这类目录合计不到 1 MB，收益太小不值得动，保持 node_modules 原样。）
+$mapFiles = Get-ChildItem (Join-Path $Stage "app\server\node\node_modules") -Recurse -File -Filter *.map -ErrorAction SilentlyContinue
+if ($mapFiles) {
+    $mapSaved = [math]::Round((($mapFiles | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
+    $mapFiles | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
+    Write-Host ("已剔除 source map {0} 个（省 {1} MB）" -f $mapFiles.Count, $mapSaved) -ForegroundColor DarkGray
+}
 Write-Host "stage 目录已组装（已排除 app\www、运行时数据与开发脚本）"
 
 # ---------- Step 5: fnpack 打包 ----------
@@ -195,6 +233,22 @@ $fpk = Get-Item (Join-Path $Parent "pregnancyjournal.fpk") -ErrorAction Silently
 if (-not $fpk) { throw "未找到输出 fpk" }
 $finalPath = Join-Path $Parent "pregnancyjournal_v$Version.fpk"
 Move-Item $fpk.FullName $finalPath -Force
+
+# ---------- Step 5.5: 补包内脚本的执行权限 ----------
+# Windows 版 fnpack 打出的 tar 里所有条目都是 0666（没有执行位），而飞牛要求 cmd/ 下
+# 的生命周期脚本是 755。设备上实测能跑，说明系统会补，但那属于依赖对方兜底 ——
+# 一旦不补，表现就是"安装/启动毫无征兆地失败"，极难排查。这里只改权限头字节，不动内容。
+Step "5.5/6 修正包内脚本权限（cmd/* 与 ui/index.cgi -> 0755）"
+$modeFix = Join-Path $PkgDir "fix_fpk_modes.js"
+$nodeExe = Get-Command node -ErrorAction SilentlyContinue
+if ((-not $nodeExe) -or (-not (Test-Path $modeFix))) {
+    Write-Host "  [!] 跳过（缺少 node 或 fix_fpk_modes.js）；包内脚本将依赖系统补权限" -ForegroundColor Yellow
+} else {
+    & node $modeFix $finalPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [!] 权限修正未成功（脚本保证不动原包，包仍可用，但需依赖系统补权限）" -ForegroundColor Yellow
+    }
+}
 
 # ---------- Step 6: 打包后解包验证 ----------
 # 只读清单 + 仅抽取 2 个小文件；不做整包解压（整包解压会产生上万文件，删除时撞护栏）
@@ -227,6 +281,9 @@ if ($assetCount -lt 30) { $vErrors += "前端 assets 仅 $assetCount 个文件�
 & tar -xzf "$verify\pkg.tar.gz" -C $verify cmd/main
 $mb = [System.IO.File]::ReadAllBytes((Join-Path $verify "cmd\main"))[0]
 if ($mb -ne 0x23) { $vErrors += "cmd/main 含 BOM" }
+# cmd/main 在包内必须带执行位（Step 5.5 修正过；tar -tvzf 的输出形如 "-rwxr-xr-x"）
+$modeLine = @(& tar -tvzf "$verify\pkg.tar.gz" cmd/main) | Select-Object -First 1
+if ($modeLine -notmatch '^-rwx') { $vErrors += "cmd/main 在包内没有执行位: $modeLine" }
 # 包内不得含运行时数据库/日志
 foreach ($bad in @($inner | Where-Object { $_ -like "server/node/data/*.db" -or $_ -like "server/node/data/logs/*" })) {
     $vErrors += "包内混入运行时数据: $bad"
