@@ -115,6 +115,12 @@ vite.config.ts.timestamp-*
 
 # ---- 项目内部资料（含大体积 fpk 与 git bundle，不入库）----
 
+# ---- 回归脚本的运行期产物（脚本本身入库，产物不入库）----
+# tools/verify/ 是回归/核查脚本的真源，**必须入库**；
+# 只有它跑出来的临时产物与日志忽略掉。
+/tools/verify/.tmp/
+/tools/verify/regress-out/
+
 # ---- 本地留档的踩坑文档（暂不入库）----
 /DEPLOY_NOTES.md
 /WEBSOCKET_FIX.md
