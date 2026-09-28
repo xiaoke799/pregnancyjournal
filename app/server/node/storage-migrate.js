@@ -23,10 +23,12 @@ const MARKER = '.storage_migrated_v1';
 //  · *.js —— 打包时混进 data 目录的开发脚本（如 build-food-safety.js），不是用户数据
 //  · 内置只读知识库 —— 随包发布、由 ASSETS_DIR 读取；复制到持久目录既无用又占地（食材库 380KB+）
 //    （口径与 cmd/upgrade_init、cmd/uninstall_init 的排除列表保持一致）
+// ⚠️ 这三处列表必须同步：漏掉一个，升级时就会把随包发布的只读资源当成用户数据搬进持久目录。
+//    checkup_subitem_aliases.json 此前就漏在这里（upgrade_init 已经排除了它）。
 function _skip(name) {
   if (/\.(db|db-wal|db-shm|tmp|jsonl|log)$/i.test(name) || name.endsWith('.db.tmp')) return true;
   if (/\.js$/i.test(name)) return true;
-  if (/^(recipes|food_safety_v3|checkup_schedule)\.json$/i.test(name)) return true;
+  if (/^(recipes|food_safety_v3|checkup_schedule|checkup_subitem_aliases)\.json$/i.test(name)) return true;
   if (/^default_checklist_.*\.json$/i.test(name)) return true;
   return false;
 }
@@ -65,6 +67,7 @@ function migrateStorage(db) {
 
     // 重写数据库中所有包含旧路径前缀的字符串
     let rewritten = 0;
+    let rewriteOk = true;
     const legacy = legacyRoot.replace(/\\/g, '/');
     const target = targetRoot.replace(/\\/g, '/');
     try {
@@ -86,9 +89,19 @@ function migrateStorage(db) {
         }
       }
     } catch (e) {
+      rewriteOk = false;
       log.warn('存储迁移', `重写数据库路径失败: ${e.message}`);
     }
     log.startup(`存储迁移: 重写 ${rewritten} 处数据库路径引用`);
+
+    // ⚠️ 落迁移成功标记有个前提：**数据库路径改写必须成功**。
+    // 原实现无论改写成功与否都写标记 ⇒ 一旦改写出错，下次启动直接 early-return，
+    // 数据库里那些指向旧（安装目录）路径的记录就永远不会再被修正——
+    // 表现为「备份/导出提示成功，但文件在升级后找不到了」。
+    if (!rewriteOk) {
+      log.warn('存储迁移', '数据库路径改写未成功，本次不落标记，下次启动会重试');
+      return;
+    }
 
     try { fs.writeFileSync(path.join(targetRoot, MARKER), new Date().toISOString()); } catch (e) { /* ignore */ }
   } catch (e) {
