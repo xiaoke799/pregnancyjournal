@@ -75,15 +75,51 @@ app.use((req, res, next) => {
   next();
 });
 
+// ============ 错误信息脱敏（出口统一拦一道）============
+// 路由层有 160+ 处 `res.json({ code: 1001, message: e.message })`，会把 SQL 报错、
+// 文件绝对路径（/vol1/... 、D:\...）原样回给浏览器；而本文件下面的全局错误处理
+// 已经做了脱敏（非 dev 模式统一返回「服务器内部错误」）—— 路由层把它绕过了。
+// 这里在 res.json 出口统一判断：命中「像内部实现细节」的模式就换成通用文案，
+// 原始信息带 reqId 写进错误日志，排查时不受影响。开发模式保留原文以便调试。
+// ⚠️ 模式必须覆盖 fnOS 的真实数据路径形态 `/vol1/@appdata/...`（不是 `/vol/`），
+//    以及 JS 运行时错误的原文（TypeError 的 "Cannot read properties of ..."）。
+//    反过来也要收得住：正常业务文案里不会出现这些词，实测 14 条业务提示零误伤。
+// ⚠️ 盘符那一支必须写成 `\b[A-Za-z]:[\\/]`（**前面带词边界**）：
+//    没有 `\b` 时 `[A-Za-z]:[\\/]` 会连 `http://`（"p:/"）、`https://`（"s:/"）一起命中
+//    —— 那样任何带网址的业务提示（如"请检查推送地址 https://qyapi.…"）都会被整句
+//    换成通用文案。加了词边界后，盘符前面必然是空白/引号/中文/行首，而 http(s) 的
+//    `p`/`s` 前面是字母，不构成边界，于是不再误伤。t13 的 N2b 两条分支都有断言。
+const SENSITIVE_MSG_RE = /(sqlite|no such (table|column)|SQL logic error|constraint failed|malformed|unable to open database|database is locked|transaction within a transaction|no transaction is active|Cannot read propert|is not a function|is not defined|ENOENT|EACCES|EPERM|EISDIR|ENOTDIR|EBUSY|EMFILE|\b[A-Za-z]:[\\/]|\/(vol\d*|home|usr|var|opt|tmp|etc|root|mnt)\/)/i;
+app.use((req, res, next) => {
+  if (config.APP_MODE === 'dev') return next();
+  const rawJson = res.json.bind(res);
+  res.json = (body) => {
+    try {
+      if (body && typeof body === 'object' && typeof body.message === 'string'
+        && body.message && SENSITIVE_MSG_RE.test(body.message)) {
+        log.error('脱敏', `已隐藏内部错误细节: ${req.method} ${req.path}`, { reqId: req._reqId, raw: body.message });
+        return rawJson({ ...body, message: '操作失败，请稍后重试；如持续失败请查看应用日志' });
+      }
+    } catch (e) { /* 脱敏绝不能反噬业务 */ }
+    return rawJson(body);
+  };
+  next();
+});
 
 app.get('/api/health', (req, res) => {
+  // 数据库健康：库损坏又没有可用备份时 status 变 degraded。
+  // 目的就是消灭「网关显示健康、日志说就绪，但每个请求都失败」这种假正常。
+  let dbHealth = null;
+  try { dbHealth = require('./db').getDbHealth(); } catch (e) { /* 数据库尚未就绪 */ }
+  const degraded = !!((dbHealth && dbHealth.ok === false) || (dbHealth && dbHealth.last_save_error));
   res.json({
-    status: 'ok',
+    status: degraded ? 'degraded' : 'ok',
     version: config.APP_VERSION,
     uptime: Math.floor(process.uptime()),
     pid: process.pid,
     requests: requestCount,
     routes: loadedRoutes,
+    db: dbHealth,
     memory: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
   });
 });
@@ -103,11 +139,65 @@ function sendIndex(req, res) {
 }
 
 const assetsDir = path.join(staticDir, 'assets');
+
+// 缓存策略的唯一真源：express.static 与 gzip 中间件都用它，
+// 避免「压缩过的响应」和「原样响应」拿到两套 Cache-Control。
+const assetsDirPrefix = path.join(assetsDir, path.sep);
+function cacheControlFor(filePath) {
+  // HTML 永不缓存：部署后必须立刻生效（它引用着新文件名的 JS）
+  if (filePath.endsWith('.html') || filePath.endsWith('.htm')) {
+    return 'no-store, no-cache, must-revalidate';
+  }
+  // assets/ 下的文件名自带内容 hash，内容一变文件名就变 ⇒ 可以放心永久缓存。
+  // 用 immutable 后浏览器连「304 校验」那一轮往返都省了（旧的 no-cache 每次都要问一遍）。
+  if (filePath.startsWith(assetsDirPrefix)) {
+    return 'public, max-age=31536000, immutable';
+  }
+  return 'public, max-age=86400'; // 其他静态资源（UI 图片等，无 hash）缓存 1 天
+}
+
+// 把 URL 解析成静态目录下的真实文件路径，供 gzip 中间件判断是否值得压缩。
+// ⚠️ 只解析、不发送；解析不出文件就留空，让请求照原样落到 express.static。
+function resolveStaticFile(req, res, next) {
+  let rel;
+  try {
+    rel = decodeURIComponent(req.path || '');
+  } catch (e) {
+    return next(); // URL 编码非法，交给下游处理
+  }
+  if (!rel || rel.includes('\0')) return next();
+
+  let base;
+  let sub;
+  if (rel === '/assets' || rel.startsWith('/assets/')) {
+    base = assetsDir;
+    sub = rel.slice('/assets'.length);
+  } else {
+    base = staticDir;
+    sub = rel;
+  }
+  const full = path.normalize(path.join(base, sub));
+  // 防目录穿越：解析后必须仍在目标目录内
+  if (!full.startsWith(path.join(base, path.sep))) return next();
+  req._staticFilePath = full;
+  next();
+}
+
+// 先解析路径，再尝试 gzip；不命中就直接放行给下面的 express.static
+app.use(resolveStaticFile);
+try {
+  // ⚠️ cacheControlFor 必须传进去：压缩中间件自己发响应，不走 express.static 的
+  // setHeaders，缓存头要按同一套规则再设一遍，否则压缩响应会丢掉 Cache-Control。
+  app.use(require('./services/http-compress').gzipStatic({ cacheControlFor }));
+} catch (e) {
+  log.warn('压缩', `gzip 中间件未启用（不影响功能）: ${e.message}`);
+}
+
 if (fs.existsSync(assetsDir)) {
   app.use('/assets', express.static(assetsDir, {
     etag: true, lastModified: true,
-    setHeaders: (res) => {
-      res.set('Cache-Control', 'no-cache'); // JS/CSS 每次部署后必须更新
+    setHeaders: (res, filePath) => {
+      res.set('Cache-Control', cacheControlFor(filePath));
     }
   }));
 }
@@ -116,12 +206,7 @@ if (fs.existsSync(staticDir)) {
   app.use(express.static(staticDir, {
     etag: true, lastModified: true,
     setHeaders: (res, filePath) => {
-      // HTML 文件不缓存，确保部署后立即生效
-      if (filePath.endsWith('.html') || filePath.endsWith('.htm')) {
-        res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-      } else {
-        res.set('Cache-Control', 'max-age=86400'); // 其他静态资源缓存1天
-      }
+      res.set('Cache-Control', cacheControlFor(filePath));
     }
   }));
 }
@@ -233,23 +318,37 @@ async function start() {
 
 process.on('uncaughtException', (err) => {
   log.error('进程', 'uncaughtException', { error: err.message, stack: err.stack?.substring(0, 300) });
+  // 退出前必须补一次落盘：数据是「内存数据库 + 每 30 秒整库落盘」，
+  // 不补的话崩溃即丢掉最多 30 秒的写入（可能正是用户刚记的体重、刚上传的照片）。
+  // SIGTERM/SIGINT 早就走 flushAndExit() 落盘了，这里原来漏了。
+  try { require('./db').saveDb(); } catch (e) { /* 落盘失败也不能挡住退出 */ }
   // 退出进程避免处于未知状态（定时器将在下次启动时恢复）
   setTimeout(() => process.exit(1), 1000);
 });
 
 process.on('unhandledRejection', (reason) => {
   log.error('进程', 'unhandledRejection', { reason: String(reason) });
+  // 同样补一次落盘：未处理的 Promise 拒绝往往发生在「刚写完数据、还没到落盘周期」的时刻
+  try { require('./db').saveDb(); } catch (e) { /* ignore */ }
 });
 
-// 优雅退出：被系统停止（SIGTERM）或中断（SIGINT）时记录日志
-process.on('SIGTERM', () => {
-  log.startup('收到 SIGTERM，进程退出', { pid: process.pid, uptime: Math.floor(process.uptime()) });
+// 优雅退出：被系统停止（SIGTERM）或中断（SIGINT）时**先落盘再退出**。
+// 数据是「内存数据库 + 每 30 秒整库落盘」，不在退出前补一次的话，
+// 每次停止/升级应用都会丢掉最多 30 秒的写入（用户刚记的体重、刚上传的照片就没了）。
+// saveDb() 是同步的，可以安全地放在 process.exit() 之前；
+// 数据库尚未初始化或正处于恢复锁定中时它会自行跳过，不会抛错。
+function flushAndExit(signal) {
+  log.startup(`收到 ${signal}，进程退出`, { pid: process.pid, uptime: Math.floor(process.uptime()) });
+  try {
+    require('./db').saveDb();
+    log.startup('退出前落盘完成');
+  } catch (e) {
+    log.warn('退出', `退出前落盘失败: ${e.message}`);
+  }
   process.exit(0);
-});
-process.on('SIGINT', () => {
-  log.startup('收到 SIGINT，进程退出', { pid: process.pid, uptime: Math.floor(process.uptime()) });
-  process.exit(0);
-});
+}
+process.on('SIGTERM', () => flushAndExit('SIGTERM'));
+process.on('SIGINT', () => flushAndExit('SIGINT'));
 
 // ============ 网关用户身份读取（仅在 FNOS_SOCKET_PATH 存在时信任 X-Trim-* Header） ============
 function getGatewayUser(req) {
