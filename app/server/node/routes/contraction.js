@@ -200,29 +200,69 @@ router.get('/contractions/sessions/:id/analysis', async (req, res) => {
     }
     const avg_duration = total_count > 0 ? Math.round(total_duration / total_count) : 0;
     const avg_interval = interval_count > 0 ? Math.round(total_interval / interval_count) : 0;
-    const oneHourAgo = Date.now() - 3600000;
+
+    // ---------- 把「HH:MM:SS」还原成会话自己的时间轴 ----------
+    // ⚠️ 绝不能用 Date.now() 当「现在」：那样「最近一小时」是相对真实墙钟算的，
+    // 回头分析昨晚/上周的会话时，所有宫缩都落在窗口之外，last_hour_count 恒为 0，
+    // 结论永远掉到「暂无足够数据」——历史会话的分析等于没用。
+    // 这里改用**该会话最后一次宫缩的时间**作为锚点。
     const sessionDate = session.session_date;
     const sessionStartTs = session.start_time
       ? new Date(sessionDate + 'T' + session.start_time).getTime()
       : null;
-    const last_hour_contractions = contractions.filter(c => {
-      if (!c.start_time) return false;
+    const tsOf = (c) => {
+      if (!c.start_time) return null;
       let ts = new Date(sessionDate + 'T' + c.start_time).getTime();
+      if (!Number.isFinite(ts)) return null;
       // 处理跨午夜：若宫缩时间早于会话开始时间，说明已跨到次日
-      if (sessionStartTs !== null && ts < sessionStartTs) {
+      if (sessionStartTs !== null && Number.isFinite(sessionStartTs) && ts < sessionStartTs) {
         ts += 24 * 60 * 60 * 1000;
       }
-      return ts >= oneHourAgo;
+      return ts;
+    };
+
+    const timeline = contractions.map(tsOf).filter(t => t !== null);
+    const anchorTs = timeline.length ? timeline.reduce((a, b) => (b > a ? b : a)) : null;
+
+    // ---------- 最近一小时窗口（相对会话锚点） ----------
+    const WINDOW_MS = 60 * 60 * 1000;
+    // 「已持续满 1 小时」的判定留 5 分钟余量：用户往往不是在宫缩真正开始的那一刻
+    // 就打开计时器的，要求严丝合缝满 60 分钟会把真实产程判成不满足。
+    const SPAN_MIN_MINUTES = 55;
+
+    const last_hour_contractions = anchorTs === null ? [] : contractions.filter(c => {
+      const ts = tsOf(c);
+      return ts !== null && ts <= anchorTs && ts >= anchorTs - WINDOW_MS;
     });
     const last_hour_count = last_hour_contractions.length;
-    let is_511_met = false;
-    if (last_hour_count >= 12) {
-      const allLongEnough = last_hour_contractions.every(c => c.duration >= 60);
-      is_511_met = allLongEnough;
-    }
+
+    const windowFirstTs = last_hour_contractions
+      .map(tsOf)
+      .filter(t => t !== null)
+      .reduce((a, b) => (a === null || b < a ? b : a), null);
+    const window_span_minutes = (anchorTs !== null && windowFirstTs !== null)
+      ? Math.round((anchorTs - windowFirstTs) / 60000)
+      : 0;
+
+    const allLongEnough = last_hour_count > 0 && last_hour_contractions.every(c => (c.duration || 0) >= 60);
+
+    // 5-1-1 = 每 5 分钟 1 次 + 每次持续 1 分钟以上 + **持续满 1 小时**。
+    // ⚠️ 第三个「1」原来完全没校验：只要 12 次宫缩落在「距当前 60 分钟的滚动窗口」内就判定满足
+    // ——实测 12 次宫缩哪怕只跨 16.5 分钟，也会直接给出「已满足 5-1-1，建议立即前往医院待产」。
+    // 现在必须同时满足「窗口内首末宫缩的真实跨度 ≥ 55 分钟」。
+    const is_511_met = last_hour_count >= 12 && allLongEnough && window_span_minutes >= SPAN_MIN_MINUTES;
+
+    // 会话说到底是不是「刚记的」：超过 3 小时就明确提示这是历史记录，
+    // 免得用户拿昨天会话的结论判断今天要不要去医院。
+    const hoursSinceAnchor = anchorTs === null ? 0 : (Date.now() - anchorTs) / 3600000;
+    const isHistorical = hoursSinceAnchor > 3;
+
     let recommendation = '';
     if (is_511_met) {
-      recommendation = '已满足5-1-1规则（每5分钟1次宫缩，持续1小时以上，每次持续超过1分钟），建议立即前往医院待产。';
+      recommendation = '已满足5-1-1规则（宫缩每5分钟1次、每次持续超过1分钟，并已持续1小时以上），建议立即前往医院待产。';
+    } else if (last_hour_count >= 12 && allLongEnough) {
+      // 密度够了、只差「持续满 1 小时」——这正是原来被漏掉的那个「1」。
+      recommendation = `宫缩已达到「每5分钟1次、每次持续超过1分钟」的密度，但本次记录的跨度只有约 ${window_span_minutes} 分钟，还没满1小时。请继续记录：如持续满1小时请立即前往医院。`;
     } else if (avg_interval > 0 && avg_interval <= 300 && last_hour_count >= 6) {
       recommendation = '宫缩频率较高，正在接近5-1-1规则，请密切观察并做好前往医院的准备。';
     } else if (total_count >= 3 && avg_duration >= 30) {
@@ -232,6 +272,10 @@ router.get('/contractions/sessions/:id/analysis', async (req, res) => {
     } else {
       recommendation = '暂无足够数据进行5-1-1规则分析，请继续记录宫缩情况。';
     }
+    if (isHistorical) {
+      recommendation += `（注意：这是约 ${Math.round(hoursSinceAnchor)} 小时前的记录，不能代表当前情况；如现在仍有宫缩，请新建会话重新记录。）`;
+    }
+
     res.json({
       code: 0,
       data: {
@@ -240,6 +284,8 @@ router.get('/contractions/sessions/:id/analysis', async (req, res) => {
         avg_duration,
         avg_interval,
         last_hour_count,
+        // 本次窗口内「首次宫缩 → 末次宫缩」的真实跨度（分钟），供前端/排查核对
+        window_span_minutes,
         is_511_met,
         recommendation
       },

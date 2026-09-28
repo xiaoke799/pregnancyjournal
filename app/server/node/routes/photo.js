@@ -5,7 +5,10 @@ const config = require('../config');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const { mimeOf } = require('../services/media-types');
+const crypto = require('crypto');
+// 用 Node 内置的 randomUUID 生成文件名，去掉第三方 uuid 包
+const uuidv4 = () => crypto.randomUUID();
 const logger = require('../logger');
 const heic = require('../services/heic');
 const imageThumb = require('../services/image-thumb');
@@ -66,7 +69,15 @@ function _isVideo(filename, contentType) {
 // - nosniff：避免浏览器按内容嗅探出意料之外的类型
 // - SVG 内联返回时加 CSP sandbox：直接打开该 URL 会在应用同源下执行脚本（存储型 XSS 面），
 //   加 sandbox 后脚本不执行；对 <img> 正常显示没有影响
-function _applyServeHeaders(res, filePath) {
+/**
+ * @param cacheControl 默认 'no-cache'（留着校验器，命中 ETag 就是 304 空响应）。
+ *
+ * 【为什么要显式设缓存头】全局中间件给所有 /api/ 响应都设了 no-store
+ * （那是给数据接口用的，防数据不刷新）。但图片不属于那类：
+ * 不覆盖的话，每次进相册每张图都要整张重新下载一遍，几十张就是几十 MB。
+ * 这里改成 no-cache —— 浏览器仍会校验，但命中 ETag 时返回 304，一个字节都不传。
+ */
+function _applyServeHeaders(res, filePath, cacheControl = 'no-cache') {
   // 只在类型明确时才加 nosniff：类型未知（octet-stream）时浏览器靠内容嗅探还能把图显示出来，
   // 加了 nosniff 反而会让没登记扩展名的图片（.jfif/.jpe 之类）显示不出来。
   const ct = String(res.getHeader('Content-Type') || '');
@@ -76,6 +87,7 @@ function _applyServeHeaders(res, filePath) {
   if (/\.svgz?$/i.test(String(filePath))) {
     res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
   }
+  res.setHeader('Cache-Control', cacheControl);
 }
 
 function _ensureDir(dir) {
@@ -262,15 +274,18 @@ router.get('/photos/:id/file', async (req, res) => {
     if (!fs.existsSync(photo.file_path)) return res.status(404).json({ code: 1001, data: null, message: '文件不存在' });
 
     // 安全校验：确保文件路径在允许的目录内（防止路径遍历）
+    // ⚠️ 必须拼 path.sep 再比前缀：只写 startsWith(dir) 时，
+    // 兄弟目录（如 photos_backup / media-old）也会被判成「在允许目录内」。
+    // 与下方缩略图接口（用 `d + path.sep`）保持同一口径。
     const resolvedPath = path.resolve(photo.file_path);
     const allowedDirs = [path.resolve(config.PHOTOS_DIR), path.resolve(config.MEDIA_DIR)].map(d => d.toLowerCase());
-    const isAllowed = allowedDirs.some(dir => resolvedPath.toLowerCase().startsWith(dir));
+    const isAllowed = allowedDirs.some(dir => resolvedPath.toLowerCase() === dir || resolvedPath.toLowerCase().startsWith(dir + path.sep));
     if (!isAllowed) return res.status(403).json({ code: 1001, data: null, message: '不允许访问该路径' });
 
-    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.jpe': 'image/jpeg', '.jfif': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.tiff': 'image/tiff', '.tif': 'image/tiff', '.heic': 'image/heic', '.heif': 'image/heif', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v', '.avi': 'video/x-msvideo', '.mkv': 'video/x-matroska', '.ogg': 'video/ogg', '.ogv': 'video/ogg', '.flv': 'video/x-flv', '.wmv': 'video/x-ms-wmv', '.3gp': 'video/3gpp', '.3g2': 'video/3gpp2', '.mts': 'video/mp2t', '.m2ts': 'video/mp2t', '.ts': 'video/mp2t', '.vob': 'video/dvd', '.rm': 'application/vnd.rn-realmedia', '.rmvb': 'application/vnd.rn-realmedia-vbr', '.asf': 'video/x-ms-asf' };
-    const ext = path.extname(photo.file_path).toLowerCase();
-    res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
-    _applyServeHeaders(res, photo.file_path);
+    // MIME 映射统一来自 services/media-types（此处原本内联了 33 条）
+    res.setHeader('Content-Type', mimeOf(photo.file_path) || 'application/octet-stream');
+    // 原图内容不会变（换照片 = 新 id），可以放心缓存一整天
+    _applyServeHeaders(res, photo.file_path, 'public, max-age=86400');
     res.sendFile(resolvedPath);
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
@@ -286,14 +301,15 @@ router.get('/photos/:id/thumbnail', async (req, res) => {
       thumbPath = photo.file_path;
     }
     if (!thumbPath || !fs.existsSync(thumbPath)) return res.status(404).json({ code: 1001, data: null, message: '文件不存在' });
-    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.jpe': 'image/jpeg', '.jfif': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.heic': 'image/heic', '.heif': 'image/heif', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v' };
-    const ext = path.extname(thumbPath).toLowerCase();
-    res.setHeader('Content-Type', mimeMap[ext] || 'image/jpeg');
+    // MIME 映射统一来自 services/media-types（此处原本内联了 17 条，比原图接口少一半）
+    res.setHeader('Content-Type', mimeOf(thumbPath) || 'image/jpeg');
     const allowedDirs = [path.resolve(config.PHOTOS_DIR), path.resolve(config.MEDIA_DIR)];
     const resolvedPath = path.resolve(thumbPath);
     if (!allowedDirs.some(d => resolvedPath === d || resolvedPath.startsWith(d + path.sep))) {
       return res.status(403).json({ code: 1001, data: null, message: '不允许访问该文件' });
     }
+    // 缩略图走默认 no-cache（带 ETag）：它有个回退逻辑——缩略图还没生成时
+    // 这个地址会返回原图，稍后补生成了才返回真缩略图。缓存太久会一直用大图。
     _applyServeHeaders(res, thumbPath);
     res.sendFile(resolvedPath);
   } catch (e) {
