@@ -20,7 +20,8 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
+// 用 Node 内置的 randomUUID（不再依赖第三方 uuid 包）
+const uuidv4 = () => crypto.randomUUID();
 const db = require('../db');
 const dayjs = require('dayjs');
 const config = require('../config');
