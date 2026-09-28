@@ -33,23 +33,43 @@ export const usePregnancyStore = defineStore('pregnancy', () => {
     return null
   })
 
-  async function fetchActivePregnancy() {
-    loading.value = true
-    try {
-      const res = await pregnancyApi.getActive()
-      if (res.code === 0 && res.data) {
-        currentPregnancy.value = res.data
-        await fetchGestationalAge()
-      } else {
+  /**
+   * 并发去重：只合并「同时在飞」的请求。
+   *
+   * 为什么需要：应用启动时 App.vue 会预取一次，紧接着首页组件挂载时也会调一次，
+   * 没有这层保护就会把同一个请求打两遍 —— 首屏本来就慢，不能再翻倍。
+   *
+   * ⚠️ 它**只**合并并发请求：任务完成后 _inflight 立刻清空，所以
+   * 「改预产期 / 切档案 / 建档完成」之后的刷新照常会真的发请求，不受影响。
+   */
+  let _inflight: Promise<void> | null = null
+
+  async function fetchActivePregnancy(): Promise<void> {
+    if (_inflight) return _inflight
+    const task = (async () => {
+      loading.value = true
+      try {
+        const res = await pregnancyApi.getActive()
+        if (res.code === 0 && res.data) {
+          currentPregnancy.value = res.data
+          await fetchGestationalAge()
+        } else {
+          currentPregnancy.value = null
+          gestationalAge.value = null
+        }
+      } catch {
+        // 没有活跃档案等情况：置空即可，不应让异常冒泡炸掉页面
         currentPregnancy.value = null
         gestationalAge.value = null
+      } finally {
+        loading.value = false
       }
-    } catch {
-      // 没有活跃档案等情况：置空即可，不应让异常冒泡炸掉页面
-      currentPregnancy.value = null
-      gestationalAge.value = null
+    })()
+    _inflight = task
+    try {
+      return await task
     } finally {
-      loading.value = false
+      if (_inflight === task) _inflight = null
     }
   }
 

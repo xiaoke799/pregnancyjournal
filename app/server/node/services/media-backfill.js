@@ -35,16 +35,23 @@ let _running = false;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** 递归收集「文件名 → 真实路径」；文件名是 uuid，几乎不会重名 */
-function _indexDir(dir, index, budget) {
+/**
+ * 递归收集「文件名 → 真实路径」；文件名是 uuid，几乎不会重名。
+ *
+ * ⚠️ 必须用**异步** readdir：照片目录可能有上千个文件，同步递归会把事件循环
+ * 整个堵住（NAS 上可达数秒）。而这一步在启动后立刻执行，正好撞上用户首次打开
+ * 页面的那几秒 —— 首屏的 HTML / JS / 接口全被堵在后面排队，表现为「首次打开很慢、
+ * 甚至白屏」。改成异步后，扫描期间事件循环照常处理请求。
+ */
+async function _indexDir(dir, index, budget) {
   if (budget.left <= 0) return;
   let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+  try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); } catch (e) { return; }
   for (const ent of entries) {
     if (budget.left <= 0) return;
     const p = path.join(dir, ent.name);
     try {
-      if (ent.isDirectory()) _indexDir(p, index, budget);
+      if (ent.isDirectory()) await _indexDir(p, index, budget);
       else if (ent.isFile()) {
         budget.left -= 1;
         if (!index.has(ent.name)) index.set(ent.name, p);
@@ -62,10 +69,10 @@ function _indexDir(dir, index, budget) {
  * 或用户换过存储卷导致旧路径前缀对不上。
  * 只在「basename 命中 + 目标文件真实存在」时才改；文件名叫 uuid，不会误配。
  */
-function healPaths(db) {
+async function healPaths(db) {
   const index = new Map();
   const budget = { left: MAX_SCAN_FILES };
-  for (const root of [config.PHOTOS_DIR, config.MEDIA_DIR]) _indexDir(root, index, budget);
+  for (const root of [config.PHOTOS_DIR, config.MEDIA_DIR]) await _indexDir(root, index, budget);
   if (!index.size) return { fixed: 0, scanned: 0 };
 
   let fixed = 0;
@@ -178,7 +185,7 @@ async function runMediaBackfill(db) {
   _running = true;
   try {
     // 0) 路径自愈（最先做：后面两步都依赖 file_path 能找到文件）
-    const h = healPaths(db);
+    const h = await healPaths(db);
     if (h.fixed > 0) {
       try { db.saveDb(); } catch (e) { /* 交给定时落盘 */ }
       logger.startup(`路径自愈: 修好 ${h.fixed} 条（扫描 ${h.scanned} 个文件）`);
@@ -212,11 +219,19 @@ async function runMediaBackfill(db) {
   }
 }
 
-/** 后台启动（不阻塞调用方，不抛异常） */
+/**
+ * 后台启动（不阻塞调用方，不抛异常）
+ *
+ * ⚠️ 刻意**延迟**几秒再跑，而不是 setImmediate：后端刚起来那几秒正是用户首次打开
+ * 页面的时刻，此时哪怕只是扫一遍照片目录，也会跟首屏请求抢资源。晚几秒跑对用户
+ * 完全无感（路径自愈/缩略图补齐本来就是后台维护任务），却能把首屏让出来。
+ * 排障或测试时可设 PJ_BACKFILL_DELAY_MS=0 立即执行。
+ */
 function startMediaBackfill(db) {
-  setImmediate(() => {
+  const delayMs = Number(process.env.PJ_BACKFILL_DELAY_MS || 3000);
+  setTimeout(() => {
     runMediaBackfill(db).catch((e) => logger.warn('媒体补齐', e.message));
-  });
+  }, Math.max(0, delayMs)).unref?.();
 }
 
 module.exports = { startMediaBackfill, runMediaBackfill, healPaths };
