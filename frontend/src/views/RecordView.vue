@@ -549,6 +549,7 @@ import dayjs from 'dayjs'
 import MiniCalendar from '@/components/record/MiniCalendar.vue'
 import RecordList from '@/components/record/RecordList.vue'
 import AddRecordDialog from '@/components/record/AddRecordDialog.vue'
+import { getMoodEmoji as moodEmojiOf, MOOD_OPTIONS as moodOptions } from '@/utils/format'
 import StatsPanel from './StatsView/StatsPanel.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 
@@ -605,14 +606,7 @@ const glucoseForm = ref({ date: '', period: 'fasting' as 'fasting' | '1h' | '2h'
 const fhrForm = ref({ date: '', value: null as number | null, note: '' })
 // 便便
 const stoolForm = ref({ date: '', count: null as number | null, consistency: 'normal' as 'hard' | 'normal' | 'soft' | 'diarrhea', note: '' })
-// 心情
-const moodOptions = [
-  { value: 1, emoji: '😢', label: '很差' },
-  { value: 2, emoji: '😔', label: '不好' },
-  { value: 3, emoji: '😐', label: '一般' },
-  { value: 4, emoji: '😊', label: '不错' },
-  { value: 5, emoji: '😄', label: '很好' },
-]
+// 心情选项统一取自 utils/format 的共享常量
 const moodForm = ref({ date: dayjs().format('YYYY-MM-DD'), value: 3, note: '' })
 // 日记
 const noteForm = ref({ date: '', content: '' })
@@ -746,8 +740,8 @@ const previewItems = computed<PreviewItem[]>(() => {
     if (r.urination_frequency) items.push({ type: 'urination', icon: '🚻', label: '排尿', value: uMap[r.urination_frequency] || r.urination_frequency, color: '#22d3ee' })
   }
   if (r.mood) {
-    const icons = ['', '😢', '😔', '😐', '😊', '😄']
-    items.push({ type: 'mood', icon: '😊', label: '心情', value: (icons[r.mood] || '😐') + (r.mood_note ? ' ' + r.mood_note.slice(0, 8) : ''), color: '#f87171' })
+    // 心情 emoji 取自 utils/format 的唯一真源，兜底沿用本页原有的 '😐'
+    items.push({ type: 'mood', icon: '😊', label: '心情', value: (moodEmojiOf(r.mood, '😐')) + (r.mood_note ? ' ' + r.mood_note.slice(0, 8) : ''), color: '#f87171' })
   }
 
   return items.slice(0, 6) // 最多显示6个预览项

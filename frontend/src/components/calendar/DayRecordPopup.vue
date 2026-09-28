@@ -30,6 +30,7 @@
 import { computed } from 'vue'
 import { NModal, NButton } from 'naive-ui'
 import { useRouter } from 'vue-router'
+import { getMoodEmoji as moodEmojiOf } from '@/utils/format'
 
 const props = defineProps<{
   show: boolean
@@ -55,7 +56,8 @@ const hasRecord = computed(() => {
   return props.record && (props.record.weight || props.record.fetal_heart_rate || props.record.body_temperature || props.record.mood || props.record.note)
 })
 
-const moodEmojis: Record<number, string> = { 1: '😢', 2: '😔', 3: '😐', 4: '😊', 5: '😄' }
+// 心情 emoji 统一取自 utils/format 的唯一真源（不再本页另抄一份映射）
+const moodEmojis: Record<number, string> = { 1: moodEmojiOf(1), 2: moodEmojiOf(2), 3: moodEmojiOf(3), 4: moodEmojiOf(4), 5: moodEmojiOf(5) }
 
 function goToRecord() {
   visible.value = false

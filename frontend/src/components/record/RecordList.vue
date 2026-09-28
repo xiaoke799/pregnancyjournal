@@ -35,6 +35,7 @@
 import { ref, computed, h, watch, onMounted, onUnmounted } from 'vue'
 import { dailyRecordApi } from '@/api/daily-record'
 import { usePregnancyStore } from '@/stores/pregnancy'
+import { getMoodEmoji as moodEmojiOf } from '@/utils/format'
 import AppIcon from '@/components/common/AppIcon.vue'
 
 const props = defineProps<{
@@ -528,11 +529,10 @@ const isNoteHtml = computed(() => {
   return n && n.includes('<') && n.includes('>')
 })
 
-const moodIcons = ['', '😢', '😔', '😐', '😊', '😄']
-
 function getMoodEmoji(): string {
   const m = record.value.mood
-  return moodIcons[m] || '😊'
+  // 映射统一取自 utils/format 的唯一真源；兜底沿用本页原有的 '😊'
+  return moodEmojiOf(m, '😊')
 }
 
 function getStoolPreview(): string {

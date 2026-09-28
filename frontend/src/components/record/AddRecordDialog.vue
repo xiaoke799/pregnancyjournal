@@ -509,6 +509,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { dailyRecordApi } from '@/api/daily-record'
 import client from '@/api/client'
 import { getApiBase } from '@/utils/api-base'
+import { MOOD_OPTIONS as moodOptions } from '@/utils/format'
 import dayjs from 'dayjs'
 import AppIcon from '@/components/common/AppIcon.vue'
 
@@ -567,13 +568,7 @@ const recordTypes = [
   { value: 'fetal_heart_rate', icon: 'heart', label: '测胎心' },
 ]
 
-const moodOptions = [
-  { value: 1, emoji: '😢', label: '很差' },
-  { value: 2, emoji: '😔', label: '不好' },
-  { value: 3, emoji: '😐', label: '一般' },
-  { value: 4, emoji: '😊', label: '不错' },
-  { value: 5, emoji: '😄', label: '很好' },
-]
+// 心情选项统一取自 utils/format 的共享常量（此前记录弹窗/记录页/日记页各抄了一份）
 
 const symptomOptions = [
   '恶心', '呕吐', '头痛', '头晕', '水肿', '腰痛',

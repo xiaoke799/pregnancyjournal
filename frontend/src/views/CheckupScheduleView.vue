@@ -1034,14 +1034,19 @@ async function loadAll() {
   } finally { loading.value = false }
 }
 
-onMounted(() => {
-  loadAll()
-  // 直接进入/刷新本页时，pregnancyStore 可能还是空的（它只在首页等页面被加载过）。
-  // 本页的「预计日期」要用 LMP 推算，「完成日期 / 自定义产检」要用 pregnancy_id 拉取，
-  // 所以这里自己补拉一次；拿到后下面的 watch 会自动再 loadAll 一遍。
-  if (!pregnancyStore.currentPregnancy) {
-    pregnancyStore.fetchActivePregnancy().catch(() => { /* 没有档案就保持空，不影响排期展示 */ })
+onMounted(async () => {
+  // 档案已在（壳层预取命中，最常见的情形）→ 加载一次就够
+  if (pregnancyStore.currentPregnancy?.id) {
+    loadAll()
+    return
   }
+  // 档案还没到：等它到手。
+  // ⚠️ 等来之后**不要**在这里再补一次 loadAll()：id 从「无」变「有」会让下面的
+  // watch 自动触发，自己再调一次，整套请求（排期 1 个 + 逐项报告 15+ 个）就打了两遍。
+  // 只有「拉完仍然没有档案」才需要自己兜底 —— 那种情况 watch 永远不会触发，
+  // 而产检排期对尚未建档的用户同样要展示（只是不带完成状态）。
+  await pregnancyStore.fetchActivePregnancy().catch(() => { /* 没有档案就保持空，不影响排期展示 */ })
+  if (!pregnancyStore.currentPregnancy?.id) loadAll()
 })
 watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() })
 </script>

@@ -146,8 +146,13 @@
       </div>
     </div>
 
+    <!-- 三态：加载中 / 真的没有 / 有清单。加载期间原本落到空分支，页面下方一片空白 -->
+    <div v-if="loading && checklists.length === 0" class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-text">正在加载…</div>
+    </div>
     <!-- 空状态 -->
-    <div v-if="checklists.length === 0 && !loading" class="empty-state">
+    <div v-else-if="checklists.length === 0" class="empty-state">
       <div class="empty-icon">📋</div>
       <div class="empty-text">暂无清单数据</div>
     </div>

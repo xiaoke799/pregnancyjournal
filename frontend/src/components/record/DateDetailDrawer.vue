@@ -49,6 +49,7 @@
 import { computed } from 'vue'
 import { NDrawer, NDrawerContent, NButton } from 'naive-ui'
 import dayjs from 'dayjs'
+import { getMoodEmoji as moodEmojiOf } from '@/utils/format'
 import AppIcon from '@/components/common/AppIcon.vue'
 
 const props = defineProps<{
@@ -156,8 +157,8 @@ const groupedRecords = computed<RecordGroup[]>(() => {
     } catch { /* ignore */ }
   }
   if (r.mood) {
-    const moodIcons = ['', '😢', '😔', '😐', '😊', '😄']
-    groups.push({ type: 'mood', icon: moodIcons[r.mood] || '😊', label: '心情', items: [{ time: '', value: r.mood_note || '' }] })
+    // 心情 emoji 取自 utils/format 的唯一真源，兜底沿用本页原有的 '😊'
+    groups.push({ type: 'mood', icon: moodEmojiOf(r.mood, '😊'), label: '心情', items: [{ time: '', value: r.mood_note || '' }] })
   }
   if (r.note) {
     groups.push({ type: 'note', icon: '📝', label: '日记', items: [{ time: '', value: r.note }] })
