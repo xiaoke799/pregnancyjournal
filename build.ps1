@@ -66,6 +66,21 @@ if (($manifestSub -split '\.').Count -ne 3) { $errors += "manifest sub_version($
 # changelog 必须与本版同步：版本号改了但说明还停在上版的话，
 # 用户在应用中心看到的「更新说明」会是上一版的内容。
 if ($manifestText -notmatch [regex]::Escape("V$Version")) { $errors += "manifest changelog 未包含 V$Version（说明还停在上一个版本）" }
+# README 是发版需同步的**第 5 处**：徽章与下载文件名都对外可见。
+# 历史坑：v0.0.31 发布后 README 仍写着 0.0.28 / 14.6MB（落后 3 个版本），
+# 因为这道校验只覆盖了 manifest/config.js/build.ps1/CHANGELOG，README 在网外。
+$readmePath = Join-Path $PkgDir "README.md"
+if (Test-Path $readmePath) {
+    $readmeText = [System.IO.File]::ReadAllText($readmePath)
+    if ($readmeText -notmatch [regex]::Escape("version-$Version-green.svg")) {
+        $errors += "README.md 版本徽章未同步（应含 version-$Version-green.svg）"
+    }
+    if ($readmeText -notmatch [regex]::Escape("pregnancyjournal_v$Version.fpk")) {
+        $errors += "README.md 下载文件名未同步（应含 pregnancyjournal_v$Version.fpk）"
+    }
+} else {
+    $errors += "缺少 README.md"
+}
 $entryJs = [regex]::Match($html, '/assets/(index-[A-Za-z0-9._-]+\.js)').Groups[1].Value
 if (-not $entryJs) {
     $errors += "index.html 未引用 index-*.js 入口"
@@ -104,12 +119,12 @@ while ($queue.Count -gt 0) {
 $removed = 0
 # ⚠️ 用「移动到隔离目录」而不是 Remove-Item：
 # ① 这是**构建产物**，误删顶多重编一次，但直接删会触发部分环境的删除护栏（fail-closed 直接中断打包）；
-# ② 移走后仍可回收，出问题能对照。隔离目录在 本地私有目录 下（已 gitignored）。
+# ② 移走后仍可回收，出问题能对照。隔离目录在仓库根的 .trash/ 下（已 gitignored）。
 $assetsTrash = $null
 Get-ChildItem $assetsDir -File | ForEach-Object {
     if (-not $keep.Contains($_.Name)) {
         if (-not $assetsTrash) {
-            $assetsTrash = Join-Path $PkgDir "本地私有目录\trash-ui-assets-$(Get-Date -Format yyyyMMdd-HHmmss)"
+            $assetsTrash = Join-Path $PkgDir ".trash\ui-assets-$(Get-Date -Format yyyyMMdd-HHmmss)"
             New-Item -ItemType Directory -Force -Path $assetsTrash | Out-Null
         }
         Move-Item $_.FullName -Destination (Join-Path $assetsTrash $_.Name) -Force
@@ -221,7 +236,7 @@ if (-not (Test-Path $fnpack)) { $fnpack = "fnpack_tool.exe" }
 # 这里也统一改成「存在就移入隔离目录」。
 $intermediate = Join-Path $Parent "pregnancyjournal.fpk"
 if (Test-Path $intermediate) {
-    $fpkTrash = Join-Path $PkgDir "本地私有目录\trash-build-$(Get-Date -Format yyyyMMdd-HHmmss)"
+    $fpkTrash = Join-Path $PkgDir ".trash\build-$(Get-Date -Format yyyyMMdd-HHmmss)"
     New-Item -ItemType Directory -Force -Path $fpkTrash | Out-Null
     Move-Item $intermediate -Destination (Join-Path $fpkTrash "pregnancyjournal.fpk") -Force
 }

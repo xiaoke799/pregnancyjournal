@@ -2,13 +2,12 @@
  * tools/verify/_env.js —— 回归/核查脚本的**运行环境唯一出处**。
  *
  * 为什么要有这个文件：
- *   此前这 90 多个脚本散在 `tools/verify/`（被 .gitignore 排除、不入库），
- *   且每个脚本顶部都硬编码 `const ROOT = 'D:/pregnancy-journal'`、
- *   node.exe 的绝对路径、PortableGit 的绝对路径 —— 换机器 / 换目录 clone 下来
- *   一个都跑不起来，等于「验证能力只存在于作者本机」。
+ *   这套脚本原先散在一个本地私有工作目录里（不入库），且每个脚本顶部都硬编码了
+ *   仓库根的绝对路径、node.exe 的绝对路径、某个特定 git-bash 的绝对路径 ——
+ *   换机器 / 换目录 clone 下来一个都跑不起来，等于「验证能力只存在于作者本机」。
  *
  * 现在所有与本机相关的常量都从本文件取；脚本只 `require('./_env')`。
- * 需要临时覆盖时用环境变量：PJ_VERIFY_TMP / PJ_NODE / PJ_BASH。
+ * 需要临时覆盖时用环境变量：PJ_VERIFY_TMP / PJ_NODE / PJ_BASH / PJ_GIT。
  */
 const path = require('path');
 const fs = require('fs');
@@ -50,14 +49,21 @@ function which(candidates) {
   return null;
 }
 
-/** bash —— 本机 PortableGit 的 bash 是残缺的（dirname/head 缺失），但 t17 只用它跑假 curl，够用 */
+/**
+ * bash —— 供 t17 跑「假 curl」的片段用。
+ *
+ * ⚠️ 必须用 `usr/bin/bash.exe`，**不要用 `bin/bash.exe`**：
+ *   Git for Windows 的 `bin/bash.exe` 是个启动器，PATH 挂载与 MSYS 路径转换行为不同，
+ *   会导致片段里 prepend 的假 curl 目录找不到 —— 表现为 t17 直接掉成 7 通过 / 9 失败
+ *   （而子进程本身能起来，所以不会报 spawn 错误，极易误判成"测试本身有问题"）。
+ */
 const BASH = which([
   process.env.PJ_BASH,
-  'C:/Users/X/tools/verify/binaries/PortableGit/versions/1.2.0/usr/bin/bash.exe',
-  'C:/Program Files/Git/bin/bash.exe',
-  'C:/Program Files (x86)/Git/bin/bash.exe',
+  'C:/Program Files/Git/usr/bin/bash.exe',
+  'C:/Program Files (x86)/Git/usr/bin/bash.exe',
   '/usr/bin/bash',
   '/bin/bash',
+  'bash',
 ]);
 
 module.exports = {
