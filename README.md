@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-FnOS%20x86--64%20%2F%20ARM64-8c8c8c.svg)](https://www.fnos.com/)
-[![Version](https://img.shields.io/badge/version-0.0.28-green.svg)](manifest)
+[![Version](https://img.shields.io/badge/version-0.0.31-green.svg)](manifest)
 
 > 飞牛 OS 原生应用 · 数据 100% 本地存储 · 零上云
 >
@@ -35,9 +35,9 @@
 
 ### 安装方式 / Installation
 
-从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.28.fpk`（约 14.6MB，以 Releases 页最新版为准），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
+从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.31.fpk`（约 13.0MB，以 Releases 页最新版为准），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
 
-Download `pregnancyjournal_v0.0.28.fpk` (≈14.6MB; always grab the latest on the Releases page) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
+Download `pregnancyjournal_v0.0.31.fpk` (≈13.0MB; always grab the latest on the Releases page) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
 
 > 应用依赖已完整内置在安装包中，安装后无需联网下载任何组件。
 > All dependencies are bundled in the package — no network download needed after install.

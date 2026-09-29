@@ -7,7 +7,8 @@
  * 执行一次就会：条目全部堆到「蔬菜类」、菌菇类与药食同源分类消失、重复条目混入。
  *
  * 该文件只用于还原 2026-06 之前那次「155 条蔬菜 → 9 分类」的历史转换，留存仅为追溯。
- * 日常维护请用 本地维护脚本目录 下的脚本（food_add_*.js + expand_food_safety.js + enhance_food_safety.js）。
+ * 日常维护由配套的一次性数据脚本完成（food_add_*.js / expand_food_safety.js / enhance_food_safety.js），
+ * 这些脚本属于本地维护工具、未随仓库分发。
  *
  * Rebuild food_safety_v3.json with multi-category structure.
  * Preserves existing 155 vegetable items, adds 9 more categories with common pregnancy-related foods.

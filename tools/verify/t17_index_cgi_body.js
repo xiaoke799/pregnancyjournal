@@ -23,11 +23,12 @@ const TMP = path.join(BASE, 'tmp_r');
 const FAKEBIN = path.join(TMP, 'fakebin');
 const BASH = require('./_env').BASH;
 
-// 反例来源（固定的「修复前」提交）。写死 v0.0.30 的提交号，是为了让反例**不受本仓库
-// 提交状态影响**：哪怕这次修复已经被提交、HEAD 已经是新版，反例照样取得到。
+// 反例来源（固定的「修复前」版本）。这里用 **tag 名**而不是提交号：
+// tag 名在本仓库历史被重写（filter-branch + force-push）之后依然有效，提交号会直接查不到。
+// v0.0.30 是本次修复前的最后一个发布版本，其 app/ui/index.cgi 确实没有 `--data-binary`。
 // （原先写 `HEAD` —— 一旦提交修复，反例会退化成"取到的是新版"，而代码里已经先断言
 //   「旧版本确实没有 --data-binary」，于是要么误报要么被静默跳过。）
-const OLD_REFS = ['524f039', 'HEAD'];
+const OLD_REFS = ['v0.0.30', 'HEAD'];
 
 let PASS = 0, FAIL = 0;
 function ok(cond, label, extra) {

@@ -1,7 +1,7 @@
 # tools/verify —— 回归与核查脚本
 
-本目录是孕程记的**验证能力本体**。此前它散落在 `tools/verify/` 里（该目录被 `.gitignore`
-排除 ⇒ 一个文件都没入库），一旦本机磁盘或 `.git` 出事，代码能靠 bundle 捞回来、
+本目录是孕程记的**验证能力本体**。此前它散落在一个**本地私有工作目录**里（该目录被 git 排除
+⇒ 一个文件都没入库），一旦本机磁盘或 `.git` 出事，代码能靠备份捞回来、
 **这套验证能力却会整体丢失**。2026-09-29 迁入仓库内，目的就是让它跟着仓库走。
 
 ---
@@ -80,9 +80,12 @@ tools/verify/
    而异步 spawn 正常。`t17` 曾因此**从未真正跑起来过**，反例被静默跳过 —— 写新套件时务必照抄现有写法。
 2. **`tcp_shim.js` 是本机唯一能跑真链路的方式**：安全策略禁止监听 Unix Domain Socket。
    用法 `node -r tcp_shim.js server.js`，端口由 `PJ_TCP_PORT` 覆盖（默认 38471）。
-3. **PortableGit 的 bash 是残缺的**（`dirname`/`head`/`grep` 缺失）。`t17` 只用它跑一个假
-   `curl`，够用；需要正经 shell 时用 Python/PowerShell 代替。
-4. **反例来源固定写死历史提交**（如 `524f039`），**不要写 `HEAD`** —— 修复一提交，反例就失效了。
+3. **bash 要用 `usr/bin/bash.exe`，不要用 `bin/bash.exe`**（Windows / Git for Windows）。
+   `bin/bash.exe` 是启动器，PATH 挂载与 MSYS 路径转换行为不同 ⇒ `t17` 里 prepend 的假 curl
+   目录找不到，**直接掉成 7 通过 / 9 失败**；而子进程本身能起来、不报 spawn 错误，极易误判成"测试写错了"。
+   需要覆盖时用 `PJ_BASH`。
+4. **反例来源写死为 tag 名**（如 `v0.0.30`），**不要写 `HEAD`** —— 修复一提交，反例就失效了。
+   也不要用提交号：仓库历史一旦被重写（filter-branch + force-push），提交号就直接查不到了。
 5. **换机器时**：只改 `_env.js` 一处。若某个外部程序（git / bash / node）探测不到，
    用 `PJ_NODE` / `PJ_BASH` / `PJ_GIT` / `PJ_VERIFY_TMP` 环境变量覆盖。
 
@@ -90,16 +93,20 @@ tools/verify/
 
 ## 迁移说明（2026-09-29）
 
-- 来源：`tools/verify/`（66 个顶层脚本）+ `tools/verify/verify-20260928/`（20 个 t 系列 + 运行器）
-  + `tools/verify/wecom/`（4 个）+ `tools/verify/fixtures/heic-test/`（夹具）。
+本目录原先散落在一个**本地私有工作目录**里（被 git 排除 ⇒ 一个文件都没入库）。
+下面只写"从哪几类脚本来的"，不再列出那个私有目录的具体路径 —— 它不属于本仓库。
+
+- 来源四类：核查/探针脚本（66 个顶层脚本）、v0.0.31 十九项修复的专项探针（20 个 t 系列 + 运行器）、
+  推送套件（4 个）、HEIC 测试夹具。
 - 入库 **93 个文件**：72 `.js` / 16 `.py` / 1 `.sh` / 1 `.heic` / 2 `.jpg` / 1 `README.md`。
   其中 **73 个做了路径改写**，其余无需改动。
 - 改写手法：所有本机常量收敛到 `_env.js`，脚本内只保留 `require('./_env')`。
   改完 **72 个 .js 全部通过 `node --check`，16 个 .py 全部通过 `py_compile`**，
   并从新位置跑通全套 **40/40 全绿 / 756 项**（与迁移前基线逐套一致）。
-- **原 `tools/verify/` 下的副本未删除**（按项目约定：先复制、跑绿、再谈删）。
-- 未迁入（判断为一次性/无关）：`checkup.fixed.js`（临时修好的副本）、`clean_ui_assets.js`（一次性清理）、
-  `_refactor_recordview_stats.py`（一次性重构工具）、`本地维护脚本目录`（食物库数据生成脚本，非验证）。
+- **原私有目录下的副本未删除**（按项目约定：先复制、跑绿、再谈删）。
+- 未迁入（判断为一次性/本地维护工具，非验证）：`checkup.fixed.js`（临时修好的副本）、
+  `clean_ui_assets.js`（一次性清理）、`_refactor_recordview_stats.py`（一次性重构）、
+  食物库数据生成脚本（`food_add_*.js` / `expand_*.js` / `enhance_*.js` / `recipes_add.js`）。
 
 ### 迁移时踩过的两个坑（都值得记住）
 
