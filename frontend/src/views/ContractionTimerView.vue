@@ -21,7 +21,7 @@
         <button
           class="big-button"
           :class="{ running: isRunning }"
-          @click="isRunning ? endContraction() : startContraction()"
+          @click="onToggleContraction"
         >
           {{ isRunning ? '停止' : '开始' }}
         </button>
@@ -193,16 +193,33 @@ function formatTime(isoStr?: string): string {
 
 async function handleSaveManual() {
   if (!canSaveManual.value) return
+  if (!sessionId.value) { message.error('会话还没就绪，请返回后重新进入'); return }
   const start = dayjs(manualStartTime.value).toISOString()
   const end = dayjs(manualEndTime.value).toISOString()
-  await recordManual(start, end)
+  // ⚠️ 以前不看返回值，sessionId 为空时 recordManual 直接 return，
+  //    这里却照样弹「已保存」—— 用户以为记下了，其实什么都没写。
+  const ok = await recordManual(start, end)
+  if (!ok) { message.error('保存失败，请重试'); return }
   message.success('已保存')
   manualStartTime.value = null
   manualEndTime.value = null
 }
 
+/** 开始 / 结束一次宫缩。会话没建起来时明确提示，不再静默什么都不做。 */
+async function onToggleContraction() {
+  if (!sessionId.value) { message.error('会话还没就绪，请返回后重新进入'); return }
+  if (isRunning.value) {
+    const ok = await endContraction()
+    if (!ok) message.error('结束这次宫缩失败，请重试')
+  } else {
+    const ok = await startContraction()
+    if (!ok) message.error('开始计时失败，请重试')
+  }
+}
+
 async function handleEndSession() {
-  await endSession()
+  const ok = await endSession()
+  if (!ok) { message.error('结束记录失败，请重试'); return }
   router.push('/')
 }
 
@@ -210,10 +227,21 @@ function goBack() {
   router.push('/')
 }
 
+/** 孕期档案由 App.vue 壳层异步预取（不 await）⇒ 挂载时可能还没到，这里主动等一次。 */
+async function ensurePregnancy(): Promise<boolean> {
+  if (pregnancyStore.currentPregnancy) return true
+  await pregnancyStore.fetchActivePregnancy()
+  if (pregnancyStore.currentPregnancy) return true
+  message.error('还没取到孕期信息，请先在「设置」里完成初始设置')
+  return false
+}
+
 onMounted(async () => {
-  if (pregnancyStore.currentPregnancy) {
-    await startSession(pregnancyStore.currentPregnancy.id)
-  }
+  // ⚠️ 以前是 `if (currentPregnancy) startSession(...)`：孕期没取回时会话根本没建，
+  //    而所有按钮又都是「sessionId 为空就静默返回」⇒ 整个页面点了全没反应。
+  if (!(await ensurePregnancy())) return
+  const ok = await startSession(pregnancyStore.currentPregnancy!.id)
+  if (!ok) message.error('初始化失败，计时可能不可用，请返回后重新进入')
 })
 
 onUnmounted(() => {
