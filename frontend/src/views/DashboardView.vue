@@ -307,7 +307,7 @@ import { markCheckupCompleted } from '@/api/checkup-schedule'
 import { checkupApi } from '@/api/checkup'
 import client from '@/api/client'
 import { calculateGestationalAge } from '@/utils/gestational'
-import { getMoodEmoji as moodEmojiOf } from '@/utils/format'
+import { getMoodEmoji as moodEmojiOf, sleepQualityLabel } from '@/utils/format'
 import dayjs from 'dayjs'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -632,12 +632,9 @@ function todoIcon(item: any): string {
 
 const todayStr = dayjs().format('YYYY-MM-DD')
 
-function sleepQualityLabel(q: string): string {
-  // 兼容小弹窗保存的中文质量值
-  const zhMap: Record<string, string> = { '好': 'good', '一般': 'fair', '差': 'poor' }
-  const normalized = zhMap[q] || q
-  return normalized === 'good' ? '好' : normalized === 'poor' ? '差' : '一般'
-}
+// ⚠️ 这里曾有第三份睡眠质量映射（中文↔英文），且兜底返回 '一般' ——
+//    于是「没记质量」会被显示成「一般」，而记录列表/统计面板的兜底各不相同。
+//    现已收口到 utils/format 的唯一真源（铁律 #34），本页直接用共享函数。
 
 // 分组可见性计算（仅保留健康数据相关）
 const hasGlucose = computed(() => {

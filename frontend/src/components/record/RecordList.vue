@@ -35,7 +35,7 @@
 import { ref, computed, h, watch, onMounted, onUnmounted } from 'vue'
 import { dailyRecordApi } from '@/api/daily-record'
 import { usePregnancyStore } from '@/stores/pregnancy'
-import { getMoodEmoji as moodEmojiOf } from '@/utils/format'
+import { getMoodEmoji as moodEmojiOf, normalizeSleepQuality, sleepQualityLabel } from '@/utils/format'
 import AppIcon from '@/components/common/AppIcon.vue'
 
 const props = defineProps<{
@@ -101,38 +101,40 @@ interface CategoryDef {
   addable: boolean
   badge?: string
   badgeColor?: string
-  actionType?: 'add' | 'toggle' | 'camera' | 'link'
-  linkTo?: string
 }
 
 const allCategories: CategoryDef[] = [
-  { type: 'weight', icon: 'weight', label: '体重', color: '#a78bfa', addable: true, actionType: 'add' },
+  { type: 'weight', icon: 'weight', label: '体重', color: '#a78bfa', addable: true },
   // 三围（胸/腰/臀）：与 RecordView 顶部「＋ 添加记录」菜单保持一致。
   // 【历史问题】腰围当初只加进了那个小菜单，没加到本列表，用户在记录页主入口根本看不到它。
-  { type: 'waist', icon: '📏', label: '三围', color: '#14b8a6', addable: true, actionType: 'add' },
-  { type: 'edema', icon: '🦵', label: '水肿', color: '#0ea5e9', addable: true, actionType: 'add' },
-  { type: 'discharge', icon: '💧', label: '分泌物', color: '#06b6d4', addable: true, actionType: 'add' },
-  { type: 'skin', icon: '✨', label: '皮肤状况', color: '#d946ef', addable: true, actionType: 'add' },
-  { type: 'urination', icon: '🚻', label: '排尿情况', color: '#22d3ee', addable: true, actionType: 'add' },
-  { type: 'blood_pressure', icon: '🩺', label: '血压', color: '#ef4444', addable: true, actionType: 'add' },
-  { type: 'supplement', icon: '💊', label: '营养补充', color: '#06b6d4', addable: true, actionType: 'add' },
-  { type: 'hcg', icon: '🧬', label: 'hCG', color: '#8b5cf6', addable: true, actionType: 'link', linkTo: 'hcg' },
-  { type: 'uric_acid', icon: '🧪', label: '尿酸', color: '#ec4899', addable: true, actionType: 'link', linkTo: 'uric_acid' },
-  { type: 'blood_glucose', icon: '🩸', label: '孕期血糖', color: '#f59e0b', addable: true, actionType: 'add' },
-  { type: 'habit', icon: '✅', label: '好习惯', color: '#6366f1', addable: true, actionType: 'add' },
-  { type: 'stool', icon: '💩', label: '便便', color: '#a3e635', addable: true, actionType: 'add' },
-  { type: 'symptoms', icon: 'clipboard', label: '症状', color: '#34d399', addable: true, actionType: 'add' },
-  { type: 'mood', icon: '😊', label: '心情', color: '#f87171', addable: true, actionType: 'add' },
-  { type: 'fetal_heart_rate', icon: 'heart', label: '测胎心', color: '#f472b6', addable: true, actionType: 'link', linkTo: 'fetal_heart_rate' },
-  { type: 'intimacy', icon: '💑', label: '爱爱', color: '#f43f5e', addable: true, actionType: 'add' },
-  { type: 'temperature', icon: 'thermometer', label: '体温', color: '#ef4444', addable: true, actionType: 'add' },
-  { type: 'plan', icon: '📌', label: '计划', color: '#14b8a6', addable: true, actionType: 'add' },
-  { type: 'sleep', icon: '😴', label: '睡眠', color: '#818cf8', addable: true, actionType: 'add' },
-  { type: 'exercise', icon: '🏃', label: '运动', color: '#22c55e', addable: true, actionType: 'add' },
-  { type: 'diet', icon: '🍎', label: '饮食备注', color: '#fb923c', addable: true, actionType: 'add' },
-  { type: 'water', icon: '💧', label: '饮水', color: '#38bdf8', addable: true, actionType: 'add' },
-  { type: 'contraction', icon: 'timer', label: '宫缩', color: '#f43f5e', addable: true, actionType: 'add' },
-  { type: 'fetal_movement', icon: '🦶', label: '胎动', color: '#a78bfa', addable: true, actionType: 'add' },
+  { type: 'waist', icon: '📏', label: '三围', color: '#14b8a6', addable: true },
+  { type: 'edema', icon: '🦵', label: '水肿', color: '#0ea5e9', addable: true },
+  { type: 'discharge', icon: '💧', label: '分泌物', color: '#06b6d4', addable: true },
+  { type: 'skin', icon: '✨', label: '皮肤状况', color: '#d946ef', addable: true },
+  { type: 'urination', icon: '🚻', label: '排尿情况', color: '#22d3ee', addable: true },
+  { type: 'blood_pressure', icon: '🩺', label: '血压', color: '#ef4444', addable: true },
+  { type: 'supplement', icon: '💊', label: '营养补充', color: '#06b6d4', addable: true },
+  // 用药：2026-09-29 补。此前这一类**完全没有入口**（顶部菜单/记录列表/quickAdd 三处都漏了），
+  // 而它的数据通路一直是齐的 —— 列表里本就有 hasDataForType/getPreview 的 medication 分支，
+  // 只是永远没有类别能命中它，那两段代码等于死代码。
+  { type: 'medication', icon: '💊', label: '用药', color: '#9333ea', addable: true },
+  { type: 'hcg', icon: '🧬', label: 'hCG', color: '#8b5cf6', addable: true },
+  { type: 'uric_acid', icon: '🧪', label: '尿酸', color: '#ec4899', addable: true },
+  { type: 'blood_glucose', icon: '🩸', label: '孕期血糖', color: '#f59e0b', addable: true },
+  { type: 'habit', icon: '✅', label: '好习惯', color: '#6366f1', addable: true },
+  { type: 'stool', icon: '💩', label: '便便', color: '#a3e635', addable: true },
+  { type: 'symptoms', icon: 'clipboard', label: '症状', color: '#34d399', addable: true },
+  { type: 'mood', icon: '😊', label: '心情', color: '#f87171', addable: true },
+  { type: 'fetal_heart_rate', icon: 'heart', label: '测胎心', color: '#f472b6', addable: true },
+  { type: 'intimacy', icon: '💑', label: '爱爱', color: '#f43f5e', addable: true },
+  { type: 'temperature', icon: 'thermometer', label: '体温', color: '#ef4444', addable: true },
+  { type: 'plan', icon: '📌', label: '计划', color: '#14b8a6', addable: true },
+  { type: 'sleep', icon: '😴', label: '睡眠', color: '#818cf8', addable: true },
+  { type: 'exercise', icon: '🏃', label: '运动', color: '#22c55e', addable: true },
+  { type: 'diet', icon: '🍎', label: '饮食备注', color: '#fb923c', addable: true },
+  { type: 'water', icon: '💧', label: '饮水', color: '#38bdf8', addable: true },
+  { type: 'contraction', icon: 'timer', label: '宫缩', color: '#f43f5e', addable: true },
+  { type: 'fetal_movement', icon: '🦶', label: '胎动', color: '#a78bfa', addable: true },
 ]
 
 function hasDataForType(type: string): boolean {
@@ -274,225 +276,6 @@ function getPreview(type: string): string {
   }
 }
 
-function renderDetail(type: string) {
-  const r = record.value
-  switch (type) {
-    case 'weight':
-      return h('div', { class: 'detail-row weight-main' }, [
-        h('div', { class: 'detail-value-large' }, [
-          r.weight,
-          h('span', { class: 'detail-unit' }, ' kg'),
-        ]),
-      ])
-    case 'blood_pressure':
-      return h('div', {}, [
-        h('div', { class: 'detail-row bp-row' }, [
-          h('div', { class: 'bp-item' }, [
-            h('span', { class: 'bp-label' }, '收缩压'),
-            h('span', { class: ['bp-value', getSystolicClass()] }, r.blood_pressure_systolic || '--'),
-            h('span', { class: 'bp-unit' }, 'mmHg'),
-          ]),
-          h('div', { class: 'bp-divider' }, '/'),
-          h('div', { class: 'bp-item' }, [
-            h('span', { class: 'bp-label' }, '舒张压'),
-            h('span', { class: ['bp-value', getDiastolicClass()] }, r.blood_pressure_diastolic || '--'),
-            h('span', { class: 'bp-unit' }, 'mmHg'),
-          ]),
-        ]),
-        h('div', { class: 'detail-meta' }, [
-          h('span', { class: ['status-tag', getBpStatusClass()] }, getBpStatusLabel()),
-          h('span', { class: 'meta-hint' }, '正常范围：收缩压 <120, 舒张压 <80'),
-        ]),
-      ])
-    case 'blood_glucose':
-      return h('table', { class: 'glucose-table' }, [
-        h('thead', {}, h('tr', {}, [
-          h('th', {}, '时段'),
-          h('th', {}, '数值'),
-          h('th', {}, '状态'),
-        ])),
-        h('tbody', {}, [
-          r.blood_glucose_fasting ? h('tr', {}, [
-            h('td', {}, h('span', { class: 'glucose-period' }, '🌅 空腹')),
-            h('td', { class: getGlucoseClass('fasting') }, [r.blood_glucose_fasting, h('span', { class: 'detail-unit-sm' }, ' mmol/L')]),
-            h('td', {}, h('span', { class: ['status-tag', getGlucoseStatusClass('fasting')] }, getGlucoseStatusLabel('fasting'))),
-          ]) : null,
-          r.blood_glucose_1h ? h('tr', {}, [
-            h('td', {}, h('span', { class: 'glucose-period' }, '🍽️ 餐后1h')),
-            h('td', { class: getGlucoseClass('1h') }, [r.blood_glucose_1h, h('span', { class: 'detail-unit-sm' }, ' mmol/L')]),
-            h('td', {}, h('span', { class: ['status-tag', getGlucoseStatusClass('1h')] }, getGlucoseStatusLabel('1h'))),
-          ]) : null,
-          r.blood_glucose_2h ? h('tr', {}, [
-            h('td', {}, h('span', { class: 'glucose-period' }, '🍽️ 餐后2h')),
-            h('td', { class: getGlucoseClass('2h') }, [r.blood_glucose_2h, h('span', { class: 'detail-unit-sm' }, ' mmol/L')]),
-            h('td', {}, h('span', { class: ['status-tag', getGlucoseStatusClass('2h')] }, getGlucoseStatusLabel('2h'))),
-          ]) : null,
-        ].filter(Boolean)),
-      ])
-    case 'fetal_heart_rate':
-      return h('div', {}, [
-        h('div', { class: 'detail-row fhr-row' }, [
-          h('span', { class: 'fhr-icon' }, '❤️'),
-          h('div', { class: ['detail-value-large', getFhrClass()] }, [
-            r.fetal_heart_rate,
-            h('span', { class: 'detail-unit' }, ' bpm'),
-          ]),
-        ]),
-        h('div', { class: 'detail-meta fhr-meta' }, [
-          h('span', { class: ['status-tag', getFhrStatusClass()] }, getFhrStatusLabel()),
-          h('span', { class: 'meta-hint' }, '正常范围 110-160 bpm'),
-        ]),
-      ])
-    case 'symptoms':
-      return h('div', { class: 'tag-chips' }, getSymptoms().map((s: string, i: number) =>
-        h('span', { key: i, class: 'tag-chip' }, s)
-      ))
-    case 'sleep':
-      return h('div', {}, [
-        h('div', { class: 'detail-row sleep-main' }, [
-          h('div', { class: 'detail-value-large' }, [
-            r.sleep_hours || '--',
-            h('span', { class: 'detail-unit' }, ' h'),
-          ]),
-        ]),
-        r.sleep_quality ? h('div', { class: 'sleep-quality-bar' }, [
-          h('div', { class: 'sq-label' }, '睡眠质量'),
-          h('div', { class: 'sq-bar-track' }, [
-            h('div', { class: ['sq-bar-fill', getSleepQualityClass()], style: { width: getSleepQualityWidth() } }),
-          ]),
-          h('div', { class: ['sq-text', getSleepQualityClass()] }, getSleepQualityLabel()),
-        ]) : null,
-      ])
-    case 'exercise':
-      return h('div', {}, [
-        h('div', { class: 'detail-row exercise-main' }, [
-          h('span', { class: 'exercise-type' }, r.exercise_type || '运动'),
-          h('span', { class: 'exercise-duration' }, r.exercise_duration ? [r.exercise_duration, h('span', { class: 'detail-unit' }, ' 分钟')] : ''),
-        ]),
-        r.exercise_duration ? h('div', { class: 'exercise-bar' }, [
-          h('div', { class: 'exercise-bar-fill', style: { width: Math.min(100, (r.exercise_duration / 60) * 100) + '%' } }),
-        ]) : null,
-      ])
-    case 'diet': {
-      let meals: any[] = []
-      if (r.diet_note) {
-        try { const p = JSON.parse(r.diet_note); if (Array.isArray(p)) meals = p } catch { /* old format */ }
-      }
-      if (!meals.length && r.diet_note) meals = [{ type: '饮食', content: r.diet_note }]
-      return h('div', { class: 'diet-meal-list' },
-        meals.map((m: any, i: number) =>
-          h('div', { key: i, class: 'diet-meal-detail' }, [
-            h('span', { class: 'diet-meal-tag' }, m.type || '饮食'),
-            h('span', { class: 'diet-meal-content' }, m.content || ''),
-          ])
-        )
-      )
-    }
-    case 'medication':
-      return h('div', { class: 'med-list' }, getMedications().map((med: any, i: number) =>
-        h('div', { key: i, class: 'med-item' }, [
-          h('span', { class: 'med-icon' }, '💊'),
-          h('div', { class: 'med-info' }, [
-            h('span', { class: 'med-name' }, med.name),
-            med.dosage ? h('span', { class: 'med-dosage' }, med.dosage) : null,
-          ]),
-        ])
-      ))
-    case 'mood':
-      return h('div', {}, [
-        h('div', { class: 'detail-row mood-main' }, [
-          h('span', { class: 'mood-emoji-large' }, getMoodEmoji()),
-        ]),
-        r.mood_note ? h('div', { class: 'detail-meta' }, [
-          h('span', { class: 'mood-note' }, r.mood_note),
-        ]) : null,
-      ])
-    case 'water':
-      return h('div', { class: 'detail-row water-main' }, [
-        h('span', { class: 'water-icon' }, '💧'),
-        h('div', { class: 'detail-value-large' }, [
-          r.water_intake,
-          h('span', { class: 'detail-unit' }, ' ml'),
-        ]),
-      ])
-    case 'temperature':
-      return h('div', { class: 'detail-row temp-main' }, [
-        h('span', { class: 'temp-icon' }, '🌡️'),
-        h('div', { class: ['detail-value-large', getTempClass()] }, [
-          r.body_temperature,
-          h('span', { class: 'detail-unit' }, ' ℃'),
-        ]),
-        h('div', { class: 'detail-meta' }, [
-          h('span', { class: ['status-tag', getTempStatusClass()] }, getTempStatusLabel()),
-          h('span', { class: 'meta-hint' }, '正常范围 36.0-37.3℃'),
-        ]),
-      ])
-    case 'stool': {
-      const stool = getStoolData()
-      return h('div', {}, [
-        h('div', { class: 'detail-row' }, [
-          h('span', { class: 'stool-count' }, (stool.count || '?') + '次'),
-          h('span', { class: ['status-tag', getStoolConsistencyClass(stool.consistency)] }, getStoolConsistencyLabel(stool.consistency)),
-        ]),
-      ])
-    }
-    case 'supplement':
-      return h('div', { class: 'tag-chips' }, getSupplementList().map((s: string, i: number) =>
-        h('span', { key: i, class: 'tag-chip supplement-chip' }, s)
-      ))
-    case 'habit':
-      return h('div', { class: 'detail-text' }, r.habit_text || '')
-    case 'plan':
-      return h('div', { class: 'detail-text' }, r.plan_text)
-    case 'intimacy': {
-      const data = getIntimacyData()
-      const chips: any[] = []
-      if (data.count != null) chips.push(h('span', { class: 'intimacy-badge' }, data.count + '次'))
-      if (data.has_protection === 'yes') {
-        const typeMap: Record<string, string> = { condom: '避孕套', pill: '口服避孕药', other: '其他' }
-        chips.push(h('span', { class: 'intimacy-badge protected' }, '有措施 · ' + (typeMap[data.protection_type] || data.protection_type || '')))
-      } else {
-        chips.push(h('span', { class: 'intimacy-badge unprotected' }, '无措施'))
-      }
-      return h('div', {}, [
-        h('div', { class: 'intimacy-detail' }, chips),
-        r.note ? h('div', { class: 'detail-meta' }, [h('span', { class: 'meta-hint' }, r.note)]) : null,
-      ])
-    }
-    case 'contraction':
-      return h('div', { class: 'detail-row contr-main' }, [
-        h('span', { class: 'contr-icon' }, '⏱️'),
-        h('div', {}, [
-          r.contraction_duration ? h('span', { class: 'contr-value' }, r.contraction_duration + 's') : null,
-          r.contraction_interval ? h('span', { class: 'contr-interval' }, '间隔 ' + r.contraction_interval + 'min') : null,
-          r.contraction_pain ? h('span', { class: 'contr-interval' }, r.contraction_pain) : null,
-        ]),
-      ])
-    case 'fetal_movement':
-      return h('div', { class: 'detail-row fm-main' }, [
-        h('span', { class: 'fm-icon' }, '🦶'),
-        h('div', {}, [
-          r.fetal_movement_count ? h('span', { class: 'fm-value' }, r.fetal_movement_count + '次') : null,
-          r.fetal_movement_duration ? h('span', { class: 'fm-duration' }, r.fetal_movement_duration + 'min') : null,
-        ]),
-      ])
-    case 'hcg':
-      return h('div', {}, [
-        h('div', { class: 'detail-main' }, `${r.hcg_value} mIU/mL`),
-        r.hcg_weeks ? h('div', { class: 'detail-sub' }, `孕${r.hcg_weeks}周`) : null,
-        r.note ? h('div', { class: 'detail-note' }, r.note) : null,
-      ].filter(Boolean))
-    case 'uric_acid':
-      return h('div', {}, [
-        h('div', { class: 'detail-main' }, `${r.uric_acid} μmol/L`),
-        r.uric_acid_period ? h('div', { class: 'detail-sub' }, r.uric_acid_period) : null,
-        r.note ? h('div', { class: 'detail-note' }, r.note) : null,
-      ].filter(Boolean))
-    default:
-      return h('div', {})
-  }
-}
-
 function getSymptoms(): string[] {
   try {
     const raw = record.value.symptoms
@@ -510,24 +293,6 @@ function getMedications(): Array<{ name: string; dosage?: string }> {
     return Array.isArray(arr) ? arr : []
   } catch { return [] }
 }
-
-function getNotePreview(): string {
-  const n = record.value.note
-  if (!n) return ''
-  const text = isNoteHtml.value ? stripHtml(n) : n
-  return text.length > 50 ? text.slice(0, 50) + '…' : text
-}
-
-function stripHtml(html: string): string {
-  if (!html) return ''
-  const doc = new DOMParser().parseFromString(html, 'text/html')
-  return doc.body.textContent || ''
-}
-
-const isNoteHtml = computed(() => {
-  const n = record.value.note
-  return n && n.includes('<') && n.includes('>')
-})
 
 function getMoodEmoji(): string {
   const m = record.value.mood
@@ -723,35 +488,29 @@ function getFhrStatusLabel(): string {
   return '偏快'
 }
 
-const sleepQualityMap: Record<string, string> = { good: '好', fair: '一般', poor: '差' }
-// 兼容小弹窗保存的中文质量值
-const sleepQualityFromZh: Record<string, string> = { '好': 'good', '一般': 'fair', '差': 'poor' }
-
-function normalizeSleepQuality(q: any): string {
-  if (!q) return ''
-  const s = String(q)
-  return sleepQualityFromZh[s] || s
-}
-
+// 睡眠质量的取值归一与中文标签统一取自 utils/format 的唯一真源
+// （以前这里自己抄了一份 good/fair/poor ↔ 好/一般/差的映射，首页又抄了一份，
+//   统计面板干脆没抄 —— 同一个字段三处口径不一）
 function getSleepQualityLabel(): string {
-  const q = normalizeSleepQuality(record.value.sleep_quality)
-  return sleepQualityMap[q] || q || ''
+  return sleepQualityLabel(record.value.sleep_quality)
 }
 
 function getSleepQualityClass(): string {
-  const q = normalizeSleepQuality(record.value.sleep_quality)
-  if (q === 'good') return 'value-normal'
-  if (q === 'fair') return 'value-warning'
-  if (q === 'poor') return 'value-alert'
-  return 'value-neutral'
+  switch (normalizeSleepQuality(record.value.sleep_quality)) {
+    case 'good': return 'value-normal'
+    case 'fair': return 'value-warning'
+    case 'poor': return 'value-alert'
+    default: return 'value-neutral'
+  }
 }
 
 function getSleepQualityWidth(): string {
-  const q = normalizeSleepQuality(record.value.sleep_quality)
-  if (q === 'good') return '80%'
-  if (q === 'fair') return '50%'
-  if (q === 'poor') return '25%'
-  return '0%'
+  switch (normalizeSleepQuality(record.value.sleep_quality)) {
+    case 'good': return '80%'
+    case 'fair': return '50%'
+    case 'poor': return '25%'
+    default: return '0%'
+  }
 }
 </script>
 
