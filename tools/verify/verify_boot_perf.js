@@ -23,6 +23,14 @@ const os = require('os');
 const NODE_DIR = path.resolve(__dirname, '../../app/server/node');
 const SHIM = path.resolve(__dirname, 'tcp_shim.js');
 const UI = path.resolve(__dirname, '../../app/ui');
+const MANIFEST = path.resolve(__dirname, '../../manifest');
+
+/** 版本号的唯一真源是 manifest —— 断言一律与它比，不写死字符串（否则每次发版都假红）。 */
+function manifestVersion() {
+  const m = fs.readFileSync(MANIFEST, 'utf-8').match(/^version\s*=\s*(\S+)/m);
+  if (!m) throw new Error('manifest 里没解析到 version');
+  return m[1];
+}
 const PORT = 38511;
 
 let pass = 0;
@@ -152,7 +160,11 @@ function getRaw(urlPath, headers = {}) {
   if (health.status === 200) {
     const h = JSON.parse(health.body.toString('utf8'));
     assert(h.status === 'ok', 'health 返回 ok');
-    assert(h.version === '0.0.31', '版本号已同步到 0.0.31', `(实际 ${h.version})`);
+    // ⚠️ 版本号必须**从 manifest 读**（唯一真源），不能写死：
+    //    写死的话每次发版这条都会假红（2026-09-30 升 0.0.32 时实测踩到），
+    //    久而久之大家就习惯性忽略它 —— 而它本该是「包里版本号对不对」的守门员。
+    assert(h.version === manifestVersion(),
+      `版本号与 manifest 一致（${manifestVersion()}）`, `(实际 ${h.version})`);
     assert(h.routes >= 20, `路由全部加载 (${h.routes})`);
   } else {
     ng('health 接口', `status=${health.status}`);
