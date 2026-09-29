@@ -14,6 +14,8 @@ const F = {
   dialog: `${ROOT}/frontend/src/components/record/AddRecordDialog.vue`,
   list: `${ROOT}/frontend/src/components/record/RecordList.vue`,
   view: `${ROOT}/frontend/src/views/RecordView.vue`,
+  /** 全项目「多处必须一致的字面量」的唯一真源（心情/睡眠质量/…）——铁律 #34 */
+  fmt: `${ROOT}/frontend/src/utils/format.ts`,
   /** 统计卡片已抽成共享组件：记录页「统计」标签 与 独立「统计」页 都用它。
    *  ⚠️ 三围/胎心/宫缩这些统计卡现在断言这个文件，别再回 RecordView 里找（会假红）。 */
   panel: `${ROOT}/frontend/src/views/StatsView/StatsPanel.vue`,
@@ -68,12 +70,34 @@ check('daily-record.js INSERT 参数含 bust/hip', has('api', 'req.body.bust ?? 
 check('types/index.ts 有 bust/waist/hip', has('types', 'bust: number | null') && has('types', 'hip: number | null'));
 
 // ============ 四个「表里有、界面原本没入口」的新类型 ============
+// ⚠️ 这四类还额外要求「记录页有专属小弹窗」：2026-09-28 之前它们没有小弹窗，
+//    点快捷菜单会掉进 26 个类型的选择器大弹窗，与其它 21 个类型的交互完全不同
+//    （用户反馈「风格不统一」的根因）。qf = 小弹窗表单变量，modal = 小弹窗开关，
+//    submit = 提交载荷里那一行字面量。
 const NEW_TYPES = [
-  { type: 'edema', label: '水肿', col: 'edema_level', form: 'edemaLevel' },
-  { type: 'discharge', label: '分泌物', col: 'vaginal_discharge', form: 'vaginalDischarge' },
-  { type: 'skin', label: '皮肤状况', col: 'skin_condition', form: 'skinCondition' },
-  { type: 'urination', label: '排尿情况', col: 'urination_frequency', form: 'urinationFrequency' },
+  { type: 'edema', label: '水肿', col: 'edema_level', form: 'edemaLevel',
+    qf: 'edemaForm', modal: 'showEdemaModal', modalTitle: '记录水肿',
+    submit: 'edema_level: edemaForm.value.level' },
+  { type: 'discharge', label: '分泌物', col: 'vaginal_discharge', form: 'vaginalDischarge',
+    qf: 'dischargeForm', modal: 'showDischargeModal', modalTitle: '记录分泌物',
+    submit: 'vaginal_discharge: dischargeForm.value.value' },
+  { type: 'skin', label: '皮肤状况', col: 'skin_condition', form: 'skinCondition',
+    qf: 'skinForm', modal: 'showSkinModal', modalTitle: '记录皮肤状况',
+    submit: 'skin_condition: skinForm.value.value' },
+  { type: 'urination', label: '排尿情况', col: 'urination_frequency', form: 'urinationFrequency',
+    qf: 'urinationForm', modal: 'showUrinationModal', modalTitle: '记录排尿情况',
+    submit: 'urination_frequency: urinationForm.value.value' },
 ];
+
+/** 按 title 把 RecordView 里某个 <n-modal>…</n-modal> 的整块源码切出来 */
+function modalBlock(title) {
+  const i = src.view.indexOf(`title="${title}"`);
+  if (i < 0) return '';
+  const start = src.view.lastIndexOf('<n-modal', i);
+  const end = src.view.indexOf('</n-modal>', i);
+  if (start < 0 || end < 0 || end < start) return '';
+  return src.view.slice(start, end);
+}
 out.push('');
 out.push('【新增记录类型（水肿 / 分泌物 / 皮肤状况 / 排尿情况）】');
 for (const t of NEW_TYPES) {
@@ -87,10 +111,23 @@ for (const t of NEW_TYPES) {
   if (!has('list', `case '${t.type}':`)) errs.push('列表 hasData/preview');
   if (!has('view', `{ value: '${t.type}'`)) errs.push('快捷菜单');
   if (!has('view', `r.${t.col}`)) errs.push('预览卡读取 ' + t.col);
-  check(`${t.label}：9 个入口全部接上`, errs.length === 0, errs.join('、'));
+  // —— 专属小弹窗（统一风格）七件套 ——
+  if (!has('view', `case '${t.type}': reset`)) errs.push('快捷弹窗分支 openQuickAdd');
+  if (!has('view', `const ${t.qf} = ref(`)) errs.push('快捷弹窗表单 ' + t.qf);
+  if (!has('view', t.submit)) errs.push('快捷弹窗提交 ' + t.col);
+  if (!has('view', `v-model:show="${t.modal}"`)) errs.push('快捷弹窗开关 ' + t.modal);
+  if (!has('view', `const ${t.modal} = ref(false)`)) errs.push('快捷弹窗开关定义 ' + t.modal);
+  if (!has('view', `v-model:value="${t.qf}.note"`)) errs.push('快捷弹窗备注 ' + t.qf + '.note');
+  // 提示文案必须落在**这个小弹窗自己的块里**（不是全文件里随便有就算）——
+  // 否则弹窗块被挪乱/合并时，日期和选项还在、就医提示却跑到别处去了。
+  const blk = modalBlock(t.modalTitle);
+  if (!blk) errs.push('找不到小弹窗块 title="' + t.modalTitle + '"');
+  else if (!/class="form-hint-text"/.test(blk)) errs.push('小弹窗内缺就医提示文案');
+  check(`${t.label}：16 个入口全部接上`, errs.length === 0, errs.join('、'));
 }
 // 快捷菜单点下去必须能真的打开界面（默认分支不能再只弹警告）
-check('尚无专属弹窗的类型会打开通用大弹窗（不再只弹「未知类型」警告）',
+// 说明：现在快捷菜单里每个类型都有自己的小弹窗，default 分支只作为「将来新增类型漏接」的兜底。
+check('通用大弹窗兜底分支仍在（不因为全部类型都有小弹窗就删掉 default）',
   !has('view', "message.warning('未知类型: ' + type)") && has('view', 'addDialogType.value = type'));
 
 // ============ 弹窗每个类型都要有保存分支 ============
@@ -109,6 +146,18 @@ check(`记录列表类别 ${listTypes.length} 个，全部有 hasData/preview �
 const quickValues = [...src.view.matchAll(/\{ value: '([A-Za-z0-9_]+)', icon: '[^']*', label: '[^']*' \}/g)].map(m => m[1]);
 const quickMissing = quickValues.filter(t => !listTypes.includes(t));
 check(`快捷菜单 ${quickValues.length} 个类型都在记录列表里有对应条目`, quickMissing.length === 0, '缺: ' + quickMissing.join('、'));
+
+// ⚠️ 先断言「确实解析到了类型」再断言内容 —— 正则会因为格式微调而解析出 0 个，
+//    那样下面的 ⊆ 断言会空集恒真（假绿）。这就是铁律 #27 说的「必须断言解析到预期数量」。
+check(`能解析出快捷菜单类型（≥20，实得 ${quickValues.length}）`, quickValues.length >= 20);
+
+// 快捷菜单里的每个类型都必须有**专属小弹窗**（`case 'X': reset...`）——
+// 有一个漏了就会掉进 26 个类型的选择器大弹窗，这一类的交互体验跟别的不一样。
+const quickCaseTypes = new Set([...src.view.matchAll(/case '([A-Za-z0-9_]+)': reset/g)].map(m => m[1]));
+check(`快捷菜单类型都能解析出 openQuickAdd 分支（≥20，实得 ${quickCaseTypes.size}）`, quickCaseTypes.size >= 20);
+const noQuickModal = quickValues.filter(t => !quickCaseTypes.has(t));
+check(`快捷菜单 ${quickValues.length} 个类型都有专属小弹窗（统一风格）`,
+  noQuickModal.length === 0, '只有大弹窗、没有小弹窗: ' + noQuickModal.join('、'));
 
 // ============ 导出/恢复的字段覆盖度（数据完整性）============
 // 恢复走 TABLE_COLUMNS 白名单：/restore-latest 先 DELETE FROM 表 再按白名单插入，
@@ -200,11 +249,23 @@ out.push('【死字段检查：daily_record 的每个用户列都得有「写入
   // diet_record / exercise_record），2026-09-25 已从建表语句、INSERT 列表、导出白名单、
   // CSV 表头、类型定义里全部清理（对照 v0.0.27 源码确认从未被任何版本写过）。
   // 保留这个机制是为了将来出现「确实要预留但暂时没人写」的列时有地方登记。
-  const KNOWN_UNUSED = [];
+  //
+  // intimacy_note（2026-09-29 登记）：爱爱的备注**统一改存 note**（与小弹窗一致，
+  // 根因是把 intimacy_record 的 JSON 原文回填进备注框）。
+  // 这一列从此不再写入，但**只承载历史数据** —— 读侧仍有回退链
+  // （AddRecordDialog：`r.note || r.intimacy_note`；RecordList hasData：`r.intimacy_record || r.intimacy_note`），
+  // 所以既不能删列，也不该被当成"死字段"。
+  const KNOWN_UNUSED = ['intimacy_note'];
 
   const dead = drCols.filter((c) => !INTERNAL.includes(c) && !KNOWN_UNUSED.includes(c) && !hasWriter(c));
   check(`daily_record 的 ${drCols.length} 列中，没有「谁也写不到」的死字段`,
     dead.length === 0, dead.length ? '死字段: ' + dead.join('、') : '');
+
+  // 豁免必须站得住脚：登记成 KNOWN_UNUSED 的列，读侧得真的有人在读它 ——
+  // 否则「豁免」就成了掩盖"真死字段"的借口。
+  check('intimacy_note 的豁免成立：读侧仍保留回退链（老数据仍可见）',
+    /r\.note \|\| r\.intimacy_note/.test(src.dialog) && /r\.intimacy_record \|\| r\.intimacy_note/.test(src.list),
+    '读侧回退链被删了 ⇒ 应改为真删列，而不是继续豁免');
 }
 
 // ============ INSERT 列 ↔ 参数「逐位对应」（历史上出过生产事故）============
@@ -230,6 +291,166 @@ out.push('【INSERT 列与参数逐位对应】');
       : ['长度不等'];
     check(`INSERT 的 ${cols.length} 列与参数逐位一一对应（不是只比数量）`,
       bad.length === 0, bad.slice(0, 5).join(' | '));
+  }
+}
+
+// ============ 取值域 / 文案 / 备注语义的「唯一真源」核查（2026-09-29 修复）============
+// 背景：这几处曾经「同一个字段、多套口径」，且症状都是**静默**的 ——
+//   · 睡眠质量：小弹窗写中文、大弹窗写英文 ⇒ 编辑一次就静默改域，同一列中英混排；
+//   · 上架/统计/列表三处各抄一份映射，改了 A 忘改 B；
+//   · 「当天备注」其实是**按天共享的一列**，各类型盲写覆盖 ⇒ 静默丢备注。
+// 下面这些断言的作用是：**再分裂一次就会红**。
+out.push('');
+out.push('【取值域与文案的唯一真源】');
+
+// —— 睡眠质量 ——
+check('format.ts 定义规范取值域 SLEEP_QUALITY_VALUES', has('fmt', 'export const SLEEP_QUALITY_VALUES = [' ))
+check('format.ts 导出 SLEEP_QUALITY_OPTIONS / normalizeSleepQuality / sleepQualityLabel',
+  has('fmt', 'export const SLEEP_QUALITY_OPTIONS') && has('fmt', 'export function normalizeSleepQuality') && has('fmt', 'export function sleepQualityLabel'));
+check('format.ts 里 SLEEP_QUALITY_OPTIONS 只定义一份',
+  count('fmt', /export const SLEEP_QUALITY_OPTIONS/g) === 1, '出现 ' + count('fmt', /export const SLEEP_QUALITY_OPTIONS/g) + ' 次');
+check('format.ts 的中文历史值映射覆盖 好/一般/差',
+  /好: 'good'/.test(src.fmt) && /一般: 'fair'/.test(src.fmt) && /差: 'poor'/.test(src.fmt));
+
+// 「好→good」这份映射在**全前端**只允许存在一处（format.ts）——这正是防再次分裂的断言
+const dupSleepMap = [];
+(function walk(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) { walk(p); continue; }
+    if (!/\.(vue|ts)$/.test(e.name)) continue;
+    if (p.replace(/\\/g, '/').endsWith('utils/format.ts')) continue;
+    const txt = fs.readFileSync(p, 'utf-8');
+    if (/['"](?:好|一般|差)['"]\s*:\s*['"](?:good|fair|poor)['"]/.test(txt)) dupSleepMap.push(path.relative(ROOT, p));
+  }
+})(`${ROOT}/frontend/src`);
+check('全前端只有 format.ts 一处「中文睡眠质量 → 英文」映射（防再次分裂）',
+  dupSleepMap.length === 0, dupSleepMap.join('、'));
+
+check('RecordView 睡眠质量选项取自共享真源', has('view', 'SLEEP_QUALITY_OPTIONS as sleepQualityOptions') && has('view', 'v-for="q in sleepQualityOptions"'));
+check('RecordView 睡眠质量表单值用共享类型（不再是中文字面量）',
+  has('view', "quality: 'fair' as SleepQuality") && has('view', "quality: 'fair',") && !/quality: '(?:好|一般|差)'/.test(src.view));
+check('AddRecordDialog 无本地 sleepQualityOptions 数组（已收口到 format.ts）', !/const sleepQualityOptions = \[/.test(src.dialog));
+check('AddRecordDialog 选项与归一同取自共享真源',
+  has('dialog', 'SLEEP_QUALITY_OPTIONS as sleepQualityOptions') && has('dialog', 'normalizeSleepQuality(r.sleep_quality)'));
+check('RecordList 展示走共享归一与中文标签（无本地映射表）',
+  has('list', 'sleepQualityLabel(record.value.sleep_quality)') && has('list', 'normalizeSleepQuality(record.value.sleep_quality)') && !/sleepQualityMap|sqMap/.test(src.list));
+check('统计面板「质量」列也走共享归一（否则老数据中文/新数据英文在同一张表里混排）',
+  has('panel', 'extraFormat: (r: any) => sleepQualityLabel(r.sleep_quality)'));
+
+// —— 取值域取「并集」：同一个字段在小弹窗与大弹窗必须同域 ——
+// ⚠️ 取值域的真源在 utils/format（铁律 #34）：这里从那里解析出来再断言两处 UI，
+//    免得又出现「脚本里抄一份数组、源码改了脚本还绿」的假绿。
+const painVals = [...(src.fmt.match(/CONTRACTION_PAIN_VALUES = \[([^\]]*)\]/) || [, ''])[1]
+  .matchAll(/'([^']+)'/g)].map((m) => m[1]);
+check(`能从 utils/format 解析出宫缩疼痛取值域（预期 4，实得 ${painVals.length}）`, painVals.length === 4);
+const PAIN = painVals.length === 4 ? painVals : ['无感', '轻微', '明显', '剧烈'];
+check('RecordView 宫缩疼痛取值域 = 无感/轻微/明显/剧烈',
+  PAIN.every((v) => has('view', `n-radio-button value="${v}"`)));
+check('AddRecordDialog 宫缩疼痛取值域 = 无感/轻微/明显/剧烈',
+  PAIN.every((v) => has('dialog', `{ label: '${v}', value: '${v}' }`)) && !has('dialog', "{ label: '中度', value: '中度' }"));
+check('AddRecordDialog 宫缩疼痛回填走共享归一（老数据「中度」不再显示成裸文本）',
+  has('dialog', 'normalizeContractionPain(r.contraction_pain)'),
+  '取值域改了，回填就必须归一，否则老记录在下拉框里显示成一串原文');
+const UA = ['空腹', '餐后2小时', '随机'];
+check('RecordView 尿酸时段取值域 = 空腹/餐后2小时/随机',
+  UA.every((v) => has('view', `{ label: '${v}', value: '${v}' }`)));
+check('AddRecordDialog 尿酸时段取值域 = 空腹/餐后2小时/随机',
+  UA.every((v) => has('dialog', `{ label: '${v}', value: '${v}' }`)));
+check('RecordView 不再有旧的「餐后」孤值（与弹窗不同域）', !has('view', "{ label: '餐后', value: '餐后' }"));
+
+// —— 「用药」入口：历史上整个丢失，现在四处都要在 ——
+out.push('');
+out.push('【用药（medication）：入口四处齐全】');
+check('RecordView 快捷菜单有「用药」', has('view', "{ value: 'medication', icon: '💊', label: '用药' }"));
+check('RecordView openQuickAdd 有 medication 分支', has('view', "case 'medication': resetMedicationForm()"));
+check('RecordView 有用药小弹窗（表单/开关/保存）',
+  has('view', 'const medForm = ref(') && has('view', 'const showMedicationModal = ref(false)') && has('view', 'async function saveMedication()'));
+check('RecordView 用药写入 medication 列（JSON 数组）', has('view', 'medication: JSON.stringify([{'));
+check('AddRecordDialog 类型清单有「用药」', has('dialog', "{ value: 'medication'"));
+check('RecordList 类别里有「用药」', has('list', "{ type: 'medication'"));
+check('RecordList hasData/preview 都有 medication 分支',
+  count('list', /case 'medication':/g) >= 2, '出现 ' + count('list', /case 'medication':/g) + ' 次');
+
+// —— 「当天备注」是按天共享的一列：必须预填、必须可清空 ——
+out.push('');
+out.push('【「当天备注」语义（按天共享一列）】');
+check('RecordView 备注标签统一为「当天备注（可选）」共 20 处',
+  count('view', /当天备注（可选）/g) === 20, '实得 ' + count('view', /当天备注（可选）/g));
+check('RecordView 没有残留旧标签「备注（可选）」', !/<label>备注（可选）<\/label>/.test(src.view));
+// 传 undefined 会被后端整列跳过 ⇒ 用户删掉备注保存后又"长回来"。必须显式传字符串（空串=清空）
+check('RecordView 的 note 写入一律显式传字符串（可清空）',
+  !/\.value\.note \|\| undefined/.test(src.view), '仍有 ' + count('view', /\.value\.note \|\| undefined/g) + ' 处');
+check('打开弹窗时预填当天已有备注（防盲写覆盖）',
+  has('view', 'const NOTE_FORMS') && has('view', 'nf.value.note = (currentRecords.value[0] && currentRecords.value[0].note)'));
+check('心情备注单独预填（mood 用自己的 mood_note 列）',
+  has('view', "moodForm.value.note = (currentRecords.value[0] && currentRecords.value[0].mood_note)"));
+// ★ 不变量：模板里**每个带备注输入框的表单**都必须登记进 NOTE_FORMS，
+//   否则那个弹窗打开时不预填 ⇒ 保存时把当天已有备注清掉（静默丢数据）。
+{
+  const tplForms = [...new Set([...src.view.matchAll(/v-model:value="(\w+)\.note"/g)].map((m) => m[1]))]
+    .filter((f) => f !== 'moodForm'); // mood 由上面那条单独预填
+  const nmBlock = src.view.match(/const NOTE_FORMS: Record<string, any> = \{([\s\S]*?)\n\}/);
+  const nmText = nmBlock ? nmBlock[1] : '';
+  const unregistered = tplForms.filter((f) => !new RegExp(`\\b${f}\\b`).test(nmText));
+  check(`带备注输入框的 ${tplForms.length} 个快捷表单全部登记进 NOTE_FORMS`,
+    tplForms.length >= 19 && unregistered.length === 0,
+    '未登记: ' + unregistered.join('、') + (nmBlock ? '' : '（没解析到 NOTE_FORMS 块）'));
+}
+
+// —— 饮食备注格式统一为 JSON 数组（与「添加记录」大弹窗一致）——
+out.push('');
+out.push('【写入格式统一】');
+check('RecordView saveDiet 写 JSON 数组（不再是纯文本，避免被大弹窗改写）',
+  has('view', "diet_note: JSON.stringify([{ type: dietForm.value.meal"));
+check('RecordView 非法日期报错中止（不再静默改成今天）',
+  has('view', "message.error('日期无效，请重新选择日期')"));
+check('AddRecordDialog 非法日期同样报错中止',
+  has('dialog', "message.error('日期无效，请重新选择日期')"));
+check('AddRecordDialog 心情备注显式写入（可清空）',
+  has('dialog', 'data.mood_note = formData.value.moodNote ||'), '若为条件式写入则删不掉');
+
+// —— 日期校验：「静态 + 运行时反例」双保险 ——
+// ⚠️ 只断言源码里写了 message.error('日期无效…') 会**假绿**（铁律 #11）。2026-09-29 实测：
+//    `dayjs(x,'YYYY-MM-DD',true)` 因为全项目没有 dayjs.extend(customParseFormat) 而**完全不生效**，
+//    越界日期被"溢出进位"成另一个日期照样放行（2026-13-45 → 2027-02-14、0000-00-00 → 1899-11-30）。
+//    所以这里把 utils/format.ts 里那个**真函数**抠出来，拿真 dayjs 跑一组反例。
+out.push('');
+out.push('【日期校验：运行时反例】');
+const fmtFn = (src.fmt.match(/export function isValidDateStr[\s\S]*?\n\}/) || [''])[0]
+  .replace('export ', '')
+  .replace(/\(\s*(\w+)[^)]*\)\s*:\s*\w+\s*\{/, '($1) {'); // 剥掉 TS 类型注解才能在 node 里跑
+check('utils/format 导出 isValidDateStr（日期校验唯一真源）', fmtFn.includes('function isValidDateStr'));
+// 两个调用点都必须走共享函数；再裸写严格模式 = 又一次纸糊校验。
+// ⚠️ 必须先剥注释再匹配（铁律 #33）：上面那段说明注释里就写了 `dayjs(x,'YYYY-MM-DD',true)`
+//    这几个字，不剥注释 ⇒ 注释把自己绊倒、两条断言恒红（已实测踩到）。
+function stripComments(s) { return s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1'); }
+const RAW_STRICT = /dayjs\([^)]*,\s*'YYYY-MM-DD',\s*true\s*\)/;
+check('RecordView 不再裸用 dayjs 严格模式（不生效的写法）', !RAW_STRICT.test(stripComments(src.view)));
+check('AddRecordDialog 不再裸用 dayjs 严格模式（不生效的写法）', !RAW_STRICT.test(stripComments(src.dialog)));
+let _dayjs = null;
+try { _dayjs = require(path.join(ROOT, 'frontend', 'node_modules', 'dayjs')) } catch (_) { /* 缺依赖则不静默跳过 */ }
+check('能加载 dayjs 以运行日期反例', !!_dayjs, '缺 frontend/node_modules/dayjs');
+if (fmtFn.includes('function isValidDateStr') && _dayjs) {
+  // ⚠️ 抠出来的函数体一旦含 TS 语法（如 `as any`、泛型），new Function 会抛而不是返回 false
+  // ⇒ 必须兜住，让「提取不出来」变成一条**失败的断言**，而不是整个脚本崩掉（崩了就没人看见红）。
+  let isValidDateStr = null, compileErr = '';
+  try {
+    isValidDateStr = new Function('dayjs', fmtFn + '; return isValidDateStr')(_dayjs);
+  } catch (e) { compileErr = e.message; }
+  check('isValidDateStr 能在 node 里直接执行（函数体是纯 JS，无 TS 语法）', !!isValidDateStr, compileErr);
+  if (isValidDateStr) {
+    const goodCases = ['2026-09-29', '2024-02-29', '2026-12-31'];
+    const badCases = ['2026-13-45', '2026-02-30', '2026-12-32', '0000-00-00', '2026-9-9', 'abcdef', ''];
+    const killed = goodCases.filter((c) => !isValidDateStr(c));
+    const leaked = badCases.filter((c) => isValidDateStr(c));
+    check(`合法日期全部通过（${goodCases.length} 个）`, killed.length === 0, '误杀: ' + killed.join('、'));
+    check(`越界 / 畸形日期全部拦下（${badCases.length} 个）`, leaked.length === 0, '漏判: ' + leaked.join('、'));
+    // 反例自检：证明「旧写法确实拦不住」。若哪天装上 customParseFormat 让旧写法也生效，
+    // 这条会变红 ⇒ 提醒本段断言可以放宽，而不是让它默默失去意义。
+    const oldLeaks = badCases.filter((c) => _dayjs(c, 'YYYY-MM-DD', true).isValid());
+    check('反例自检：旧写法确实存在漏判（本段断言仍然有意义）', oldLeaks.length > 0,
+      '旧写法已能拦住全部反例 ⇒ 插件可能已装上，请复核本段');
   }
 }
 

@@ -48,6 +48,12 @@ tools/verify/
 ├── t*.js                ← 2026-09-28 十九项修复的专用探针（t9/t11–t18 已收进运行器）
 ├── *_color*.py / review_*.py / _check_chart_ink.py / _crop_cards.py
 │                        ← 配色与图表"可读性体检"（铁律 #22 的 5 个配色审查脚本在此）
+├── review_exercise_tokens.py
+│                        ← 「某一页把私有硬编码色改成全局设计令牌」的六项完善性审查
+│                          （① 选择器差集 ② 颜色映射/色系漂移 ③ 块外硬写色
+│                            ④ 对比度（读源码、与改前并排）⑤ 死规则 ⑥ 令牌兜底不变量）
+│                          支持 PJ_EX_VUE=<副本> 指到故意改坏的副本做**反例验证**
+│                          （基线 = git HEAD 版本，首次运行自动导出到 .tmp/）
 ├── test_image_thumb.js  ← 缩略图生成
 ├── test_upgrade_init.sh ← cmd/upgrade_init 数据抢救逻辑的本地仿真
 ├── fkprobe.js           ← 外键探针
@@ -68,8 +74,11 @@ tools/verify/
 它们只打印对照表、没有断言与汇总行，收进运行器只会得到 `NO-SUMMARY` 噪声。
 需要时手工跑，读输出判读。
 
-**③ 手工脚本**：`repro_*.js`、`shot_*.js`、`probe_album_mobile.js`、`shot_stats.js` 等
-无头浏览器类脚本 —— 依赖本机装好的 Chrome/Edge，且产出是截图给人看，不适合进自动汇总。
+**③ 手工脚本**：`repro_*.js`、`shot_*.js`、`probe_album_mobile.js`、`shot_stats.js`、
+`shot_record_quickmodals.js`（记录页快捷小弹窗的**风格一致性**核验：把「新补的」小弹窗逐个点开
+——现为 水肿/分泌物/皮肤状况/排尿情况/用药 ——读真实 DOM 与计算样式，与老牌类型（饮水）比对
+宽度/配色/字段结构/有无提示条，并自出「统一/不统一」结论）；
+等无头浏览器类脚本 —— 依赖本机装好的 Chrome/Edge，且产出是截图给人看，不适合进自动汇总。
 `wecom/e2e_push_real_server.js` 需要外部先起 smoke 服务，**有意不收**。
 
 ---
@@ -124,7 +133,9 @@ tools/verify/
 
 | 场景 | 必须先跑 |
 |---|---|
-| 改前端模板 / 加页面功能 | `verify_template_vars.js`、`verify_render.js`、`verify_record_entrypoints.js` |
+| 改前端模板 / 加页面功能 | `verify_template_vars.js`、`verify_render.js`、`verify_record_entrypoints.js`；**改记录页小弹窗**再加 `shot_record_quickmodals.js`（看风格是否与其它类型一致） |
+| 改记录页任何字段的「提交 / 读回 / 备注写入」 | `verify_record_page_functions.js`（真后端端到端：25 类别逐类跑「建/读/部分更新/改/删」+ 写入格式与 remark 语义），再跑 `verify_record_entrypoints.js`（静态：取值域唯一真源、入口齐全） |
+| 改睡眠质量 / 心情 / 其它「多处必须一致」的字面量 | 两套都跑：`verify_record_entrypoints.js`（会红在「全前端只有 format.ts 一处映射」）+ `verify_record_page_functions.js` |
 | 改前后端接口 | `verify_api_contracts.js`、`verify_upload_field_names.js` |
 | 动产检排期 json 的 id / 改 pregnancy·schedule_dates·custom_checkup·reminder 四表 | `probe_push_schedule_impact.js` |
 | 改 `saveDb` / 落盘逻辑 | `t9_verify_db_fixes.js`、`verify_db_persist.js`、`probe_async_save_race.js` |
