@@ -35,6 +35,11 @@ function check(name, cond, extra) {
 }
 const has = (k, s) => src[k].includes(s);
 const count = (k, re) => (src[k].match(re) || []).length;
+/**
+ * ⚠️ 匹配源码做断言前**必须先剥注释**（铁律 #33）：说明性注释里常会原样写出
+ * 被禁用的写法（例如「不要写 `dayjs(x,'YYYY-MM-DD',true)`」），不剥就会把自己绊成恒红。
+ */
+function stripComments(s) { return s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1'); }
 
 // ============ 三围（类型键 waist，含新增的 bust / hip）============
 out.push('【三围：胸围 / 腰围 / 臀围】');
@@ -410,6 +415,22 @@ check('AddRecordDialog 非法日期同样报错中止',
 check('AddRecordDialog 心情备注显式写入（可清空）',
   has('dialog', 'data.mood_note = formData.value.moodNote ||'), '若为条件式写入则删不掉');
 
+// —— 时间选择器的空值必须是 null，不能是空字符串 ——
+// naive-ui 的 n-time-picker 绑 formatted-value，收到 '' 会把它当日期解析并抛
+// `RangeError: Invalid time value` ⇒ 被 App.vue 错误边界接住 ⇒ 整页「这个页面出错了」。
+// 触发条件很隐蔽：**备注里没有 HH:mm~HH:mm**（用记录页小弹窗记的宫缩，备注常为空）时，
+// 回填不会给这两个字段赋值 ⇒ 保持默认值 ⇒ 一点「查看」必崩（2026-09-29 实测复现）。
+const D_NOCOMMENT = stripComments(src.dialog);
+check('宫缩开始/结束时间初值为 null（不是空字符串）',
+  /contractionStart:\s*null as string \| null/.test(D_NOCOMMENT) &&
+  /contractionEnd:\s*null as string \| null/.test(D_NOCOMMENT),
+  "写成 '' 会让 n-time-picker 抛 Invalid time value");
+check('宫缩回填前显式清成 null（避免残留空字符串）',
+  /formData\.value\.contractionStart = null/.test(D_NOCOMMENT),
+  '只在匹配到时间时才赋值，未匹配时应保持 null');
+check('n-time-picker 的 formatted-value 只绑这两个字段（新增时要同样用 null）',
+  count('dialog', /<n-time-picker/g) === 2, '实得 ' + count('dialog', /<n-time-picker/g) + ' 个');
+
 // —— 日期校验：「静态 + 运行时反例」双保险 ——
 // ⚠️ 只断言源码里写了 message.error('日期无效…') 会**假绿**（铁律 #11）。2026-09-29 实测：
 //    `dayjs(x,'YYYY-MM-DD',true)` 因为全项目没有 dayjs.extend(customParseFormat) 而**完全不生效**，
@@ -422,9 +443,9 @@ const fmtFn = (src.fmt.match(/export function isValidDateStr[\s\S]*?\n\}/) || ['
   .replace(/\(\s*(\w+)[^)]*\)\s*:\s*\w+\s*\{/, '($1) {'); // 剥掉 TS 类型注解才能在 node 里跑
 check('utils/format 导出 isValidDateStr（日期校验唯一真源）', fmtFn.includes('function isValidDateStr'));
 // 两个调用点都必须走共享函数；再裸写严格模式 = 又一次纸糊校验。
-// ⚠️ 必须先剥注释再匹配（铁律 #33）：上面那段说明注释里就写了 `dayjs(x,'YYYY-MM-DD',true)`
+// ⚠️ 必须先剥注释再匹配（铁律 #33）：说明注释里就写了 `dayjs(x,'YYYY-MM-DD',true)`
 //    这几个字，不剥注释 ⇒ 注释把自己绊倒、两条断言恒红（已实测踩到）。
-function stripComments(s) { return s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1'); }
+//    （stripComments 定义在文件上部，供全脚本共用。）
 const RAW_STRICT = /dayjs\([^)]*,\s*'YYYY-MM-DD',\s*true\s*\)/;
 check('RecordView 不再裸用 dayjs 严格模式（不生效的写法）', !RAW_STRICT.test(stripComments(src.view)));
 check('AddRecordDialog 不再裸用 dayjs 严格模式（不生效的写法）', !RAW_STRICT.test(stripComments(src.dialog)));
