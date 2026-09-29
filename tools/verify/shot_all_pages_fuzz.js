@@ -99,7 +99,7 @@ const PAGES = [
   { key: 'checklist', hash: 'checklist', title: '清单' },
   { key: 'exercise', hash: 'exercise-guide', title: '运动指南' },
   { key: 'weekly', hash: 'weekly-detail', title: '本周变化' },
-  { key: 'settings', hash: 'settings', title: '设置' },
+  { key: 'settings', hash: 'settings', title: '设置', budget: 30000 },
   { key: 'contraction', hash: 'contraction-timer', title: '宫缩计时器' },
   { key: 'fetal', hash: 'fetal-movement-counter', title: '胎动计数' },
   { key: 'setup', hash: 'setup', title: '初始设置' },
@@ -125,7 +125,10 @@ const PROBE = `
     const cls = (el.className || '').toString().split(' ')[0];
     return (cls ? cls + '|' : '') + t;
   };
-  const SELECTOR = 'button, .category-row, .type-menu-item, .n-tab, .n-radio-button, .mode-tab';
+  // 覆盖尽量多的交互形态：按钮 / 记录类别行 / 快捷菜单项 / 页签 / 单选 /
+  // 折叠面板标题（运动指南页内容全在折叠体里，不加就一个都点不到）/ 勾选框 / 开关 / 下拉
+  const SELECTOR = 'button, .category-row, .type-menu-item, .n-tab, .n-radio-button, .mode-tab, '
+    + '.n-collapse-item__header, .n-checkbox, .n-switch, .n-base-selection';
   (async function () {
     try {
       await wait(4000);
@@ -135,7 +138,7 @@ const PROBE = `
       const list = Array.from(document.querySelectorAll(SELECTOR));
       out.steps.push('可点元素=' + list.length);
       let guard = 0;
-      for (let i = 0; i < list.length && guard < 70; i++) {
+      for (let i = 0; i < list.length && guard < 120; i++) {
         guard++;
         const el = list[i];
         const label = describe(el);
@@ -260,7 +263,7 @@ const PROBE = `
       '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
       '--hide-scrollbars', '--mute-audio', '--disable-extensions',
       `--user-data-dir=${profile}`, '--window-size=430,900',
-      '--virtual-time-budget=150000', '--dump-dom', url,
+      '--virtual-time-budget=' + (p.budget || 150000), '--dump-dom', url,
     ];
     const WATCH_MS = 150000;
     const dom = await new Promise((resolve) => {
@@ -285,7 +288,8 @@ const PROBE = `
 
   const results = [];
   let fail = 0;
-  for (const p of PAGES) {
+  const only = process.env.PJ_ONLY;
+  for (const p of PAGES.filter((x) => !only || x.key === only)) {
     const r = await runPage(p);
     if (!r) {
       console.log(`\n【${p.title}】 ⚠️ 没取到结果`);
@@ -305,7 +309,12 @@ const PROBE = `
 
   fs.writeFileSync(path.join(OUT, LABEL + '.json'), JSON.stringify(results, null, 2), 'utf-8');
   console.log('\n明细: ' + path.join(OUT, LABEL + '.json'));
-  console.log('合计: ' + (PAGES.length - fail) + ' 个页面通过 / ' + fail + ' 个页面崩溃');
+  const total = PAGES.filter((x) => !only || x.key === only).length;
+  const noResult = results.filter((r) => r.error === 'no-result').length;
+  // ⚠️ 必须写成「N 通过 / M 失败」：run_all_suites 靠这个正则统计；
+  //    no-result（页面在无头虚拟时钟下取不到结果）不计入失败，但单独报出来，不掩盖。
+  console.log('合计: ' + (total - fail - noResult) + ' 通过 / ' + fail + ' 失败'
+    + (noResult ? '（另有 ' + noResult + ' 个页面未取到结果，非崩溃）' : ''));
   cleanup();
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('脚本异常:', e); process.exit(3); });
