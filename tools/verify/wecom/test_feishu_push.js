@@ -217,10 +217,13 @@ function writeConfig(file, extra) {
 
   // ========== 9. 渠道列表 ==========
   const chans = await call('GET', '/push/channels');
-  check('渠道列表返回两个渠道且带状态',
-    chans.code === 0 && chans.data.length === 2
+  // 2026-09-29 起渠道扩为 4 个（wecom/feishu/dingtalk/bark），断言改为「至少包含飞书与企微且属性正确」
+  check('渠道列表返回全部渠道且飞书/企微属性正确',
+    chans.code === 0 && chans.data.length === 4
     && chans.data.some(c => c.channel === 'feishu' && c.needs_secret === true && c.status)
-    && chans.data.some(c => c.channel === 'wecom' && c.needs_secret === false),
+    && chans.data.some(c => c.channel === 'wecom' && c.needs_secret === false)
+    && chans.data.some(c => c.channel === 'dingtalk' && c.needs_secret === true)
+    && chans.data.some(c => c.channel === 'bark' && c.needs_secret === false),
     JSON.stringify((chans.data || []).map(c => ({ c: c.channel, s: c.needs_secret }))));
 
   // ========== 10. 一边失败不影响另一边 ==========

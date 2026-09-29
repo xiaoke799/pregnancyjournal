@@ -28,6 +28,8 @@ const SUITES = [
   [path.join(WECOM, 'test_wecom_push.js'), '企业微信推送', ''],
   [path.join(WECOM, 'test_wecom_scheduler.js'), '企微调度器', ''],
   [path.join(WECOM, 'test_feishu_push.js'), '飞书推送', ''],
+  [path.join(WECOM, 'test_dingtalk_push.js'), '钉钉推送', ''],
+  [path.join(WECOM, 'test_bark_push.js'), 'Bark推送', ''],
   // e2e_push_real_server 不自包含（要外部先起 smoke 服务），单独在最后手跑
   // ---- 导出 / 兼容 / 媒体 18 套 ----
   [path.join(UP, 'e2e_export_dir.js'), '导出到指定目录', ''],

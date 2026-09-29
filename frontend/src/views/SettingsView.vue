@@ -568,8 +568,8 @@ const currentCanRW = ref<boolean | null>(null)
 const allPregnancies = ref<any[]>([])
 const activePregnancyId = ref('')
 
-// ===== 推送（企业微信 / 飞书）=====
-// 两个渠道的界面结构完全一致，用同一套模板 + 按渠道分片的状态渲染。
+// ===== 推送（企业微信 / 飞书 / 钉钉 / Bark）=====
+// 各渠道的界面结构完全一致，用同一套模板 + 按渠道分片的状态渲染。
 const pushChannelMeta = [
   {
     key: 'wecom' as const,
@@ -586,6 +586,22 @@ const pushChannelMeta = [
     needsSecret: true,
     urlPlaceholder: 'https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx',
     hint: '在飞书群里点「设置 → 群机器人 → 添加机器人 → 自定义机器人」，复制 Webhook 地址。若机器人安全设置选了「签名校验」，请把加签密钥填到上面；选了「自定义关键词」，关键词请填「孕程记」；选了「IP 白名单」，需把 NAS 的出口 IP 加进去。',
+  },
+  {
+    key: 'dingtalk' as const,
+    name: '钉钉',
+    icon: '🔹',
+    needsSecret: true,
+    urlPlaceholder: 'https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxx',
+    hint: '在钉钉群里点「群设置 → 机器人 → 添加机器人 → 自定义（Webhook 接入）」，复制 Webhook 地址。若安全设置选了「加签」，请把 SEC 开头的密钥填到上面；选了「自定义关键词」，关键词请填「孕程记」；选了「IP 白名单」，需把 NAS 的出口 IP 加进去。',
+  },
+  {
+    key: 'bark' as const,
+    name: 'Bark',
+    icon: '🔔',
+    needsSecret: false,
+    urlPlaceholder: 'https://api.day.app/你的Key',
+    hint: 'iPhone 在 App Store 安装 Bark 后打开 App，复制它给出的推送 URL（https://api.day.app/你的Key）粘贴到上面。自建 Bark 服务器的填自建地址，http/https 都可以。',
   },
 ]
 
@@ -606,6 +622,8 @@ type ChannelState = {
 const channelState = reactive<Record<string, ChannelState>>({
   wecom: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
   feishu: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
+  dingtalk: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
+  bark: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
 })
 
 const anyChannelConfigured = computed(() => pushChannelMeta.some(ch => channelState[ch.key].configured))
@@ -1196,7 +1214,7 @@ async function retryPush(logId: string) {
 }
 
 function channelLabel(ch?: string): string {
-  const map: Record<string, string> = { wecom: '企业微信', feishu: '飞书' }
+  const map: Record<string, string> = { wecom: '企业微信', feishu: '飞书', dingtalk: '钉钉', bark: 'Bark' }
   return map[ch || 'wecom'] || (ch || '企业微信')
 }
 
