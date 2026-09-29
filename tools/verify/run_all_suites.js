@@ -71,7 +71,7 @@ const SUITES = [
   // ====================================================================
   [path.join(V, 't9_verify_db_fixes.js'), 'DB修复综合(外键/索引/损坏库)', ''],
   [path.join(V, 't11_contraction_511.js'), '宫缩5-1-1(含跨午夜/历史)', ''],
-  [path.join(V, 't12_reference_photo.js'), '参考资料源与照片目录校验', ''],
+  [path.join(V, 't12_reference_photo.js'), '照片目录校验（reference 部分已随接口下线移除）', ''],
   [path.join(V, 't13_error_sanitize.js'), '错误脱敏(含URL不误伤)', ''],
   [path.join(V, 't14_access_control.js'), '访问控制(日志/导出鉴权)', ''],
   [path.join(V, 't15_crash_flush.js'), '崩溃/退出前补落盘', ''],
