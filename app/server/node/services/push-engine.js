@@ -7,13 +7,13 @@
  * - **失败必留痕**：严格校验响应 + 自动重试 + 只在成功时才标记「今天已推」。
  *
  * 各渠道差异（Webhook 协议完全不同，必须分开处理）：
- * | 项 | 企业微信 | 飞书 |
- * | --- | --- | --- |
- * | 地址 | qyapi.weixin.qq.com/cgi-bin/webhook/send?key= | open.feishu.cn/open-apis/bot/v2/hook/ |
- * | 文本字段 | `{msgtype:'text', text:{content}}` | `{msg_type:'text', content:{text}}` |
- * | 成功判定 | `errcode === 0` | `code === 0` |
- * | 内容上限 | 2048 字节 | 请求体 ≤ 20KB（取 19KB 文本预算） |
- * | 加签 | 无 | 可选：HmacSHA256(key = timestamp+"\n"+secret, msg = 空) → Base64 |
+ * | 项 | 企业微信 | 飞书 | 钉钉 | Bark |
+ * | --- | --- | --- | --- | --- |
+ * | 地址 | qyapi.weixin.qq.com/cgi-bin/webhook/send?key= | open.feishu.cn/open-apis/bot/v2/hook/ | oapi.dingtalk.com/robot/send?access_token= | api.day.app/<key>（或自建） |
+ * | 文本字段 | `{msgtype:'text', text:{content}}` | `{msg_type:'text', content:{text}}` | `{msgtype:'text', text:{content}}` | `{title, body}` |
+ * | 成功判定 | `errcode === 0` | `code === 0` | `errcode === 0` | HTTP 2xx 且 JSON `code === 200` |
+ * | 内容上限 | 2048 字节 | 请求体 ≤ 20KB（取 19KB 文本预算） | 官方未明示，保守 18KB | APNs 4KB（取 3500） |
+ * | 加签 | 无 | 可选：HmacSHA256(key = timestamp+"\n"+secret, msg = 空) → Base64，放 body | 可选：HmacSHA256(key = secret, msg = 毫秒timestamp+"\n"+secret) → Base64 → URL 编码，拼 URL | 无 |
  */
 const fs = require('fs');
 const path = require('path');
@@ -108,6 +108,83 @@ const CHANNELS = {
     },
     retryableCodes: new Set([11232]), // 限流（整点/半点高峰）
   },
+
+  dingtalk: {
+    key: 'dingtalk',
+    name: '钉钉',
+    configFile: 'dingtalk.json',
+    needsSecret: true,
+    urlPlaceholder: 'https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxx',
+    // 官方未明示单条 text 上限；社区普遍按 20000 字节内处理，保守取 18000 留余量
+    textLimitBytes: 18000,
+    urlError(url) {
+      let u;
+      try { u = new URL(url); } catch { return '钉钉 Webhook 地址格式不正确'; }
+      if (u.protocol !== 'https:') return '钉钉 Webhook 地址必须以 https 开头';
+      if (!/(^|\.)dingtalk\.com$/.test(u.hostname)) return '钉钉 Webhook 地址域名不正确（应为 oapi.dingtalk.com）';
+      if (!u.pathname.includes('/robot/send')) return '钉钉 Webhook 地址不完整，请重新复制（应包含 /robot/send）';
+      if (!u.searchParams.get('access_token')) return '钉钉 Webhook 地址缺少 access_token，请重新复制完整地址';
+      return null;
+    },
+    // 钉钉「加签」模式：与飞书完全不同——
+    // key=secret，对 `timestamp+"\n"+secret` 做 HmacSHA256 → Base64 → URL 编码，
+    // timestamp 为毫秒（1 小时内有效），最终以 &timestamp=&sign= 拼到 URL 上（不是放 body）。
+    // 官方文档：open.dingtalk.com「自定义机器人安全设置」（2026-09-29 实抓确认，别凭记忆改）
+    signUrl(url, cfg) {
+      const secret = (cfg.secret || '').trim();
+      if (!secret) return;
+      const timestamp = String(Date.now());
+      const stringToSign = `${timestamp}\n${secret}`;
+      const sign = crypto.createHmac('sha256', secret).update(stringToSign, 'utf8').digest('base64');
+      // searchParams.set 会自动做 URL 编码，与官方 URLEncoder.encode(…,"UTF-8") 等价
+      url.searchParams.set('timestamp', timestamp);
+      url.searchParams.set('sign', sign);
+    },
+    buildBody(text) {
+      return JSON.stringify({ msgtype: 'text', text: { content: text } });
+    },
+    parseResponse(json) {
+      const code = Number(json.errcode);
+      if (code === 0) return { ok: true };
+      return { ok: false, code, message: friendlyDingtalkError(code, json.errmsg) };
+    },
+    retryableCodes: new Set([-1, 410100]), // -1 系统繁忙；410100 发送太快限流（每分钟 20 条，超了限流 10 分钟）
+  },
+
+  bark: {
+    key: 'bark',
+    name: 'Bark',
+    configFile: 'bark.json',
+    needsSecret: false,
+    urlPlaceholder: 'https://api.day.app/你的Key（自建服务器填自建地址）',
+    // APNs 载荷上限 4KB，留余量
+    textLimitBytes: 3500,
+    urlError(url) {
+      let u;
+      try { u = new URL(url); } catch { return 'Bark 推送地址格式不正确'; }
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') return 'Bark 推送地址必须以 http(s):// 开头';
+      // 地址末段就是设备的推送 Key（自建服务器域名任意，但必须有 key 段）
+      const keySeg = u.pathname.split('/').filter(Boolean)[0];
+      if (!keySeg) return 'Bark 推送地址缺少 Key，请在 Bark App 里复制完整推送 URL（https://api.day.app/你的Key）';
+      return null;
+    },
+    // Bark：POST JSON {title, body} 到推送 URL；正文首行做通知标题，其余做内容
+    buildBody(text) {
+      const src = String(text == null ? '' : text);
+      const nl = src.indexOf('\n');
+      const firstLine = (nl === -1 ? src : src.slice(0, nl)).trim();
+      const rest = nl === -1 ? '' : src.slice(nl + 1).trim();
+      const body = { title: firstLine || '孕程记', body: rest || firstLine || ' ' };
+      return JSON.stringify(body);
+    },
+    parseResponse(json) {
+      // Bark 成功 = JSON code 200（HTTP 层 2xx 已在 sendChannelOnce 校验过）
+      const code = Number(json.code);
+      if (code === 200) return { ok: true };
+      return { ok: false, code, message: friendlyBarkError(code, json.message) };
+    },
+    retryableCodes: new Set(), // Bark 无明确限流码；403/410 都是设备侧问题，重试无意义
+  },
 };
 
 function channelList() {
@@ -147,6 +224,42 @@ function friendlyFeishuError(code, msg) {
   return `${base}（code ${code}）`;
 }
 
+function friendlyDingtalkError(code, msg) {
+  const m = String(msg || '');
+  // 310000 是「安全设置校验未通过」的统一码，按 errmsg 细分给用户可操作的提示
+  if (code === 310000) {
+    if (/keywords/i.test(m)) return '机器人开启了「自定义关键词」，消息里必须包含该关键词（建议把关键词设为：孕程记）（errcode 310000）';
+    if (/sign/i.test(m)) return '签名校验失败：请检查「加签密钥」是否填对（SEC 开头），并确认 NAS 系统时间准确（errcode 310000）';
+    if (/timestamp/i.test(m)) return '签名时间戳无效：请确认 NAS 系统时间准确（errcode 310000）';
+    if (/ip/i.test(m)) return `IP 不在白名单内：请在钉钉机器人安全设置里关闭 IP 白名单或把 NAS 出口 IP 加进去${m ? `（${m}）` : ''}`;
+    return `机器人安全设置校验未通过：${m || '请检查加签密钥/关键词/IP 白名单设置'}（errcode 310000）`;
+  }
+  const map = {
+    [-1]: '钉钉系统繁忙，稍后会自动重试',
+    40035: '消息参数缺失，请重新保存 Webhook 地址',
+    400101: 'access_token 无效：Webhook 地址不完整或机器人已被删除，请在群里重新复制',
+    400102: '机器人已停用，请到钉钉群机器人管理里启用',
+    400106: '机器人不存在：Webhook 地址无效或机器人已被移除，请重新复制',
+    410100: '推送触发限流（钉钉限制每个机器人每分钟 20 条），稍后会自动重试',
+    430101: '消息含不安全外链，请调整内容后重试',
+    430102: '消息含不合适文本，被钉钉拦截',
+    430103: '消息含不合适图片，被钉钉拦截',
+    430104: '消息内容不合规，被钉钉拦截',
+  };
+  const base = map[code] || (msg || '钉钉返回错误');
+  return `${base}（errcode ${code}）`;
+}
+
+function friendlyBarkError(code, msg) {
+  const map = {
+    400: '推送参数不正确，请重新保存 Bark 推送地址',
+    403: '推送 Key 无效：请在 Bark App 里重新复制完整推送 URL',
+    410: '被 APNs 拒绝：请打开 Bark App 确认推送权限正常',
+  };
+  const base = map[code] || (msg || 'Bark 返回错误');
+  return `${base}（code ${code}）`;
+}
+
 function friendlyNetworkError(err) {
   const c = err && err.code;
   if (c === 'ENOTFOUND' || c === 'EAI_AGAIN') return '无法解析推送服务器域名，请检查 NAS 的网络和 DNS 设置';
@@ -160,7 +273,7 @@ function friendlyNetworkError(err) {
 // ========== 配置读写 ==========
 const DEFAULT_CONFIG = {
   webhook_url: '',
-  secret: '',            // 仅飞书用（加签密钥，可留空）
+  secret: '',            // 仅飞书/钉钉用（加签密钥，可留空）
   configured: false,
   enabled: true,
   push_checkup: true,
@@ -251,6 +364,8 @@ function sendChannelOnce(channel, cfg, textContent) {
     const data = (channel.signBody && (cfg.secret || '').trim())
       ? channel.signBody(textContent, cfg)
       : channel.buildBody(textContent, cfg);
+    // 钉钉加签：timestamp/sign 拼在 URL 上（官方要求，与飞书放 body 不同）
+    if (channel.signUrl) channel.signUrl(url, cfg);
 
     let settled = false;
     const fail = (err) => { if (!settled) { settled = true; reject(err); } };

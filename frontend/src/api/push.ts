@@ -2,7 +2,7 @@
 
 import client from './client'
 
-export type PushChannelKey = 'wecom' | 'feishu'
+export type PushChannelKey = 'wecom' | 'feishu' | 'dingtalk' | 'bark'
 
 export interface PushChannelConfig {
   channel: PushChannelKey

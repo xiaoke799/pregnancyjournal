@@ -48,6 +48,8 @@ const ALL_TABLES = [
 const WRITABLE_CONFIG_FILES = new Set([
   'wecom.json',
   'feishu.json',
+  'dingtalk.json',
+  'bark.json',
   'daily_push_state.json',
   'schedule_dates.json',
   // 用户在「备份/导出 → 手动指定目录」里添加的目录（写入测试通过才记下来）。
@@ -949,6 +951,8 @@ router.post('/backup', async (req, res) => {
     const configSources = [
       { name: 'wecom.json', srcPath: path.join(config.DATA_DIR, 'wecom.json') },
       { name: 'feishu.json', srcPath: path.join(config.DATA_DIR, 'feishu.json') },
+      { name: 'dingtalk.json', srcPath: path.join(config.DATA_DIR, 'dingtalk.json') },
+      { name: 'bark.json', srcPath: path.join(config.DATA_DIR, 'bark.json') },
       { name: 'daily_push_state.json', srcPath: path.join(config.DATA_DIR, 'daily_push_state.json') },
       { name: 'schedule_dates.json', srcPath: path.join(config.DATA_DIR, 'schedule_dates.json') },
       { name: 'trusted_dirs.json', srcPath: path.join(config.DATA_DIR, 'trusted_dirs.json') },

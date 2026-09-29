@@ -250,6 +250,8 @@ async function start() {
     './routes/checkup-schedule',
     './routes/wecom',
     './routes/feishu',
+    './routes/dingtalk',
+    './routes/bark',
     './routes/push',
     './routes/logs',
   ];
