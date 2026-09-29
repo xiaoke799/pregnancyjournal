@@ -56,6 +56,7 @@
       <RecordList
         :date="selectedDate"
         :records="currentRecords"
+        :plans="todayPlans"
         @edit="onEditRecord"
         @add-type="openQuickAdd"
       />
@@ -487,10 +488,12 @@
     </n-modal>
 
     <!-- 计划弹窗 -->
-    <n-modal v-model:show="showPlanModal" preset="card" title="记录计划" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetPlanForm">
+    <n-modal v-model:show="showPlanModal" preset="card" title="添加计划" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetPlanForm">
       <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="planForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
-        <div class="qf-group"><label>计划内容</label><n-input v-model:value="planForm.text" type="textarea" :rows="3" placeholder="今天计划做什么..." /></div>
+        <div class="qf-group"><label>计划日期</label><n-date-picker v-model:formatted-value="planForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
+        <div class="qf-group"><label>几点执行（可选）</label><n-time-picker v-model:formatted-value="planForm.time" format="HH:mm" placeholder="不填则只按日期提醒" style="width:100%" /></div>
+        <div class="qf-group"><label>计划内容</label><n-input v-model:value="planForm.text" type="textarea" :rows="3" placeholder="例如：做四维彩超 / 下午去散步" /></div>
+        <div class="form-hint-text">日期是今天 ⇒ 归入「今日计划」；之后 ⇒ 归入「孕期计划」。到点会按你配置的渠道推送提醒。</div>
       </div>
       <template #action><n-button @click="showPlanModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="savePlan">保存</n-button></template>
     </n-modal>
@@ -694,13 +697,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
-  NButton, NModal, NInput, NInputNumber, NDatePicker,
+  NButton, NModal, NInput, NInputNumber, NDatePicker, NTimePicker,
   NRadioGroup, NRadioButton, NPopover, NSelect,
   useMessage,
 } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useResize } from '@/composables/useResize'
 import { dailyRecordApi } from '@/api/daily-record'
+import { reminderApi } from '@/api/reminder'
 import dayjs from 'dayjs'
 import MiniCalendar from '@/components/record/MiniCalendar.vue'
 import RecordList from '@/components/record/RecordList.vue'
@@ -808,7 +812,11 @@ const fmForm = ref({ date: '', count: null as number | null, duration: null as n
 // 宫缩
 const contrForm = ref({ date: '', duration: null as number | null, interval: null as number | null, pain: '轻微' as '无感' | '轻微' | '明显' | '剧烈', note: '' })
 // 计划
-const planForm = ref({ date: '', text: '' })
+// 🔴 time 的初值必须是 **null**，不能是空字符串：
+//    n-time-picker 绑的是 formatted-value，收到 '' 会在内部解析时抛
+//    `RangeError: Invalid time value`，被 App.vue 错误边界接住 ⇒ 整页「这个页面出错了」。
+//    项目里已踩过两次（宫缩的开始/结束时间、计划的日期），见 MEMORY.md 铁律 #47。
+const planForm = ref({ date: '', time: null as string | null, text: '' })
 // 爱爱
 const intimacyForm = ref({ date: '', count: null as number | null, hasProtection: 'no' as 'yes' | 'no', protectionType: '' as string, note: '' })
 // HCG
@@ -935,7 +943,7 @@ async function fetchRecords() {
 }
 
 watch([() => selectedDate.value, () => pregnancyStore.currentPregnancy?.id], ([date, pid]) => {
-  if (date && pid) fetchRecords()
+  if (date && pid) { fetchRecords(); loadPlans() }
 }, { immediate: true })
 
 onMounted(() => window.addEventListener('record-added', fetchRecords))
@@ -1198,7 +1206,7 @@ function resetDietForm() { dietForm.value = { date: '', meal: '早餐', content:
 function resetExerciseForm() { exerciseForm.value = { date: '', type: '散步', duration: null, intensity: '轻松', note: '' } }
 function resetFmForm() { fmForm.value = { date: '', count: null, duration: null, note: '' } }
 function resetContrForm() { contrForm.value = { date: '', duration: null, interval: null, pain: '轻微', note: '' } }
-function resetPlanForm() { planForm.value = { date: '', text: '' } }
+function resetPlanForm() { planForm.value = { date: '', time: null, text: '' } }
 function resetIntimacyForm() { intimacyForm.value = { date: '', count: null, hasProtection: 'no', protectionType: '', note: '' } }
 
 // ====== 新增类型保存函数 ======
@@ -1278,14 +1286,62 @@ async function saveContr() {
   if (ok) showContrModal.value = false
 }
 
+/**
+ * 保存计划。
+ *
+ * 🔴 计划**不再写进当天记录**（daily_record.plan_text），而是作为一条「待办」（reminder）保存：
+ *    · 记录是**一天一条**，同一天多个时间点的安排根本放不下（写了 9 点产检就写不下下午 3 点散步）；
+ *    · 待办天然**一条一记录**，支持任意多条、带具体时间；
+ *    · 且待办**本来就在推送链路里**（push-engine 会扫 reminder 表做今日/未来提醒），
+ *      存进去就自动获得「到点提醒」，不用为计划再单独做一套推送。
+ *    历史数据（老记录里的 plan_text）仍照旧显示，见 RecordList 的计划行。
+ */
 async function savePlan() {
-  if (!planForm.value.text.trim()) { message.warning('请输入计划内容'); return }
-  const ok = await doUpsert({
-    record_date: planForm.value.date,
-    plan_text: planForm.value.text,
-    plan_date: planForm.value.date || undefined,
-  })
-  if (ok) showPlanModal.value = false
+  const text = planForm.value.text.trim()
+  if (!text) { message.warning('请输入计划内容'); return }
+  const pid = pregnancyStore.currentPregnancy?.id
+  if (!pid) { message.error('缺少孕期信息，请先完成初始设置'); return }
+
+  const date = planForm.value.date || dayjs().format('YYYY-MM-DD')
+  if (!isValidDateStr(date)) { message.error('日期无效，请重新选择日期'); return }
+
+  saving.value = true
+  try {
+    const res: any = await reminderApi.create({
+      pregnancy_id: pid,
+      title: text,
+      trigger_date: date,
+      trigger_time: planForm.value.time || null,   // 空则只按日期提醒
+      reminder_type: 'plan',
+      priority: 'medium',
+      is_enabled: 1,
+    })
+    if (res.code !== 0) { message.error(res.message || '保存失败，请重试'); return }
+    const isToday = date === dayjs().format('YYYY-MM-DD')
+    message.success(isToday ? '已加入今日计划' : `已加入孕期计划（${date.slice(5)}${planForm.value.time ? ' ' + planForm.value.time : ''}）`)
+    showPlanModal.value = false
+    await loadPlans()
+  } catch (e: any) {
+    message.error('保存失败：' + (e?.message || '未知错误'))
+  } finally {
+    saving.value = false
+  }
+}
+
+/** 记录页要展示的计划：全部「计划」类型的待办（含今日与孕期），供列表与首页共用。 */
+const todayPlans = ref<any[]>([])
+
+async function loadPlans() {
+  const pid = pregnancyStore.currentPregnancy?.id
+  if (!pid) { todayPlans.value = []; return }
+  try {
+    const res: any = await reminderApi.list(pid)
+    const rows = res && res.code === 0 && Array.isArray(res.data) ? res.data : []
+    // 只取计划类；历史「手动待办」不混进来
+    todayPlans.value = rows.filter((p: any) => p.reminder_type === 'plan')
+  } catch (e) {
+    todayPlans.value = []
+  }
 }
 
 async function saveIntimacy() {

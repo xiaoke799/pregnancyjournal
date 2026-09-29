@@ -40,7 +40,11 @@
       <div class="section-header">
         <h3>提醒看板</h3>
         <div class="header-actions">
-          <span class="section-hint" v-if="todayTodos.length">未来30天 · {{ todayTodos.length }} 项</span>
+          <span class="section-hint" v-if="todayTodos.length">
+            <template v-if="todayCount">今日 {{ todayCount }} 项</template>
+            <template v-if="todayCount && upcomingCount"> · </template>
+            <template v-if="upcomingCount">孕期计划 {{ upcomingCount }} 项</template>
+          </span>
           <n-button size="tiny" :loading="pushing" @click="pushToWecom" v-if="todayTodos.length">推送消息</n-button>
         </div>
       </div>
@@ -53,13 +57,17 @@
         <div v-for="item in todayTodos" :key="item.id" class="plan-item" :class="{ 'is-today': item.days_until === 0, 'is-past': (item.days_until || 0) < 0, 'is-completed': item.is_completed }">
           <span class="plan-icon">{{ todoIcon(item) }}</span>
           <div class="plan-body">
-            <span class="plan-title" :class="{ 'completed-text': item.is_completed }">{{ item.name || item.title || '提醒' }}</span>
+            <span class="plan-title" :class="{ 'completed-text': item.is_completed }">
+              <span v-if="isPlanItem(item)" class="plan-tag">计划</span>{{ item.name || item.title || '提醒' }}
+            </span>
             <span class="plan-meta" v-if="item.trigger_date || item.days_until != null">
               <template v-if="item.days_until != null">
                 {{ formatDaysUntil(item.days_until) }}
               </template>
               <template v-else>{{ formatCountdown(item.trigger_date) }}</template>
               <template v-if="item.trigger_date && item.days_until !== 0"> · {{ item.trigger_date.slice(5) }}</template>
+              <!-- 执行时间（几点）：计划与带时间的提醒都会显示 -->
+              <template v-if="item.trigger_time"> · {{ String(item.trigger_time).slice(0, 5) }}</template>
             </span>
           </div>
           <!-- 完成按钮：只对"计划"和"手动提醒"显示，产检去产检页完成 -->
@@ -654,6 +662,20 @@ const glucoseDisplayText = computed(() => {
 
 const lmpDate = computed(() => pregnancyStore.currentPregnancy?.last_period_date)
 
+/**
+ * 是不是「计划」条目。
+ * 两种来源：① 新的计划存在待办表（reminder_type='plan'）；② 历史计划曾是当天记录的
+ * plan_text，后端会以 type='plan' 的形式合并进来。两者都要认得。
+ */
+function isPlanItem(item: any): boolean {
+  return item?.reminder_type === 'plan' || item?.type === 'plan'
+}
+
+/** 今日要做的（计划 + 提醒 + 今天的产检），供看板标题分区显示 */
+const todayCount = computed(() => todayTodos.value.filter((t: any) => t.days_until === 0).length)
+/** 孕期计划：今天之后的（含产检安排） */
+const upcomingCount = computed(() => todayTodos.value.filter((t: any) => t.days_until !== 0).length)
+
 /** 判断该条目是否可在首页看板直接完成（计划+手动提醒可以，产检不行） */
 function canCompleteOnDashboard(item: any): boolean {
   const t = item.type || ''
@@ -1038,6 +1060,13 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .plan-body { flex: 1; min-width: 0; }
 .plan-title { font-size: 13px; font-weight: 600; color: var(--text-color, #1e293b); display: block; }
 .plan-meta { font-size: 11px; color: var(--text-hint, #94a3b8); }
+/* 「计划」小标签：与产检提醒、手动待办区分开 */
+.plan-tag {
+  display: inline-block; margin-right: 5px; padding: 0 5px;
+  border-radius: 4px; font-size: 10px; line-height: 16px;
+  background: var(--bg-tint-pink, #fdf1f5); color: var(--primary-color, #7c5cbf);
+  vertical-align: 1px;
+}
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
 .quick-add-row { display: flex; gap: 8px; margin-top: 4px; }

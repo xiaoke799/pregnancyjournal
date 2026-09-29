@@ -290,6 +290,30 @@ router.get('/dashboard', async function(req, res) {
       'SELECT * FROM reminder WHERE pregnancy_id = ? AND trigger_date BETWEEN ? AND ? AND is_enabled = 1 AND (is_completed IS NULL OR is_completed = 0) ORDER BY trigger_date ASC LIMIT 20',
       [pregnancy_id, todayStr, monthLaterStr]
     );
+    // 🔴 给 reminder 行补上统一字段（name / type / days_until），必须做，两个原因：
+    // ① 下面的去重按 `name + type` 算 key —— 以前直接 SELECT *，行里没有这两个字段，
+    //    多条 reminder 的 key 全是 "| " ⇒ **被当成重复只留第一条**（存量 bug：用户建多条
+    //    手动待办也会被吞，2026-09-30 计划改造的端到端探针抓到）。
+    // ② type 用 'reminder'：完成时前端走 reminderApi.complete；「这是计划」的身份
+    //    靠 reminder_type='plan' 标识，前端靠它显示「计划」标签并分组今日/孕期。
+    todayTodos = todayTodos.map(function(r) {
+      return {
+        id: r.id,
+        name: r.title,
+        title: r.title,
+        type: 'reminder',
+        reminder_type: r.reminder_type,
+        trigger_date: r.trigger_date,
+        trigger_time: r.trigger_time,
+        priority: r.priority,
+        notes: r.notes,
+        is_enabled: r.is_enabled,
+        is_completed: r.is_completed || 0,
+        days_until: r.trigger_date
+          ? Math.ceil((new Date(r.trigger_date) - new Date(todayStr)) / (24 * 60 * 60 * 1000))
+          : null
+      };
+    });
 
     // 完成口径（与产检页「周区间命中 ∪ [cs_xxx] 标记命中」一致），供下方「产检提醒」与
     // 「产检建议」共用 —— 两个列表都不能把已完成的项目再当成待办/建议列出来。
