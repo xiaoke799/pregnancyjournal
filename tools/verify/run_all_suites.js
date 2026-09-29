@@ -38,6 +38,8 @@ const SUITES = [
   [path.join(UP, 'verify_checkup_frontend_patch.js'), '产检前端补丁', 'S2 已知常红'],
   [path.join(UP, 'verify_checkup_sorting.js'), '产检列表排序', ''],
   [path.join(UP, 'e2e_backup_field_coverage.js'), '备份字段覆盖', ''],
+  [path.join(UP, 'verify_backup_schema_coverage.js'), '备份表结构覆盖核对', ''],
+  [path.join(UP, 'e2e_backup_all_fields.js'), '备份全字段往返', ''],
   [path.join(UP, 'e2e_restore_db_file.js'), '整库恢复', '约 31 秒'],
   [path.join(UP, 'verify_record_entrypoints.js'), '记录类入口', ''],
   [path.join(UP, 'verify_record_page_functions.js'), '记录页全功能', ''],
