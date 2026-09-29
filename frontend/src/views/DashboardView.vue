@@ -21,6 +21,9 @@
       </div>
     </div>
 
+    <!-- ===== 本周变化（宝宝 / 妈妈，逐周 4~40 周） ===== -->
+    <WeeklyDevelopmentCard />
+
     <!-- ===== 提醒看板（未来一个月） ===== -->
     <div class="section reminder-board">
       <div class="section-header">
@@ -285,6 +288,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { NInput, NButton, NTag, NDatePicker, NSelect, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useGestationalAge } from '@/composables/useGestationalAge'
+import WeeklyDevelopmentCard from '@/components/WeeklyDevelopmentCard.vue'
 import { getDashboard } from '@/api/dashboard'
 import { reminderApi } from '@/api/reminder'
 import { pushApi } from '@/api/push'
