@@ -241,7 +241,6 @@ async function start() {
     './routes/checklist',
     './routes/reminder',
     './routes/fetal_movement',
-    './routes/reference',
     './routes/dashboard',
     './routes/export',
     './routes/habit-checkin',

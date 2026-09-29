@@ -1,4 +1,7 @@
-// 测试 #6（reference.js 目录/文件名/数据结构）+ #7（photo.js 目录前缀校验）端到端验证
+// 测试 #7（photo.js 目录前缀校验）端到端验证
+// 【2026-09-29 变更】原「#6 reference.js」部分随 /reference/* 接口整体下线而移除：
+// 7 个端点全部无活消费方（前端 api/reference.ts 只被死组件引用），故前端 api、
+// 后端路由一并删除；food-safety 数据本身仍由 routes/diet.js、routes/export.js 提供。
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -21,7 +24,6 @@ process.env.APP_MODE = 'dev';
 
 const express = require('express');
 const db = require(path.join(SERVER_DIR, 'db.js'));
-const referenceRouter = require(path.join(SERVER_DIR, 'routes', 'reference.js'));
 const photoRouter = require(path.join(SERVER_DIR, 'routes', 'photo.js'));
 
 let PASS = 0, FAIL = 0;
@@ -48,15 +50,6 @@ function get(port, p) {
 (async () => {
   await db.initDb();
 
-  // ================= #6 静态断言 =================
-  console.log('=== L1：#6 reference.js 源码静态断言 ===');
-  const refSrc = fs.readFileSync(path.join(SERVER_DIR, 'routes', 'reference.js'), 'utf-8');
-  const refClean = stripComments(refSrc);
-  ok(/config\.ASSETS_DIR/.test(refClean), '_loadJson 使用 config.ASSETS_DIR');
-  ok(!/config\.DATA_DIR/.test(refClean), '不再出现 config.DATA_DIR');
-  ok(!/'food_safety\.json'/.test(refClean), '不再引用不存在的 food_safety.json');
-  ok(/'food_safety_v3\.json'/.test(refClean), '改用真实文件名 food_safety_v3.json');
-
   // ================= #7 静态断言 =================
   console.log('=== L2：#7 photo.js 源码静态断言 ===');
   const photoSrc = fs.readFileSync(path.join(SERVER_DIR, 'routes', 'photo.js'), 'utf-8');
@@ -64,50 +57,14 @@ function get(port, p) {
   const badPrefix = /resolvedPath\.toLowerCase\(\)\.startsWith\(dir\)/.test(photoClean);
   ok(!badPrefix, '不再存在裸 startsWith(dir)（不带 path.sep）的目录校验');
 
-  // ================= 功能验证 =================
+  // ================= #7 功能验证 =================
   const app = express();
   app.use(express.json());
-  app.use('/api/v1', referenceRouter);
   app.use('/api/v1', photoRouter);
   const server = app.listen(0, '127.0.0.1');
   await new Promise(r => server.once('listening', r));
   const port = server.address().port;
 
-  console.log('=== L3：#6 /reference/food-safety 真正能读到数据 ===');
-  const all = await get(port, '/api/v1/reference/food-safety');
-  ok(all.json && all.json.code === 0, '不再返回「食材安全数据不存在」', all.json && all.json.message);
-  const cats = all.json && all.json.data && all.json.data.categories;
-  ok(Array.isArray(cats) && cats.length === 13, '返回 13 个分类（真实文件内容）', Array.isArray(cats) ? cats.length : cats);
-  ok(all.json && all.json.data && all.json.data.metadata && all.json.data.metadata.version === '3.3',
-    'metadata.version = 3.3（真实文件）', all.json && all.json.data && all.json.data.metadata && all.json.data.metadata.version);
-
-  console.log('=== L4：#6 关键词搜索命中 {categories[].items[]} ===');
-  const hit = await get(port, '/api/v1/reference/food-safety?keyword=' + encodeURIComponent('菠菜'));
-  ok(hit.json && hit.json.code === 0, '搜索接口 code=0', hit.json && hit.json.message);
-  const hitData = hit.json && hit.json.data;
-  ok(hitData && hitData.count > 0, '【关键】搜「菠菜」有结果（旧代码恒 0）', hitData && hitData.count);
-  ok(hitData && hitData.results.some(r => r.name === '菠菜' && r.category === '蔬菜类'),
-    '结果里含「菠菜」且带分类名', hitData && hitData.results && hitData.results.slice(0, 3).map(r => r.name + '/' + r.category));
-
-  console.log('=== L5：#6 反例对照（搜索不是「全都返回」）===');
-  const none = await get(port, '/api/v1/reference/food-safety?keyword=' + encodeURIComponent('绝对不存在的食材xyzabc'));
-  ok(none.json && none.json.data && none.json.data.count === 0, '搜不存在的词 count=0（证明搜索真的在过滤）', none.json && none.json.data && none.json.data.count);
-  const aliasHit = await get(port, '/api/v1/reference/food-safety?keyword=' + encodeURIComponent('西红柿'));
-  ok(aliasHit.json && aliasHit.json.data && aliasHit.json.data.count > 0, '别名「西红柿」能搜到（aliases 分支生效）', aliasHit.json && aliasHit.json.data && aliasHit.json.data.count);
-
-  console.log('=== L6：#6 其余 5 个 json 确实不存在 → 仍返回明确错误（不炸）===');
-  const dev = await get(port, '/api/v1/reference/development/12');
-  ok(dev.json && dev.json.code === 1001 && /不存在/.test(dev.json.message), '返回「发育数据文件不存在」（诚实失败，非 500）', dev.json && dev.json.message);
-  const ci = await get(port, '/api/v1/reference/checkup-items/foo');
-  ok(ci.json && ci.json.code === 1001 && /不存在/.test(ci.json.message), '产检知识库同样明确报不存在', ci.json && ci.json.message);
-  const rg = await get(port, '/api/v1/reference/ranges/foo');
-  ok(rg.json && rg.json.code === 1001 && /不存在/.test(rg.json.message), '参考范围同样明确报不存在', rg.json && rg.json.message);
-  const cp = await get(port, '/api/v1/reference/checkup-plan');
-  ok(cp.json && cp.json.code === 1001 && /不存在/.test(cp.json.message), '产检标准同样明确报不存在', cp.json && cp.json.message);
-  const iom = await get(port, '/api/v1/reference/iom-weight');
-  ok(iom.json && iom.json.code === 1001 && /不存在/.test(iom.json.message), 'IOM 体重标准同样明确报不存在', iom.json && iom.json.message);
-
-  // ================= #7 功能验证 =================
   console.log('=== L7：#7 照片文件接口目录校验 ===');
   const photosDir = path.join(TMP, 'photos');
   const siblingDir = path.join(TMP, 'photos_backup');
