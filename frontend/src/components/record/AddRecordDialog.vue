@@ -644,8 +644,13 @@ const formData = ref({
   fetalMovementCount: null as number | null,
   fetalMovementDuration: null as number | null,
   // 宫缩
-  contractionStart: '',
-  contractionEnd: '',
+  // 🔴 必须是 null，**不能是空字符串**：下面两个 n-time-picker 绑的是 formatted-value，
+  //    收到 '' 时 naive-ui 会把它当日期解析，抛 `RangeError: Invalid time value`，
+  //    被 App.vue 的错误边界接住 ⇒ 整页变成「这个页面出错了」。
+  //    触发条件很隐蔽：**备注里没有 `HH:mm~HH:mm` 格式的时间**时，回填不会给这两个字段赋值，
+  //    于是它们保持默认值 —— 用记录页小弹窗记的宫缩（备注常为空）一点「查看」就必崩。
+  contractionStart: null as string | null,
+  contractionEnd: null as string | null,
   contractionInterval: null as number | null,
   contractionPain: null as string | null,
   // 症状
@@ -776,6 +781,10 @@ watch(() => props.show, (val) => {
           // 历史取值「中度」已被移出选项（取值域 2026-09-29 与小弹窗统一），
           // 不归一的话老记录回填进下拉框会显示成一串裸文本
           formData.value.contractionPain = normalizeContractionPain(r.contraction_pain) || null
+          // 🔴 先显式清成 null（不是 ''）再尝试回填：留空字符串会让 n-time-picker 抛
+          //    `Invalid time value` ⇒ 整页被错误边界接住（详见 formData 定义处说明）
+          formData.value.contractionStart = null
+          formData.value.contractionEnd = null
           if (r.note) {
             const m = r.note.match(/(\d{2}:\d{2})~(\d{2}:\d{2})/)
             if (m) {
@@ -1219,8 +1228,8 @@ function resetForm() {
     glucoseValue: null,
     fetalMovementCount: null,
     fetalMovementDuration: null,
-    contractionStart: '',
-    contractionEnd: '',
+    contractionStart: null,
+    contractionEnd: null,
     contractionInterval: null,
     contractionPain: null as string | null,
     symptoms: [],

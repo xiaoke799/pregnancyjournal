@@ -152,6 +152,27 @@ const probeFor = (scene) => `
           if (saveBtn) { saveBtn.click(); out.steps.push('已点保存'); await wait(1500); }
           else out.steps.push('小弹窗里没找到「保存」');
         }
+      } else if (SCENE === 'fuzz-record') {
+        // 把记录页所有类别行逐个点一遍，每次点完都查一次错误边界 —— 自动定位崩点
+        const rows = Array.from(document.querySelectorAll('.category-row'));
+        const labels = rows.map((r) => (r.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 12));
+        out.steps.push('类别行=' + rows.length);
+        for (let i = 0; i < rows.length; i++) {
+          rows[i].click();
+          await wait(500);
+          const e = errState();
+          if (e.crashed) {
+            out.crashedAfterClick = true;
+            out.errMsgAfterClick = '点「' + labels[i] + '」后崩：' + e.msg;
+            dump(); return;
+          }
+          // 关掉可能打开的弹窗，避免遮挡后续点击
+          const mask = document.querySelector('.n-modal-mask');
+          if (mask) mask.click();
+          await wait(250);
+        }
+        out.clicked = true;
+        out.steps.push('已逐个点过 ' + rows.length + ' 个类别行，全部无崩溃');
       } else if (SCENE === 'timer-flow') {
         // 计时器完整流程：开始 → 停止 → 结束本次会话
         const start = Array.from(document.querySelectorAll('button'))
@@ -188,6 +209,7 @@ const probeFor = (scene) => `
 
 const SCENES = [
   { key: 'record-click', hash: 'record', title: '记录页 · 点「宫缩」类别行' },
+  { key: 'fuzz-record', hash: 'record', title: '记录页 · 逐个点所有类别行（自动找崩点）' },
   { key: 'quick-contraction', hash: 'record', title: '记录页 · 「添加记录」→ 宫缩 → 保存' },
   { key: 'record-stats', hash: 'record', title: '记录页 · 切「统计」子标签' },
   { key: 'stats-page', hash: 'stats', title: '独立统计页 /stats' },
@@ -242,7 +264,7 @@ const SCENES = [
       contraction_duration: 45,
       contraction_interval: 8,
       contraction_pain: '明显',
-      note: '10:00~10:45',
+      note: '',
     }),
   });
   console.log('写宫缩记录: ' + (rec.json && rec.json.code));
