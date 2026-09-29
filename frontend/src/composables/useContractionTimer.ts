@@ -15,76 +15,111 @@ export function useContractionTimer() {
 
   const totalCount = computed(() => contractions.value.length)
 
-  async function startSession(pregnancyId: string) {
-    const res = await contractionApi.createSession(pregnancyId)
-    if (res.code === 0 && res.data) {
-      sessionId.value = res.data.id
-      contractions.value = []
-      alert511.value = false
-    }
-  }
-
-  async function startContraction() {
-    if (!sessionId.value) return
-    isRunning.value = true
-    currentStartTime.value = new Date()
-    await contractionApi.recordContraction(sessionId.value, 'start')
-  }
-
-  async function endContraction() {
-    if (!sessionId.value || !currentStartTime.value) return
-    isRunning.value = false
-
-    const now = new Date()
-    lastDuration.value = (now.getTime() - currentStartTime.value.getTime()) / 1000
-
-    // 计算间隔
-    if (contractions.value.length > 0) {
-      const lastEnd = contractions.value[contractions.value.length - 1].endTime
-      if (lastEnd) {
-        lastInterval.value = (currentStartTime.value.getTime() - new Date(lastEnd).getTime()) / 1000
+  /**
+   * ⚠️ 同 useFetalMovementCounter：这几个操作一律返回**是否成功**。
+   * 以前 sessionId 为空时是 `if (!sessionId.value) return` —— 界面毫无变化也不报错，
+   * 而「会话没建起来」恰恰是最容易发生的（页面挂载时孕期档案可能还没取回）。
+   * 那种情况下用户点「开始/结束」看到的就是纯粹的「没反应」。
+   */
+  async function startSession(pregnancyId: string): Promise<boolean> {
+    try {
+      const res = await contractionApi.createSession(pregnancyId)
+      if (res.code === 0 && res.data) {
+        sessionId.value = res.data.id
+        contractions.value = []
+        alert511.value = false
+        return true
       }
+      return false
+    } catch (e) {
+      return false
     }
+  }
 
-    const res = await contractionApi.recordContraction(sessionId.value, 'end')
+  async function startContraction(): Promise<boolean> {
+    if (!sessionId.value) return false
+    try {
+      isRunning.value = true
+      currentStartTime.value = new Date()
+      await contractionApi.recordContraction(sessionId.value, 'start')
+      return true
+    } catch (e) {
+      isRunning.value = false
+      currentStartTime.value = null
+      return false
+    }
+  }
 
-    contractions.value.push({
-      startTime: currentStartTime.value.toISOString(),
-      endTime: now.toISOString(),
-      duration: lastDuration.value,
-      interval: lastInterval.value,
-    })
-    currentStartTime.value = null
+  async function endContraction(): Promise<boolean> {
+    if (!sessionId.value || !currentStartTime.value) return false
+    try {
+      isRunning.value = false
 
-    // 检查 5-1-1
-    if (sessionId.value) {
-      const analysis = await contractionApi.analyze(sessionId.value)
-      if (analysis.code === 0 && analysis.data) {
-        alert511.value = analysis.data.is_511_met
+      const now = new Date()
+      lastDuration.value = (now.getTime() - currentStartTime.value.getTime()) / 1000
+
+      // 计算间隔
+      if (contractions.value.length > 0) {
+        const lastEnd = contractions.value[contractions.value.length - 1].endTime
+        if (lastEnd) {
+          lastInterval.value = (currentStartTime.value.getTime() - new Date(lastEnd).getTime()) / 1000
+        }
       }
-    }
-  }
 
-  async function endSession(notes?: string) {
-    if (!sessionId.value) return
-    await contractionApi.endSession(sessionId.value, notes)
-    sessionId.value = null
-    isRunning.value = false
-  }
+      await contractionApi.recordContraction(sessionId.value, 'end')
 
-  async function recordManual(startTime: string, endTime: string) {
-    if (!sessionId.value) return
-    const res = await contractionApi.recordContraction(sessionId.value, 'manual', startTime, endTime)
-    if (res.code === 0 && res.data) {
-      const c = res.data
       contractions.value.push({
-        startTime: c.start_time,
-        endTime: c.end_time,
-        duration: c.duration,
-        interval: c.interval_from_prev,
+        startTime: currentStartTime.value.toISOString(),
+        endTime: now.toISOString(),
+        duration: lastDuration.value,
+        interval: lastInterval.value,
       })
-      lastDuration.value = c.duration || 0
-      if (c.interval_from_prev) lastInterval.value = c.interval_from_prev
+      currentStartTime.value = null
+
+      // 检查 5-1-1
+      if (sessionId.value) {
+        const analysis = await contractionApi.analyze(sessionId.value)
+        if (analysis.code === 0 && analysis.data) {
+          alert511.value = analysis.data.is_511_met
+        }
+      }
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
+  async function endSession(notes?: string): Promise<boolean> {
+    if (!sessionId.value) return false
+    try {
+      await contractionApi.endSession(sessionId.value, notes)
+      sessionId.value = null
+      isRunning.value = false
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
+  async function recordManual(startTime: string, endTime: string): Promise<boolean> {
+    if (!sessionId.value) return false
+    try {
+      const res = await contractionApi.recordContraction(sessionId.value, 'manual', startTime, endTime)
+      if (res.code === 0 && res.data) {
+        const c = res.data
+        contractions.value.push({
+          startTime: c.start_time,
+          endTime: c.end_time,
+          duration: c.duration,
+          interval: c.interval_from_prev,
+        })
+        lastDuration.value = c.duration || 0
+        if (c.interval_from_prev) lastInterval.value = c.interval_from_prev
+        return true
+      }
+      return false
+    } catch (e) {
+      return false
     }
   }
 

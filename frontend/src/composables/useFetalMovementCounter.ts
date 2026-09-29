@@ -10,31 +10,53 @@ export function useFetalMovementCounter() {
   const startTime = ref<string | null>(null)
   const kicks = ref<any[]>([])
 
-  async function startSession(pregnancyId: string) {
-    const res: any = await fetalMovementApi.createSession(pregnancyId)
-    if (res.code === 0 && res.data) {
-      sessionId.value = res.data.id
-      kickCount.value = 0
-      startTime.value = res.data.start_time
-      kicks.value = []
-      isRunning.value = true
+  /**
+   * ⚠️ 这三个操作一律返回**是否成功**，绝不静默失败。
+   * 以前失败时只是不更新状态（isRunning 不变、计数不涨），
+   * 界面纹丝不动、也不报错 —— 用户看到的就是「点了没反应」，既不知道没成，也没法重试。
+   */
+  async function startSession(pregnancyId: string): Promise<boolean> {
+    try {
+      const res: any = await fetalMovementApi.createSession(pregnancyId)
+      if (res.code === 0 && res.data) {
+        sessionId.value = res.data.id
+        kickCount.value = 0
+        startTime.value = res.data.start_time
+        kicks.value = []
+        isRunning.value = true
+        return true
+      }
+      return false
+    } catch (e) {
+      return false
     }
   }
 
-  async function recordKick() {
-    if (!sessionId.value) return
-    const res: any = await fetalMovementApi.recordKick(sessionId.value)
-    if (res.code === 0 && res.data) {
-      kickCount.value++
-      kicks.value.push(res.data)
+  async function recordKick(): Promise<boolean> {
+    if (!sessionId.value) return false
+    try {
+      const res: any = await fetalMovementApi.recordKick(sessionId.value)
+      if (res.code === 0 && res.data) {
+        kickCount.value++
+        kicks.value.push(res.data)
+        return true
+      }
+      return false
+    } catch (e) {
+      return false
     }
   }
 
-  async function endSession(notes?: string) {
-    if (!sessionId.value) return
-    await fetalMovementApi.endSession(sessionId.value, notes)
-    isRunning.value = false
-    sessionId.value = null
+  async function endSession(notes?: string): Promise<boolean> {
+    if (!sessionId.value) return false
+    try {
+      await fetalMovementApi.endSession(sessionId.value, notes)
+      isRunning.value = false
+      sessionId.value = null
+      return true
+    } catch (e) {
+      return false
+    }
   }
 
   function reset() {

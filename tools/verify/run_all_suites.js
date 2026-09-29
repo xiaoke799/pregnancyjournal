@@ -42,6 +42,7 @@ const SUITES = [
   [path.join(UP, 'verify_record_entrypoints.js'), '记录类入口', ''],
   [path.join(UP, 'verify_record_page_functions.js'), '记录页全功能', ''],
   [path.join(UP, 'shot_record_quickmodals.js'), '快捷小弹窗风格一致', '约 60 秒·需无头浏览器'],
+  [path.join(UP, 'shot_fetal_movement_click.js'), '胎动/宫缩计时点击', '约 90 秒·需无头浏览器'],
   [path.join(UP, 'e2e_video_backup.js'), '相册视频备份', ''],
   [path.join(UP, 'e2e_push_config_backup.js'), '推送配置进备份', '约 40 秒'],
   [path.join(UP, 'e2e_export_mobile.js'), '导出手机端', ''],
