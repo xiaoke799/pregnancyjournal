@@ -14,6 +14,7 @@
       <div class="stage-label">当前阶段</div>
       <h3>{{ currentStage.name }}</h3>
       <p class="stage-desc">{{ currentStage.desc }}</p>
+      <p class="stage-goal">🎯 {{ currentStage.goal }}</p>
       <div class="stage-tags">
         <n-tag v-for="ex in currentStage.exercises" :key="ex" size="small" :type="currentStage.tagType" round>{{ ex }}</n-tag>
       </div>
@@ -21,15 +22,132 @@
 
     <!-- 各阶段详情 -->
     <n-collapse :default-expanded-names="[stageKey]" accordion>
+      <!-- 运动量标准 -->
+      <n-collapse-item name="basics" title="先看这个：多少算合适？">
+        <div class="eg-tip eg-tip-good">
+          <span><strong>一句话标准</strong>健康孕妇每周累计 <strong>150 分钟中等强度</strong>运动，分摊到 3~5 天完成即可 —— 大约是"每天 30 分钟、每周 5 天"。这是 ACOG（美国妇产科学会）等主流孕期运动指南的共同建议。</span>
+        </div>
+
+        <div class="step-grid">
+          <div class="step-block">
+            <strong>每周</strong>
+            <ol>
+              <li>累计 <strong>150 分钟</strong>中等强度</li>
+              <li>分摊到 3~5 天，不要"平时不动、周末猛练"</li>
+              <li>体力好的可加到 300 分钟</li>
+            </ol>
+          </div>
+          <div class="step-block">
+            <strong>每次</strong>
+            <ol>
+              <li>从 <strong>10~15 分钟</strong>起步</li>
+              <li>适应后加到 <strong>20~30 分钟</strong>（最易坚持）</li>
+              <li>连续中等强度不宜超过 45 分钟</li>
+            </ol>
+          </div>
+          <div class="step-block">
+            <strong>怎么加量</strong>
+            <ol>
+              <li>孕前不运动的：从每天 5~10 分钟开始</li>
+              <li>每周只比上周多 5 分钟，宁慢勿快</li>
+              <li>出现不适就退回上一档，别硬撑</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="eg-tip eg-tip-warn" style="margin-top:12px">
+          <span><strong>别把运动当成减肥手段</strong>孕期运动的目标是<strong>维持体能、控制增重速度、改善腰背不适与水肿、为分娩储备体力</strong>，而不是掉秤。体重增长目标是"长在合理区间"，不是越少越好。</span>
+        </div>
+
+        <div class="eg-tip eg-tip-info">
+          <span><strong>增重参考（按孕前 BMI）</strong>偏瘦约 12.5~18 kg ｜ 正常体重约 11.5~16 kg ｜ 超重约 7~11.5 kg ｜ 肥胖约 5~9 kg。这只是参考区间，<strong>以产检医生的具体建议为准</strong>。</span>
+        </div>
+      </n-collapse-item>
+
+      <!-- 强度自测 -->
+      <n-collapse-item name="intensity" title="怎么判断强度？一个动作就够">
+        <div class="eg-tip eg-tip-info">
+          <span><strong>谈话测试（最实用）</strong>运动时<strong>能正常说话、但不能唱歌</strong>，就是合适的中等强度。不用买设备、不用算心率，随时能自测。</span>
+        </div>
+
+        <div class="phase-grid">
+          <div class="phase-item green">
+            <strong>🟢 偏轻松</strong>
+            <p>能边动边流畅聊天、甚至唱歌。强度偏低，可适当加快一点。</p>
+          </div>
+          <div class="phase-item yellow">
+            <strong>🟡 刚刚好（保持）</strong>
+            <p>能说完整句子，但唱歌会喘；微微出汗、心跳加快、呼吸略急。这就是目标区间。</p>
+          </div>
+          <div class="phase-item pink">
+            <strong>🔴 过头了（立刻减量）</strong>
+            <p>说不出完整一句话、喘不上气、头晕胸闷。马上减速或停下休息。</p>
+          </div>
+        </div>
+
+        <div class="eg-tip eg-tip-warn" style="margin-top:12px">
+          <span><strong>关于"心率不超 140"</strong>这是很多年前的旧说法，现在已经不用单一心率数字来判断了 —— 每个人的基础心率差别很大。用上面的<strong>谈话测试</strong>更准也更省事。如果戴着手表，只要看趋势有没有比平时异常飙高即可，不必死磕某个数值。</span>
+        </div>
+      </n-collapse-item>
+
       <!-- 孕早期 -->
       <n-collapse-item name="early" title="孕早期（1~3个月）">
         <div class="eg-tip eg-tip-info">
-          <span><strong>原则</strong>胚胎着床未稳，以"缓慢、低强度"为主，避免腹部震动。</span>
+          <span><strong>原则</strong>胚胎着床未稳，以"缓慢、低强度"为主，避免腹部震动与体温升高。</span>
         </div>
 
         <div class="eg-card">
           <div class="card-head"><strong>散步</strong> <n-tag size="tiny" type="warning">首选</n-tag></div>
-          <p>最安全的运动方式。步伐放缓，每次15~30分钟，饭后稍作休息再进行。</p>
+          <p>最安全的运动方式。步伐放缓，每次15~30分钟，饭后稍作休息再进行。不必追求速度，走到身体微微发热、呼吸略快即可。</p>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>孕妇瑜伽（温和版）</strong> <n-tag size="tiny" type="info">呼吸与放松</n-tag></div>
+          <p>以呼吸练习和轻柔伸展为主，帮助身体提前适应，也能缓解早孕的紧张与焦虑。</p>
+          <ul class="card-steps">
+            <li>从孕期专门的入门动作开始，每次 15~20 分钟</li>
+            <li>避开深度扭转、挤压腹部的体式，也不要长时间平躺</li>
+            <li>有瑜伽基础的也要降一档强度；孕前没练过的先从教练带课开始</li>
+          </ul>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>凯格尔运动（盆底肌）</strong> <n-tag size="tiny" type="success">越早越好</n-tag></div>
+          <p>盆底肌锻炼<strong>孕早期就能开始</strong>，是整个孕期投入产出比最高的一项：防漏尿、减轻痔疮、为分娩和产后恢复打底。</p>
+          <ol class="card-steps">
+            <li>排空小便，全身放松，只收缩盆底肌（不要夹大腿或收腹）</li>
+            <li>吸气时提收肛门与阴道，像"憋住尿"的感觉，保持 3~5 秒</li>
+            <li>呼气放松，同样休息 3~5 秒</li>
+            <li>每次 20~30 下，每天 3 次，坐着站着都能练</li>
+          </ol>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>踝泵 + 抬腿</strong> <n-tag size="tiny" type="default">防血栓</n-tag></div>
+          <p>孕早期就开始预防下肢水肿和静脉血栓，久坐久站的人尤其需要。</p>
+          <div class="step-grid">
+            <div class="step-block">
+              <strong>踝泵（随时做）</strong>
+              <ol>
+                <li>坐着或躺着，脚尖用力向上勾，停 2 秒</li>
+                <li>再用力向下绷，停 2 秒</li>
+                <li>一小时做 20 次，办公时每小时提醒自己一轮</li>
+              </ol>
+            </div>
+            <div class="step-block">
+              <strong>靠墙抬腿（睡前）</strong>
+              <ol>
+                <li>臀部贴近墙壁，双腿搭在墙面上</li>
+                <li>保持 5~10 分钟，让腿部血液回流</li>
+                <li>起来时先侧身慢起，别直接坐起</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>靠墙站立 / 猫式伸展</strong> <n-tag size="tiny" type="default">缓解腰背</n-tag></div>
+          <p>早孕就开始腰酸的人可以每天做：靠墙站立 3 分钟（后脑、肩胛、臀部贴墙，收紧小腹）；四肢着地做猫式伸展，吸气塌腰、呼气拱背，各 5~8 次。</p>
         </div>
 
         <div class="eg-card">
@@ -38,10 +156,10 @@
         </div>
 
         <div class="eg-tip eg-tip-warn">
-          <span><strong>注意</strong>避免剧烈跑跳、仰卧起坐、腹部用力；若有出血、腹痛立即停止并就医。</span>
+          <span><strong>注意</strong>避免剧烈跑跳、仰卧起坐、腹部用力；<strong>不要平躺过久</strong>（子宫压迫下腔静脉，容易头晕心慌）；<strong>远离热瑜伽、高温汗蒸</strong>——孕早期核心体温升高有风险。若有出血、腹痛立即停止并就医。</span>
         </div>
         <div class="eg-tip eg-tip-good">
-          <span><strong>体重管理</strong>整个孕期增重12~14kg为宜，孕早期即开始控制。</span>
+          <span><strong>体重管理</strong>孕早期热量需求几乎不用增加，重点是别因为"一人吃两人补"而提前放量。具体增重区间见本文开头「先看这个」。</span>
         </div>
       </n-collapse-item>
 
@@ -213,6 +331,89 @@
         </div>
       </n-collapse-item>
 
+      <!-- 运动前后 -->
+      <n-collapse-item name="routine" title="运动前后怎么安排">
+        <div class="step-grid">
+          <div class="step-block">
+            <strong>开始前：热身 5~10 分钟</strong>
+            <ol>
+              <li>原地踏步 / 慢走，让心率缓慢升上来</li>
+              <li>肩颈绕环、手臂前后绕圈各 10 次</li>
+              <li>踝关节、膝关节各绕环 10 次</li>
+              <li>不要一上来就做主要动作</li>
+            </ol>
+          </div>
+          <div class="step-block">
+            <strong>结束后：放松 5~10 分钟</strong>
+            <ol>
+              <li>先慢走 2~3 分钟让心率平复</li>
+              <li>小腿、大腿后侧、髋部、肩背依次静态拉伸</li>
+              <li>每个动作保持 15~30 秒，<strong>缓慢拉伸不要弹振</strong></li>
+              <li>不要突然坐下或躺下</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="eg-tip eg-tip-info" style="margin-top:12px">
+          <span><strong>喝水</strong>运动前 1 杯温水；运动中每 15~20 分钟补几口（别一次灌太多）；运动后再补足。出汗多、天热时可在水里加一点点盐。</span>
+        </div>
+
+        <div class="eg-tip eg-tip-warn">
+          <span><strong>时间怎么挑</strong>饭后至少 <strong>1 小时</strong>再运动；避开正午高温与刚起床的空腹时段；户外散步以下午 4~5 点最舒服（阳光温和、草木释氧多）。晚上运动别太晚，以免影响睡眠。</span>
+        </div>
+
+        <div class="eg-tip eg-tip-danger">
+          <span><strong>运动完别马上洗澡</strong>先休息 10~15 分钟，等心率平复、汗落了再用<strong>温水</strong>冲洗。水温过高容易头晕，孕晚期尤其要避免长时间泡热水澡。</span>
+        </div>
+
+        <div class="eg-tip eg-tip-good">
+          <span><strong>穿什么</strong>合脚防滑的运动鞋（孕期脚会变大，别穿旧的挤脚鞋）；透气吸汗的衣物；孕中晚期可加托腹带减轻腰腹负担；内衣选承托好的运动款。</span>
+        </div>
+      </n-collapse-item>
+
+      <!-- 常见疑问 -->
+      <n-collapse-item name="faq" title="常见疑问">
+        <div class="eg-card">
+          <div class="card-head"><strong>孕前从不运动，现在开始来得及吗？</strong></div>
+          <p>来得及。从每天散步 10 分钟开始，每周只加 5 分钟，慢慢过渡到 30 分钟。孕期开始运动永远不晚，但"从零直接上强度"最容易受伤。</p>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>怀孕前一直跑步，还能继续跑吗？</strong></div>
+          <p>如果孕前有规律跑步习惯、且医生没有禁忌，可以继续慢跑，但要把配速降到<strong>能正常说话</strong>的程度，并缩短距离。孕中晚期肚子变大后，建议换成快走或游泳。孕前不跑步的人，孕期不要新开始跑。</p>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>能做力量训练 / 举铁吗？</strong></div>
+          <p>可以，但原则不同：用<strong>轻重量、多次数</strong>；<strong>绝对不要憋气发力</strong>（憋气会让血压瞬间升高）；避免仰卧推举和弯腰负重；孕晚期不要尝试大重量和新动作。</p>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>孕妇瑜伽和普通瑜伽一样吗？</strong></div>
+          <p>不一样。要避开深度扭转、腹部挤压、倒立体式，以及<strong>热瑜伽</strong>（高温环境全程禁止）。孕中期以后避免长时间平躺。建议找有孕期资质的教练，或跟专门的孕期课程。</p>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>游泳要注意什么？</strong></div>
+          <p>孕中期是最合适的阶段，水的浮力能明显减轻关节和腰背负担。但<strong>破水后、有出血或医生诊断宫颈机能不全时禁止</strong>。水温别太低（低于 28℃ 容易抽筋），上下池注意防滑，最好有人陪同。</p>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>做家务算运动吗？</strong></div>
+          <p>日常活动量算，但不能替代规律运动。而且拖地、擦窗、搬重物这类<strong>弯腰用力的家务反而容易伤腰</strong>，孕晚期建议交给家人。</p>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>运动完肚子发紧、有点坠胀，正常吗？</strong></div>
+          <p>运动后短暂出现、休息就能缓解的肚子发紧，多是<strong>假性宫缩</strong>，可以继续观察。但如果<strong>越来越规律、越来越密、休息也不缓解</strong>，或伴有出血、流水、持续腹痛，<strong>立即停止并就医</strong>。</p>
+        </div>
+
+        <div class="eg-card">
+          <div class="card-head"><strong>一天里什么时间运动最好？</strong></div>
+          <p>没有硬性规定，关键是<strong>固定下来、形成习惯</strong>。避开饭后立刻、正午高温和深夜。上班族可以拆成"午休快走 15 分钟 + 晚饭后散步 15 分钟"，同样算数。</p>
+        </div>
+      </n-collapse-item>
+
       <!-- 运动禁忌 -->
       <n-collapse-item name="forbid" title="运动禁忌&停止信号">
         <div style="font-weight:600;margin-bottom:8px;color:#e8627a;">出现以下症状，立即停止运动并就医：</div>
@@ -260,7 +461,8 @@
     <!-- 底部声明 -->
     <div class="eg-footer">
       <p>内容来源：《协和医院产科专家·备孕怀孕营养胎教全书》马良坤 著</p>
-      <p>仅供参考，具体方案请遵医嘱 · 不适请立即停止并就医</p>
+      <p>运动量标准参考 ACOG（美国妇产科学会）孕期运动建议：健康孕妇每周至少 150 分钟中等强度有氧运动</p>
+      <p>仅供参考，具体运动方案请遵医嘱 · 不适请立即停止并就医</p>
     </div>
   </div>
 </template>
@@ -268,18 +470,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { NCollapse, NCollapseItem, NTag } from 'naive-ui'
-import { usePregnancyStore } from '@/stores/pregnancy'
 import { useGestationalAge } from '@/composables/useGestationalAge'
 
-const pregnancyStore = usePregnancyStore()
-const { stageKey: rawStageKey } = useGestationalAge()
+const { stageKey: rawStageKey, age } = useGestationalAge()
 
-// 映射到折叠面板的 key
+// 映射到折叠面板的 key（原生 stageKey 取值：preparing/early/mid/late/nursing/unknown）：
+//   preparing（备孕）、early（孕早期）→ early；mid → mid；
+//   late 孕晚期：足月（≥37 周）后 → prepartum（临产前面板）；
+//   nursing（已过预产期）→ prepartum；unknown（未设置孕周）→ early（内容最保守）
 const stageKey = computed(() => {
   const key = rawStageKey.value
-  if (key === 'preparing') return 'early'
   if (key === 'mid') return 'mid'
-  return 'late' // late + nursing → late
+  if (key === 'late') return (age.value?.weeks ?? 0) >= 37 ? 'prepartum' : 'late'
+  if (key === 'nursing') return 'prepartum'
+  return 'early'
 })
 
 const currentStage = computed(() => {
@@ -287,23 +491,33 @@ const currentStage = computed(() => {
     early: {
       name: '孕早期（1~3月）',
       desc: '以缓慢为主，打好基础',
-      exercises: ['缓慢散步', '运动胎教'],
+      goal: '本阶段目标：每周 3~5 次、每次 15~30 分钟，先把习惯建立起来',
+      exercises: ['缓慢散步', '温和孕妇瑜伽', '凯格尔', '踝泵抬腿', '运动胎教'],
       tagType: 'warning' as const,
     },
     mid: {
       name: '孕中期（4~7月）',
       desc: '胎儿稳定，运动黄金期',
+      goal: '本阶段目标：每周累计 150 分钟中等强度，约每天 30 分钟、每周 5 天',
       exercises: ['游泳', '散步', '普拉提', '有氧操', '瑜伽'],
       tagType: 'info' as const,
     },
     late: {
       name: '孕晚期（8~9月+）',
       desc: '减轻水肿，锻炼盆底，备战分娩',
+      goal: '本阶段目标：每周 3~5 次、每次 20~30 分钟，以"不疲劳"为上限',
       exercises: ['普拉提', '凯格尔', '散步', '提肛练习'],
       tagType: 'error' as const,
     },
+    prepartum: {
+      name: '临产前（足月 · 孕10月）',
+      desc: '帮助入盆，储备体力，迎接分娩',
+      goal: '本阶段目标：在医生建议下坚持适量运动促进入盆，外出全程有人陪同',
+      exercises: ['爬楼梯', '散步', '孕妇瑜伽', '呼吸法练习', '分娩球操'],
+      tagType: 'success' as const,
+    },
   }
-  return map[stageKey.value] || map.mid
+  return map[stageKey.value] || map.early
 })
 
 const stopSignals = [
@@ -315,10 +529,14 @@ const forbidItems = [
   { icon: '💉', title: '子痫前期', desc: '高血压危重情况需静卧' },
   { icon: '💧', title: '过早破水', desc: '立即平躺垫高臀部就医' },
   { icon: '🔒', title: '子宫颈闭锁不全', desc: '需要卧床静养' },
+  { icon: '🧖', title: '热瑜伽 / 高温汗蒸', desc: '核心体温升高有风险' },
+  { icon: '🤿', title: '潜水（全程）', desc: '气压变化威胁胎儿' },
+  { icon: '⛷️', title: '有跌倒风险的运动', desc: '滑雪、骑马、滑冰、对抗性球类' },
+  { icon: '🫁', title: '憋气用力', desc: '举重搬重物憋气会血压骤升' },
   { icon: '🦋', title: '蝶泳（全程禁止）', desc: '拉伤肩膀和后背下部' },
   { icon: '🏋️', title: '剧烈运动（全程）', desc: '造成子宫收缩流产风险' },
   { icon: '🦶', title: '脚底按摩', desc: '泡脚时禁止导致腹部不适' },
-  { icon: '🤰', title: '仰卧时间过长', desc: '压迫血管影响血液循环' },
+  { icon: '🤰', title: '仰卧时间过长', desc: '孕中期后压迫血管影响循环' },
 ]
 </script>
 
@@ -352,9 +570,18 @@ const forbidItems = [
 .eg-current-stage.stage-early { background: linear-gradient(135deg, #f4a261, #e8835a); }
 .eg-current-stage.stage-mid { background: linear-gradient(135deg, #3a86c8, #1f6aa8); }
 .eg-current-stage.stage-late { background: linear-gradient(135deg, #7c5cbf, #5e3d9e); }
+.eg-current-stage.stage-prepartum { background: linear-gradient(135deg, #4a9b7f, #2e7d64); }
 .stage-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.75; }
 .eg-current-stage h3 { font-size: 17px; font-weight: 700; margin: 4px 0 6px; }
-.stage-desc { font-size: 13px; opacity: 0.9; margin: 0 0 10px; }
+.stage-desc { font-size: 13px; opacity: 0.9; margin: 0 0 8px; }
+.stage-goal {
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.18);
+}
 .stage-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* ── 提示框 ── */
