@@ -14,6 +14,7 @@
   --bg-tint-blue: #f4f8ff;
   --bg-tint-mint: #f1faf4;
   --bg-tint-cream: #fff9ec;
+  --bg-tint-danger: #fdf2f2;
 
   --text-color: #1f1730;
   --text-secondary: #5c5275;
@@ -85,6 +86,15 @@
   --warning-color: #f0a020;
   --error-color: #e64646;
   --info-color: #4fb6e8;
+
+  /* 语义色·文字级（ink）
+     ⚠️ 上面那组 --*-color 是**填充色**，用来画图标 / 圆点 / 竖条，对比度只需 3:1；
+     直接拿它写字不达标（如 #4fb6e8 压在 --bg-tint-blue 上只有 2 出头）。
+     浅底上的正文/标题请一律用下面这组压深后的 ink（对各自 tint 均 ≥ 4.5:1）。 */
+  --info-ink: #17709b;
+  --success-ink: #3f7f42;
+  --warning-ink: #7d4f0d;
+  --error-ink: #b32d2d;
 
   /* ============ 圆角 ============ */
   --radius-xs: 4px;
@@ -159,6 +169,7 @@ html.dark {
   --bg-tint-blue: #1c2238;
   --bg-tint-mint: #1c2b27;
   --bg-tint-cream: #2a241a;
+  --bg-tint-danger: #2b1c20;
 
   --text-color: #ece9f3;
   --text-secondary: #b6afc7;
@@ -175,6 +186,12 @@ html.dark {
   --primary-color-hover: #f7b9d4;
   --primary-color-pressed: #d8849c;
   --accent-color: #f0a6c8;
+
+  /* 深色底上的语义文字色：换成浅色，保证压在各自的 --bg-tint-* 上仍达标 */
+  --info-ink: #9ad4ef;
+  --success-ink: #93d49b;
+  --warning-ink: #f2cd7a;
+  --error-ink: #f2a0a0;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);

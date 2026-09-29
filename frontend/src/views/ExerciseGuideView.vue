@@ -416,7 +416,7 @@
 
       <!-- 运动禁忌 -->
       <n-collapse-item name="forbid" title="运动禁忌&停止信号">
-        <div style="font-weight:600;margin-bottom:8px;color:#e8627a;">出现以下症状，立即停止运动并就医：</div>
+        <div style="font-weight:600;margin-bottom:8px;color:var(--error-ink,#b32d2d);">出现以下症状，立即停止运动并就医：</div>
         <div class="signal-list">
           <n-tag v-for="s in stopSignals" :key="s" type="error" size="small" round bordered>{{ s }}</n-tag>
         </div>
@@ -542,51 +542,56 @@ const forbidItems = [
 
 <style scoped>
 .exercise-guide {
-  padding: 0 0 24px;
+  padding: 0 0 var(--space-6);
 }
 
 /* ── 头部 ── */
 .eg-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 20px 18px;
-  background: linear-gradient(135deg, #e8627a, #f4a261, #4a9b7f);
-  border-radius: 14px;
-  color: #fff;
-  margin-bottom: 16px;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  background: linear-gradient(135deg, var(--primary-600, #a83468) 0%, var(--primary-700, #862952) 100%);
+  border-radius: var(--radius-lg);
+  color: var(--text-inverse);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--glow-pink);
 }
 .eg-icon { font-size: 36px; }
 .eg-title h2 { font-size: 20px; font-weight: 700; margin: 0 0 2px; }
-.eg-title p { font-size: 13px; opacity: 0.88; margin: 0; }
+.eg-title p { font-size: 13px; color: var(--primary-100, #ffe1ee); margin: 0; }
 
-/* ── 当前阶段卡片 ── */
+/* ── 当前阶段卡片（浅底 + 阶段色竖条，与 RecordList 阶段标签同源）── */
 .eg-current-stage {
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 16px 18px;
   margin-bottom: 16px;
-  color: #fff;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--primary-color);
+  box-shadow: var(--shadow-sm);
 }
-.eg-current-stage.stage-early { background: linear-gradient(135deg, #f4a261, #e8835a); }
-.eg-current-stage.stage-mid { background: linear-gradient(135deg, #3a86c8, #1f6aa8); }
-.eg-current-stage.stage-late { background: linear-gradient(135deg, #7c5cbf, #5e3d9e); }
-.eg-current-stage.stage-prepartum { background: linear-gradient(135deg, #4a9b7f, #2e7d64); }
-.stage-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.75; }
-.eg-current-stage h3 { font-size: 17px; font-weight: 700; margin: 4px 0 6px; }
-.stage-desc { font-size: 13px; opacity: 0.9; margin: 0 0 8px; }
+.eg-current-stage.stage-early { background: var(--stage-early-bg, #fff5e8); border-left-color: var(--stage-early-color, #f29e51); }
+.eg-current-stage.stage-mid { background: var(--stage-mid-bg, #e8f5fc); border-left-color: var(--stage-mid-color, #4fb6e8); }
+.eg-current-stage.stage-late { background: var(--stage-late-bg, #fde7ed); border-left-color: var(--stage-late-color, #ec5d8a); }
+.eg-current-stage.stage-prepartum { background: var(--stage-nursing-bg, #ebf7ed); border-left-color: var(--stage-nursing-color, #5bbe70); }
+.stage-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-hint); }
+.eg-current-stage h3 { font-size: 17px; font-weight: 700; margin: 4px 0 6px; color: var(--text-color); }
+.stage-desc { font-size: 13px; color: var(--text-secondary); margin: 0 0 8px; }
 .stage-goal {
   font-size: 12.5px;
   line-height: 1.5;
   margin: 0 0 10px;
   padding: 7px 10px;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-color);
 }
 .stage-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* ── 提示框 ── */
 .eg-tip {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 14px;
   display: flex;
   gap: 8px;
@@ -595,20 +600,20 @@ const forbidItems = [
   line-height: 1.55;
   margin: 10px 0;
 }
-.eg-tip .tip-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
 .eg-tip strong { font-size: 12.5px; }
-.eg-tip-info   { background: #e8f2fb; border-left: 3px solid #3a86c8; color: #1a5276; }
-.eg-tip-warn   { background: #fff3e0; border-left: 3px solid #ff9800; color: #e65100; }
-.eg-tip-good   { background: #e8f5f0; border-left: 3px solid #4a9b7f; color: #1b5e20; }
-.eg-tip-danger { background: #fce8ec; border-left: 3px solid #e8627a; color: #a31523; }
+.eg-tip-info   { background: var(--bg-tint-blue, #f4f8ff);   border-left: 3px solid var(--info-color, #4fb6e8);    color: var(--info-ink, #17709b); }
+.eg-tip-warn   { background: var(--bg-tint-cream, #fff9ec);  border-left: 3px solid var(--warning-color, #f0a020); color: var(--warning-ink, #7d4f0d); }
+.eg-tip-good   { background: var(--bg-tint-mint, #f1faf4);   border-left: 3px solid var(--success-color, #4ea750); color: var(--success-ink, #3f7f42); }
+.eg-tip-danger { background: var(--bg-tint-danger, #fdf2f2); border-left: 3px solid var(--error-color, #e64646);   color: var(--error-ink, #b32d2d); }
 
 /* ── 运动卡片 ── */
 .eg-card {
-  background: #fafafa;
-  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   padding: 14px 16px;
   margin: 10px 0;
-  border: 1px solid #eee;
+  box-shadow: var(--shadow-sm);
 }
 .card-head {
   display: flex;
@@ -616,13 +621,12 @@ const forbidItems = [
   gap: 8px;
   margin-bottom: 8px;
 }
-.card-icon { font-size: 22px; }
-.eg-card p { font-size: 13.5px; color: #555; line-height: 1.65; margin: 0; }
+.eg-card p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.65; margin: 0; }
 .card-steps, .card-steps ol {
   margin: 8px 0 0;
   padding-left: 20px;
   font-size: 13px;
-  color: #444;
+  color: var(--text-secondary);
   line-height: 1.7;
 }
 .card-steps li, .card-steps ol li { margin-bottom: 3px; }
@@ -635,12 +639,12 @@ const forbidItems = [
   margin-top: 10px;
 }
 .step-block {
-  background: #e8f2fb;
-  border-radius: 8px;
+  background: var(--bg-tint-blue, #f4f8ff);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
   padding: 12px;
-  border: 1px solid #c5def5;
 }
-.step-block strong { font-size: 14px; color: #1f6aa8; display: block; margin-bottom: 6px; }
+.step-block strong { font-size: 14px; color: var(--info-ink, #17709b); display: block; margin-bottom: 6px; }
 .step-block ol { padding-left: 18px; margin: 0; font-size: 12.5px; line-height: 1.65; }
 .step-block li { margin-bottom: 2px; }
 
@@ -652,18 +656,19 @@ const forbidItems = [
   margin-top: 10px;
 }
 .phase-item {
-  border-radius: 10px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
   padding: 12px 14px;
-  border-left: 3px solid;
+  border-left: 3px solid var(--border-color);
 }
-.phase-item strong { font-size: 14px; display: block; margin-bottom: 4px; }
-.phase-item p { font-size: 12px; color: #666; margin: 0; line-height: 1.5; }
-.phase-item.orange { background: #fef3e8; border-color: #f4a261; }
-.phase-item.green  { background: #e8f5f0; border-color: #4a9b7f; }
-.phase-item.blue   { background: #e8f2fb; border-color: #3a86c8; }
-.phase-item.purple { background: #f0ebfb; border-color: #7c5cbf; }
-.phase-item.pink   { background: #fce8ec; border-color: #e8627a; }
-.phase-item.yellow { background: #fff8e1; border-color: #f0b429; }
+.phase-item strong { font-size: 14px; color: var(--text-color); display: block; margin-bottom: 4px; }
+.phase-item p { font-size: 12px; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+.phase-item.orange { background: var(--stage-early-bg, #fff5e8);     border-color: var(--stage-early-color, #f29e51); }
+.phase-item.yellow { background: var(--bg-tint-cream, #fff9ec);      border-color: var(--warning-color, #f0a020); }
+.phase-item.green  { background: var(--bg-tint-mint, #f1faf4);       border-color: var(--success-color, #4ea750); }
+.phase-item.blue   { background: var(--bg-tint-blue, #f4f8ff);       border-color: var(--info-color, #4fb6e8); }
+.phase-item.purple { background: var(--stage-preparing-bg, #f4f6fa); border-color: var(--accent-lilac, #b08fd6); }
+.phase-item.pink   { background: var(--stage-late-bg, #fde7ed);      border-color: var(--primary-color, #c44680); }
 
 /* ── 停止信号 ── */
 .signal-list {
@@ -679,24 +684,24 @@ const forbidItems = [
   gap: 8px;
 }
 .forbid-item {
-  background: #fce8ec;
-  border: 1px solid #f3b8c3;
-  border-radius: 8px;
+  background: var(--bg-tint-danger, #fdf2f2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   text-align: center;
 }
 .fi-icon { font-size: 24px; display: block; margin-bottom: 4px; }
-.forbid-item strong { font-size: 13px; color: #e8627a; display: block; }
-.forbid-item small { font-size: 11.5px; color: #888; display: block; margin-top: 2px; }
+.forbid-item strong { font-size: 13px; color: var(--error-ink, #b32d2d); display: block; }
+.forbid-item small { font-size: 11.5px; color: var(--text-hint); display: block; margin-top: 2px; }
 
 /* ── 底部声明 ── */
 .eg-footer {
   text-align: center;
   padding: 20px 16px;
   margin-top: 20px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-color);
   font-size: 12px;
-  color: #aaa;
+  color: var(--text-hint);
   line-height: 1.7;
 }
 .eg-footer p { margin: 2px 0; }
