@@ -21,8 +21,19 @@
       </div>
     </div>
 
-    <!-- ===== 本周变化（宝宝 / 妈妈，逐周 4~40 周） ===== -->
-    <WeeklyDevelopmentCard />
+    <!-- ===== 本周变化（简洁入口卡，摘要随当前孕周变化；详情在独立页 /weekly-detail） ===== -->
+    <router-link :to="weeklyDetailTarget" class="weekly-entry">
+      <div class="weekly-entry-head">
+        <h3>本周变化</h3>
+        <span class="weekly-entry-week" v-if="weeklyCurrentWeek">第 {{ weeklyCurrentWeek }} 周</span>
+      </div>
+      <template v-if="weeklyCurrentWeek">
+        <p class="weekly-entry-teaser"><span class="teaser-icon">👶</span>宝宝：{{ weeklyBabyTeaser }}</p>
+        <p class="weekly-entry-teaser"><span class="teaser-icon">🤰</span>妈妈：{{ weeklyMomTeaser }}</p>
+      </template>
+      <p class="weekly-entry-teaser" v-else>设置孕周后自动定位到当前周 · 点击可浏览各周变化</p>
+      <span class="weekly-entry-more">查看详情 ›</span>
+    </router-link>
 
     <!-- ===== 提醒看板（未来一个月） ===== -->
     <div class="section reminder-board">
@@ -288,7 +299,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { NInput, NButton, NTag, NDatePicker, NSelect, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useGestationalAge } from '@/composables/useGestationalAge'
-import WeeklyDevelopmentCard from '@/components/WeeklyDevelopmentCard.vue'
+import { weekBabyTeaser, weekMomTeaser } from '@/data/weekly-development'
 import { getDashboard } from '@/api/dashboard'
 import { reminderApi } from '@/api/reminder'
 import { pushApi } from '@/api/push'
@@ -317,6 +328,25 @@ const {
   trimesterText: realtimeTrimesterText,
   stageKey: realtimeStageKey,
 } = useGestationalAge()
+
+// ====== 本周变化入口卡（简洁摘要，详情页 /weekly-detail） ======
+/** 当前实际孕周（钳制 4~40）；备孕期无孕周，返回 null 显示引导文案 */
+const weeklyCurrentWeek = computed(() => {
+  const a = realtimeAge.value
+  if (!a || a.isPrePregnancy) return null
+  return Math.min(Math.max(a.weeks, 4), 40)
+})
+const weeklyDetailTarget = computed(() =>
+  weeklyCurrentWeek.value
+    ? { path: '/weekly-detail', query: { week: String(weeklyCurrentWeek.value) } }
+    : '/weekly-detail'
+)
+const weeklyBabyTeaser = computed(() =>
+  weeklyCurrentWeek.value ? weekBabyTeaser(weeklyCurrentWeek.value) : ''
+)
+const weeklyMomTeaser = computed(() =>
+  weeklyCurrentWeek.value ? weekMomTeaser(weeklyCurrentWeek.value) : ''
+)
 
 /** 倒计时标签文字（根据状态动态变化）。 */
 const countdownLabel = computed(() => {
@@ -830,6 +860,54 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   letter-spacing: 0.2px;
 }
 .meta-dot { opacity: 0.5; }
+
+/* ===== 本周变化入口卡（简洁，详情在独立页） ===== */
+.weekly-entry {
+  display: block;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-soft);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  text-decoration: none;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+.weekly-entry:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.weekly-entry-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.weekly-entry-head h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-color);
+}
+.weekly-entry-week {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+.weekly-entry-teaser {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0 0 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.teaser-icon { flex-shrink: 0; font-size: 13px; }
+.weekly-entry-more {
+  font-size: 12.5px;
+  color: var(--primary-color);
+  font-weight: 600;
+}
 
 .section {
   background: var(--bg-card, white);
