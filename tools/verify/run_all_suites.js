@@ -48,6 +48,7 @@ const SUITES = [
   [path.join(UP, 'shot_contraction_view_error.js'), '宫缩六场景不崩溃', '约 150 秒·需无头浏览器'],
   [path.join(UP, 'shot_all_pages_fuzz.js'), '全页面点击不崩溃', '约 200 秒·需无头浏览器'],
   [path.join(UP, 'shot_record_all_types_e2e.js'), '记录页全类型模拟', '约 120 秒·需无头浏览器'],
+  [path.join(UP, 'shot_plan_flow.js'), '计划全流程（今日/孕期/推送）', '约 120 秒·需无头浏览器'],
   [path.join(UP, 'e2e_video_backup.js'), '相册视频备份', ''],
   [path.join(UP, 'e2e_push_config_backup.js'), '推送配置进备份', '约 40 秒'],
   [path.join(UP, 'e2e_export_mobile.js'), '导出手机端', ''],
