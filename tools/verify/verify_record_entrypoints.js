@@ -415,6 +415,38 @@ check('AddRecordDialog 非法日期同样报错中止',
 check('AddRecordDialog 心情备注显式写入（可清空）',
   has('dialog', 'data.mood_note = formData.value.moodNote ||'), '若为条件式写入则删不掉');
 
+// —— 三处记录类型清单的「相对顺序」必须一致 ——
+// 条目数本来不同（各自职责不同：菜单 24 / 列表 26 / 弹窗 27），
+// 但**交集部分的顺序必须相同**，否则用户在三个界面看到三种排列 —— 就是「乱」的来源。
+// 2026-09-30 按「功能分组 + 常用优先」统一过一次，这条断言防止再次分叉。
+function typeKeys(text, declRe, keyRe) {
+  const m = text.match(declRe);
+  if (!m) return null;
+  const start = m.index + m[0].length;
+  const end = text.indexOf('\n]', start);
+  if (end < 0) return null;
+  return [...text.slice(start, end).matchAll(keyRe)].map((x) => x[1]);
+}
+const KEY_Q = typeKeys(src.view, /const quickTypes = \[/, /value: '([a-z_]+)'/g);
+const KEY_C = typeKeys(src.list, /const allCategories[^=]*= \[/, /type: '([a-z_]+)'/g);
+const KEY_T = typeKeys(src.dialog, /const recordTypes = \[/, /value: '([a-z_]+)'/g);
+check(`能从三处解析出类型清单（菜单/列表/弹窗 = ${(KEY_Q || []).length}/${(KEY_C || []).length}/${(KEY_T || []).length}）`,
+  (KEY_Q || []).length >= 20 && (KEY_C || []).length >= 20 && (KEY_T || []).length >= 20);
+if (KEY_Q && KEY_C && KEY_T) {
+  const common = KEY_Q.filter((k) => KEY_C.includes(k) && KEY_T.includes(k));
+  const only = (arr) => arr.filter((k) => common.includes(k));
+  const a = only(KEY_Q), b = only(KEY_C), c = only(KEY_T);
+  check(`三处共有的 ${common.length} 个类型相对顺序一致`,
+    JSON.stringify(a) === JSON.stringify(b) && JSON.stringify(a) === JSON.stringify(c),
+    `菜单[${a.slice(0, 6)}] 列表[${b.slice(0, 6)}] 弹窗[${c.slice(0, 6)}]`);
+  // 「常用优先」：核心体征必须排在最前
+  const HIGH = ['weight', 'blood_pressure', 'fetal_movement', 'contraction', 'fetal_heart_rate'];
+  check('三处的前 5 项都是高频核心体征（体重/血压/胎动/宫缩/胎心）',
+    JSON.stringify(a.slice(0, 5)) === JSON.stringify(HIGH) &&
+    JSON.stringify(c.slice(0, 5)) === JSON.stringify(HIGH),
+    `实际 菜单[${a.slice(0, 5)}] 弹窗[${c.slice(0, 5)}]`);
+}
+
 // —— 时间选择器的空值必须是 null，不能是空字符串 ——
 // naive-ui 的 n-time-picker 绑 formatted-value，收到 '' 会把它当日期解析并抛
 // `RangeError: Invalid time value` ⇒ 被 App.vue 错误边界接住 ⇒ 整页「这个页面出错了」。
