@@ -41,7 +41,17 @@ import AppIcon from '@/components/common/AppIcon.vue'
 const props = defineProps<{
   date: string
   records?: any[]
+  /** 「计划」类型的待办（reminder_type='plan'）。计划存在待办表里而不是当天记录里：
+   *  记录一天一条放不下多个时间点的安排，待办一条一记录且已在推送链路中。 */
+  plans?: any[]
 }>()
+
+/** 选中日期当天的计划（可能多条，按时间排序） */
+const dayPlans = computed(() => {
+  const list = (props.plans || []).filter((p: any) => p.trigger_date === props.date)
+  return list.slice().sort((a: any, b: any) =>
+    String(a.trigger_time || '99:99').localeCompare(String(b.trigger_time || '99:99')))
+})
 
 const emit = defineEmits<{
   'add': []
@@ -84,6 +94,10 @@ const record = computed(() => {
 type DisplayCategory = CategoryDef & { hasData: boolean }
 
 function onCategoryClick(cat: DisplayCategory) {
+  // 「计划」存在待办表里（不在当天记录），且一天可以有多条 ⇒ 点击一律走「添加计划」小弹窗。
+  // 不能走通用大弹窗：那读的是当天记录，里面根本没有计划数据（会打开一张空表单）。
+  if (cat.type === 'plan') { emit('add-type', 'plan'); return }
+
   if (cat.hasData) {
     // 有数据 → 编辑（使用大弹窗）
     emit('edit', { type: cat.type, record: record.value })
@@ -176,7 +190,8 @@ function hasDataForType(type: string): boolean {
     case 'habit': return !!r.habit_text
     case 'supplement': return !!r.supplement_record
     case 'intimacy': return !!(r.intimacy_record || r.intimacy_note)
-    case 'plan': return !!r.plan_text
+    // 计划现在存在「待办」表里（见 dayPlans）；历史数据仍可能在当天记录的 plan_text 里
+  case 'plan': return !!r.plan_text || dayPlans.value.length > 0
     default: return false
   }
 }
@@ -269,8 +284,18 @@ function getPreview(type: string): string {
       return getSupplementPreview()
     case 'intimacy':
       return getIntimacyPreview()
-    case 'plan':
+    case 'plan': {
+      // 优先展示当天的计划（待办）：带上时间，多条时给个总数
+      if (dayPlans.value.length > 0) {
+        const first = dayPlans.value[0]
+        const time = first.trigger_time ? String(first.trigger_time).slice(0, 5) + ' ' : ''
+        const title = String(first.title || '').slice(0, 22)
+        const more = dayPlans.value.length > 1 ? ` 等 ${dayPlans.value.length} 项` : ''
+        return time + title + more
+      }
+      // 历史数据：计划曾写在当天记录的 plan_text 里
       return r.plan_text ? r.plan_text.slice(0, 30) + (r.plan_text.length > 30 ? '…' : '') : ''
+    }
     default:
       return ''
   }

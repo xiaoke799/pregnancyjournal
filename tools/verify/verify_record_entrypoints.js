@@ -260,7 +260,14 @@ out.push('【死字段检查：daily_record 的每个用户列都得有「写入
   // 这一列从此不再写入，但**只承载历史数据** —— 读侧仍有回退链
   // （AddRecordDialog：`r.note || r.intimacy_note`；RecordList hasData：`r.intimacy_record || r.intimacy_note`），
   // 所以既不能删列，也不该被当成"死字段"。
-  const KNOWN_UNUSED = ['intimacy_note'];
+  //
+  // plan_text / plan_date（2026-09-30 登记）：计划改为存进「待办」（reminder 表）——
+  // 当天记录**一天一条**，放不下同一天多个时间点的安排（写了 9 点产检就写不下下午散步）；
+  // 待办一条一记录、支持任意多条，而且**本来就在推送链路里**（push-engine 扫 reminder 表），
+  // 存进去就自动获得「到点提醒」，不必为计划再单做一套推送。
+  // 这两列从此不再写入，但**只承载历史计划**：读侧仍有回退（RecordList 在当天没有待办计划时
+  // 回退显示 `r.plan_text`）⇒ 既不能删列，也不该被当成"死字段"。
+  const KNOWN_UNUSED = ['intimacy_note', 'plan_text', 'plan_date'];
 
   const dead = drCols.filter((c) => !INTERNAL.includes(c) && !KNOWN_UNUSED.includes(c) && !hasWriter(c));
   check(`daily_record 的 ${drCols.length} 列中，没有「谁也写不到」的死字段`,
@@ -271,6 +278,9 @@ out.push('【死字段检查：daily_record 的每个用户列都得有「写入
   check('intimacy_note 的豁免成立：读侧仍保留回退链（老数据仍可见）',
     /r\.note \|\| r\.intimacy_note/.test(src.dialog) && /r\.intimacy_record \|\| r\.intimacy_note/.test(src.list),
     '读侧回退链被删了 ⇒ 应改为真删列，而不是继续豁免');
+  check('plan_text 的豁免成立：读侧仍能显示历史计划',
+    /r\.plan_text/.test(src.list),
+    'RecordList 里读历史 plan_text 的回退被删了 ⇒ 应改为真删列，而不是继续豁免');
 }
 
 // ============ INSERT 列 ↔ 参数「逐位对应」（历史上出过生产事故）============
@@ -460,8 +470,16 @@ check('宫缩开始/结束时间初值为 null（不是空字符串）',
 check('宫缩回填前显式清成 null（避免残留空字符串）',
   /formData\.value\.contractionStart = null/.test(D_NOCOMMENT),
   '只在匹配到时间时才赋值，未匹配时应保持 null');
-check('n-time-picker 的 formatted-value 只绑这两个字段（新增时要同样用 null）',
-  count('dialog', /<n-time-picker/g) === 2, '实得 ' + count('dialog', /<n-time-picker/g) + ' 个');
+// 所有 n-time-picker 绑定的字段，初值都必须是 null（空字符串会让 naive-ui 抛
+// `Invalid time value` ⇒ 整页崩）。新增 time-picker 时照此办理，不必再改本断言。
+{
+  const tpVars = [...D_NOCOMMENT.matchAll(/<n-time-picker[^>]*v-model:formatted-value="formData\.([a-zA-Z]+)"/g)]
+    .map((m) => m[1]);
+  const badTp = tpVars.filter((v) => !new RegExp(v + ':\\s*null as string \\| null').test(D_NOCOMMENT));
+  check(`大弹窗 ${tpVars.length} 个 time-picker 绑定字段的初值都是 null`,
+    tpVars.length >= 3 && badTp.length === 0,
+    badTp.length ? '初值不是 null 的: ' + badTp.join('、') : '只解析到 ' + tpVars.length + ' 个（少于 3 说明绑定丢了）');
+}
 // n-date-picker 的 formatted-value 同样怕空字符串（抛 `Cannot read properties of undefined
 // (reading 'peers')`）。大弹窗里绑它的字段只有 recordDate / planDate —— 两者都必须用 null。
 check('计划日期初值为 null 且回填不留空字符串',

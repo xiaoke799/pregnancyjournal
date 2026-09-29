@@ -409,6 +409,11 @@
             <label>计划日期（可选）</label>
             <n-date-picker v-model:formatted-value="formData.planDate" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
           </div>
+          <div class="form-group">
+            <label>几点执行（可选）</label>
+            <n-time-picker v-model:formatted-value="formData.planTime" format="HH:mm" placeholder="不填则只按日期提醒" style="width: 100%" />
+          </div>
+          <div class="form-hint">计划会加到「今日计划 / 孕期计划」里，到点按你配置的渠道推送提醒</div>
         </template>
 
         <!-- 日记 - Tiptap 富文本编辑器 -->
@@ -501,7 +506,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
 import {
-  NModal, NButton, NButtonGroup, NInput, NInputNumber, NDatePicker,
+  NModal, NButton, NButtonGroup, NInput, NInputNumber, NDatePicker, NTimePicker,
   NRadioGroup, NRadioButton, NSelect, useMessage,
 } from 'naive-ui'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
@@ -509,6 +514,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import { dailyRecordApi } from '@/api/daily-record'
+import { reminderApi } from '@/api/reminder'
 import client from '@/api/client'
 import { getApiBase } from '@/utils/api-base'
 import { MOOD_OPTIONS as moodOptions, SLEEP_QUALITY_OPTIONS as sleepQualityOptions, normalizeSleepQuality, type SleepQuality, isValidDateStr, normalizeContractionPain } from '@/utils/format'
@@ -700,6 +706,7 @@ const formData = ref({
   //    `Cannot read properties of undefined (reading 'peers')`，同样被错误边界接住。
   //    无值一律用 null。
   planDate: null as string | null,
+  planTime: null as string | null, // 同 planDate：空字符串会让 n-time-picker 崩，必须用 null
   // 好习惯
   habitText: '',
   // 日记（富文本 HTML）
@@ -1152,11 +1159,34 @@ async function saveRecord() {
         if (!formData.value.fetalHeartRate) { message.warning('请输入胎心率'); saving.value = false; return }
         data.fetal_heart_rate = formData.value.fetalHeartRate
         break
-      case 'plan':
+      case 'plan': {
         if (!formData.value.planText) { message.warning('请输入计划内容'); saving.value = false; return }
-        data.plan_text = formData.value.planText
-        if (formData.value.planDate) data.plan_date = formData.value.planDate
-        break
+        if (!props.pregnancyId) { message.error('缺少孕期信息'); saving.value = false; return }
+        // 🔴 计划写进「待办」（reminder），不再写进当天记录：
+        //    记录是**一天一条**，同一天多个时间点的安排放不下；待办一条一记录、
+        //    支持任意多条且**已在推送链路里**（push-engine 扫 reminder 表），
+        //    存进去就自动有「到点提醒」。详见 RecordView.savePlan 的说明。
+        const pres: any = await reminderApi.create({
+          pregnancy_id: props.pregnancyId,
+          title: formData.value.planText,
+          trigger_date: formData.value.planDate || formData.value.recordDate,
+          trigger_time: formData.value.planTime || null,
+          reminder_type: 'plan',
+          priority: 'medium',
+          is_enabled: 1,
+        })
+        if (pres.code !== 0) {
+          message.error(pres.message || '保存失败，请重试')
+          saving.value = false
+          return
+        }
+        visible.value = false
+        resetForm()
+        emit('saved')
+        message.success('已添加计划')
+        saving.value = false
+        return   // 不走下面的 daily_record 写入
+      }
       case 'habit':
         if (!formData.value.habitText) { message.warning('请输入好习惯内容'); saving.value = false; return }
         data.habit_text = formData.value.habitText
@@ -1262,6 +1292,7 @@ function resetForm() {
     fetalHeartRate: null,
     planText: '',
     planDate: null as string | null, // 无值必须 null，不能是 ''（见 formData 定义处说明）
+    planTime: null as string | null, // 同 planDate：空字符串会让 n-time-picker 崩，必须用 null
     habitText: '',
     waterIntake: null,
     stoolCount: null,
