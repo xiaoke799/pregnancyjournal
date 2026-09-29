@@ -89,7 +89,7 @@
       <!-- 睡眠 -->
       <MetricCard v-if="hasData('sleep')" title="睡眠时长" unit="小时" color="#8b5cf6"
         :dates="chartDates" :values="chartValues('sleep_hours')"
-        :table-data="tableData('sleep', 'sleep_hours', { extra: 'sleep_quality', extraLabel: '质量' })" />
+        :table-data="tableData('sleep', 'sleep_hours', { extra: 'sleep_quality', extraLabel: '质量', extraFormat: (r: any) => sleepQualityLabel(r.sleep_quality) })" />
 
       <!-- 饮水 -->
       <MetricCard v-if="hasData('water')" title="饮水量" unit="ml" color="#3b82f6"
@@ -119,6 +119,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { dailyRecordApi } from '@/api/daily-record'
 import dayjs from 'dayjs'
+import { sleepQualityLabel } from '@/utils/format'
 import MetricCard from './MetricCard.vue'
 
 /**
@@ -300,6 +301,12 @@ function tableData(
     cols?: Array<{ key: string; label: string }>
     extra?: string
     extraLabel?: string
+    /**
+     * 附加列的展示格式化。
+     * ⚠️ 必须给「取值域会漂移」的列用它：`sleep_quality` 老数据是中文（好/一般/差）、
+     *    新数据是英文（good/fair/poor），直接渲染会在同一张表里中英混排。
+     */
+    extraFormat?: (r: any) => string
     /** 备注列改成取该字段（如宫缩的疼痛程度），与用户自己的备注合并显示 */
     noteField?: string
   }
@@ -317,7 +324,7 @@ function tableData(
       return {
         date: dayjs(r.record_date).format('MM-DD'),
         value: opts?.format ? opts.format(r) : (r[mainField] ?? '--'),
-        extra: opts?.extra ? (r[opts.extra] ?? '') : undefined,
+        extra: opts?.extra ? (opts?.extraFormat ? opts.extraFormat(r) : (r[opts.extra] ?? '')) : undefined,
         note: parts.length ? parts.join(' · ') : undefined,
       }
     })

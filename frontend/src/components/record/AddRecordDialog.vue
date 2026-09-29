@@ -160,8 +160,9 @@
             <div class="form-group flex-1">
               <label>疼痛程度</label>
               <n-select v-model:value="formData.contractionPain" :options="[
+                { label: '无感', value: '无感' },
                 { label: '轻微', value: '轻微' },
-                { label: '中度', value: '中度' },
+                { label: '明显', value: '明显' },
                 { label: '剧烈', value: '剧烈' },
               ]" placeholder="选择疼痛程度" style="width: 100%" />
             </div>
@@ -329,6 +330,7 @@
             <n-select v-model:value="formData.uricAcidPeriod" :options="[
               { label: '空腹', value: '空腹' },
               { label: '餐后2小时', value: '餐后2小时' },
+              { label: '随机', value: '随机' },
             ]" placeholder="选择时段" style="width: 100%" />
           </div>
           <div class="form-hint">女性正常范围155-357 μmol/L</div>
@@ -509,7 +511,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { dailyRecordApi } from '@/api/daily-record'
 import client from '@/api/client'
 import { getApiBase } from '@/utils/api-base'
-import { MOOD_OPTIONS as moodOptions } from '@/utils/format'
+import { MOOD_OPTIONS as moodOptions, SLEEP_QUALITY_OPTIONS as sleepQualityOptions, normalizeSleepQuality, type SleepQuality, isValidDateStr, normalizeContractionPain } from '@/utils/format'
 import dayjs from 'dayjs'
 import AppIcon from '@/components/common/AppIcon.vue'
 
@@ -582,12 +584,8 @@ const supplementOptions = [
   '益生菌', '蛋白粉', '燕窝', '鱼胶',
 ]
 
-const sleepQualityOptions = [
-  { value: 'good', label: '好' },
-  { value: 'fair', label: '一般' },
-  { value: 'poor', label: '差' },
-]
-
+// 睡眠质量选项统一取自 utils/format 的唯一真源（值用规范英文 good/fair/poor，
+// 与小弹窗写入的是同一套取值 —— 以前两边各写一份，导致同一个字段两套取值域）。
 const dietMealOptions = [
   { value: '早餐', label: '早餐' },
   { value: '午餐', label: '午餐' },
@@ -665,7 +663,7 @@ const formData = ref({
   // 睡眠（入/起床时间）
     sleepBedtime: '' as string,
     sleepWaketime: '' as string,
-    sleepQuality: 'fair' as 'good' | 'fair' | 'poor',
+    sleepQuality: 'fair' as SleepQuality,
   // 饮水
   waterIntake: null as number | null,
   // 排便
@@ -775,7 +773,9 @@ watch(() => props.show, (val) => {
           break
         case 'contraction':
           formData.value.contractionInterval = r.contraction_interval ?? null
-          formData.value.contractionPain = r.contraction_pain || null
+          // 历史取值「中度」已被移出选项（取值域 2026-09-29 与小弹窗统一），
+          // 不归一的话老记录回填进下拉框会显示成一串裸文本
+          formData.value.contractionPain = normalizeContractionPain(r.contraction_pain) || null
           if (r.note) {
             const m = r.note.match(/(\d{2}:\d{2})~(\d{2}:\d{2})/)
             if (m) {
@@ -818,10 +818,8 @@ watch(() => props.show, (val) => {
           formData.value.exerciseDuration = r.exercise_duration ?? null
           break
         case 'sleep':
-          // 兼容小弹窗保存的中文质量值（好/一般/差）→ 英文（good/fair/poor）
-          const sqMap2: Record<string, string> = { '好': 'good', '一般': 'fair', '差': 'poor' }
-          const mappedQ2 = sqMap2[String(r.sleep_quality)] || r.sleep_quality
-          formData.value.sleepQuality = (mappedQ2 || 'fair') as 'good' | 'fair' | 'poor'
+          // 历史中文值（好/一般/差）由 normalizeSleepQuality 统一归一，不用在这里再抄一份映射
+          formData.value.sleepQuality = (normalizeSleepQuality(r.sleep_quality) || 'fair') as SleepQuality
           // 尝试从备注中解析入/起床时间（格式如 "22:00~07:00"）
           if (r.note) {
             const m = r.note.match(/(\d{1,2}:\d{2})[~\-～](\d{1,2}:\d{2})/)
@@ -862,9 +860,12 @@ watch(() => props.show, (val) => {
           } catch { formData.value.supplementItems = [] }
           break
         case 'intimacy':
-          formData.value.intimacyNote = r.intimacy_note || r.intimacy_record || ''
-          // intimacy_record 存储的是 "已记录" 或备注文本
-          formData.value.intimacyHappened = !!(r.intimacy_record || r.intimacy_note)
+          // 🔴 备注只从 note 取（与小弹窗一致）。
+          //    以前是 `r.intimacy_note || r.intimacy_record || ''`，而记录页小弹窗把
+          //    intimate_record 写成结构化 JSON ⇒ 备注框里会原样出现一串
+          //    {"count":1,"has_protection":"yes",...}，保存后又把这串 JSON 写回库里。
+          formData.value.intimacyNote = r.note || r.intimacy_note || ''
+          formData.value.intimacyHappened = !!(r.intimacy_record || r.intimacy_note || r.note)
           break
         case 'habit':
           formData.value.habitText = r.habit_text || ''
@@ -980,11 +981,18 @@ async function saveRecord() {
 
   saving.value = true
   try {
-    // 强制确保 record_date 为有效 YYYY-MM-DD 格式
-    let rawDate = formData.value.recordDate
-    const recordDate = (rawDate && dayjs(rawDate, 'YYYY-MM-DD', true).isValid())
-      ? dayjs(rawDate).format('YYYY-MM-DD')
-      : dayjs().format('YYYY-MM-DD')
+    // record_date 必须是有效日期；为空才落到今天。
+    // ⚠️ 以前是「非法也默默改成今天」—— 选错日期时数据会悄悄落到今天，用户看不出来。
+    // 🔴 校验必须用共享的 `isValidDateStr()`：全项目没有 `dayjs.extend(customParseFormat)`，
+    //    `dayjs(x,'YYYY-MM-DD',true)` 的严格模式**不生效**（会溢出进位成另一个日期）。见 utils/format。
+    const rawDate = formData.value.recordDate
+    if (rawDate && !isValidDateStr(rawDate)) {
+      message.error('日期无效，请重新选择日期')
+      saving.value = false
+      return
+    }
+    // 已通过校验 ⇒ 字符串本身就是标准的 YYYY-MM-DD，无需再交给 dayjs 格式化一遍
+    const recordDate = rawDate ? String(rawDate) : dayjs().format('YYYY-MM-DD')
     const data: any = {
       pregnancy_id: props.pregnancyId,
       record_date: recordDate,
@@ -1083,7 +1091,14 @@ async function saveRecord() {
         // - sleep 类型：存 "22:00~07:00" 格式的时间范围，编辑时正则解析回填 bedtime/waketime
         // - diary 类型：存 Tiptap 富文本 HTML 内容（日记无独立 content 字段）
         // - 其他类型不使用 note 字段
-        if (formData.value.sleepBedtime && formData.value.sleepWaketime) {
+        //
+        // 🔴 这里曾经**无条件覆盖**：小弹窗把 note 当用户备注（如「起夜两次」），
+        //    大弹窗又把它当时间范围 ⇒ 编辑睡眠时填一下起止时间，用户的备注就被静默吃掉
+        //    （记录列表也不显示 note，用户完全看不出来）。
+        //    现在只在「本来没有备注」或「备注本身就是时间范围」时才写，用户备注一律保留。
+        const prevNote = String((props.editRecord && props.editRecord.note) || '').trim()
+        const prevIsRange = /^\d{1,2}:\d{2}\s*[~\-～]\s*\d{1,2}:\d{2}$/.test(prevNote)
+        if (formData.value.sleepBedtime && formData.value.sleepWaketime && (prevNote === '' || prevIsRange)) {
           data.note = `${formData.value.sleepBedtime}~${formData.value.sleepWaketime}`
         }
         break
@@ -1104,13 +1119,20 @@ async function saveRecord() {
       case 'supplement':
         data.supplement_record = JSON.stringify(formData.value.supplementItems.map(s => ({ name: s })))
         break
-      case 'intimacy':
-        data.intimacy_record = formData.value.intimacyHappened ? (formData.value.intimacyNote || '已记录') : ''
-        data.intimacy_note = formData.value.intimacyNote || (formData.value.intimacyHappened ? '已记录' : '')
+      case 'intimacy': {
+        // 保留小弹窗写入的结构化数据（次数 / 是否避孕）——「是否发生 + 备注」两个输入
+        // 表达不了这些信息，以前编辑一次就被 "已记录" 或备注文本覆盖掉了。
+        const prevIntimacy = props.editRecord && props.editRecord.intimacy_record
+        data.intimacy_record = formData.value.intimacyHappened ? (prevIntimacy || '已记录') : ''
+        // 备注统一存 note（与小弹窗一致）；intimacy_note 不再写入，留给历史数据
+        data.note = formData.value.intimacyNote || ''
         break
+      }
       case 'mood':
         data.mood = String(formData.value.moodValue ?? 3)
-        if (formData.value.moodNote) data.mood_note = formData.value.moodNote
+        // 显式写入（空串=清空）。moodNote 已在上面的回填逻辑里从 r.mood_note 预填，
+        // 所以不会因为"只想改个心情"就把之前写的心情备注抹掉。
+        data.mood_note = formData.value.moodNote || ''
         break
       case 'fetal_heart_rate':
         if (!formData.value.fetalHeartRate) { message.warning('请输入胎心率'); saving.value = false; return }
@@ -1212,7 +1234,7 @@ function resetForm() {
     // 睡眠（入/起床时间）
     sleepBedtime: '',
     sleepWaketime: '',
-    sleepQuality: 'fair' as 'good' | 'fair' | 'poor',
+    sleepQuality: 'fair' as SleepQuality,
     bodyTemperature: null,
     hcgValue: null,
     hcgWeeks: null as number | null,

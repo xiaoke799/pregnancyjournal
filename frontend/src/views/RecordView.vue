@@ -86,7 +86,7 @@
           <n-input-number v-model:value="weightForm.value" :min="30" :max="200" :step="0.1" placeholder="请输入体重" style="width: 100%" />
         </div>
         <div class="qf-group">
-          <label>备注（可选）</label>
+          <label>当天备注（可选）</label>
           <n-input v-model:value="weightForm.note" placeholder="可选" />
         </div>
       </div>
@@ -121,7 +121,7 @@
           </div>
         </div>
         <div class="qf-group">
-          <label>备注（可选）</label>
+          <label>当天备注（可选）</label>
           <n-input v-model:value="bpForm.note" placeholder="可选" />
         </div>
       </div>
@@ -158,7 +158,7 @@
           <n-input-number v-model:value="glucoseForm.value" :min="0" :max="30" :step="0.1" placeholder="请输入" style="width: 100%" />
         </div>
         <div class="qf-group">
-          <label>备注（可选）</label>
+          <label>当天备注（可选）</label>
           <n-input v-model:value="glucoseForm.note" placeholder="可选" />
         </div>
       </div>
@@ -188,7 +188,7 @@
         </div>
         <div class="form-hint-text">正常范围：110-160 bpm</div>
         <div class="qf-group">
-          <label>备注（可选）</label>
+          <label>当天备注（可选）</label>
           <n-input v-model:value="fhrForm.note" placeholder="可选" />
         </div>
       </div>
@@ -226,7 +226,7 @@
           </n-radio-group>
         </div>
         <div class="qf-group">
-          <label>备注（可选）</label>
+          <label>当天备注（可选）</label>
           <n-input v-model:value="stoolForm.note" placeholder="可选" />
         </div>
       </div>
@@ -268,31 +268,6 @@
       <template #action>
         <n-button @click="showMoodModal = false">取消</n-button>
         <n-button type="primary" :loading="saving" @click="saveMood">保存</n-button>
-      </template>
-    </n-modal>
-
-    <!-- 日记弹窗 -->
-    <n-modal
-      v-model:show="showNoteModal"
-      preset="card"
-      title="写日记"
-      style="max-width: 480px; width: 94vw;"
-      :mask-closable="true"
-      @after-leave="resetNoteForm"
-    >
-      <div class="quick-form">
-        <div class="qf-group">
-          <label>日期</label>
-          <n-date-picker v-model:formatted-value="noteForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
-        </div>
-        <div class="qf-group">
-          <label>日记内容</label>
-          <n-input v-model:value="noteForm.content" type="textarea" :rows="5" placeholder="记录今天的感受..." />
-        </div>
-      </div>
-      <template #action>
-        <n-button @click="showNoteModal = false">取消</n-button>
-        <n-button type="primary" :loading="saving" @click="saveNote">保存</n-button>
       </template>
     </n-modal>
 
@@ -383,12 +358,53 @@
       </template>
     </n-modal>
 
+    <!-- 用药弹窗 -->
+    <!-- ⚠️ 这个入口曾经整个丢失：`medication` 有列、有大弹窗保存分支、有导出标签，
+         但顶部「＋」菜单、记录列表、openQuickAdd 三处都没有它 —— 于是用户根本没法记录用药。
+         成因是「＋」从「通用大弹窗」改成「每类专属小弹窗」时漏掉了这一类。 -->
+    <n-modal
+      v-model:show="showMedicationModal"
+      preset="card"
+      title="记录用药"
+      style="max-width: 420px; width: 92vw;"
+      :mask-closable="true"
+      @after-leave="resetMedicationForm"
+    >
+      <div class="quick-form">
+        <div class="qf-group">
+          <label>日期</label>
+          <n-date-picker v-model:formatted-value="medForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
+        </div>
+        <div class="qf-group">
+          <label>药品名称</label>
+          <n-input v-model:value="medForm.name" placeholder="如：叶酸片、对乙酰氨基酚" />
+        </div>
+        <div class="qf-group">
+          <label>剂量</label>
+          <n-input v-model:value="medForm.dosage" placeholder="如：500mg、1 片" />
+        </div>
+        <div class="qf-group">
+          <label>服用频次</label>
+          <n-input v-model:value="medForm.frequency" placeholder="如：一日三次、按需" />
+        </div>
+        <div class="form-hint-text">孕期用药前请先咨询医生或药师；已确诊疾病需长期服药的，不要自行停药或减量</div>
+        <div class="qf-group">
+          <label>当天备注（可选）</label>
+          <n-input v-model:value="medForm.note" placeholder="如：医生开的、饭后服用" />
+        </div>
+      </div>
+      <template #action>
+        <n-button @click="showMedicationModal = false">取消</n-button>
+        <n-button type="primary" :loading="saving" @click="saveMedication">保存</n-button>
+      </template>
+    </n-modal>
+
     <!-- 体温弹窗 -->
     <n-modal v-model:show="showTempModal" preset="card" title="记录体温" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetTempForm">
       <div class="quick-form">
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="tempForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>体温 (°C)</label><n-input-number v-model:value="tempForm.value" :min="35" :max="42" :step="0.1" placeholder="36.5" style="width:100%" /></div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="tempForm.note" placeholder="可选" /></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="tempForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showTempModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveTemp">保存</n-button></template>
     </n-modal>
@@ -401,8 +417,8 @@
           <div class="qf-group flex1"><label>入睡时间</label><n-select v-model:value="sleepForm.bedtime" :options="timeOptions" placeholder="选择" filterable style="width:100%" /></div>
           <div class="qf-group flex1"><label>起床时间</label><n-select v-model:value="sleepForm.waketime" :options="timeOptions" placeholder="选择" filterable style="width:100%" /></div>
         </div>
-        <div class="qf-group"><label>睡眠质量</label><n-radio-group v-model:value="sleepForm.quality" size="small"><n-radio-button value="差">差</n-radio-button><n-radio-button value="一般">一般</n-radio-button><n-radio-button value="好">好</n-radio-button></n-radio-group></div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="sleepForm.note" placeholder="如：起夜几次、做梦等" /></div>
+        <div class="qf-group"><label>睡眠质量</label><n-radio-group v-model:value="sleepForm.quality" size="small"><n-radio-button v-for="q in sleepQualityOptions" :key="q.value" :value="q.value">{{ q.label }}</n-radio-button></n-radio-group></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="sleepForm.note" placeholder="如：起夜几次、做梦等" /></div>
       </div>
       <template #action><n-button @click="showSleepModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveSleep">保存</n-button></template>
     </n-modal>
@@ -413,7 +429,7 @@
         <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="waterForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
         <div class="qf-group"><label>饮水量 (ml)</label><n-input-number v-model:value="waterForm.value" :min="0" :max="5000" :step="50" placeholder="今日总饮水量" style="width:100%" /></div>
         <div class="form-hint-text">建议孕期每日饮水 1700-2300ml</div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="waterForm.note" placeholder="可选" /></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="waterForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showWaterModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveWater">保存</n-button></template>
     </n-modal>
@@ -437,7 +453,7 @@
           <div class="qf-group flex1"><label>时长(分钟)</label><n-input-number v-model:value="exerciseForm.duration" :min="0" :max="300" :step="5" placeholder="分钟" style="width:100%" /></div>
         </div>
         <div class="qf-group"><label>强度感受</label><n-radio-group v-model:value="exerciseForm.intensity" size="small"><n-radio-button value="轻松">轻松</n-radio-button><n-radio-button value="中等">中等</n-radio-button><n-radio-button value="较累">较累</n-radio-button></n-radio-group></div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="exerciseForm.note" placeholder="可选" /></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="exerciseForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showExerciseModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveExercise">保存</n-button></template>
     </n-modal>
@@ -451,7 +467,7 @@
           <div class="qf-group flex1"><label>用时(分钟)</label><n-input-number v-model:value="fmForm.duration" :min="0" :max="180" :step="5" placeholder="分钟" style="width:100%" /></div>
         </div>
         <div class="form-hint-text">正常胎动：每小时≥3次，每天累计10次以上</div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="fmForm.note" placeholder="可选" /></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="fmForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showFmModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveFm">保存</n-button></template>
     </n-modal>
@@ -465,7 +481,7 @@
           <div class="qf-group flex1"><label>间隔时间(分钟)</label><n-input-number v-model:value="contrForm.interval" :min="0" :max="60" :step="0.5" placeholder="分钟" style="width:100%" /></div>
         </div>
         <div class="qf-group"><label>疼痛程度</label><n-radio-group v-model:value="contrForm.pain" size="small"><n-radio-button value="无感">无感</n-radio-button><n-radio-button value="轻微">轻微</n-radio-button><n-radio-button value="明显">明显</n-radio-button><n-radio-button value="剧烈">剧烈</n-radio-button></n-radio-group></div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="contrForm.note" placeholder="可选" /></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="contrForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showContrModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveContr">保存</n-button></template>
     </n-modal>
@@ -486,7 +502,7 @@
         <div class="qf-group"><label>次数</label><n-input-number v-model:value="intimacyForm.count" :min="0" :max="10" placeholder="次数" style="width:100%" /></div>
         <div class="qf-group"><label>是否有避孕措施</label><n-radio-group v-model:value="intimacyForm.hasProtection" size="small"><n-radio-button value="yes">有措施</n-radio-button><n-radio-button value="no">无措施</n-radio-button></n-radio-group></div>
         <div class="qf-group" v-if="intimacyForm.hasProtection === 'yes'"><label>措施类型</label><n-radio-group v-model:value="intimacyForm.protectionType" size="small"><n-radio-button value="condom">避孕套</n-radio-button><n-radio-button value="pill">口服避孕药</n-radio-button><n-radio-button value="other">其他</n-radio-button></n-radio-group></div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="intimacyForm.note" placeholder="可选" /></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="intimacyForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showIntimacyModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveIntimacy">保存</n-button></template>
     </n-modal>
@@ -498,7 +514,7 @@
         <div class="qf-group"><label>HCG 值 (mIU/mL)</label><n-input-number v-model:value="hcgForm.value" :min="0" :max="1000000" :step="100" placeholder="如：50000" style="width:100%" /></div>
         <div class="qf-group"><label>孕周（可选，用于参考范围）</label><n-input-number v-model:value="hcgForm.weeks" :min="3" :max="15" :step="1" placeholder="如：6" style="width:100%" /></div>
         <div class="form-hint-text">孕3-4周: 50-500 | 孕4-5周: 100-5000 | 孕5-6周: 1000-50000 | 孕6-8周达峰值后逐渐下降</div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="hcgForm.note" placeholder="如：翻倍情况、医生建议等" /></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="hcgForm.note" placeholder="如：翻倍情况、医生建议等" /></div>
       </div>
       <template #action><n-button @click="showHcgModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveHcg">保存</n-button></template>
     </n-modal>
@@ -512,7 +528,7 @@
           <div class="qf-group flex1"><label>测量时段</label><n-select v-model:value="uaForm.period" :options="uaPeriodOptions" placeholder="选择" style="width:100%" /></div>
         </div>
         <div class="form-hint-text">正常参考值：非孕期 150-360 μmol/L；孕期可能略高，>420需关注</div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="uaForm.note" placeholder="如：是否空腹、医生建议等" /></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="uaForm.note" placeholder="如：是否空腹、医生建议等" /></div>
       </div>
       <template #action><n-button @click="showUaModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveUa">保存</n-button></template>
     </n-modal>
@@ -525,12 +541,152 @@
         <div class="qf-group"><label>腰围 (cm)</label><n-input-number v-model:value="waistForm.value" :min="40" :max="200" :step="0.1" placeholder="如：85" style="width:100%" /></div>
         <div class="qf-group"><label>臀围 (cm)</label><n-input-number v-model:value="waistForm.hip" :min="60" :max="230" :step="0.1" placeholder="如：95" style="width:100%" /></div>
         <div class="form-hint-text">只填其中一两项也可以；建议固定时间（如晨起空腹）测量，便于前后对比</div>
-        <div class="qf-group"><label>备注（可选）</label><n-input v-model:value="waistForm.note" placeholder="可选" /></div>
+        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="waistForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showWaistModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveWaist">保存</n-button></template>
     </n-modal>
 
-    <!-- 编辑/添加通用大弹窗（photo等无独立小弹窗的类型走这里） -->
+    <!-- 水肿弹窗 -->
+    <n-modal
+      v-model:show="showEdemaModal"
+      preset="card"
+      title="记录水肿"
+      style="max-width: 420px; width: 92vw;"
+      :mask-closable="true"
+      @after-leave="resetEdemaForm"
+    >
+      <div class="quick-form">
+        <div class="qf-group">
+          <label>日期</label>
+          <n-date-picker v-model:formatted-value="edemaForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
+        </div>
+        <div class="qf-group">
+          <label>水肿程度</label>
+          <n-radio-group v-model:value="edemaForm.level" size="small">
+            <n-radio-button value="none">无</n-radio-button>
+            <n-radio-button value="mild">轻度</n-radio-button>
+            <n-radio-button value="moderate">中度</n-radio-button>
+            <n-radio-button value="severe">重度</n-radio-button>
+          </n-radio-group>
+        </div>
+        <div class="form-hint-text">孕晚期轻微水肿较常见，可抬高下肢、少盐饮食；若短期内明显加重，或伴头痛、视物模糊、血压升高，请立即就医</div>
+        <div class="qf-group">
+          <label>当天备注（可选）</label>
+          <n-input v-model:value="edemaForm.note" placeholder="如：部位（脚踝/小腿/手）、休息后是否消退" />
+        </div>
+      </div>
+      <template #action>
+        <n-button @click="showEdemaModal = false">取消</n-button>
+        <n-button type="primary" :loading="saving" @click="saveEdema">保存</n-button>
+      </template>
+    </n-modal>
+
+    <!-- 分泌物弹窗 -->
+    <n-modal
+      v-model:show="showDischargeModal"
+      preset="card"
+      title="记录分泌物"
+      style="max-width: 420px; width: 92vw;"
+      :mask-closable="true"
+      @after-leave="resetDischargeForm"
+    >
+      <div class="quick-form">
+        <div class="qf-group">
+          <label>日期</label>
+          <n-date-picker v-model:formatted-value="dischargeForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
+        </div>
+        <div class="qf-group">
+          <label>分泌物情况</label>
+          <n-radio-group v-model:value="dischargeForm.value" size="small">
+            <n-radio-button value="normal">正常</n-radio-button>
+            <n-radio-button value="more">偏多</n-radio-button>
+            <n-radio-button value="abnormal">异常</n-radio-button>
+          </n-radio-group>
+        </div>
+        <div class="form-hint-text">孕期分泌物增多多为正常；若出现异味、颜色异常、豆腐渣样，或伴瘙痒灼痛，请就医检查</div>
+        <div class="qf-group">
+          <label>当天备注（可选）</label>
+          <n-input v-model:value="dischargeForm.note" placeholder="如：颜色、性状、有无异味或瘙痒" />
+        </div>
+      </div>
+      <template #action>
+        <n-button @click="showDischargeModal = false">取消</n-button>
+        <n-button type="primary" :loading="saving" @click="saveDischarge">保存</n-button>
+      </template>
+    </n-modal>
+
+    <!-- 皮肤状况弹窗 -->
+    <n-modal
+      v-model:show="showSkinModal"
+      preset="card"
+      title="记录皮肤状况"
+      style="max-width: 420px; width: 92vw;"
+      :mask-closable="true"
+      @after-leave="resetSkinForm"
+    >
+      <div class="quick-form">
+        <div class="qf-group">
+          <label>日期</label>
+          <n-date-picker v-model:formatted-value="skinForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
+        </div>
+        <div class="qf-group">
+          <label>皮肤状况</label>
+          <n-radio-group v-model:value="skinForm.value" size="small">
+            <n-radio-button value="normal">正常</n-radio-button>
+            <n-radio-button value="stretch_marks">妊娠纹</n-radio-button>
+            <n-radio-button value="itchy">瘙痒</n-radio-button>
+            <n-radio-button value="melasma">色素沉着</n-radio-button>
+          </n-radio-group>
+        </div>
+        <div class="form-hint-text">妊娠纹多出现在腹部与大腿，控制体重增速有帮助；若全身瘙痒（尤其手心脚心）请尽快就医排查胆汁淤积</div>
+        <div class="qf-group">
+          <label>当天备注（可选）</label>
+          <n-input v-model:value="skinForm.note" placeholder="如：出现部位、是否瘙痒" />
+        </div>
+      </div>
+      <template #action>
+        <n-button @click="showSkinModal = false">取消</n-button>
+        <n-button type="primary" :loading="saving" @click="saveSkin">保存</n-button>
+      </template>
+    </n-modal>
+
+    <!-- 排尿情况弹窗 -->
+    <n-modal
+      v-model:show="showUrinationModal"
+      preset="card"
+      title="记录排尿情况"
+      style="max-width: 420px; width: 92vw;"
+      :mask-closable="true"
+      @after-leave="resetUrinationForm"
+    >
+      <div class="quick-form">
+        <div class="qf-group">
+          <label>日期</label>
+          <n-date-picker v-model:formatted-value="urinationForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
+        </div>
+        <div class="qf-group">
+          <label>排尿情况</label>
+          <n-radio-group v-model:value="urinationForm.value" size="small">
+            <n-radio-button value="normal">正常</n-radio-button>
+            <n-radio-button value="frequent">尿频</n-radio-button>
+            <n-radio-button value="painful">尿痛</n-radio-button>
+          </n-radio-group>
+        </div>
+        <div class="form-hint-text">孕早期与孕晚期尿频多为正常（子宫压迫膀胱）；若伴尿痛、尿急或发热，可能是尿路感染，需就医</div>
+        <div class="qf-group">
+          <label>当天备注（可选）</label>
+          <n-input v-model:value="urinationForm.note" placeholder="如：白天/夜间次数、有无尿急" />
+        </div>
+      </div>
+      <template #action>
+        <n-button @click="showUrinationModal = false">取消</n-button>
+        <n-button type="primary" :loading="saving" @click="saveUrination">保存</n-button>
+      </template>
+    </n-modal>
+
+    <!-- 编辑/添加通用大弹窗
+         ⚠️ 现在快捷菜单里每个类型都有自己的专属小弹窗，这里主要承担「编辑已有记录」；
+         openQuickAdd 的 default 分支保留为兜底（将来新增类型漏接小弹窗时仍能录进去）。 -->
     <AddRecordDialog :show="showAddDialog" :date="selectedDate" :pregnancy-id="pregnancyStore.currentPregnancy?.id" :default-type="addDialogType" :edit-record="addDialogRecord" @update:show="showAddDialog = $event" @saved="onRecordSaved" />
   </div>
 </template>
@@ -549,7 +705,7 @@ import dayjs from 'dayjs'
 import MiniCalendar from '@/components/record/MiniCalendar.vue'
 import RecordList from '@/components/record/RecordList.vue'
 import AddRecordDialog from '@/components/record/AddRecordDialog.vue'
-import { getMoodEmoji as moodEmojiOf, MOOD_OPTIONS as moodOptions } from '@/utils/format'
+import { getMoodEmoji as moodEmojiOf, MOOD_OPTIONS as moodOptions, SLEEP_QUALITY_OPTIONS as sleepQualityOptions, type SleepQuality, isValidDateStr } from '@/utils/format'
 import StatsPanel from './StatsView/StatsPanel.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 
@@ -576,10 +732,10 @@ const showGlucoseModal = ref(false)
 const showFhrModal = ref(false)
 const showStoolModal = ref(false)
 const showMoodModal = ref(false)
-const showNoteModal = ref(false)
 const showSymptomModal = ref(false)
 const showSupplementModal = ref(false)
 const showHabitModal = ref(false)
+const showMedicationModal = ref(false)
 const showTempModal = ref(false)
 const showSleepModal = ref(false)
 const showWaterModal = ref(false)
@@ -592,6 +748,10 @@ const showIntimacyModal = ref(false)
 const showHcgModal = ref(false)
 const showUaModal = ref(false)
 const showWaistModal = ref(false)
+const showEdemaModal = ref(false)
+const showDischargeModal = ref(false)
+const showSkinModal = ref(false)
+const showUrinationModal = ref(false)
 
 // ====== 表单数据 ======
 const defaultDate = () => selectedDate.value || dayjs().format('YYYY-MM-DD')
@@ -608,8 +768,6 @@ const fhrForm = ref({ date: '', value: null as number | null, note: '' })
 const stoolForm = ref({ date: '', count: null as number | null, consistency: 'normal' as 'hard' | 'normal' | 'soft' | 'diarrhea', note: '' })
 // 心情选项统一取自 utils/format 的共享常量
 const moodForm = ref({ date: dayjs().format('YYYY-MM-DD'), value: 3, note: '' })
-// 日记
-const noteForm = ref({ date: '', content: '' })
 // 症状
 const symptomOptions = ['恶心', '呕吐', '头痛', '头晕', '水肿', '腰痛', '胃灼热', '便秘', '腹泻', '尿频', '失眠', '焦虑', '乏力', '气短', '心悸', '背痛', '腿抽筋']
 const symptomForm = ref({ date: '', items: [] as string[] })
@@ -618,10 +776,15 @@ const supplementOptions = ['叶酸', '铁剂', '钙片', 'DHA', '复合维生素
 const supplementForm = ref({ date: '', items: [] as string[] })
 // 好习惯
 const habitForm = ref({ date: '', text: '' })
+// 用药（存 JSON 数组 [{name,dosage,frequency}]，与大弹窗、记录列表的解析口径一致）
+const medForm = ref({ date: '', name: '', dosage: '', frequency: '', note: '' })
 // 体温
 const tempForm = ref({ date: '', value: null as number | null, note: '' })
 // 睡眠
-const sleepForm = ref({ date: '', bedtime: '' as string, waketime: '' as string, quality: '一般' as '差' | '一般' | '好', note: '' })
+// ⚠️ 质量存**规范英文值**（good/fair/poor），与「添加记录」大弹窗一致。
+//    以前这里写中文（好/一般/差），导致同一个字段两套取值域、编辑一次就被静默改域。
+//    文案与取值都取自 utils/format 的唯一真源。
+const sleepForm = ref({ date: '', bedtime: '' as string, waketime: '' as string, quality: 'fair' as SleepQuality, note: '' })
 
 // 时间选项（每30分钟一个，00:00 ~ 23:30）
 const timeOptions = Array.from({ length: 48 }, (_, i) => {
@@ -651,13 +814,22 @@ const intimacyForm = ref({ date: '', count: null as number | null, hasProtection
 // HCG
 const hcgForm = ref({ date: '', value: null as number | null, weeks: null as number | null, note: '' })
 // 尿酸
+// ⚠️ 取值域必须与「添加记录」大弹窗一致（那边原来是「空腹/餐后2小时」）——
+//    同一个字段两套取值，统计表和导出里就会冒出一个两边都不认的值。这里取并集。
 const uaPeriodOptions = [
-  { label: '空腹', value: '空腹' }, { label: '餐后', value: '餐后' },
+  { label: '空腹', value: '空腹' }, { label: '餐后2小时', value: '餐后2小时' },
   { label: '随机', value: '随机' },
 ]
 const uaForm = ref({ date: '', value: null as number | null, period: '空腹', note: '' })
 // 腰围
 const waistForm = ref({ date: '', bust: null as number | null, value: null as number | null, hip: null as number | null, note: '' })
+// 水肿 / 分泌物 / 皮肤状况 / 排尿情况
+// ⚠️ 这四类以前没有专属小弹窗，点下去会掉进 26 个类型的选择器大弹窗，
+//    与其它所有类型的交互都不一样（用户会以为功能没做）。
+const edemaForm = ref({ date: '', level: 'none' as 'none' | 'mild' | 'moderate' | 'severe', note: '' })
+const dischargeForm = ref({ date: '', value: 'normal' as 'normal' | 'more' | 'abnormal', note: '' })
+const skinForm = ref({ date: '', value: 'normal' as 'normal' | 'stretch_marks' | 'itchy' | 'melasma', note: '' })
+const urinationForm = ref({ date: '', value: 'normal' as 'normal' | 'frequent' | 'painful', note: '' })
 
 // ====== 类型菜单定义 ======
 const quickTypes = [
@@ -675,6 +847,7 @@ const quickTypes = [
   { value: 'symptoms', icon: 'clipboard', label: '症状' },
   { value: 'supplement', icon: '💊', label: '补充剂' },
   { value: 'habit', icon: '✅', label: '好习惯' },
+  { value: 'medication', icon: '💊', label: '用药' },
   { value: 'temperature', icon: 'thermometer', label: '体温' },
   { value: 'sleep', icon: '😴', label: '睡眠' },
   { value: 'water', icon: '💧', label: '饮水' },
@@ -777,17 +950,29 @@ function onRecordSaved() {
   window.dispatchEvent(new CustomEvent('record-added'))
 }
 
-function openAddDialog() {
-  addDialogType.value = undefined
-  addDialogRecord.value = null
-  showAddDialog.value = true
-}
-
 function onEditRecord(payload: { type: string; record: any }) {
   // 编辑模式使用原有的大弹窗
   addDialogType.value = payload.type
   addDialogRecord.value = payload.record
   showAddDialog.value = true
+}
+
+/**
+ * 「当天备注」预填表：type → 该类型的快捷表单。
+ *
+ * ⚠️ `daily_record.note` 是**按天共享的一列**（一天一行、所有类型共用），**不是每类型一列**。
+ *    换言之二十几个小弹窗里的「备注」写的其实是同一格。
+ *    以前这里是"直接覆盖"⇒ 先给体重写备注、再给睡眠写备注，前一个就被悄悄抹掉了；
+ *    而记录列表和预览卡都不显示 note，用户完全看不出来（纯静默丢数据）。
+ *    现在打开弹窗时把当天已有的备注预填进去 —— 用户看得见自己在改什么，不会再盲写覆盖。
+ *    （心情是唯一例外：它有自己的 `mood_note` 列，不参与共享。）
+ */
+const NOTE_FORMS: Record<string, any> = {
+  weight: weightForm, waist: waistForm, blood_pressure: bpForm, blood_glucose: glucoseForm,
+  fetal_heart_rate: fhrForm, stool: stoolForm, temperature: tempForm, sleep: sleepForm,
+  water: waterForm, exercise: exerciseForm, fetal_movement: fmForm, contraction: contrForm,
+  intimacy: intimacyForm, hcg: hcgForm, uric_acid: uaForm, edema: edemaForm,
+  discharge: dischargeForm, skin: skinForm, urination: urinationForm, medication: medForm,
 }
 
 // ====== 快捷添加：根据类型打开对应小弹窗 ======
@@ -803,6 +988,7 @@ function openQuickAdd(type: string) {
     case 'symptoms': resetSymptomForm(); symptomForm.value.date = d; showSymptomModal.value = true; break
     case 'supplement': resetSupplementForm(); supplementForm.value.date = d; showSupplementModal.value = true; break
     case 'habit': resetHabitForm(); habitForm.value.date = d; showHabitModal.value = true; break
+    case 'medication': resetMedicationForm(); medForm.value.date = d; showMedicationModal.value = true; break
     case 'temperature': resetTempForm(); tempForm.value.date = d; showTempModal.value = true; break
     case 'sleep': resetSleepForm(); sleepForm.value.date = d; showSleepModal.value = true; break
     case 'water': resetWaterForm(); waterForm.value.date = d; showWaterModal.value = true; break
@@ -815,7 +1001,11 @@ function openQuickAdd(type: string) {
     case 'hcg': resetHcgForm(); hcgForm.value.date = d; showHcgModal.value = true; break
     case 'uric_acid': resetUaForm(); uaForm.value.date = d; showUaModal.value = true; break
     case 'waist': resetWaistForm(); waistForm.value.date = d; showWaistModal.value = true; break
-  // 没有专属小弹窗的类型（水肿 / 分泌物 / 皮肤状况 / 排尿情况）走通用大弹窗。
+    case 'edema': resetEdemaForm(); edemaForm.value.date = d; showEdemaModal.value = true; break
+    case 'discharge': resetDischargeForm(); dischargeForm.value.date = d; showDischargeModal.value = true; break
+    case 'skin': resetSkinForm(); skinForm.value.date = d; showSkinModal.value = true; break
+    case 'urination': resetUrinationForm(); urinationForm.value.date = d; showUrinationModal.value = true; break
+  // 兜底：将来新加的类型若忘了接专属小弹窗，仍能打开通用大弹窗录入。
   // ⚠️ 这里以前只弹一句「未知类型」警告 —— 于是新加的记录类型点下去等于没反应，
   // 用户会以为「这个功能根本没做」。所以默认分支必须能真的打开录入界面。
   default:
@@ -823,6 +1013,16 @@ function openQuickAdd(type: string) {
     addDialogRecord.value = null
     showAddDialog.value = true
     break
+  }
+  // 把当天已有的备注预填进「当天备注」（原因见 NOTE_FORMS 上方说明）
+  const nf = NOTE_FORMS[type]
+  if (nf && 'note' in nf.value) {
+    nf.value.note = (currentRecords.value[0] && currentRecords.value[0].note) || ''
+  }
+  // 心情是唯一例外：它有自己的 mood_note 列，不参与共享，得单独预填，
+  // 否则用户只想换个心情、保存时就会把之前写的心情备注清成空串（现在 note 是显式写入）。
+  if (type === 'mood') {
+    moodForm.value.note = (currentRecords.value[0] && currentRecords.value[0].mood_note) || ''
   }
 }
 
@@ -832,11 +1032,19 @@ async function doUpsert(data: any) {
     message.error('缺少孕期信息')
     return false
   }
-  // 强制确保 record_date 为有效 YYYY-MM-DD 格式
-  let rawDate = data.record_date
-  data.record_date = (rawDate && dayjs(rawDate, 'YYYY-MM-DD', true).isValid())
-    ? dayjs(rawDate).format('YYYY-MM-DD')
-    : dayjs().format('YYYY-MM-DD')
+  // record_date 必须是有效日期。
+  // ⚠️ 这里以前是「非法就默默改成今天」—— 用户选错日期时数据会悄悄落到**今天**，
+  //    记录页看不到问题（今天确实多了一条），但那条记录根本不在用户以为的那天。
+  //    现在：传了日期但不合法 ⇒ 直接报错中止，让他重选。
+  // 🔴 校验必须用共享的 `isValidDateStr()`：全项目没有 `dayjs.extend(customParseFormat)`，
+  //    `dayjs(x,'YYYY-MM-DD',true)` 的严格模式**不生效**（会溢出进位成另一个日期）。见 utils/format。
+  const rawDate = data.record_date
+  if (rawDate != null && rawDate !== '' && !isValidDateStr(rawDate)) {
+    message.error('日期无效，请重新选择日期')
+    return false
+  }
+  // 已通过校验 ⇒ 字符串本身就是标准的 YYYY-MM-DD，无需再交给 dayjs 格式化一遍
+  data.record_date = rawDate ? String(rawDate) : dayjs().format('YYYY-MM-DD')
   saving.value = true
   try {
     data.pregnancy_id = pregnancyStore.currentPregnancy.id
@@ -866,7 +1074,7 @@ async function saveWeight() {
   const ok = await doUpsert({
     record_date: weightForm.value.date,
     weight: weightForm.value.value,
-    note: weightForm.value.note || undefined,
+    note: weightForm.value.note,
   })
   if (ok) showWeightModal.value = false
 }
@@ -877,7 +1085,7 @@ async function saveBp() {
     record_date: bpForm.value.date,
     blood_pressure_systolic: String(bpForm.value.systolic),
     blood_pressure_diastolic: String(bpForm.value.diastolic),
-    note: bpForm.value.note || undefined,
+    note: bpForm.value.note,
   })
   if (ok) showBpModal.value = false
 }
@@ -886,7 +1094,7 @@ async function saveGlucose() {
   if (!glucoseForm.value.value) { message.warning('请输入血糖值'); return }
   const data: any = {
     record_date: glucoseForm.value.date,
-    note: glucoseForm.value.note || undefined,
+    note: glucoseForm.value.note,
   }
   if (glucoseForm.value.period === 'fasting') data.blood_glucose_fasting = glucoseForm.value.value
   else if (glucoseForm.value.period === '1h') data.blood_glucose_1h = glucoseForm.value.value
@@ -900,7 +1108,7 @@ async function saveFhr() {
   const ok = await doUpsert({
     record_date: fhrForm.value.date,
     fetal_heart_rate: fhrForm.value.value,
-    note: fhrForm.value.note || undefined,
+    note: fhrForm.value.note,
   })
   if (ok) showFhrModal.value = false
 }
@@ -913,7 +1121,7 @@ async function saveStool() {
       count: stoolForm.value.count,
       consistency: stoolForm.value.consistency,
     }),
-    note: stoolForm.value.note || undefined,
+    note: stoolForm.value.note,
   })
   if (ok) showStoolModal.value = false
 }
@@ -923,21 +1131,12 @@ async function saveMood() {
   const ok = await doUpsert({
     record_date: date,
     mood: String(moodForm.value.value ?? 3),
-    mood_note: moodForm.value.note || undefined,
+    mood_note: moodForm.value.note,
   })
   if (ok) {
     showMoodModal.value = false
     message.success('心情已保存')
   }
-}
-
-async function saveNote() {
-  if (!noteForm.value.content.trim()) { message.warning('请输入内容'); return }
-  const ok = await doUpsert({
-    record_date: noteForm.value.date,
-    note: noteForm.value.content,
-  })
-  if (ok) showNoteModal.value = false
 }
 
 async function saveSymptom() {
@@ -966,6 +1165,21 @@ async function saveHabit() {
   if (ok) showHabitModal.value = false
 }
 
+async function saveMedication() {
+  if (!medForm.value.name.trim()) { message.warning('请输入药品名称'); return }
+  const ok = await doUpsert({
+    record_date: medForm.value.date,
+    // 与大弹窗（AddRecordDialog）写的是同一形状，记录列表也按这个形状解析
+    medication: JSON.stringify([{
+      name: medForm.value.name.trim(),
+      dosage: medForm.value.dosage.trim(),
+      frequency: medForm.value.frequency.trim(),
+    }]),
+    note: medForm.value.note,
+  })
+  if (ok) showMedicationModal.value = false
+}
+
 // ====== 重置表单函数 ======
 function resetWeightForm() { weightForm.value = { date: '', value: null, note: '' } }
 function resetBpForm() { bpForm.value = { date: '', systolic: null, diastolic: null, note: '' } }
@@ -973,12 +1187,12 @@ function resetGlucoseForm() { glucoseForm.value = { date: '', period: 'fasting',
 function resetFhrForm() { fhrForm.value = { date: '', value: null, note: '' } }
 function resetStoolForm() { stoolForm.value = { date: '', count: null, consistency: 'normal', note: '' } }
 function resetMoodForm() { moodForm.value = { date: dayjs().format('YYYY-MM-DD'), value: 3, note: '' } }
-function resetNoteForm() { noteForm.value = { date: '', content: '' } }
 function resetSymptomForm() { symptomForm.value = { date: '', items: [] } }
 function resetSupplementForm() { supplementForm.value = { date: '', items: [] } }
 function resetHabitForm() { habitForm.value = { date: '', text: '' } }
+function resetMedicationForm() { medForm.value = { date: '', name: '', dosage: '', frequency: '', note: '' } }
 function resetTempForm() { tempForm.value = { date: '', value: null, note: '' } }
-function resetSleepForm() { sleepForm.value = { date: '', bedtime: '', waketime: '', quality: '一般', note: '' } }
+function resetSleepForm() { sleepForm.value = { date: '', bedtime: '', waketime: '', quality: 'fair', note: '' } }
 function resetWaterForm() { waterForm.value = { date: '', value: null, note: '' } }
 function resetDietForm() { dietForm.value = { date: '', meal: '早餐', content: '' } }
 function resetExerciseForm() { exerciseForm.value = { date: '', type: '散步', duration: null, intensity: '轻松', note: '' } }
@@ -990,7 +1204,7 @@ function resetIntimacyForm() { intimacyForm.value = { date: '', count: null, has
 // ====== 新增类型保存函数 ======
 async function saveTemp() {
   if (!tempForm.value.value) { message.warning('请输入体温'); return }
-  const ok = await doUpsert({ record_date: tempForm.value.date, body_temperature: tempForm.value.value, note: tempForm.value.note || undefined })
+  const ok = await doUpsert({ record_date: tempForm.value.date, body_temperature: tempForm.value.value, note: tempForm.value.note, })
   if (ok) showTempModal.value = false
 }
 
@@ -1007,20 +1221,26 @@ async function saveSleep() {
     record_date: sleepForm.value.date,
     sleep_hours: hours,
     sleep_quality: sleepForm.value.quality || undefined,
-    note: sleepForm.value.note || undefined,
+    note: sleepForm.value.note,
   })
   if (ok) showSleepModal.value = false
 }
 
 async function saveWater() {
   if (!waterForm.value.value) { message.warning('请输入饮水量'); return }
-  const ok = await doUpsert({ record_date: waterForm.value.date, water_intake: waterForm.value.value, note: waterForm.value.note || undefined })
+  const ok = await doUpsert({ record_date: waterForm.value.date, water_intake: waterForm.value.value, note: waterForm.value.note, })
   if (ok) showWaterModal.value = false
 }
 
 async function saveDiet() {
   if (!dietForm.value.content.trim()) { message.warning('请输入饮食内容'); return }
-  const ok = await doUpsert({ record_date: dietForm.value.date, diet_note: dietForm.value.content })
+  // ⚠️ 统一用 JSON 数组存储（`[{type,content}]`）——「添加记录」大弹窗就是这个格式，
+  //    这里以前存纯文本 ⇒ 用大弹窗开一次就被改写成 JSON，格式漂移。
+  //    读侧（记录列表 / 大弹窗）两种都能认，所以老数据不受影响。
+  const ok = await doUpsert({
+    record_date: dietForm.value.date,
+    diet_note: JSON.stringify([{ type: dietForm.value.meal, content: dietForm.value.content }]),
+  })
   if (ok) showDietModal.value = false
 }
 
@@ -1030,7 +1250,7 @@ async function saveExercise() {
     record_date: exerciseForm.value.date,
     exercise_type: exerciseForm.value.type,
     exercise_duration: exerciseForm.value.duration,
-    note: exerciseForm.value.note || undefined,
+    note: exerciseForm.value.note,
   })
   if (ok) showExerciseModal.value = false
 }
@@ -1041,7 +1261,7 @@ async function saveFm() {
     record_date: fmForm.value.date,
     fetal_movement_count: fmForm.value.count,
     fetal_movement_duration: fmForm.value.duration || undefined,
-    note: fmForm.value.note || undefined,
+    note: fmForm.value.note,
   })
   if (ok) showFmModal.value = false
 }
@@ -1053,7 +1273,7 @@ async function saveContr() {
     contraction_duration: contrForm.value.duration || undefined,  // 持续时间(秒)
     contraction_interval: contrForm.value.interval || undefined,   // 间隔时间(分钟)
     contraction_pain: contrForm.value.pain || undefined,           // 疼痛程度
-    note: contrForm.value.note || undefined,
+    note: contrForm.value.note,
   })
   if (ok) showContrModal.value = false
 }
@@ -1072,7 +1292,7 @@ async function saveIntimacy() {
   const ok = await doUpsert({
     record_date: intimacyForm.value.date,
     intimacy_record: JSON.stringify({ count: intimacyForm.value.count, has_protection: intimacyForm.value.hasProtection, protection_type: intimacyForm.value.protectionType }),
-    note: intimacyForm.value.note || undefined,
+    note: intimacyForm.value.note,
   })
   if (ok) showIntimacyModal.value = false
 }
@@ -1081,6 +1301,10 @@ async function saveIntimacy() {
 function resetHcgForm() { hcgForm.value = { date: '', value: null, weeks: null, note: '' } }
 function resetUaForm() { uaForm.value = { date: '', value: null, period: '空腹', note: '' } }
 function resetWaistForm() { waistForm.value = { date: '', bust: null, value: null, hip: null, note: '' } }
+function resetEdemaForm() { edemaForm.value = { date: '', level: 'none', note: '' } }
+function resetDischargeForm() { dischargeForm.value = { date: '', value: 'normal', note: '' } }
+function resetSkinForm() { skinForm.value = { date: '', value: 'normal', note: '' } }
+function resetUrinationForm() { urinationForm.value = { date: '', value: 'normal', note: '' } }
 
 async function saveHcg() {
   if (!hcgForm.value.value) { message.warning('请输入HCG值'); return }
@@ -1088,7 +1312,7 @@ async function saveHcg() {
     record_date: hcgForm.value.date,
     hcg_value: hcgForm.value.value,
     hcg_weeks: hcgForm.value.weeks || undefined,
-    note: hcgForm.value.note || undefined,
+    note: hcgForm.value.note,
   })
   if (ok) showHcgModal.value = false
 }
@@ -1099,7 +1323,7 @@ async function saveUa() {
     record_date: uaForm.value.date,
     uric_acid: uaForm.value.value,
     uric_acid_period: uaForm.value.period || undefined,
-    note: uaForm.value.note || undefined,
+    note: uaForm.value.note,
   })
   if (ok) showUaModal.value = false
 }
@@ -1113,7 +1337,7 @@ async function saveWaist() {
   }
   const payload: any = {
     record_date: waistForm.value.date,
-    note: waistForm.value.note || undefined,
+    note: waistForm.value.note,
   }
   // 只提交真正填了的项，避免把用户没量的一项写成空值
   if (bust != null) payload.bust = bust
@@ -1121,6 +1345,45 @@ async function saveWaist() {
   if (hip != null) payload.hip = hip
   const ok = await doUpsert(payload)
   if (ok) showWaistModal.value = false
+}
+
+// 水肿 / 分泌物 / 皮肤状况 / 排尿情况
+// 四类都是「单选 + 备注」，备注统一走 daily_record.note（与体重/血压/便便等完全同一字段），
+// 后端 POST 只更新请求里出现过的字段，所以大弹窗编辑这四类时不会把备注抹掉。
+async function saveEdema() {
+  const ok = await doUpsert({
+    record_date: edemaForm.value.date,
+    edema_level: edemaForm.value.level || 'none',
+    note: edemaForm.value.note,
+  })
+  if (ok) showEdemaModal.value = false
+}
+
+async function saveDischarge() {
+  const ok = await doUpsert({
+    record_date: dischargeForm.value.date,
+    vaginal_discharge: dischargeForm.value.value || 'normal',
+    note: dischargeForm.value.note,
+  })
+  if (ok) showDischargeModal.value = false
+}
+
+async function saveSkin() {
+  const ok = await doUpsert({
+    record_date: skinForm.value.date,
+    skin_condition: skinForm.value.value || 'normal',
+    note: skinForm.value.note,
+  })
+  if (ok) showSkinModal.value = false
+}
+
+async function saveUrination() {
+  const ok = await doUpsert({
+    record_date: urinationForm.value.date,
+    urination_frequency: urinationForm.value.value || 'normal',
+    note: urinationForm.value.note,
+  })
+  if (ok) showUrinationModal.value = false
 }
 
 // ====== 多选切换辅助 ======
