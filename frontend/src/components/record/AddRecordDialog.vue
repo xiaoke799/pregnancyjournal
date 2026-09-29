@@ -622,7 +622,8 @@ function toggleSupplement(s: string) {
 }
 
 const formData = ref({
-  recordDate: '',
+  // 同为 n-date-picker 的 formatted-value，无值必须 null（打开时 watch 一定会赋上有效日期）
+  recordDate: null as string | null,
   // 体重
   weight: null as number | null,
   // 三围
@@ -695,7 +696,10 @@ const formData = ref({
   fetalHeartRate: null as number | null,
   // 计划
   planText: '',
-  planDate: '',
+  // 🔴 同上：n-date-picker 的 formatted-value 收到 '' 会在内部解析时抛
+  //    `Cannot read properties of undefined (reading 'peers')`，同样被错误边界接住。
+  //    无值一律用 null。
+  planDate: null as string | null,
   // 好习惯
   habitText: '',
   // 日记（富文本 HTML）
@@ -888,7 +892,8 @@ watch(() => props.show, (val) => {
           break
         case 'plan':
           formData.value.planText = r.plan_text || ''
-          formData.value.planDate = r.plan_date || ''
+          // 🔴 不能 `|| ''`：空字符串会让 n-date-picker 崩（见 formData 定义处说明），无值用 null
+          formData.value.planDate = r.plan_date || null
           break
         case 'diary': {
           const html = r.note || ''
@@ -1256,7 +1261,7 @@ function resetForm() {
     moodNote: '',
     fetalHeartRate: null,
     planText: '',
-    planDate: '',
+    planDate: null as string | null, // 无值必须 null，不能是 ''（见 formData 定义处说明）
     habitText: '',
     waterIntake: null,
     stoolCount: null,

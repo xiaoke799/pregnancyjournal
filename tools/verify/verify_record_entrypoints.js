@@ -430,6 +430,16 @@ check('宫缩回填前显式清成 null（避免残留空字符串）',
   '只在匹配到时间时才赋值，未匹配时应保持 null');
 check('n-time-picker 的 formatted-value 只绑这两个字段（新增时要同样用 null）',
   count('dialog', /<n-time-picker/g) === 2, '实得 ' + count('dialog', /<n-time-picker/g) + ' 个');
+// n-date-picker 的 formatted-value 同样怕空字符串（抛 `Cannot read properties of undefined
+// (reading 'peers')`）。大弹窗里绑它的字段只有 recordDate / planDate —— 两者都必须用 null。
+check('计划日期初值为 null 且回填不留空字符串',
+  /planDate:\s*null as string \| null/.test(D_NOCOMMENT) &&
+  /formData\.value\.planDate = r\.plan_date \|\| null/.test(D_NOCOMMENT),
+  "`planDate = r.plan_date || ''` 会让 n-date-picker 崩");
+check('大弹窗里没有任何把空字符串喂给日期/时间选择器的地方',
+  !/(planDate|recordDate|contractionStart|contractionEnd)\s*=[^;\n]*\|\|\s*''/.test(D_NOCOMMENT) &&
+  !/recordDate:\s*''/.test(D_NOCOMMENT),
+  '这些字段都绑 formatted-value，空字符串会崩，统一用 null');
 
 // —— 日期校验：「静态 + 运行时反例」双保险 ——
 // ⚠️ 只断言源码里写了 message.error('日期无效…') 会**假绿**（铁律 #11）。2026-09-29 实测：
