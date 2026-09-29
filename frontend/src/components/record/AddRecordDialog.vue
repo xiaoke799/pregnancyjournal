@@ -1161,8 +1161,17 @@ async function saveRecord() {
         break
       case 'plan': {
         if (!formData.value.planText) { message.warning('请输入计划内容'); saving.value = false; return }
+
+        // 编辑历史计划（老记录里的 plan_text）⇒ 保持写回**当天记录**：
+        // 老数据原地改。否则保存会冒出一条新待办、老计划还在 ⇒ 「改了像没改」。
+        if (props.editRecord?.id) {
+          data.plan_text = formData.value.planText
+          if (formData.value.planDate) data.plan_date = formData.value.planDate
+          break
+        }
+
         if (!props.pregnancyId) { message.error('缺少孕期信息'); saving.value = false; return }
-        // 🔴 计划写进「待办」（reminder），不再写进当天记录：
+        // 🔴 新增计划写进「待办」（reminder），不再写进当天记录：
         //    记录是**一天一条**，同一天多个时间点的安排放不下；待办一条一记录、
         //    支持任意多条且**已在推送链路里**（push-engine 扫 reminder 表），
         //    存进去就自动有「到点提醒」。详见 RecordView.savePlan 的说明。
