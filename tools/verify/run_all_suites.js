@@ -40,6 +40,7 @@ const SUITES = [
   [path.join(UP, 'e2e_backup_field_coverage.js'), '备份字段覆盖', ''],
   [path.join(UP, 'e2e_restore_db_file.js'), '整库恢复', '约 31 秒'],
   [path.join(UP, 'verify_record_entrypoints.js'), '记录类入口', ''],
+  [path.join(UP, 'verify_record_page_functions.js'), '记录页全功能', ''],
   [path.join(UP, 'e2e_video_backup.js'), '相册视频备份', ''],
   [path.join(UP, 'e2e_push_config_backup.js'), '推送配置进备份', '约 40 秒'],
   [path.join(UP, 'e2e_export_mobile.js'), '导出手机端', ''],
@@ -60,6 +61,7 @@ const SUITES = [
   // ---- 2026-09-28 新增 ----
   [path.join(UP, 'verify_boot_perf.js'), '首屏性能', ''],
   [path.join(UP, 'verify_api_contracts.js'), '前后端路由契约', ''],
+  [path.join(UP, 'verify_ui_orphans.js'), 'UI产物孤儿', ''],
   // ---- 路径安全 ----
   [path.join(UP, 'verify_path_traversal.js'), '路径穿越', ''],
   [path.join(UP, 'verify_db_persist.js'), '落盘验证', ''],
