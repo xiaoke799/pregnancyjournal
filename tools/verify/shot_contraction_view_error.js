@@ -256,15 +256,35 @@ const SCENES = [
   if (!pid) { console.log('建孕期失败:', JSON.stringify(p1.json)); cleanup(); process.exit(2); }
 
   // 写一条**当天**的宫缩记录（记录页默认显示今天）
+  // 一条记录塞满所有字段 ⇒ 记录页每个类别行都「有数据」⇒ 点它会打开**编辑大弹窗**，
+  // 一次覆盖全部类型的**回填**路径（这里正是崩得最多的地方）。
+  // 刻意取值：note 留空（真实场景）；plan_date 不传 ⇒ 回填时 `r.plan_date || ''` 得空串；
+  //          contraction_pain 用历史值「中度」⇒ 覆盖取值域归一。
   const rec = await req('POST', GW + '/api/v1/daily-records', {
     headers: H,
     body: JSON.stringify({
       pregnancy_id: pid, record_date: dstr(0),
-      contraction_count: 3,
-      contraction_duration: 45,
-      contraction_interval: 8,
-      contraction_pain: '明显',
-      note: '',
+      weight: 64.2, blood_pressure_systolic: '118', blood_pressure_diastolic: '76',
+      fetal_heart_rate: 145, body_temperature: 36.6,
+      bust: 88, waist: 92, hip: 96,
+      blood_glucose_fasting: 4.8, blood_glucose_1h: 7.2, blood_glucose_2h: 6.1,
+      mood: '4', mood_note: '还行', note: '',
+      stool_record: JSON.stringify({ count: 1, consistency: 'normal' }),
+      sleep_hours: 7.5, sleep_quality: 'good',
+      symptoms: JSON.stringify(['腰痛']),
+      exercise_type: '散步', exercise_duration: 30,
+      diet_note: JSON.stringify([{ type: '早餐', content: '小米粥' }]),
+      medication: JSON.stringify([{ name: '叶酸片', dosage: '0.4mg', frequency: '一日一次' }]),
+      edema_level: 'mild', vaginal_discharge: 'normal',
+      skin_condition: 'normal', urination_frequency: 'normal',
+      hcg_value: 50000, hcg_weeks: 6,
+      uric_acid: 250, uric_acid_period: '空腹',
+      supplement_record: JSON.stringify([{ name: '叶酸' }]),
+      intimacy_record: JSON.stringify({ count: 1, has_protection: 'yes', protection_type: 'condom' }),
+      water_intake: 1800, habit_text: '早睡',
+      contraction_count: 2, contraction_interval: 8, contraction_duration: 45, contraction_pain: '中度',
+      fetal_movement_count: 12, fetal_movement_duration: 20,
+      plan_text: '下次产检',
     }),
   });
   console.log('写宫缩记录: ' + (rec.json && rec.json.code));
