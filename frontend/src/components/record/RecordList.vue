@@ -19,7 +19,9 @@
           <div class="row-right">
             <template v-if="cat.hasData">
               <span class="row-preview">{{ getPreview(cat.type) }}</span>
-              <span v-if="isSessionType(cat.type)" class="row-view-hint">查看</span>
+              <!-- 「查看」只在**真有会话**时给：只手填过、一次会话都没有的日子没有明细可看，
+                   那时点条目的去向是编辑（与其它类型一致），提示符也得跟着是编辑图标 -->
+              <span v-if="isSessionType(cat.type) && hasSessions(cat.type)" class="row-view-hint">查看</span>
               <span v-else class="row-edit-icon"><AppIcon name="edit" :size="14" /></span>
             </template>
             <template v-else>
@@ -78,16 +80,58 @@ async function fetchRecords() {
   } catch {}
 }
 
+/**
+ * 当天**真的有会话**的两类计数。
+ *
+ * ⚠️ 为什么不能只看条目上「有没有数据」：那个判据读的是当天记录的**汇总列**
+ *    （用户在本页小弹窗里**手填**也会写这里），而「每次明细」读的是 `*_session` 表
+ *    （只有计数器 / 计时器才写）。两者可以不一致 —— 手填过、却一次会话都没有的日子，
+ *    条目上有数据，但没有明细可看。若此时仍一律跳明细弹窗，用户看到的是**空明细框**，
+ *    而且**再也点不开编辑表单**（其它二十几个类型点条目都是编辑）⇒ 数据看得见、改不了。
+ * 所以去向按「有没有会话」定：有会话 → 看明细；只有手填值 → 照旧走编辑。
+ *
+ * 口径与后端 `daily-rollup` 对齐：**一次都没数的空会话不代表这一天**（点开计数器、
+ * 没记就按结束），所以只认 `count > 0` 的会话。
+ *
+ * ⚠️ 取数失败时保持空 ⇒ 退回「编辑」这条路。编辑是用户显式操作、不会静默覆盖什么；
+ *    反过来（误判成有会话）会把用户送进一个同样取不到数据的空明细框，又成了死路。
+ *
+ * ⚠️ 本块必须声明在下方 `immediate: true` 的 watch **之前**：那个 watch 在 setup 期就会跑，
+ *    若 `sessionCounts` 还在下面，就成了 TDZ（Cannot access before initialization）。
+ */
+const sessionCounts = ref<Record<string, number>>({})
+function hasSessions(type: string) { return (sessionCounts.value[type] || 0) > 0 }
+
+async function fetchSessionCounts() {
+  if (!pregnancyStore.currentPregnancy?.id) { sessionCounts.value = {}; return }
+  try {
+    const res: any = await dailyRecordApi.getSessionDetail(pregnancyStore.currentPregnancy.id, props.date)
+    const d = (res && res.code === 0 && res.data) || {}
+    const positive = (list: any) =>
+      Array.isArray(list) ? list.filter((s: any) => Number(s && s.count) > 0).length : 0
+    sessionCounts.value = {
+      fetal_movement: positive(d.fetal_movement),
+      contraction: positive(d.contraction),
+    }
+  } catch {
+    sessionCounts.value = {}
+  }
+}
+
 watch([() => props.date, () => pregnancyStore.currentPregnancy?.id], ([date, pid]) => {
-  if (date && pid) fetchRecords()
+  if (date && pid) { fetchRecords(); fetchSessionCounts() }
 }, { immediate: true })
 
 onMounted(() => {
-  window.addEventListener('record-added', fetchRecords)
+  window.addEventListener('record-added', onRecordAdded)
 })
 onUnmounted(() => {
-  window.removeEventListener('record-added', fetchRecords)
+  window.removeEventListener('record-added', onRecordAdded)
 })
+
+/** 记录/会话写回后：行上的汇总与「有没有会话」必须一起刷新，否则会出现
+ *  「汇总已更新、却还按旧状态决定点条目去哪儿」的错位。 */
+function onRecordAdded() { fetchRecords(); fetchSessionCounts() }
 
 const record = computed(() => {
   if (props.records && props.records.length > 0) return props.records[0]
@@ -101,9 +145,11 @@ function onCategoryClick(cat: DisplayCategory) {
   // 不能走通用大弹窗：那读的是当天记录，里面根本没有计划数据（会打开一张空表单）。
   if (cat.type === 'plan') { emit('add-type', 'plan'); return }
 
-  // 胎动 / 宫缩：有会话记录 ⇒ 点条目看每次明细（弹窗）。
+  // 胎动 / 宫缩：**有会话** ⇒ 点条目看每次明细（弹窗）。
   // 用户反馈「明细在页面上铺开、上面放多了不好操作」⇒ 明细统一收进弹窗，页面只留主要数据。
-  if (isSessionType(cat.type) && cat.hasData) {
+  // ⚠️ 判据是「有没有会话」而**不是**「当天记录有没有值」：只手填过、一次会话都没有的日子
+  //    没有明细可看，落进弹窗就是空框，且编辑入口被堵死 —— 此时必须继续往下走编辑分支。
+  if (isSessionType(cat.type) && hasSessions(cat.type)) {
     emit('detail', cat.type)
     return
   }
