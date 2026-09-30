@@ -104,15 +104,23 @@ router.get('/dashboard/events', async function(req, res) {
     alertRecords.forEach(function(record) {
       var hasAlert = false;
       var alertTitle = '';
-      if (record.blood_pressure_systolic > 140 || (record.blood_pressure_diastolic && record.blood_pressure_diastolic > 90)) {
+      // ⚠️ 阈值一律用 **>=**（含边界），不是 `>`：
+      //   ① 临床口径本来就是「≥」——妊娠期高血压 = 收缩压 ≥140 和/或 舒张压 ≥90 mmHg；
+      //      孕期空腹血糖 ≥5.1；餐后 2h 控制目标上限 6.7（达到上限即应提示）。
+      //   ② 同一份数据在记录列表 `RecordList.vue` 里是 `>= 140 || >= 90`、空腹 `< 5.1` 才算正常，
+      //      这里若用 `>`，血压正好 140/90、空腹正好 5.1 就会出现
+      //      「记录列表标红偏高、首页时间轴一声不响」的两处打架。
+      //   ③ 血压计/血糖仪读数常常正好卡在整数或一位小数，压线漏报的代价最高。
+      //   护栏：`tools/verify/probe_alert_threshold.js`
+      if (record.blood_pressure_systolic >= 140 || (record.blood_pressure_diastolic && record.blood_pressure_diastolic >= 90)) {
         hasAlert = true;
         alertTitle = '血压偏高';
       }
-      if (record.blood_glucose_fasting && record.blood_glucose_fasting > 5.1) {
+      if (record.blood_glucose_fasting && record.blood_glucose_fasting >= 5.1) {
         hasAlert = true;
         alertTitle = alertTitle ? alertTitle + '+空腹血糖偏高' : '空腹血糖偏高';
       }
-      if (record.blood_glucose_2h && record.blood_glucose_2h > 6.7) {
+      if (record.blood_glucose_2h && record.blood_glucose_2h >= 6.7) {
         hasAlert = true;
         alertTitle = alertTitle ? alertTitle + '+餐后血糖偏高' : '餐后血糖偏高';
       }
