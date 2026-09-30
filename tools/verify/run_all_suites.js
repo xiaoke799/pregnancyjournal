@@ -94,6 +94,10 @@ const SUITES = [
   // ⚠️ 需要 frontend/node_modules（vue-tsc 在 devDependencies）；缺了它按**失败**处理，
   //    不报"通过"（fail-closed：工具链缺失 ≠ 类型没问题）。
   [path.join(UP, 'verify_frontend_types.js'), '前端类型体检(vue-tsc)', '约 15 秒'],
+  // ---- 2026-10-01 新增：深色模式接线 ----
+  // 历史上深色是「半成品」：store 有 currentTheme、CSS 有 html.dark，但都没接到 DOM（页面恒亮色）。
+  // 这种退化构建不报错、测试不红，只能靠肉眼看 ⇒ 静态钉死接线（含反例自检）。
+  [path.join(UP, 'verify_dark_mode.js'), '深色模式接线(theme/html.dark/图表配色)', ''],
   // ---- 2026-09-30 新增：胎动/宫缩 会话 ↔ 记录页 ↔ 统计 联动 ----
   // 用户口径：「首页能记录，记录页要全部记录，统计里只统计今天最高的一个值做曲线」。
   // ⚠️ 这套是**真后端**（不起浏览器）：验写回口径、单位换算（秒/分差 60 倍）、
@@ -119,6 +123,24 @@ const SUITES = [
   // 而 contractionStatText 在该分支直接 return，把「今日 N 次 · 持续 X 秒」整个盖掉、无法自愈。
   // 三个场景：昨天遗留空壳会话（必须 false）/ 今天确实在计时（true）/ 结束后回落（false）。
   [path.join(UP, 'probe_contraction_active_stale.js'), '首页「计时中」只认今天(陈旧会话不卡住)', ''],
+  // 首页时间轴「血压/血糖偏高」的**边界值**：临床阈值一律是「≥」（140/90、空腹 5.1、餐后2h 6.7），
+  // 而记录列表 RecordList.vue 也是 `>=140 || >=90`、空腹 `<5.1` 才算正常。
+  // dashboard.js 原先写 `>` ⇒ 恰好压线时出现「记录列表标红、首页时间轴一声不响」的两处打架。
+  // 场景 A 压线必报（5 项）/ B 低一档必不报（4 项，反例）/ C 明显偏高仍报（1 项）。
+  [path.join(UP, 'probe_alert_threshold.js'), '首页告警阈值含边界(压线不漏报)', ''],
+  // ---- 模板 / 渲染 / 可读性 ----
+  // ⚠️ 这三套此前**一直没进 runner**：记忆里写着「新增路由必须同步 verify_render.js」
+  //    「改模板跑 verify_render.js」，但没人跑 ⇒ 约定形同虚设，脚本在旁边烂掉也不知道。
+  //    verify_render / verify_template_vars 不打「N 通过 / M 失败」汇总行（只打结论行），
+  //    在汇总表里会显示 NO-SUMMARY；但它们**失败时 exit 1**（verdict=EXIT1 会计入红灯），
+  //    所以仍然有牙，只是不贡献项数。
+  [path.join(UP, 'verify_render.js'), '15 页渲染(改模板必跑)', ''],
+  [path.join(UP, 'verify_template_vars.js'), '模板变量引用(防 Undefined)', ''],
+  [path.join(UP, 'verify_readability.js'), '文案可读性', ''],
+  // 推送数据源四表的改动影响面（记忆：动 pregnancy/schedule_dates/custom_checkup/reminder 前必跑）
+  [path.join(UP, 'probe_push_schedule_impact.js'), '推送排期数据源影响面', ''],
+  // 铁律 #28：saveDb()(同步) 与 saveDbAsync() 不可混 —— 异步落盘不能把内存快照盖回去
+  [path.join(UP, 'probe_async_save_race.js'), '异步落盘不盖回旧快照', ''],
   // ---- 路径安全 ----
   [path.join(UP, 'verify_path_traversal.js'), '路径穿越', ''],
   [path.join(UP, 'verify_path_guard.js'), '路径锚定与白名单', '上线前检查修复回归'],

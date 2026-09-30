@@ -127,6 +127,8 @@ vite.config.ts.timestamp-*
 # 只有它跑出来的临时产物与日志忽略掉。
 /tools/verify/.tmp/
 /tools/verify/regress-out/
+# fkprobe.js 跑的时候现场生成的测试沙箱（t.db/logs/photos/uploads），每次运行都会重建
+/tools/verify/fkprobe/
 
 # ---- 本地留档的踩坑文档（暂不入库）----
 /DEPLOY_NOTES.md
