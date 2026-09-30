@@ -1,5 +1,10 @@
 <template>
-  <n-config-provider :theme-overrides="themeOverrides" :locale="zhCN" :date-locale="dateZhCN">
+  <n-config-provider
+    :theme="effectiveDark ? darkTheme : lightTheme"
+    :theme-overrides="effectiveDark ? darkThemeOverrides : lightThemeOverrides"
+    :locale="zhCN"
+    :date-locale="dateZhCN"
+  >
     <n-message-provider>
       <n-dialog-provider>
         <n-notification-provider>
@@ -25,9 +30,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onErrorCaptured } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, onErrorCaptured } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePregnancyStore } from '@/stores/pregnancy'
+import { useAppStore } from '@/stores/app'
 import {
   NConfigProvider,
   NMessageProvider,
@@ -36,6 +42,8 @@ import {
   NButton,
   zhCN,
   dateZhCN,
+  darkTheme,
+  lightTheme,
   type GlobalThemeOverrides,
 } from 'naive-ui'
 
@@ -73,7 +81,48 @@ function goHome() {
   router.push('/').catch(() => { window.location.reload() })
 }
 
-const themeOverrides: GlobalThemeOverrides = {
+// ============ 深色模式 ============
+// 把 store 里的 themeMode（浅色/深色/跟随系统）换算成「实际是否深色」，再：
+//   ① 给 <html> 加/去 `dark` 类 —— 激活 variables.css 里那套 html.dark CSS 变量
+//      （页面底色、卡片、文字、边框、阴影全跟着翻暗）；
+//   ② 把 Naive UI 的 darkTheme + 深色 themeOverrides 传给 n-config-provider
+//      （Naive 组件自身的底色/文字由它的 theme 控制，光靠 html.dark 类翻不了）。
+// 之前 currentTheme 是死状态、config-provider 只传 theme-overrides 没传 theme，
+// 于是「深色」永远不生效（铁律 #18 说的「深色模式未接上」）。
+const appStore = useAppStore()
+const systemDark = ref(false)
+let themeMql: MediaQueryList | null = null
+function onThemeMql(e: MediaQueryListEvent) { systemDark.value = e.matches }
+
+onMounted(() => {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    themeMql = window.matchMedia('(prefers-color-scheme: dark)')
+    systemDark.value = themeMql.matches
+    // addEventListener 旧浏览器没有 → 兼容写法
+    if (themeMql.addEventListener) themeMql.addEventListener('change', onThemeMql)
+    else if ((themeMql as any).addListener) (themeMql as any).addListener(onThemeMql)
+  }
+})
+onBeforeUnmount(() => {
+  if (themeMql) {
+    if (themeMql.removeEventListener) themeMql.removeEventListener('change', onThemeMql)
+    else if ((themeMql as any).removeListener) (themeMql as any).removeListener(onThemeMql)
+  }
+})
+
+const effectiveDark = computed(() =>
+  appStore.themeMode === 'dark' ||
+  (appStore.themeMode === 'system' && systemDark.value),
+)
+
+// immediate: 首屏就按存储/系统偏好定好，避免亮→暗闪一下
+watch(effectiveDark, (v) => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.toggle('dark', v)
+  }
+}, { immediate: true })
+
+const lightThemeOverrides: GlobalThemeOverrides = {
   common: {
     primaryColor: '#c44680',
     primaryColorHover: '#b13a72',
@@ -205,6 +254,144 @@ const themeOverrides: GlobalThemeOverrides = {
   Slider: {
     fillColor: '#c44680',
     fillColorHover: '#b13a72',
+    handleColor: '#ffffff',
+  },
+}
+
+// 深色模式的 Naive UI 覆写：与 variables.css 的 html.dark 变量对齐（卡片/文字/边框翻暗，
+// 品牌粉在深底上提亮为 --primary-color 的暗色值 #f0a6c8，保证对比度）。
+const darkThemeOverrides: GlobalThemeOverrides = {
+  common: {
+    primaryColor: '#f0a6c8',
+    primaryColorHover: '#f7b9d4',
+    primaryColorPressed: '#d8849c',
+    primaryColorSuppl: '#f0a6c8',
+    infoColor: '#9ad4ef',
+    infoColorHover: '#b3e0f5',
+    infoColorPressed: '#7cc8e8',
+    successColor: '#93d49b',
+    successColorHover: '#a7ddae',
+    successColorPressed: '#7cc488',
+    warningColor: '#f2cd7a',
+    warningColorHover: '#f5d98f',
+    warningColorPressed: '#e6bf5f',
+    errorColor: '#f2a0a0',
+    errorColorHover: '#f5b0b0',
+    errorColorPressed: '#e88a8a',
+    borderRadius: '10px',
+    borderRadiusSmall: '8px',
+    fontFamily: '"PingFang SC","Noto Sans SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Helvetica Neue","Segoe UI",sans-serif',
+    fontWeightStrong: '600',
+    textColorBase: '#ece9f3',
+    textColor1: '#ece9f3',
+    textColor2: '#b6afc7',
+    textColor3: '#8a83a0',
+    bodyColor: 'transparent',
+    cardColor: '#1a1730',
+    modalColor: '#221d3b',
+    popoverColor: '#221d3b',
+    dividerColor: '#251f3a',
+    borderColor: '#2c2640',
+    hoverColor: 'rgba(240, 166, 200, 0.08)',
+    pressedColor: 'rgba(240, 166, 200, 0.12)',
+    actionColor: '#2a1e2d',
+    tableHeaderColor: '#2a1e2d',
+    inputColor: '#221d3b',
+    inputColorDisabled: '#1c172e',
+  },
+  Button: {
+    borderRadiusTiny: '6px',
+    borderRadiusSmall: '8px',
+    borderRadiusMedium: '10px',
+    borderRadiusLarge: '12px',
+    fontWeight: '600',
+    paddingMedium: '0 18px',
+  },
+  Card: {
+    borderRadius: '16px',
+    paddingMedium: '20px',
+    paddingLarge: '24px',
+    color: '#1a1730',
+  },
+  Modal: {
+    peers: {
+      Card: {
+        borderRadius: '20px',
+        paddingMedium: '24px',
+      },
+    },
+  },
+  Drawer: {
+    borderRadius: '20px',
+  },
+  Dialog: {
+    borderRadius: '16px',
+    iconMargin: '0 12px 0 0',
+  },
+  Input: {
+    borderRadius: '10px',
+    heightMedium: '40px',
+    border: '1px solid #2c2640',
+    borderHover: '1px solid #f0a6c8',
+    borderFocus: '1px solid #f0a6c8',
+    boxShadowFocus: '0 0 0 3px rgba(240, 166, 200, 0.18)',
+  },
+  Select: {
+    peers: {
+      InternalSelection: {
+        borderRadius: '10px',
+        heightMedium: '40px',
+        border: '1px solid #2c2640',
+        borderHover: '1px solid #f0a6c8',
+        borderFocus: '1px solid #f0a6c8',
+        boxShadowFocus: '0 0 0 3px rgba(240, 166, 200, 0.18)',
+      },
+    },
+  },
+  DatePicker: {
+    peers: {
+      Input: {
+        borderRadius: '10px',
+      },
+    },
+  },
+  Tag: {
+    borderRadius: '8px',
+    fontWeightStrong: '600',
+  },
+  Tabs: {
+    tabFontWeightActive: '600',
+    tabPaddingMediumLine: '10px 18px',
+  },
+  Message: {
+    borderRadius: '12px',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+  },
+  Notification: {
+    borderRadius: '14px',
+  },
+  Switch: {
+    railColorActive: '#f0a6c8',
+  },
+  Checkbox: {
+    colorChecked: '#f0a6c8',
+    borderChecked: '1px solid #f0a6c8',
+    borderFocus: '1px solid #f0a6c8',
+    boxShadowFocus: '0 0 0 3px rgba(240, 166, 200, 0.22)',
+  },
+  Radio: {
+    dotColorActive: '#f0a6c8',
+    boxShadowActive: 'inset 0 0 0 1px #f0a6c8',
+    boxShadowHover: 'inset 0 0 0 1px #f0a6c8',
+    boxShadowFocus: 'inset 0 0 0 1px #f0a6c8, 0 0 0 3px rgba(240, 166, 200, 0.22)',
+  },
+  Progress: {
+    railColor: '#251f3a',
+    fillColor: '#f0a6c8',
+  },
+  Slider: {
+    fillColor: '#f0a6c8',
+    fillColorHover: '#f7b9d4',
     handleColor: '#ffffff',
   },
 }

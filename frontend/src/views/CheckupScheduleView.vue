@@ -1073,9 +1073,9 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
    ⚠️ 令牌挂在 :global(:root) 而不是组件根类上：Naive 的 n-modal 会把弹窗内容
       teleport 到 body 之外，挂在组件根上的自定义属性继承不进去（弹窗里有
       「选择检查项目」「从NAS选择」两个界面）。--ck- 前缀保证不与全局 token 冲突。
-   ⚠️ 深浅底一律取全局的 --bg-tint-* 与 --text-* / --border-*：将来若真的接上
-      深色模式（目前 html.dark 只是预留，currentTheme 还没接到 DOM 上），
-      这些变量会被自动覆盖，本页不需要再维护第二套深色值。
+   ⚠️ 深浅底一律取全局的 --bg-tint-* 与 --text-* / --border-*：深色模式已由
+      App.vue 接上 DOM（html.dark + Naive darkTheme），这些变量会被自动覆盖，
+      本页不需要再维护第二套深色值。
    ============================================================================ */
 :global(:root) {
   /* 表面与线条 */

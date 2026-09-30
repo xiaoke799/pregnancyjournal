@@ -2,6 +2,20 @@
   <div class="settings-view">
     <h2>设置</h2>
     <div class="settings-sections">
+      <!-- 外观 -->
+      <div class="section">
+        <h3>外观</h3>
+        <div class="form-group">
+          <label class="form-label">主题</label>
+          <n-radio-group :value="appStore.themeMode" @update:value="appStore.setThemeMode" size="medium">
+            <n-radio-button value="light">浅色</n-radio-button>
+            <n-radio-button value="dark">深色</n-radio-button>
+            <n-radio-button value="system">跟随系统</n-radio-button>
+          </n-radio-group>
+          <div class="form-hint-text">选「跟随系统」时会随手机/电脑的深色偏好自动切换；选择会被记住。</div>
+        </div>
+      </div>
+
       <!-- 孕期管理 -->
       <div class="section">
         <h3>孕期管理</h3>
@@ -473,6 +487,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { NInput, NButton, NRadioGroup, NRadioButton, NTag, NSwitch, NCheckboxGroup, NCheckbox, NSpace, NModal, useMessage } from 'naive-ui'
 import dayjs from 'dayjs'
 import { usePregnancyStore } from '@/stores/pregnancy'
+import { useAppStore } from '@/stores/app'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { pregnancyApi } from '@/api/pregnancy'
 import { exportApi } from '@/api/export'
@@ -532,6 +547,7 @@ function formatUptime(sec: number) {
 }
 
 const pregnancyStore = usePregnancyStore()
+const appStore = useAppStore()
 
 // 安全获取 message（防止在特殊上下文中失败导致整个组件崩溃）
 let message: any = { success: () => {}, error: () => {}, warning: () => {}, info: () => {} }
