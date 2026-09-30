@@ -81,6 +81,11 @@ function checkVersionSync(root) {
   // sub_version 必须 3 段式（上架无效的坑：v0.0.30 首发包写成 4 段式）
   add('manifest sub_version 是 3 段式', (man.subVersion || '').split('.').length === 3,
     `sub_version=${man.subVersion}`);
+  // sub_version 必须与 version 完全一致（build.ps1 Step1 也强制这条）。
+  // 不一致时上架/打包会出问题，且本脚本其余判定都以 version 为期望基线，
+  // 若不在此卡住，就会拿错误的基线去比 package.json，把真问题掩盖成「绿」。
+  add('manifest sub_version === version', man.subVersion === man.version,
+    `version=${man.version} sub_version=${man.subVersion}`);
   // 本脚本只对这三个文件负责；manifest 自身的一致性由 build.ps1 把关
   const expect = man.version;
 
@@ -202,6 +207,22 @@ function main() {
     } else {
       fail++;
       console.log('  ✘ 反例自检失败：lock 缺 packages[""] 却没判红');
+    }
+
+    // 第四个反例：manifest 里 sub_version 与 version 不一致也必须判红
+    // （不卡住的话，本脚本会用错误的 version 基线去比 package.json，把真问题掩盖成绿）
+    const manFile = path.join(tmp, 'manifest');
+    const manTxt = fs.readFileSync(manFile, 'utf-8');
+    const drifted = manTxt.replace(/^sub_version\s*=.*$/m, 'sub_version = 9.9.9');
+    fs.writeFileSync(manFile, drifted, 'utf-8');
+    const drift = checkVersionSync(tmp);
+    const hit4 = drift.checks.find((c) => c.name === 'manifest sub_version === version');
+    if (hit4 && !hit4.ok) {
+      pass++;
+      console.log('  ✔ 反例自检：manifest 里 sub_version≠version 后确实变红（核验不到 ≠ 没问题）');
+    } else {
+      fail++;
+      console.log('  ✘ 反例自检失败：manifest sub_version≠version 却没判红 —— 新断言是假护栏');
     }
   } finally {
     try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) { /* 残留无妨 */ }
