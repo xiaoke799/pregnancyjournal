@@ -1,5 +1,5 @@
 /**
- * 首页「胎动 / 宫缩」卡片 与 记录页「今天每次的记录」 的真实渲染核验（无头浏览器）
+ * 首页「胎动 / 宫缩」卡片 与 记录页「点条目弹明细」 的真实渲染核验（无头浏览器）
  *
  * 【为什么需要它】用户反馈：「你的胎动、宫缩和记录页功能没联动起来啊，
  * 首页相关功能是展示和快捷记录啊」。后端写回口径由 `e2e_session_rollup.js` 覆盖，
@@ -7,7 +7,7 @@
  *   ① 首页两张卡：标题、「今日 X 次」数字、**整卡可点**（标题链接铺满整卡·无「›」符号）、有没有「记一笔」按钮
  *   ② 点「记一笔」⇒ 弹出的必须是**胎动/宫缩小弹窗**（不是 26 类型通用大弹窗），字段对得上
  *   ③ 在小弹窗里填数字 → 保存 ⇒ 卡片上的数字**当场跟着变**（展示 ↔ 快捷记录闭环）
- *   ④ 记录页出现「今天每次的记录」，同一天多次会话**一条一行**都列出来
+ *   ④ 记录页**不再**内联铺开明细；点「胎动」「宫缩」条目弹出明细框，同一天多次会话**一条一行**
  *   ⑤ 无横向溢出（卡片从「纯跳转」改成带按钮的竖版，最容易撑破窄屏）
  *
  * ⚠️ 踩过的坑（沿用 shot_record_quickmodals 的教训）：
@@ -220,20 +220,66 @@ const PROBE = `
     out.afterSave = { cards: await readCards() };
   }
 
+  /**
+   * 记录页：明细**不再铺在页面上**（用户要求：上面只留主要数据）——
+   * 现在点「胎动」「宫缩」条目弹出对应明细框。本段验证：
+   *   ① 页面内联的 .session-detail 块已消失；
+   *   ② 点条目 → 弹出「胎动明细 / 宫缩明细」，行数与内容对得上（同一天多次会话一条一行）。
+   */
   async function recordPage() {
     location.hash = '#/record';
-    for (var i = 0; i < 60 && !document.querySelector('.session-detail'); i++) await sleep(250);
-    var sd = document.querySelector('.session-detail');
-    if (!sd) { out.record = { found: false, why: '记录页没有「今天每次的记录」区块' }; return; }
-    var heads = Array.prototype.map.call(sd.querySelectorAll('.sd-group-head'), function (h) { return clean(h.textContent); });
-    var rows = Array.prototype.map.call(sd.querySelectorAll('.sd-row'), function (r) {
-      return {
-        time: clean((r.querySelector('.sd-time') || {}).textContent),
-        main: clean((r.querySelector('.sd-main') || {}).textContent),
-        sub: clean((r.querySelector('.sd-sub') || {}).textContent)
-      };
-    });
-    out.record = { found: true, title: clean((sd.querySelector('.sd-title') || {}).textContent), heads: heads, rows: rows };
+    for (var i = 0; i < 60 && !document.querySelector('.record-list .category-list'); i++) await sleep(250);
+    await sleep(800);
+    var listReady = !!document.querySelector('.record-list .category-list');
+    out.record = {
+      found: listReady,
+      why: listReady ? '' : '记录页分类列表没渲染出来',
+      inlineBlockStillThere: !!document.querySelector('.session-detail'),
+      fm: null,
+      ct: null
+    };
+    if (!listReady) return;
+    out.record.fm = await openDetailAndRead('胎动');
+    out.record.ct = await openDetailAndRead('宫缩');
+  }
+
+  /** 找类别行 → 点击 → 等「XX明细」弹窗 → 读行数据（弹窗按标题定位，可叠着多个） */
+  async function openDetailAndRead(label) {
+    var row = null;
+    var items = document.querySelectorAll('.record-list .category-item');
+    for (var i = 0; i < items.length; i++) {
+      if (clean((items[i].querySelector('.row-label') || {}).textContent) === label) { row = items[i]; break; }
+    }
+    if (!row) return { open: false, why: '找不到「' + label + '」类别行' };
+    (row.querySelector('.category-row') || row).click();
+    var want = label + '明细';
+    var dlg = null;
+    for (var t = 0; t < 40 && !dlg; t++) {
+      await sleep(150);
+      var ms = visibleModals();
+      for (var k = ms.length - 1; k >= 0; k--) {
+        if (modalTitle(ms[k]).indexOf(want) >= 0) { dlg = ms[k]; break; }
+      }
+    }
+    if (!dlg) return { open: false, why: '点「' + label + '」条目没弹出明细弹窗' };
+    // 标题出来 ≠ 数据回来：等行（或空态）渲染
+    for (var w = 0; w < 40; w++) {
+      if (dlg.querySelectorAll('.sdd-row').length > 0 || dlg.querySelector('.sdd-empty')) break;
+      await sleep(150);
+    }
+    var rows = Array.prototype.map.call(dlg.querySelectorAll('.sdd-row'), function (r) { return clean(r.textContent); });
+    var res = {
+      open: true,
+      title: modalTitle(dlg),
+      summary: clean((dlg.querySelector('.sdd-summary') || {}).textContent),
+      rowCount: dlg.querySelectorAll('.sdd-row').length,
+      rows: rows
+    };
+    // 关闭：不断言关得掉（naive-ui 关闭有过渡动画，虚拟时钟下节点晚一步移除）
+    var closeBtn = dlg.querySelector('.n-base-close');
+    if (closeBtn) closeBtn.click();
+    await sleep(300);
+    return res;
   }
 
   async function outOfRange() {
@@ -390,15 +436,27 @@ function judge(r) {
   else if (!/共\s*6\s*次/.test(afm.stat)) bad.push('保存后卡片数字没跟着变（实际「' + afm.stat + '」，期望含「共 6 次」）');
 
   const rec = r.record || {};
-  if (!rec.found) bad.push('记录页看不到「今天每次的记录」（' + (rec.why || '') + '）');
+  if (!rec.found) bad.push('记录页没打开（' + (rec.why || '') + '）');
   else {
-    if (rec.title.indexOf('今天每次的记录') < 0) bad.push('明细区标题不对（' + rec.title + '）');
-    const heads = rec.heads.join(' | ');
-    if (!/胎动\s*·\s*2\s*次会话/.test(heads)) bad.push('胎动会话数不对（' + heads + '）');
-    if (!/宫缩\s*·\s*1\s*次会话/.test(heads)) bad.push('宫缩会话数不对（' + heads + '）');
-    if (rec.rows.length !== 3) bad.push('明细行数应为 3（2 胎动 + 1 宫缩），实际 ' + rec.rows.length);
-    const mains = rec.rows.map((x) => x.main).join(' | ');
-    if (!/2 次/.test(mains) || !/2 条/.test(mains)) bad.push('明细内容不对（' + mains + '）');
+    if (rec.inlineBlockStillThere) bad.push('记录页顶部还留着内联的「今天每次的记录」块（用户要求改为点条目弹窗看明细）');
+    const fmD = rec.fm || {};
+    if (!fmD.open) bad.push('点「胎动」条目没弹出明细弹窗（' + (fmD.why || '') + '）');
+    else {
+      if (fmD.rowCount !== 2) bad.push('胎动明细行数应为 2，实际 ' + fmD.rowCount);
+      const fmTxt = (fmD.rows || []).join(' | ');
+      if (!/2 次/.test(fmTxt)) bad.push('胎动明细缺「2 次」（' + fmTxt + '）');
+      if (!/共\s*2\s*次会话/.test(fmD.summary || '')) bad.push('胎动明细缺会话数摘要（' + fmD.summary + '）');
+    }
+    const ctD = rec.ct || {};
+    if (!ctD.open) bad.push('点「宫缩」条目没弹出明细弹窗（' + (ctD.why || '') + '）');
+    else {
+      if (ctD.rowCount !== 1) bad.push('宫缩明细行数应为 1，实际 ' + ctD.rowCount);
+      const ctTxt = (ctD.rows || []).join(' | ');
+      if (!/2 条/.test(ctTxt)) bad.push('宫缩明细缺「2 条」（' + ctTxt + '）');
+      if (!/50 秒/.test(ctTxt)) bad.push('宫缩明细缺「50 秒/次」（' + ctTxt + '）');
+      if (!/3\.2/.test(ctTxt)) bad.push('宫缩明细缺间隔 3.2 分钟（' + ctTxt + '）');
+      if (!/共\s*1\s*次会话/.test(ctD.summary || '')) bad.push('宫缩明细缺会话数摘要（' + ctD.summary + '）');
+    }
   }
 
   const ov = r.overflow || {};
@@ -533,11 +591,14 @@ function judge(r) {
   console.log('  ' + JSON.stringify(r.dialog));
   console.log('\n【保存后卡片（期望「今日 6 次」）】');
   (r.afterSave && r.afterSave.cards || []).forEach((c) => console.log(`  ${c.title}｜${c.stat}`));
-  console.log('\n【记录页「今天每次的记录」】');
+  console.log('\n【记录页：内联明细块已移除 / 点条目弹明细】');
   if (r.record && r.record.found) {
-    console.log('  标题：' + r.record.title);
-    (r.record.heads || []).forEach((h) => console.log('  分组：' + h));
-    (r.record.rows || []).forEach((x) => console.log(`    ${x.time}｜${x.main}｜${x.sub}`));
+    console.log('  顶部内联「今天每次的记录」还在？' + (r.record.inlineBlockStillThere ? '是（应为否）' : '否'));
+    [['胎动', r.record.fm], ['宫缩', r.record.ct]].forEach(([label, d]) => {
+      d = d || {};
+      console.log(`  ${label}：${d.open ? '弹窗已开｜' + d.title + '｜' + d.summary : '未打开（' + (d.why || '') + '）'}`);
+      (d.rows || []).forEach((x) => console.log('    ' + x));
+    });
   } else console.log('  ' + JSON.stringify(r.record));
 
   console.log('\n【统计页：口径说明 + 数据列表今日行】');
