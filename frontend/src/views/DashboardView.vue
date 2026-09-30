@@ -120,13 +120,12 @@
          也没法随手补一笔 —— 用户反馈「首页相关功能是展示和快捷记录啊」。
          现在：卡上直接显示今天的数字（读 daily_record 的汇总，计数器/计时器结束会话
          或每记一次都会写回），并提供「记一笔」就地弹出小弹窗；
-         想用实时计数/计时器再点标题行右侧的箭头进全屏页。 -->
+         整张卡片（除「记一笔」按钮外）点任意位置都能进全屏计数器/计时器页。 -->
     <div class="tool-row">
       <div class="tool-card">
         <div class="tool-card-head">
           <span class="tool-card-icon"><AppIcon name="timer" :size="18" /></span>
-          <router-link to="/contraction-timer" class="tool-card-title">宫缩计时器</router-link>
-          <router-link to="/contraction-timer" class="tool-card-more" aria-label="进入宫缩计时器">›</router-link>
+          <router-link to="/contraction-timer" class="tool-card-title" aria-label="进入宫缩计时器">宫缩计时器</router-link>
         </div>
         <div class="tool-card-stat" :class="{ 'is-live': contractionActive, 'is-empty': contractionStatEmpty }">
           {{ contractionStatText }}
@@ -137,8 +136,7 @@
       <div class="tool-card">
         <div class="tool-card-head">
           <span class="tool-card-icon">🦶</span>
-          <router-link to="/fetal-movement-counter" class="tool-card-title">胎动计数器</router-link>
-          <router-link to="/fetal-movement-counter" class="tool-card-more" aria-label="进入胎动计数器">›</router-link>
+          <router-link to="/fetal-movement-counter" class="tool-card-title" aria-label="进入胎动计数器">胎动计数器</router-link>
         </div>
         <div class="tool-card-stat" :class="{ 'is-empty': fetalMovementStatEmpty }">
           {{ fetalMovementStatText }}
@@ -1278,8 +1276,10 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .eg-entry-arrow { font-size: 18px; color: #7c5cbf; font-weight: 700; }
 
 /* ===== 胎动 / 宫缩卡片：展示今日数据 + 快捷记录 =====
-   ⚠️ 卡片不再是整体 router-link（里面有按钮，套一层链接会变成嵌套可点区域）。
-      进全屏计数器/计时器改由标题右侧的「›」承担。配色沿用原卡片（浅粉→浅紫渐变）。 */
+   ⚠️ 卡片整体可点用「拉伸链接」实现：卡片外包 router-link 会让「记一笔」变成嵌套可点区域，
+      所以改为**标题链接的 ::after 铺满整卡**；「记一笔」按钮用 z-index 抬到覆盖层之上。
+      （此前承担进入的「›」符号已按用户反馈移除——符号突兀，且只有点符号才能进。）
+      配色沿用原卡片（浅粉→浅紫渐变）。 */
 .tool-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1296,7 +1296,10 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: var(--shadow-sm);
   min-width: 0;
+  position: relative;   /* 拉伸链接的定位基准：整卡可点 */
+  cursor: pointer;
 }
+.tool-card:hover { border-color: rgba(196, 70, 128, 0.35); }
 .tool-card-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .tool-card-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
 .tool-card-title {
@@ -1310,17 +1313,9 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   white-space: nowrap;
 }
 .tool-card-title:hover { color: var(--primary-color, #c44680); }
-.tool-card-more {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 700;
-  color: #7c5cbf;
-  text-decoration: none;
-  padding: 0 4px;
-}
-.tool-card-more:hover { color: var(--primary-color, #c44680); }
+/* 拉伸链接：标题链接的 ::after 铺满整卡 ⇒ 点卡片任意位置都能进全屏页；
+   「记一笔」按钮用 z-index 抬到覆盖层之上（见下方 .n-button 规则），点它不会误跳转。 */
+.tool-card-title::after { content: ''; position: absolute; inset: 0; }
 .tool-card-stat {
   font-size: 12px;
   line-height: 1.35;
@@ -1330,7 +1325,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 }
 .tool-card-stat.is-empty { color: #9aa3af; }
 .tool-card-stat.is-live { color: var(--primary-color, #c44680); font-weight: 600; }
-.tool-card :deep(.n-button) { align-self: flex-start; }
+.tool-card :deep(.n-button) { align-self: flex-start; position: relative; z-index: 1; }
 
 .record-content { display: flex; flex-direction: column; gap: 10px; }
 

@@ -4,7 +4,7 @@
  * 【为什么需要它】用户反馈：「你的胎动、宫缩和记录页功能没联动起来啊，
  * 首页相关功能是展示和快捷记录啊」。后端写回口径由 `e2e_session_rollup.js` 覆盖，
  * 本脚本负责**前端那一半**——静态检查看不出「卡片上到底有没有数字」「点记一笔弹的是不是那个弹窗」：
- *   ① 首页两张卡：标题、「今日 X 次」数字、进全屏页的链接、有没有「记一笔」按钮
+ *   ① 首页两张卡：标题、「今日 X 次」数字、**整卡可点**（标题链接铺满整卡·无「›」符号）、有没有「记一笔」按钮
  *   ② 点「记一笔」⇒ 弹出的必须是**胎动/宫缩小弹窗**（不是 26 类型通用大弹窗），字段对得上
  *   ③ 在小弹窗里填数字 → 保存 ⇒ 卡片上的数字**当场跟着变**（展示 ↔ 快捷记录闭环）
  *   ④ 记录页出现「今天每次的记录」，同一天多次会话**一条一行**都列出来
@@ -133,23 +133,48 @@ const PROBE = `
     for (var k = 0; k < bs.length; k++) if (clean(bs[k].textContent) === text) { bs[k].click(); return true; }
     return false;
   }
-  function readCards() {
-    return Array.prototype.map.call(document.querySelectorAll('.tool-card'), function (c) {
-      var more = c.querySelector('.tool-card-more');
-      return {
-        title: clean((c.querySelector('.tool-card-title') || {}).textContent),
-        stat: clean((c.querySelector('.tool-card-stat') || {}).textContent),
-        statLive: !!(c.querySelector('.tool-card-stat') || {}).classList && c.querySelector('.tool-card-stat').classList.contains('is-live'),
-        more: more ? more.getAttribute('href') : null,
+  /**
+   * 读首页两张工具卡。整卡可点＝「标题链接铺满整卡」的拉伸链接（用户要求：去掉「›」进入符号、
+   * 点卡片任意位置都能进全屏页）—— 不看 DOM 结构，用 elementFromPoint 做**真实命中测试**：
+   *   · 卡片中部 / 原来挂「›」的右上角 → 命中元素必须落在标题链接上（= 整卡可点）；
+   *   · 「记一笔」按钮处 → 必须命中按钮本身（按钮被 z-index 抬在覆盖层之上，点它不会误跳转）。
+   */
+  async function readCards() {
+    var cards = document.querySelectorAll('.tool-card');
+    var res = [];
+    for (var i = 0; i < cards.length; i++) {
+      var c = cards[i];
+      c.scrollIntoView({ block: 'center', behavior: 'instant' });
+      await sleep(120);
+      var link = c.querySelector('.tool-card-title');
+      var statEl = c.querySelector('.tool-card-stat');
+      var btn = null;
+      var bs = c.querySelectorAll('button');
+      for (var b = 0; b < bs.length; b++) if (clean(bs[b].textContent) === '记一笔') btn = bs[b];
+      var inLink = function (el) { return !!(el && link && (el === link || link.contains(el))); };
+      var r = c.getBoundingClientRect();
+      var hitMid = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      var hitCorner = document.elementFromPoint(Math.max(1, r.right - 8), r.top + 12);
+      var hitBtn = null;
+      if (btn) { var br = btn.getBoundingClientRect(); hitBtn = document.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2); }
+      res.push({
+        title: clean(link ? link.textContent : ''),
+        stat: clean(statEl ? statEl.textContent : ''),
+        statLive: !!(statEl && statEl.classList && statEl.classList.contains('is-live')),
+        enterHref: link ? link.getAttribute('href') : null,
+        cardClickable: inLink(hitMid) && inLink(hitCorner),
+        btnOnTop: !!(btn && hitBtn && (hitBtn === btn || btn.contains(hitBtn))),
+        hasMore: !!c.querySelector('.tool-card-more'),
         buttons: Array.prototype.map.call(c.querySelectorAll('button'), function (b) { return clean(b.textContent); }),
         rectW: c.offsetWidth
-      };
-    });
+      });
+    }
+    return res;
   }
 
   async function dashboard() {
     for (var i = 0; i < 60 && document.querySelectorAll('.tool-card').length < 2; i++) await sleep(200);
-    out.cards = readCards();
+    out.cards = await readCards();
 
     // 点「胎动计数器」那张卡上的「记一笔」
     var fmCard = null;
@@ -192,7 +217,7 @@ const PROBE = `
     clickByText(m, '保存');
     for (var w = 0; w < 60; w++) { await sleep(200); if (!modalByTitle('胎动')) break; }
     await sleep(600);
-    out.afterSave = { cards: readCards() };
+    out.afterSave = { cards: await readCards() };
   }
 
   async function recordPage() {
@@ -334,12 +359,18 @@ function judge(r) {
     // 今天有 2 次会话、共 4 次 ⇒ 卡片必须把两者都写出来（否则用户会拿它去跟统计曲线比）
     if (!/今日\s*2\s*次会话\s*·\s*共\s*4\s*次/.test(fm.stat)) bad.push('胎动卡没写清「几次会话 · 共几次」（实际「' + fm.stat + '」）');
     if (fm.buttons.indexOf('记一笔') < 0) bad.push('胎动卡缺「记一笔」按钮');
-    if (!fm.more || fm.more.indexOf('fetal-movement-counter') < 0) bad.push('胎动卡缺进全屏计数器页的链接（实际 ' + fm.more + '）');
+    if (!fm.enterHref || fm.enterHref.indexOf('fetal-movement-counter') < 0) bad.push('胎动卡进全屏页的链接不对（实际 ' + fm.enterHref + '）');
+    if (!fm.cardClickable) bad.push('胎动卡不是整卡可点（卡片中部/右上角命中的不是进入链接）');
+    if (fm.hasMore) bad.push('胎动卡还挂着「›」进入符号（用户要求移除，改为整卡可点）');
+    if (!fm.btnOnTop) bad.push('胎动卡「记一笔」被整卡链接盖住（点它会误跳全屏页）');
   }
   if (ct) {
     if (!/今日\s*2\s*次/.test(ct.stat)) bad.push('宫缩卡没显示今日次数（实际「' + ct.stat + '」）');
     if (ct.buttons.indexOf('记一笔') < 0) bad.push('宫缩卡缺「记一笔」按钮');
-    if (!ct.more || ct.more.indexOf('contraction-timer') < 0) bad.push('宫缩卡缺进全屏计时器页的链接（实际 ' + ct.more + '）');
+    if (!ct.enterHref || ct.enterHref.indexOf('contraction-timer') < 0) bad.push('宫缩卡进全屏页的链接不对（实际 ' + ct.enterHref + '）');
+    if (!ct.cardClickable) bad.push('宫缩卡不是整卡可点（卡片中部/右上角命中的不是进入链接）');
+    if (ct.hasMore) bad.push('宫缩卡还挂着「›」进入符号（用户要求移除，改为整卡可点）');
+    if (!ct.btnOnTop) bad.push('宫缩卡「记一笔」被整卡链接盖住（点它会误跳全屏页）');
   }
 
   const d = r.dialog || {};
@@ -497,7 +528,7 @@ function judge(r) {
   fs.writeFileSync(path.join(OUT, LABEL + '.json'), JSON.stringify(r, null, 2), 'utf-8');
 
   console.log('\n【首页卡片】');
-  (r.cards || []).forEach((c) => console.log(`  ${c.title}｜${c.stat}｜按钮[${(c.buttons || []).join(',')}]｜→ ${c.more}`));
+  (r.cards || []).forEach((c) => console.log(`  ${c.title}｜${c.stat}｜按钮[${(c.buttons || []).join(',')}]｜整卡可点=${c.cardClickable}｜按钮可点=${c.btnOnTop}｜进入链接=${c.enterHref}`));
   console.log('\n【点「记一笔」弹出的弹窗】');
   console.log('  ' + JSON.stringify(r.dialog));
   console.log('\n【保存后卡片（期望「今日 6 次」）】');
