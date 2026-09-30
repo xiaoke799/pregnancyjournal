@@ -358,6 +358,40 @@ foreach ($r in $routeFiles) {
 }
 $assetCount = @($inner | Where-Object { $_ -like "ui/assets/*" -and $_ -notlike "*/" }).Count
 if ($assetCount -lt 30) { $vErrors += "前端 assets 仅 $assetCount 个文件，异常" }
+# ⚠️ 数量断言**够不着"少一个 chunk"** —— 2026-09-30 实测过一版包：
+#    Step1.5 的依赖图漏判（文件名带点的共享 chunk），移走一个仍被静态 import 的文件，
+#    assets 从 50 变 49，这里 49 -lt 30 = false ⇒ 一路"验证通过"，装上去就是白屏。
+#    所以 Step6 必须做**逐一比对 + 引用闭合**，不能只看数量。
+$pkgAssets = @($inner | Where-Object { $_ -like "ui/assets/*" -and $_ -notlike "*/" } |
+               ForEach-Object { $_.Substring("ui/assets/".Length) })
+$localAssets = @(Get-ChildItem $assetsDir -File | ForEach-Object { $_.Name })
+$missA = @($localAssets | Where-Object { $pkgAssets -notcontains $_ })
+$extraA = @($pkgAssets | Where-Object { $localAssets -notcontains $_ })
+if ($missA.Count -gt 0) { $vErrors += "包内 ui/assets 缺少: $($missA -join '、')" }
+if ($extraA.Count -gt 0) { $vErrors += "包内 ui/assets 多出未预期文件: $($extraA -join '、')" }
+# 引用闭合：从 index.html 出发遍历，每个被引用的 chunk 都必须真实存在。
+# ⚠️ 前导字符类含 `/`（跨 chunk 写作 "./Foo-<hash>.js"）；名字里允许 `.`（共享 .vue 组件）。
+$uiHtmlPath = Join-Path $AppUi "index.html"
+$seenAssets = New-Object System.Collections.Generic.HashSet[string]
+$aq = [System.Collections.Queue]::new()
+foreach ($m in [regex]::Matches([System.IO.File]::ReadAllText($uiHtmlPath), '/assets/([A-Za-z0-9._-]+\.(?:js|css))')) {
+    $aq.Enqueue($m.Groups[1].Value)
+}
+$dangling = @()
+while ($aq.Count -gt 0) {
+    $f = $aq.Dequeue()
+    if (-not $seenAssets.Add($f)) { continue }
+    $fp = Join-Path $assetsDir $f
+    if (-not (Test-Path $fp)) { $dangling += $f; continue }
+    $fc = [System.IO.File]::ReadAllText($fp)
+    foreach ($m in [regex]::Matches($fc, '[./"]([A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8,12}\.(?:js|css))["'']')) {
+        if (Test-Path (Join-Path $assetsDir $m.Groups[1].Value)) { $aq.Enqueue($m.Groups[1].Value) }
+    }
+}
+if ($dangling.Count -gt 0) { $vErrors += "前端存在悬空引用（运行时会 404）: $($dangling -join '、')" }
+if ($seenAssets.Count -ne $localAssets.Count) {
+    $vErrors += "前端引用闭合不上：从 index.html 只能走到 $($seenAssets.Count) / $($localAssets.Count) 个产物"
+}
 # cmd/main 无BOM（只抽这一个文件）
 & tar -xzf "$verify\pkg.tar.gz" -C $verify cmd/main
 $mb = [System.IO.File]::ReadAllBytes((Join-Path $verify "cmd\main"))[0]
