@@ -19,7 +19,8 @@
           <div class="row-right">
             <template v-if="cat.hasData">
               <span class="row-preview">{{ getPreview(cat.type) }}</span>
-              <span class="row-edit-icon"><AppIcon name="edit" :size="14" /></span>
+              <span v-if="isSessionType(cat.type)" class="row-view-hint">查看</span>
+              <span v-else class="row-edit-icon"><AppIcon name="edit" :size="14" /></span>
             </template>
             <template v-else>
               <span class="add-circle" :style="{ color: cat.color, borderColor: cat.color }">+</span>
@@ -57,6 +58,8 @@ const emit = defineEmits<{
   'add': []
   'add-type': [type: string]
   'edit': [payload: { type: string; record: any }]
+  /** 胎动/宫缩：点条目 → 打开「每次明细」弹窗（明细不再在记录页上铺开） */
+  'detail': [type: string]
 }>()
 
 const pregnancyStore = usePregnancyStore()
@@ -98,6 +101,13 @@ function onCategoryClick(cat: DisplayCategory) {
   // 不能走通用大弹窗：那读的是当天记录，里面根本没有计划数据（会打开一张空表单）。
   if (cat.type === 'plan') { emit('add-type', 'plan'); return }
 
+  // 胎动 / 宫缩：有会话记录 ⇒ 点条目看每次明细（弹窗）。
+  // 用户反馈「明细在页面上铺开、上面放多了不好操作」⇒ 明细统一收进弹窗，页面只留主要数据。
+  if (isSessionType(cat.type) && cat.hasData) {
+    emit('detail', cat.type)
+    return
+  }
+
   if (cat.hasData) {
     // 有数据 → 编辑（使用大弹窗）
     emit('edit', { type: cat.type, record: record.value })
@@ -106,6 +116,10 @@ function onCategoryClick(cat: DisplayCategory) {
     emit('add-type', cat.type)
   }
 }
+
+/** 有会话明细的两类：明细走弹窗（点条目「查看」） */
+const SESSION_TYPES = ['fetal_movement', 'contraction']
+function isSessionType(t: string) { return SESSION_TYPES.indexOf(t) >= 0 }
 
 interface CategoryDef {
   type: string
@@ -670,6 +684,19 @@ function getSleepQualityWidth(): string {
 }
 
 .category-row:hover .row-edit-icon {
+  opacity: 1;
+}
+
+/* 胎动/宫缩行的「查看」提示：点整行打开「每次明细」弹窗（不是编辑，故不显示铅笔） */
+.row-view-hint {
+  font-size: 12px;
+  flex-shrink: 0;
+  color: var(--primary-color, #c44680);
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+.category-row:hover .row-view-hint {
   opacity: 1;
 }
 

@@ -53,18 +53,16 @@
 
     <!-- ====== 4. 记录分类列表（独立滚动区域）====== -->
     <div class="list-section">
-      <!-- 今天每次会话的明细（计数器 / 计时器产生的原始记录）：汇总在下方列表里，
-           明细在这里，两者都在 ⇒ 同一天数了几次都留痕，不会被合并掉 -->
-      <SessionDetailList
-        :pregnancy-id="pregnancyStore.currentPregnancy?.id"
-        :date="selectedDate"
-      />
+      <!-- 每次会话的明细（计数器 / 计时器产生的原始记录）**不在这里铺开**——
+           用户反馈「上面放多了、显示不好操作」。改为点下方「胎动」「宫缩」条目
+           弹出明细框（SessionDetailDialog），页面只留主要数据 -->
       <RecordList
         :date="selectedDate"
         :records="currentRecords"
         :plans="todayPlans"
         @edit="onEditRecord"
         @add-type="openQuickAdd"
+        @detail="openSessionDetail"
       />
     </div>
     </template>
@@ -489,6 +487,14 @@
       :note="quickLogNote"
     />
 
+    <!-- 点「胎动」「宫缩」条目 → 看每次会话明细（替代此前页面上铺开的明细块） -->
+    <SessionDetailDialog
+      v-model:show="showSessionDetail"
+      :type="sessionDetailType"
+      :pregnancy-id="pregnancyStore.currentPregnancy?.id"
+      :date="selectedDate"
+    />
+
     <!-- 计划弹窗 -->
     <n-modal v-model:show="showPlanModal" preset="card" title="添加计划" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetPlanForm">
       <div class="quick-form">
@@ -713,7 +719,7 @@ import MiniCalendar from '@/components/record/MiniCalendar.vue'
 import RecordList from '@/components/record/RecordList.vue'
 import AddRecordDialog from '@/components/record/AddRecordDialog.vue'
 import QuickLogDialog from '@/components/record/QuickLogDialog.vue'
-import SessionDetailList from '@/components/record/SessionDetailList.vue'
+import SessionDetailDialog from '@/components/record/SessionDetailDialog.vue'
 import { getMoodEmoji as moodEmojiOf, MOOD_OPTIONS as moodOptions, SLEEP_QUALITY_OPTIONS as sleepQualityOptions, EXERCISE_INTENSITY_OPTIONS as exerciseIntensityOptions, type SleepQuality, type ExerciseIntensity, isValidDateStr } from '@/utils/format'
 import StatsPanel from './StatsView/StatsPanel.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
@@ -784,6 +790,13 @@ const showDietModal = ref(false)
 const showExerciseModal = ref(false)
 const showFmModal = ref(false)
 const showContrModal = ref(false)
+// 会话明细弹窗（点记录列表里的「胎动」「宫缩」条目打开）
+const showSessionDetail = ref(false)
+const sessionDetailType = ref<'fetal_movement' | 'contraction'>('fetal_movement')
+function openSessionDetail(type: string) {
+  sessionDetailType.value = type === 'contraction' ? 'contraction' : 'fetal_movement'
+  showSessionDetail.value = true
+}
 const showPlanModal = ref(false)
 const showIntimacyModal = ref(false)
 const showHcgModal = ref(false)
