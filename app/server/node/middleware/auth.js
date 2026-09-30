@@ -56,4 +56,69 @@ function authMiddleware(req, res, next) {
   next();
 }
 
+/**
+ * 直连本机 / 内网 —— 可信来源判定。
+ *
+ * ⚠️ 只用 express 的 `req.ip`（它本身从 socket 派生、且遵循 trust proxy 决策）。
+ *    不要再回退去读 `req.socket.remoteAddress`：那是第二处出处，还会绕开 trust proxy 的判断。
+ * ⚠️ **拿不到 IP 一律不视为本地**。历史坑：本判定原写在 logs.js，写成
+ *    `if (!req.ip || req.ip === 'unknown') return true;` —— 而真实部署所有请求都从统一网关
+ *    经 Unix Socket 进来、**根本没有 IP** ⇒ 那条「仅允许本地访问」在线上恒真、形同虚设。
+ */
+function isDirectLocal(req) {
+  const ip = req.ip || '';
+  if (!ip || ip === 'unknown') return false;
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+  if (ip.startsWith('192.168.') || ip.startsWith('::ffff:192.168.')) return true;
+  if (ip.startsWith('10.') || ip.startsWith('::ffff:10.')) return true;
+  // 172.16.0.0/12
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  if (/^::ffff:172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  return false;
+}
+
+/**
+ * 「整体性 / 破坏性操作」的管理员闸门（2026-09-30 上架前加固 B2）。
+ *
+ * 【为什么需要】应用内**有意不做用户隔离**（家庭共用是设计目标），网关鉴权只保证
+ * 「登录过 NAS」。于是在这之前，NAS 上**任何账号**都能：恢复/导入备份（整库覆盖）、
+ * 导出整份数据、浏览并下载任意目录、改推送配置、读日志 —— 孕期照片与产检报告
+ * 等于对全家人（以及任何拿到 NAS 账号的人）敞开。
+ *
+ * 【范围】只锁**整体性 / 破坏性**操作：
+ *   备份/恢复/导入/整库覆盖、整份数据导出、目录浏览与下载、改授权目录、改推送配置、看/清日志。
+ *   ⚠️ **明确不锁**：逐条增删改（记一笔、删错的那一条、传照片）、单份 CSV / 日记 PDF / 相册 PDF 导出、
+ *   以及一切只读查询。⇒ 家人的**可见性与日常操作零变化**，只是「能把全部数据抹掉 / 整份拿走」的路被堵上。
+ *
+ * 【语义】与 logs.js 原有的 checkAdmin **逐字一致**（本次只是抽出来共用，不引入新判定）：
+ *   ① `APP_MODE=dev` → 放行（本地调试，也是回归套件跑的模式）
+ *   ② 网关身份（auth_source === 'gateway'）→ 必须是 `is_admin === 'true'`
+ *   ③ 直连本机/内网（isDirectLocal）→ 视为可信
+ *   ④ 其余 → 403
+ *
+ * ⚠️ 本闸门**不改变可见性**，不要拿它当"用户隔离"用 —— 零隔离是有意决策，见
+ *    `.workbuddy/memory/references/security-model.md`。
+ */
+function requireAdmin(req, res, next) {
+  if (config.APP_MODE === 'dev') return next();
+  const st = req.state || {};
+  if (st.auth_source === 'gateway') {
+    if (st.is_admin === 'true') return next();
+    return res.status(403).json({
+      code: 403,
+      data: null,
+      message: '需要管理员权限：该操作会影响全部数据，仅管理员可执行',
+    });
+  }
+  if (isDirectLocal(req)) return next();
+  return res.status(403).json({
+    code: 403,
+    data: null,
+    message: '需要管理员权限：该操作会影响全部数据，仅管理员可执行',
+  });
+}
+
 module.exports = authMiddleware;
+// 具名导出：供路由挂闸门用（`router.post('/restore', requireAdmin, handler)`）
+module.exports.requireAdmin = requireAdmin;
+module.exports.isDirectLocal = isDirectLocal;

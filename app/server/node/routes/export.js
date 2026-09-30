@@ -7,6 +7,26 @@ const path = require('path');
 const log = require('../logger');
 const PDFDocument = require('pdfkit');
 const pathGuard = require('../services/path-guard');
+const { requireAdmin } = require('../middleware/auth');
+
+// ============================================================================
+// 「整体性 / 破坏性」操作的管理员闸门（2026-09-30 上架前加固 B2）
+//
+// 本文件的接口分两档，**不要混**：
+//   🔴 需管理员（requireAdmin）——备份/恢复/导入/整库覆盖、整份数据导出、目录浏览与下载、
+//      改授权目录。这些要么能把**全部数据抹掉/覆盖**，要么能把**整份数据拿走**、
+//      要么能翻看/下载 NAS 上任意目录。
+//   🟢 不需要（仅 verifyAuth）——`/export/csv`、`/export/diary-pdf`、`/export/album-pdf`
+//      这三条是**日常功能**：导出一段时间的 CSV、把某篇日记/某个相册做成 PDF。
+//      它们的产出就是用户在应用里本来就能看到的内容 ⇒ 拦了只会让家人用不了正常功能。
+//
+// 判定口径见 `middleware/auth.js` 的 requireAdmin（dev 放行 / 网关身份要求 is_admin /
+// 直连本机内网视为可信 / 其余 403）。**可见性与日常操作零变化**，只堵「抹掉/整份拿走」。
+// 挂闸门的路由：/export/full、/export/with-photos、/export/category、
+//   /export/import-json、/export/import-dir、/export/backup-db、/export/restore-db、
+//   /export/download-dir、/export/backups、/backup、/restore、/restore-latest、
+//   /trust-dir、/browse-dir
+// ============================================================================
 
 // 导入/恢复端点的最大请求体大小（100MB），防止内存耗尽
 const MAX_PAYLOAD_BYTES = 100 * 1024 * 1024;
@@ -395,7 +415,7 @@ function prepareInsertStatement(table, sampleRow) {
   };
 }
 
-router.post('/export/full', async (req, res) => {
+router.post('/export/full', requireAdmin, async (req, res) => {
   try {
     log.api('导出', '全量JSON导出开始');
     const exportData = { version: '1.0.0', exported_at: new Date().toISOString(), tables: {} };
@@ -418,7 +438,7 @@ router.post('/export/full', async (req, res) => {
   }
 });
 
-router.post('/export/with-photos', async (req, res) => {
+router.post('/export/with-photos', requireAdmin, async (req, res) => {
   try {
     log.api('导出', '全量+原图导出开始');
     const timestamp = config.localFileTimestamp();
@@ -485,7 +505,7 @@ router.post('/export/with-photos', async (req, res) => {
   }
 });
 
-router.get('/export/download-dir', (req, res) => {
+router.get('/export/download-dir', requireAdmin, (req, res) => {
   try {
     const exportDir = req.query.dir;
     if (!exportDir || !fs.existsSync(exportDir)) {
@@ -514,7 +534,7 @@ router.get('/export/download-dir', (req, res) => {
   }
 });
 
-router.post('/export/import-json', async (req, res) => {
+router.post('/export/import-json', requireAdmin, async (req, res) => {
   try {
     const importData = req.body;
     if (!importData || !importData.tables) {
@@ -545,7 +565,7 @@ router.post('/export/import-json', async (req, res) => {
   }
 });
 
-router.post('/export/import-dir', async (req, res) => {
+router.post('/export/import-dir', requireAdmin, async (req, res) => {
   try {
     const importDir = req.query.dir || req.body.dir;
     if (!importDir || !fs.existsSync(importDir)) {
@@ -633,7 +653,7 @@ router.post('/export/import-dir', async (req, res) => {
   }
 });
 
-router.post('/export/category', async (req, res) => {
+router.post('/export/category', requireAdmin, async (req, res) => {
   try {
     const { category, pregnancy_id } = req.body || {};
     if (!category) {
@@ -701,7 +721,7 @@ router.post('/export/category', async (req, res) => {
   }
 });
 
-router.post('/export/backup-db', async (req, res) => {
+router.post('/export/backup-db', requireAdmin, async (req, res) => {
   try {
     const dbPath = config.DATABASE_PATH;
     if (!fs.existsSync(dbPath)) {
@@ -726,7 +746,7 @@ router.post('/export/backup-db', async (req, res) => {
   }
 });
 
-router.post('/export/restore-db', async (req, res) => {
+router.post('/export/restore-db', requireAdmin, async (req, res) => {
   try {
     const backupPath = req.body.backup_path || req.query.backup_path;
     if (!backupPath || !fs.existsSync(backupPath)) {
@@ -783,7 +803,7 @@ router.post('/export/restore-db', async (req, res) => {
   }
 });
 
-router.get('/export/backups', async (req, res) => {
+router.get('/export/backups', requireAdmin, async (req, res) => {
   try {
     // 与「备份」及「一键恢复」保持一致：搜 _backupSearchRoots()
     // （含用户授权目录 / 手动确认目录）——否则导出到授权目录的备份在这里看不到。
@@ -817,7 +837,7 @@ router.get('/export/backups', async (req, res) => {
   }
 });
 
-router.post('/backup', async (req, res) => {
+router.post('/backup', requireAdmin, async (req, res) => {
   try {
     const { dir } = req.body || {};
     log.info('export/备份', `POST /backup 开始, userDir=${dir||'(auto)'}`);
@@ -1023,7 +1043,7 @@ router.post('/backup', async (req, res) => {
   }
 });
 
-router.post('/restore', async (req, res) => {
+router.post('/restore', requireAdmin, async (req, res) => {
   try {
     const { dir } = req.body || {};
     log.info('export/恢复', `POST /restore 开始, dir=${dir}`);
@@ -1718,7 +1738,7 @@ router.get('/export/album-pdf', verifyAuth, async (req, res) => {
 // 校验并记住一个「手动指定的导出目录」。
 // 只接受真实可写的目录：做一次真实写入再删除，写不进去就明确告诉用户
 // 「应用没有这个目录的写权限」以及该去哪里授权，而不是让他导出时才发现失败。
-router.post('/trust-dir', async (req, res) => {
+router.post('/trust-dir', requireAdmin, async (req, res) => {
   try {
     const { dir } = req.body || {};
     if (!dir || typeof dir !== 'string' || !dir.trim()) {
@@ -1815,7 +1835,7 @@ router.get('/storage-info', (req, res) => {
   }
 });
 
-router.get('/browse-dir', (req, res) => {
+router.get('/browse-dir', requireAdmin, (req, res) => {
   try {
     let dirPath = req.query.path || '/';
 
@@ -1981,7 +2001,7 @@ router.get('/browse-dir', (req, res) => {
 module.exports = router;
 
 // ========== 一键恢复（自动查找最新备份） ==========
-router.post('/restore-latest', async (req, res) => {
+router.post('/restore-latest', requireAdmin, async (req, res) => {
   try {
     log.info('export/恢复', `POST /restore-latest 开始（一键恢复）`);
     // 与 GET /export/backups 共用同一份搜索范围（含用户授权目录 / 手动确认目录），

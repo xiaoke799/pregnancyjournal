@@ -130,6 +130,7 @@ const SUITES = [
   [path.join(V, 't12_reference_photo.js'), '照片目录校验（reference 部分已随接口下线移除）', ''],
   [path.join(V, 't13_error_sanitize.js'), '错误脱敏(含URL不误伤)', ''],
   [path.join(V, 't14_access_control.js'), '访问控制(日志/导出鉴权)', ''],
+  [path.join(V, 'verify_admin_gate.js'), 'B2 管理操作限管理员(破坏性操作闸门)', ''],
   [path.join(V, 't15_crash_flush.js'), '崩溃/退出前补落盘', ''],
   [path.join(V, 't16_storage_migrate.js'), '存储迁移不落假标记', ''],
   [path.join(V, 't17_index_cgi_body.js'), 'CGI 请求体转发', ''],

@@ -66,8 +66,10 @@ function fakeGateway(opts = {}) {
   console.log('=== O2：#12 logs.js 源码断言 ===');
   const lgSrc = stripComments(fs.readFileSync(path.join(SERVER_DIR, 'routes', 'logs.js'), 'utf-8'));
   ok(!/if \(!req\.ip \|\| req\.ip === 'unknown'\) return true;/.test(lgSrc), '删除了 `if (!req.ip) return true` 的旁路');
-  ok(/function checkAdmin/.test(lgSrc), '新增了 checkAdmin（破坏性操作需管理员）');
-  ok(/_isDirectLocal\(req\)/.test(lgSrc), '保留了「直连本机/内网」的放行通道');
+  ok(/const \{ requireAdmin \} = require\('\.\.\/middleware\/auth'\)/.test(lgSrc), 'logs.js 从 middleware 引入 requireAdmin（判定已抽离共用）');
+  ok(!/function checkAdmin/.test(lgSrc), 'logs.js 不再自写 checkAdmin（统一走 middleware）');
+  ok(!/_isDirectLocal/.test(lgSrc), 'logs.js 不再自写 _isDirectLocal（唯一出处在 middleware）');
+  ok((lgSrc.match(/requireAdmin,/g) || []).length === 3, 'logs.js 三条路由均挂 requireAdmin', (lgSrc.match(/requireAdmin,/g) || []).length);
 
   // ---------- 功能验证 ----------
   const app = express();
@@ -108,7 +110,7 @@ function fakeGateway(opts = {}) {
     config.APP_MODE = 'fnos';
     const { s, p } = await mkApp(fakeGateway({ identity: { uid: '1000', isAdmin: false }, ip: undefined }));
     const r = await call(p, 'GET', '/api/v1/logs?lines=10');
-    ok(r.status === 200 && r.json && r.json.code === 0, '普通用户 GET /logs → 200', r.status);
+    ok(r.status === 403, '【关键】普通用户 GET /logs → 403（日志属排查线索，破坏性操作需管理员）', r.status + ' ' + String(r.raw).slice(0, 80));
     const d = await call(p, 'DELETE', '/api/v1/logs');
     ok(d.status === 403, '【关键】普通用户 DELETE /logs → 403（需管理员）', d.status + ' ' + String(d.raw).slice(0, 80));
     s.close();
