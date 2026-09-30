@@ -2,6 +2,58 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const config = require('../config');
+const rollup = require('../services/daily-rollup');
+
+/**
+ * 按明细重算会话汇总（`avg_duration` / `avg_interval` 都是**秒**）。
+ *
+ * 抽出来的理由有二：
+ *  ① 「结束计时」和「每记一条宫缩」都要算同一份东西 —— 原来这段只写在 PUT 里，
+ *     于是**用户不点结束就直接关掉应用，会话的时长/间隔永远是空**，
+ *     写回当天记录时就没有这两项（记录页只看得到次数）。
+ *  ② 汇总只有一个算法，避免两处各写一遍、慢慢算得不一样。
+ *
+ * `end_time` 传了就连同结束时间一起落库（= 结束会话），不传只刷新汇总。
+ */
+function refreshSessionAggregate(sessionId, endTime) {
+  const contractions = db.queryAll(
+    `SELECT * FROM contraction WHERE session_id = ? ORDER BY start_time ASC`,
+    [sessionId]
+  );
+  const total_count = contractions.length;
+  let total_duration = 0;
+  let total_interval = 0;
+  let interval_count = 0;
+  for (let i = 0; i < contractions.length; i++) {
+    const c = contractions[i];
+    if (c.start_time && c.end_time) {
+      const start = new Date(`2000-01-01 ${c.start_time}`);
+      const end = new Date(`2000-01-01 ${c.end_time}`);
+      total_duration += (end - start) / 1000;
+    }
+    // 第一条宫缩没有「距上一次的间隔」
+    if (i > 0 && c.interval_from_prev != null) {
+      total_interval += c.interval_from_prev;
+      interval_count++;
+    }
+  }
+  // ⚠️ 分母是 total_count（不是「有 end_time 的条数」）—— 保留原口径，
+  // 否则进行中还未结束的那一条会让平均值虚高。
+  const avg_duration = total_count > 0 ? Math.round(total_duration / total_count) : null;
+  const avg_interval = interval_count > 0 ? Math.round(total_interval / interval_count) : null;
+  if (endTime) {
+    db.run(
+      `UPDATE contraction_session SET end_time = ?, total_count = ?, avg_duration = ?, avg_interval = ? WHERE id = ?`,
+      [endTime, total_count, avg_duration, avg_interval, sessionId]
+    );
+  } else {
+    db.run(
+      `UPDATE contraction_session SET total_count = ?, avg_duration = ?, avg_interval = ? WHERE id = ?`,
+      [total_count, avg_duration, avg_interval, sessionId]
+    );
+  }
+  return { total_count, avg_duration, avg_interval };
+}
 
 router.post('/contractions/sessions', async (req, res) => {
   try {
@@ -26,10 +78,12 @@ router.post('/contractions/sessions', async (req, res) => {
 
 router.get('/contractions/sessions', async (req, res) => {
   try {
-    const { pregnancy_id } = req.query;
+    const { pregnancy_id, date } = req.query;
     let where = 'WHERE 1=1';
     const params = [];
     if (pregnancy_id) { where += ' AND pregnancy_id = ?'; params.push(pregnancy_id); }
+    // 记录页按「某一天」取会话明细，用它展示当天记了几次、各多少条
+    if (date) { where += ' AND session_date = ?'; params.push(date); }
     const rows = await db.queryAll(`SELECT * FROM contraction_session ${where} ORDER BY session_date DESC, start_time DESC`, params);
     res.json({ code: 0, data: rows, message: 'success' });
   } catch (e) {
@@ -52,32 +106,12 @@ router.put('/contractions/sessions/:id', async (req, res) => {
     const existing = await db.queryOne('SELECT * FROM contraction_session WHERE id = ?', [req.params.id]);
     if (!existing) return res.json({ code: 1001, data: null, message: '会话不存在' });
     const now = new Date().toTimeString().slice(0, 8);
-    const contractions = await db.queryAll(
-      `SELECT * FROM contraction WHERE session_id = ? ORDER BY start_time ASC`,
-      [req.params.id]
-    );
-    const total_count = contractions.length;
-    let total_duration = 0;
-    let total_interval = 0;
-    let interval_count = 0;
-    for (let i = 0; i < contractions.length; i++) {
-      const c = contractions[i];
-      if (c.start_time && c.end_time) {
-        const start = new Date(`2000-01-01 ${c.start_time}`);
-        const end = new Date(`2000-01-01 ${c.end_time}`);
-        total_duration += (end - start) / 1000;
-      }
-      if (i > 0 && c.interval_from_prev !== null) {
-        total_interval += c.interval_from_prev;
-        interval_count++;
-      }
-    }
-    const avg_duration = total_count > 0 ? Math.round(total_duration / total_count) : null;
-    const avg_interval = interval_count > 0 ? Math.round(total_interval / interval_count) : null;
-    await db.run(
-      `UPDATE contraction_session SET end_time = ?, total_count = ?, avg_duration = ?, avg_interval = ? WHERE id = ?`,
-      [now, total_count, avg_duration, avg_interval, req.params.id]
-    );
+    refreshSessionAggregate(req.params.id, now);
+    // 「结束计时」= 这次宫缩记录生效的时刻：把当天所有会话汇总写回 daily_record
+    // （记录列表 / 统计 / CSV 都只读 daily_record，不写回就等于计时白记）。
+    // 注意 avg_interval 是**秒**，rollup 里负责换算成记录页要的分钟。
+    // 会话明细仍在 contraction(_session) 表里，一条不动。
+    rollup.syncContraction(existing.pregnancy_id, existing.session_date);
     const row = await db.queryOne('SELECT * FROM contraction_session WHERE id = ?', [req.params.id]);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
@@ -122,6 +156,9 @@ router.post('/contractions/sessions/:id/contractions', async (req, res) => {
         [id, req.params.id, start_time || now, interval_from_prev]
       );
       const row = await db.queryOne('SELECT * FROM contraction WHERE id = ?', [id]);
+      // 每记一条宫缩就刷新会话汇总 + 同步当天记录（理由同胎动：不点「结束计时」也不能丢）
+      refreshSessionAggregate(req.params.id);
+      rollup.syncContraction(session.pregnancy_id, session.session_date);
       res.json({ code: 0, data: row, message: 'success' });
     } else if (action === 'end') {
       const activeContraction = await db.queryOne(
@@ -138,6 +175,8 @@ router.post('/contractions/sessions/:id/contractions', async (req, res) => {
         await db.run('UPDATE contraction SET duration = ? WHERE id = ?', [duration, activeContraction.id]);
       }
       const row = await db.queryOne('SELECT * FROM contraction WHERE id = ?', [activeContraction.id]);
+      refreshSessionAggregate(req.params.id);
+      rollup.syncContraction(session.pregnancy_id, session.session_date);
       res.json({ code: 0, data: row, message: 'success' });
     } else if (action === 'manual') {
       if (!start_time || !end_time) return res.json({ code: 1001, data: null, message: '手动模式需要start_time和end_time' });
@@ -160,6 +199,8 @@ router.post('/contractions/sessions/:id/contractions', async (req, res) => {
         [id, req.params.id, start_time, end_time, duration, interval_from_prev]
       );
       const row = await db.queryOne('SELECT * FROM contraction WHERE id = ?', [id]);
+      refreshSessionAggregate(req.params.id);
+      rollup.syncContraction(session.pregnancy_id, session.session_date);
       res.json({ code: 0, data: row, message: 'success' });
     } else {
       res.json({ code: 1001, data: null, message: '无效的action，支持: start/end/manual' });

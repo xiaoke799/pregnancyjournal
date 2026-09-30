@@ -358,3 +358,42 @@ html.dark .glass {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============ 小弹窗表单通用样式 ============
+   记录页二十多个「专属小弹窗」和共享组件 QuickLogDialog（首页也会用到）靠这几条排版。
+   ⚠️ 放在全局而不是某个组件的 <style scoped> 里：scoped 样式**不跨组件边界**，
+   组件里的 .qf-group 收不到另一个文件的 scoped 规则 —— 那样只能把同一段 CSS 抄两份，
+   改一处忘一处就会两页风格不一致。这几个类名全项目只有记录页与该组件使用，不会误伤别处。 */
+.quick-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.qf-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.qf-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.qf-row {
+  display: flex;
+  gap: 12px;
+}
+
+.flex1 {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-hint-text {
+  font-size: 12px;
+  color: var(--text-hint, #94a3b8);
+  margin-top: -6px;
+}

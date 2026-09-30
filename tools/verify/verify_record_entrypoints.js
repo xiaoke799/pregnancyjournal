@@ -14,6 +14,11 @@ const F = {
   dialog: `${ROOT}/frontend/src/components/record/AddRecordDialog.vue`,
   list: `${ROOT}/frontend/src/components/record/RecordList.vue`,
   view: `${ROOT}/frontend/src/views/RecordView.vue`,
+  /** 记录页「快捷小弹窗」抽出的共享实现（胎动 / 宫缩）。
+   *  ⚠️ 2026-09-30 起这两类的表单/取值域/备注标签从 RecordView 搬到这里
+   *  （首页也要用同一份，写得两遍必长歪）。**断言要连这个文件一起看**，
+   *  只盯 RecordView 会得出「字段没了」的假红。 */
+  quick: `${ROOT}/frontend/src/components/record/QuickLogDialog.vue`,
   /** 全项目「多处必须一致的字面量」的唯一真源（心情/睡眠质量/…）——铁律 #34 */
   fmt: `${ROOT}/frontend/src/utils/format.ts`,
   /** 统计卡片已抽成共享组件：记录页「统计」标签 与 独立「统计」页 都用它。
@@ -23,6 +28,10 @@ const F = {
   types: `${ROOT}/frontend/src/types/index.ts`,
   db: `${ROOT}/app/server/node/db.js`,
   api: `${ROOT}/app/server/node/routes/daily-record.js`,
+  /** 首页看板。它与记录页是**两个入口**，同一个类别的名字/口径必须对得上 ——
+   *  以前只断言「记录页内部自洽」，首页悄悄漏掉一整类没人发现过（饮水/运动/…15 类
+   *  在首页一个字都不提）。2026-09-30 起首页必须对这些类别"报到"。 */
+  dash: `${ROOT}/frontend/src/views/DashboardView.vue`,
 };
 const src = {};
 for (const [k, p] of Object.entries(F)) src[k] = fs.readFileSync(p, 'utf-8');
@@ -205,17 +214,98 @@ const quickValues = [...src.view.matchAll(/\{ value: '([A-Za-z0-9_]+)', icon: '[
 const quickMissing = quickValues.filter(t => !listTypes.includes(t));
 check(`快捷菜单 ${quickValues.length} 个类型都在记录列表里有对应条目`, quickMissing.length === 0, '缺: ' + quickMissing.join('、'));
 
+// ★ **反向**不变量：记录列表里的每个类型都要能在「＋」快捷菜单里点到。
+//   反例（2026-09-30 实测）：`hcg` / `uric_acid` 把 openQuickAdd 分支、专属小弹窗、表单、
+//   NOTE_FORMS 登记、记录列表条目**全都接上了**，唯独漏了 `quickTypes` 那一行
+//   ⇒ 首页「今日记录」宫格显示得到它们的数值，记录页的 ＋ 里却找不到，只能碰运气点列表条目。
+//   上面那条只查「菜单 ⊆ 列表」，抓不到这种"列表里有、菜单里没有"，所以要单独反向查一遍。
+//   确实有意不进快捷菜单的类型写进下面的白名单，并写明理由（保持"零白名单"最好）。
+const MENU_EXCLUDED = [];
+const listMissingInMenu = listTypes.filter(t => !quickValues.includes(t) && !MENU_EXCLUDED.includes(t));
+check(`记录列表 ${listTypes.length} 个类型都能在「＋」快捷菜单里点到（白名单 ${MENU_EXCLUDED.length} 个）`,
+  listMissingInMenu.length === 0, '只差快捷菜单: ' + listMissingInMenu.join('、'));
+
+// ★ **首页 ↔ 记录页**的类别对齐不变量。
+//   背景（2026-09-30 实测）：首页「今日记录」板块只渲染 9 个健康指标 + 两张工具卡，
+//   其余 15 类（饮水/运动/便便/症状/…）在首页**一个字都不提**；而板块的判据是
+//   「today_record 有没有任意一列」，于是「只记了饮水」「只用过一次胎动计数器」
+//   会渲染出一块 0px 高的空盒子（头部却写着「查看详情 →」）。修法见 DashboardView
+//   的 healthCards / otherRecordedItems。
+//   这条断言的作用：**记录页以后每新增一个类别，首页不跟上就红**，不再靠人眼发现。
+//   确实已由首页别处呈现（宫格 / 工具卡 / 待办板块）的类别写进下面的白名单并注明理由。
+// 宫格：左边是记录页的 type，右边是首页 healthCards 里的 `key:`（两套命名，体温不同名）
+const DASH_GRID = [
+  ['weight', 'weight'], ['mood', 'mood'], ['fetal_heart_rate', 'fetal_heart_rate'],
+  ['sleep', 'sleep'], ['blood_pressure', 'blood_pressure'], ['temperature', 'body_temperature'],
+  ['blood_glucose', 'blood_glucose'], ['uric_acid', 'uric_acid'], ['hcg', 'hcg'],
+];
+const DASH_TOOL_TYPES = ['fetal_movement', 'contraction'];    // → 首页两张「快捷记一笔」工具卡
+// ⚠️ 胎动/宫缩**不**进白名单：它们既有工具卡、又写回当天记录，首页的「今天已记录」兜底
+//    里也要按名字列出来（见 DashboardView 的 OTHER_RECORD_CATEGORIES）。只放白名单里
+//    「首页别处已呈现、且不该在今日记录里重复出现」的类别。
+const DASH_ELSEWHERE = [...DASH_GRID.map(p => p[0]), 'plan']; // plan → 首页「今日待办」板块
+
+// 白名单必须**自证**：说「宫格已覆盖」的，就真要在 healthCards 里找到那张卡；
+// 否则删掉一张卡也没人发现（白名单会变成静默放行）。
+const gridMissing = DASH_GRID.filter(([, k]) => !src.dash.includes(`key: '${k}'`)).map(([t]) => t);
+check(`首页宫格 ${DASH_GRID.length} 个健康指标卡片都真的在（healthCards）`,
+  gridMissing.length === 0, '缺卡: ' + gridMissing.join('、'));
+const toolMissing = DASH_TOOL_TYPES.filter(t => !new RegExp(`type="${t}"`).test(src.dash));
+check(`首页 ${DASH_TOOL_TYPES.length} 张「快捷记一笔」工具卡都在`, toolMissing.length === 0, '缺卡: ' + toolMissing.join('、'));
+
+// 记录页的 label 逐字出现在首页源码里 → 说明首页"报到"了
+const listLabelOf = {};
+for (const m of src.list.matchAll(/\{ type: '([A-Za-z0-9_]+)', icon: '[^']*', label: '([^']+)'/g)) listLabelOf[m[1]] = m[2];
+const dashMustMention = listTypes.filter(t => !DASH_ELSEWHERE.includes(t));
+const dashMissed = dashMustMention.filter(t => !src.dash.includes(`'${listLabelOf[t]}'`));
+check(`记录列表 ${dashMustMention.length} 个「非宫格」类别都在首页被提到（白名单 ${DASH_ELSEWHERE.length} 个）`,
+  dashMissed.length === 0, '首页完全没提: ' + dashMissed.map(t => listLabelOf[t]).join('、'));
+check(`能解析出记录列表类型→label 映射（≥20，实得 ${Object.keys(listLabelOf).length}）`,
+  Object.keys(listLabelOf).length >= 20, '首页↔记录页对齐断言可能空集恒真');
+
 // ⚠️ 先断言「确实解析到了类型」再断言内容 —— 正则会因为格式微调而解析出 0 个，
 //    那样下面的 ⊆ 断言会空集恒真（假绿）。这就是铁律 #27 说的「必须断言解析到预期数量」。
 check(`能解析出快捷菜单类型（≥20，实得 ${quickValues.length}）`, quickValues.length >= 20);
 
-// 快捷菜单里的每个类型都必须有**专属小弹窗**（`case 'X': reset...`）——
-// 有一个漏了就会掉进 26 个类型的选择器大弹窗，这一类的交互体验跟别的不一样。
-const quickCaseTypes = new Set([...src.view.matchAll(/case '([A-Za-z0-9_]+)': reset/g)].map(m => m[1]));
-check(`快捷菜单类型都能解析出 openQuickAdd 分支（≥20，实得 ${quickCaseTypes.size}）`, quickCaseTypes.size >= 20);
-const noQuickModal = quickValues.filter(t => !quickCaseTypes.has(t));
-check(`快捷菜单 ${quickValues.length} 个类型都有专属小弹窗（统一风格）`,
-  noQuickModal.length === 0, '只有大弹窗、没有小弹窗: ' + noQuickModal.join('、'));
+// 快捷菜单里的每个类型都必须有**专属小弹窗**——有一个漏了就会掉进 26 个类型的
+// 选择器大弹窗，这一类的交互体验跟别的不一样。**两种落地形态都算数**：
+//   ① 内联：`case 'X': resetXForm(); showXModal.value = true`（21 个类型仍在 RecordView 里）
+//   ② 抽出共享组件：`case 'X': showXModal.value = true`（只开开关，不 reset）+
+//      模板 `<QuickLogDialog v-model:show="showXModal" type="X">` + 组件里有 `type === 'X'` 分支。
+//      ⚠️ 少了组件里那条分支 ⇒ 弹窗打开是**空白**的（比"掉进大弹窗"更隐蔽），所以三条都要断言。
+//   掉进 default 分支开通用大弹窗，仍然算漏。
+const SHARED_MODAL_TYPES = ['fetal_movement', 'contraction'];
+function sharedModalWired(t) {
+  const m = src.view.match(new RegExp(`case '${t}': (show\\w+Modal)\\.value = true`));
+  if (!m) return { ok: false, why: 'openQuickAdd 没开开关' };
+  const varName = m[1];
+  const tpl = new RegExp(`<QuickLogDialog[\\s\\S]{0,400}?v-model:show="${varName}"[\\s\\S]{0,400}?type="${t}"`).test(src.view);
+  const inShared = new RegExp(`type === '${t}'`).test(src.quick);
+  return { ok: tpl && inShared, why: `模板接线=${tpl} / 共享组件有该类型分支=${inShared}` };
+}
+// 只对「没内联 reset 分支」的类型走共享形态检查，避免把将来同时写两套的写法误判
+const inlineCaseTypes = new Set([...src.view.matchAll(/case '([A-Za-z0-9_]+)': reset/g)].map(m => m[1]));
+// ★ 不变量：共享组件**声明的每个类型都必须有模板分支**。
+//   组件里曾用 `v-else` 兜宫缩 ⇒ 将来往 QuickLogType 加第三个类型且忘写分支时，
+//   弹窗会"打开是空白"且运行时不报错（比掉进大弹窗更隐蔽）。故要求逐个显式 `type === 'X'`。
+const quickUnion = [...(((src.quick.match(/type QuickLogType = ([^\n]+)/) || [, ''])[1]).matchAll(/'([^']+)'/g))]
+  .map((m) => m[1]);
+check(`共享小弹窗声明的每个类型都有模板分支（声明 ${quickUnion.length} 类：${quickUnion.join('/')}）`,
+  quickUnion.length >= 2 && quickUnion.every((t) => new RegExp(`type === '${t}'`).test(src.quick)),
+  '缺分支的：' + quickUnion.filter((t) => !new RegExp(`type === '${t}'`).test(src.quick)).join('、'));
+const sharedOk = [];
+const sharedBad = [];
+for (const t of SHARED_MODAL_TYPES) {
+  if (inlineCaseTypes.has(t)) continue; // 已内联，不用看共享形态
+  const r = sharedModalWired(t);
+  (r.ok ? sharedOk : sharedBad).push(t + (r.ok ? '' : `（${r.why}）`));
+}
+check(`快捷菜单类型都能解析出 openQuickAdd 分支（≥20，实得 ${inlineCaseTypes.size} 内联 + ${sharedOk.length} 共享）`,
+  inlineCaseTypes.size + sharedOk.length >= 20);
+const noQuickModal = quickValues.filter(t => !inlineCaseTypes.has(t) && !sharedOk.includes(t));
+check(`快捷菜单 ${quickValues.length} 个类型都有专属小弹窗（内联或共享组件，统一风格）`,
+  noQuickModal.length === 0 && sharedBad.length === 0,
+  '只有大弹窗、没有小弹窗: ' + noQuickModal.join('、') + (sharedBad.length ? '；共享形态没接全: ' + sharedBad.join('、') : ''));
 
 // ============ 导出/恢复的字段覆盖度（数据完整性）============
 // 恢复走 TABLE_COLUMNS 白名单：/restore-latest 先 DELETE FROM 表 再按白名单插入，
@@ -413,8 +503,14 @@ const painVals = [...(src.fmt.match(/CONTRACTION_PAIN_VALUES = \[([^\]]*)\]/) ||
   .matchAll(/'([^']+)'/g)].map((m) => m[1]);
 check(`能从 utils/format 解析出宫缩疼痛取值域（预期 4，实得 ${painVals.length}）`, painVals.length === 4);
 const PAIN = painVals.length === 4 ? painVals : ['无感', '轻微', '明显', '剧烈'];
-check('RecordView 宫缩疼痛取值域 = 无感/轻微/明显/剧烈',
-  PAIN.every((v) => has('view', `n-radio-button value="${v}"`)));
+// 宫缩小弹窗（宫缩疼痛的 4 个单选项所在处）2026-09-30 起在共享组件里。
+// ⚠️ 要求这 4 个值**完整落在同一处**，不是"两边加起来凑够 4 个"——凑数会放过
+//    「拆成两半分居两文件」这种同样会出问题的写法。
+const painInView = PAIN.every((v) => has('view', `n-radio-button value="${v}"`));
+const painInQuick = PAIN.every((v) => has('quick', `n-radio-button value="${v}"`));
+check('记录页小弹窗（内联或共享组件）宫缩疼痛取值域 = 无感/轻微/明显/剧烈',
+  painInView || painInQuick,
+  `完整取值域必须落在同一处：内联=${painInView} 共享=${painInQuick}；取值域真源是 utils/format`);
 check('AddRecordDialog 宫缩疼痛取值域 = 无感/轻微/明显/剧烈',
   PAIN.every((v) => has('dialog', `{ label: '${v}', value: '${v}' }`)) && !has('dialog', "{ label: '中度', value: '中度' }"));
 check('AddRecordDialog 宫缩疼痛回填走共享归一（老数据「中度」不再显示成裸文本）',
@@ -443,8 +539,12 @@ check('RecordList hasData/preview 都有 medication 分支',
 // —— 「当天备注」是按天共享的一列：必须预填、必须可清空 ——
 out.push('');
 out.push('【「当天备注」语义（按天共享一列）】');
-check('RecordView 备注标签统一为「当天备注（可选）」共 20 处',
-  count('view', /当天备注（可选）/g) === 20, '实得 ' + count('view', /当天备注（可选）/g));
+// 19 = RecordView 内联小弹窗 18 处 + 共享组件 QuickLogDialog 1 处。
+// ⚠️ 原来写死 20，是因为胎动/宫缩各占 1 处；抽成共享组件后两份模板合并成 1 处 ⇒ 总数必然少 1。
+//    这是**模板复用**带来的减少，不是「有弹窗缺了备注」——缺了会由下面 NOTE_FORMS/共享组件两条断言抓到。
+const NOTE_LABELS = count('view', /当天备注（可选）/g) + count('quick', /当天备注（可选）/g);
+check(`记录页小弹窗备注标签统一为「当天备注（可选）」共 19 处（内联 18 + 共享 1）`,
+  NOTE_LABELS === 19, '实得 ' + NOTE_LABELS + '（RecordView ' + count('view', /当天备注（可选）/g) + ' + 共享 ' + count('quick', /当天备注（可选）/g) + '）');
 check('RecordView 没有残留旧标签「备注（可选）」', !/<label>备注（可选）<\/label>/.test(src.view));
 // 传 undefined 会被后端整列跳过 ⇒ 用户删掉备注保存后又"长回来"。必须显式传字符串（空串=清空）
 check('RecordView 的 note 写入一律显式传字符串（可清空）',
@@ -461,9 +561,22 @@ check('心情备注单独预填（mood 用自己的 mood_note 列）',
   const nmBlock = src.view.match(/const NOTE_FORMS: Record<string, any> = \{([\s\S]*?)\n\}/);
   const nmText = nmBlock ? nmBlock[1] : '';
   const unregistered = tplForms.filter((f) => !new RegExp(`\\b${f}\\b`).test(nmText));
-  check(`带备注输入框的 ${tplForms.length} 个快捷表单全部登记进 NOTE_FORMS`,
-    tplForms.length >= 19 && unregistered.length === 0,
+  // 下限 18 = 现有内联表单数（原 20 处里的胎动/宫缩已抽走）。⚠️ 只降到"刚好现在能过"会失去
+  // 绊线意义，所以同时断言共享组件的两类也必须预填（下一条），两条合起来覆盖全部 20 个表单。
+  check(`内联快捷表单 ${tplForms.length} 个（带备注输入框）全部登记进 NOTE_FORMS`,
+    tplForms.length >= 18 && unregistered.length === 0,
     '未登记: ' + unregistered.join('、') + (nmBlock ? '' : '（没解析到 NOTE_FORMS 块）'));
+  // 抽到共享组件的胎动/宫缩：备注改由 `:note` prop 预填。三处缺一不可——
+  //   ① RecordView 算出当天备注 ② 两个调用点都传进去 ③ 组件打开时真的写进表单。
+  const sharedNoteOk = has('view', 'const quickLogNote = computed(')
+    && has('view', "(currentRecords.value[0] && currentRecords.value[0].note) || ''")
+    && count('view', /:note="quickLogNote"/g) >= 2
+    && has('quick', "form.value.note = props.note || ''");
+  check('共享小弹窗的两类（胎动/宫缩）备注同样预填（走 :note prop）',
+    sharedNoteOk,
+    '缺：算当天备注=' + has('view', 'const quickLogNote = computed(')
+      + ' / 两个调用点都传=' + (count('view', /:note="quickLogNote"/g) >= 2)
+      + ' / 组件写进表单=' + has('quick', "form.value.note = props.note || ''"));
 }
 
 // —— 饮食备注格式统一为 JSON 数组（与「添加记录」大弹窗一致）——

@@ -8,6 +8,11 @@
       </div>
     </div>
 
+    <!-- 口径说明：把「这一个点是按什么口径取的」写在卡上。
+         胎动 / 宫缩一天可能记好几次，若不说清，用户会拿它去跟记录页的
+         「今天一共记了多少次」比，然后怀疑数字不对。 -->
+    <div v-if="hint" class="card-hint">{{ hint }}</div>
+
     <!-- 汇总数字：一眼看清「现在多少 / 平均多少 / 涨了还是降了」 -->
     <div v-if="summaryItems.length" class="summary-strip">
       <div v-for="(s, i) in summaryItems" :key="i" class="sum-item">
@@ -76,6 +81,8 @@ const props = defineProps({
   tableData: { type: Array as any, required: true },
   /** 额外想展示的汇总项（如体重的「较首次」增重），格式 { label, value } */
   extraStats: { type: Array as () => Array<{ label: string; value: string }>, default: () => [] },
+  /** 这张卡「一个点取的是什么口径」的说明文字（可选） */
+  hint: { type: String, default: '' },
 })
 
 const showTable = ref(false)
@@ -331,6 +338,12 @@ function adjustColor(hex: string, amount: number): string {
   color: #94a3b8;
   white-space: nowrap;
 }
+.card-hint {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #94a3b8;
+  margin: -6px 0 10px;
+}
 .card-unit {
   font-size: 11px;
   color: #94a3b8;
@@ -438,5 +451,6 @@ function adjustColor(hex: string, amount: number): string {
   .chart-wrap.has-zoom { height: 226px; }
   .card-title { font-size: 14px; }
   .card-meta { font-size: 10px; }
+  .card-hint { font-size: 10px; margin: -4px 0 8px; }
 }
 </style>

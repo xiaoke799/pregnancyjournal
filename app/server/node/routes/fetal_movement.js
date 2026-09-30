@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const config = require('../config');
+const rollup = require('../services/daily-rollup');
 
 router.post('/fetal-movements/sessions', async (req, res) => {
   try {
@@ -26,10 +27,12 @@ router.post('/fetal-movements/sessions', async (req, res) => {
 
 router.get('/fetal-movements/sessions', async (req, res) => {
   try {
-    const { pregnancy_id } = req.query;
+    const { pregnancy_id, date } = req.query;
     let where = 'WHERE 1=1';
     const params = [];
     if (pregnancy_id) { where += ' AND pregnancy_id = ?'; params.push(pregnancy_id); }
+    // 记录页按「某一天」取会话明细，用它展示当天数了几次、各多少次
+    if (date) { where += ' AND session_date = ?'; params.push(date); }
     const rows = await db.queryAll(`SELECT * FROM fetal_movement_session ${where} ORDER BY session_date DESC, start_time DESC`, params);
     res.json({ code: 0, data: rows, message: 'success' });
   } catch (e) {
@@ -61,6 +64,10 @@ router.put('/fetal-movements/sessions/:id', async (req, res) => {
       `UPDATE fetal_movement_session SET end_time = ?, total_count = ? WHERE id = ?`,
       [now, total_count, req.params.id]
     );
+    // 「结束计数」= 这次胎动记录真正生效的时刻：把当天所有会话汇总写回 daily_record，
+    // 否则记录列表 / 统计 / CSV（都只读 daily_record）永远看不到计数器的成果。
+    // 会话明细仍在 fetal_movement(_session) 表里，一条不动 —— 同一天数几次都留痕。
+    rollup.syncFetalMovement(existing.pregnancy_id, existing.session_date);
     const row = await db.queryOne('SELECT * FROM fetal_movement_session WHERE id = ?', [req.params.id]);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
@@ -87,6 +94,12 @@ router.post('/fetal-movements/sessions/:id/kicks', async (req, res) => {
       [req.params.id]
     );
     db.commitTransaction();
+    // 每按一次胎动就同步一次汇总。
+    // 为什么不能只靠「结束计数」那一处回调：用户数到一半直接关掉应用 / 切走不点结束，
+    // 这次计数就永远写不回 daily_record（记录列表/统计/首页都看不到）——
+    // 那正是「没联动」最痛的一条。放在 commit 之后是为了：即便汇总失败，
+    // 这一次胎动已经落库，绝不会被一起回滚。
+    rollup.syncFetalMovement(session.pregnancy_id, session.session_date);
     const row = await db.queryOne('SELECT * FROM fetal_movement WHERE id = ?', [id]);
     res.json({ code: 0, data: row, message: 'success' });
   } catch (e) {
