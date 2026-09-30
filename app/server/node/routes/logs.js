@@ -3,63 +3,22 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const logger = require('../logger');
-const config = require('../config');
 
 // 日志接口的访问控制。
 //
 // ⚠️ 原实现是 `if (!req.ip || req.ip === 'unknown') return true;`——
 //    而真实部署下所有请求都从统一网关经 Unix Socket 进来，**根本没有 IP**，
 //    于是这条「仅允许本地访问」的判定在线上等于恒真、形同虚设。
-//    现在改为「按身份判定」：网关已鉴权放行 / dev 模式放行 / 直连本机或内网放行，
-//    其余一律拒绝。绝不再因为「拿不到 IP」就放行。
-function _identity(req) {
-  const st = req.state || {};
-  return {
-    user_id: st.user_id || '',
-    is_admin: st.is_admin === 'true',
-    source: st.auth_source || 'none',
-  };
-}
-
-function _isDirectLocal(req) {
-  // 只用 express 的 req.ip（它本身就是从 socket 派生的，并且会遵循 trust proxy 决策）。
-  // 不要再回退去读 req.socket.remoteAddress —— 那是第二处出处，且会绕开 trust proxy 的判断。
-  const ip = req.ip || '';
-  if (!ip || ip === 'unknown') return false; // 拿不到 IP ⇒ 不视为本地，绝不据此放行
-  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
-  if (ip.startsWith('192.168.') || ip.startsWith('::ffff:192.168.')) return true;
-  if (ip.startsWith('10.') || ip.startsWith('::ffff:10.')) return true;
-  // 172.16.0.0/12
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
-  if (/^::ffff:172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
-  return false;
-}
-
-function checkAccess(req, res) {
-  // 1) 网关已鉴权（统一网关模式）→ 放行
-  if (_identity(req).source === 'gateway' && _identity(req).user_id) return true;
-  // 2) 开发模式（本地调试）
-  if (config.APP_MODE === 'dev') return true;
-  // 3) 直连且来自本机/内网
-  if (_isDirectLocal(req)) return true;
-  res.status(403).json({ code: 403, data: null, message: '仅允许本机访问' });
-  return false;
-}
-
-// 破坏性操作（清空日志）额外要求管理员身份：普通用户不该有能力抹掉排查线索。
-function checkAdmin(req, res) {
-  if (config.APP_MODE === 'dev') return true;
-  const id = _identity(req);
-  if (id.source === 'gateway') {
-    if (id.is_admin) return true;
-    res.status(403).json({ code: 403, data: null, message: '需要管理员权限' });
-    return false;
-  }
-  // 非网关（直连本机/内网）视为可信
-  if (_isDirectLocal(req)) return true;
-  res.status(403).json({ code: 403, data: null, message: '需要管理员权限' });
-  return false;
-}
+//    后来改成「按身份判定」；2026-09-30 上架前加固（B2）再收紧到**管理员**：
+//    日志里有请求路径、用户 id、文件路径、日志目录，属**排查线索**而非用户数据，
+//    普通账号既不该读、更不该清空。
+//
+// 判定逻辑统一收在 `middleware/auth.js`，本文件**不再自己写一份**：
+//   · `requireAdmin` —— dev 放行 / 网关身份要求 is_admin / 直连本机内网视为可信 / 其余 403
+//   · `isDirectLocal` —— 「直连本机内网」的**唯一出处**
+// 本文件三条路由（GET /logs、GET /logs/stats、DELETE /logs）**全部**挂 requireAdmin。
+// 历史教训：判定写在两处必然漂移 —— 上面那条 `!req.ip ⇒ 放行` 就是例子。
+const { requireAdmin } = require('../middleware/auth');
 
 /** 读取 JSONL 日志文件末尾 N 行，支持级别/分类过滤 */
 function readJsonl(filePath, lineCount, { level, category, search } = {}) {
@@ -111,9 +70,8 @@ function listLogFiles() {
   }
 }
 
-// GET /api/v1/logs - 获取日志
-router.get('/logs', (req, res) => {
-  if (!checkAccess(req, res)) return;
+// GET /api/v1/logs - 获取日志（管理员；日志属排查线索，见文件顶部说明）
+router.get('/logs', requireAdmin, (req, res) => {
   try {
     const lineCount = Math.min(Math.max(1, parseInt(req.query.lines) || 200), 5000);
     const level = req.query.level || null;
@@ -168,10 +126,8 @@ router.get('/logs', (req, res) => {
   }
 });
 
-// DELETE /api/v1/logs - 清空日志
-router.delete('/logs', (req, res) => {
-  if (!checkAccess(req, res)) return;
-  if (!checkAdmin(req, res)) return;
+// DELETE /api/v1/logs - 清空日志（管理员：普通账号不该有能力抹掉排查线索）
+router.delete('/logs', requireAdmin, (req, res) => {
   try {
     const { init } = require('../logger');
     init(); // 确保日志目录存在
@@ -200,9 +156,8 @@ router.delete('/logs', (req, res) => {
   }
 });
 
-// GET /api/v1/logs/stats - 日志统计信息
-router.get('/logs/stats', (req, res) => {
-  if (!checkAccess(req, res)) return;
+// GET /api/v1/logs/stats - 日志统计信息（管理员；会暴露日志文件路径与体量）
+router.get('/logs/stats', requireAdmin, (req, res) => {
   try {
     const logPaths = logger.getLogPaths();
     const stats = { app: null, error: null };

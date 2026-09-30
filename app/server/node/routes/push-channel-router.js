@@ -7,6 +7,7 @@
  */
 const express = require('express');
 const engine = require('../services/push-engine');
+const { requireAdmin } = require('../middleware/auth');
 
 function createChannelRouter(channelKey) {
   const router = express.Router();
@@ -33,8 +34,17 @@ function createChannelRouter(channelKey) {
     }
   });
 
-  /** 保存配置或仅更新偏好 */
-  router.post(`${base}/config`, async (req, res) => {
+  /**
+   * 保存配置或仅更新偏好。
+   *
+   * 🔴 需管理员（2026-09-30 上架前加固 B2）：这里写的是**全家人共用的推送通道密钥**
+   *    （webhook_url 等），改掉会影响所有人收到的提醒，也能把数据指向外部地址
+   *    ⇒ 属「改推送配置」，收进整体性/破坏性操作那一档。
+   * ⚠️ 只锁**写入**。GET /status、GET /config（URL 脱敏）与 send-test / daily-push /
+   *    retry 都保持原样：前者是只读展示，后者是操作触发（最坏就是多发一条通知，不是破坏性），
+   *    拦了反而让家人用不了设置页里的正常按钮。
+   */
+  router.post(`${base}/config`, requireAdmin, async (req, res) => {
     try {
       const r = await engine.saveChannelConfig(channelKey, req.body);
       if (r.cleared) {

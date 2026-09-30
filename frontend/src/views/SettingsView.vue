@@ -515,12 +515,13 @@ async function loadLogs() {
       logText.value = res.data.logs || ''
       logInfo.value = res.data
     }
-  } catch { logText.value = '加载失败' }
+  } catch (e: any) { logText.value = '加载失败：' + (e?.message || '未知错误') }
   logLoading.value = false
 }
 
 async function clearLogs() {
-  try { await exportApi.clearLogs(); logText.value = '' } catch {}
+  try { await exportApi.clearLogs(); logText.value = '' }
+  catch (e: any) { message.error(e?.message || '清空日志失败') }
 }
 
 function formatUptime(sec: number) {

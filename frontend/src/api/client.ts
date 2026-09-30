@@ -95,6 +95,14 @@ client.interceptors.response.use(
       const status = error.response.status
       const data = error.response.data
 
+      // 让前端 catch 拿到后端给出的可读原因（如「需要管理员权限：该操作会影响全部数据，
+      // 仅管理员可执行」），而不是 axios 默认的 "Request failed with status code 403"。
+      // 这样所有挂了 requireAdmin 的管理操作，非管理员点到时弹窗/结果区都能显示真实原因，
+      // 而不是一堆看不懂的英文状态码（B2 上架前加固的「前端优雅降级」一环）。
+      if (data && typeof data.message === 'string' && data.message) {
+        error.message = data.message
+      }
+
       // 使用结构化日志记录
       const logPayload = { status, message: data?.message || error.message, url: error.config?.url }
       switch (status) {
