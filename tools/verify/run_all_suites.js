@@ -82,6 +82,12 @@ const SUITES = [
   [path.join(UP, 'e2e_upgrade_from_0027.js'), '线上老库升级闸门', '约 45 秒'],
   [path.join(UP, 'verify_api_contracts.js'), '前后端路由契约', ''],
   [path.join(UP, 'verify_ui_orphans.js'), 'UI产物孤儿', ''],
+  // ---- 2026-09-30 新增：发版版本号同步（manifest 之外的 3 处）----
+  // 发版要同步 8 处，其中 5 处由 build.ps1 Step1 强制；剩下 3 处（frontend/server 的
+  // package.json + package-lock 的**两处**自指版本）此前「无人管」、只能靠人记。
+  // ⚠️ 自带**反例自检**（改错版本 / 截断 JSON / 删掉 lock 的 packages[""] 三种都要变红），
+  //    防止这套断言变成恒绿的假护栏。同一份判定也被 build.ps1 Step1 调用（fail-closed）。
+  [path.join(UP, 'verify_pkg_versions.js'), '发版版本号同步(package.json/lock)', ''],
   // ---- 2026-09-30 新增：前端类型体检 ----
   // 把 `vue-tsc --noEmit` 收进回归。此前仓库常驻 15 个类型错误（client.ts 没暴露
   // 「解包后」的调用签名），噪音大到真错误没人看；清零后必须有套件守住，否则会悄悄攒回来。
