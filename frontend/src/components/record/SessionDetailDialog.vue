@@ -69,7 +69,13 @@ const isFm = computed(() => props.type === 'fetal_movement')
 
 const fm = ref<any[]>([])
 const ct = ref<any[]>([])
-const sessions = computed(() => (isFm.value ? fm.value : ct.value))
+// 🔴 空壳会话（进了计数器/计时器但一条没记 ⇒ count=0）不上屏：
+//    daily-rollup 的口径是「空会话不代表这一天」，写回、首页「今日 N 次会话」、
+//    记录页「有没有会话」的判据都已排除它；明细里再列一行「0 次」只会让用户困惑
+//    「我明明只记了 2 次，怎么冒出 3 次会话」。与那三处保持同一口径。
+const sessions = computed(() =>
+  (isFm.value ? fm.value : ct.value).filter((s: any) => Number(s && s.count) > 0)
+)
 
 /** 'HH:MM:SS' → 'HH:MM'；end 缺失（会话还在进行）时只显示开始时间 + 进行中 */
 function hhmm(t?: string | null) {

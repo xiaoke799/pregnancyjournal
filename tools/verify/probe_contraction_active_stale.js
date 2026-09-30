@@ -126,6 +126,9 @@ const dstr = (off) => {
     await openSession(pid, today, '09:00:00');
     const d = await dash(pid);
     check('B1 今天有未结束会话 ⇒ 应显示「计时中」', d.contraction_active === true, 'contraction_active=' + d.contraction_active);
+    // 「空会话不代表这一天」口径：count=0 的空壳会话不计入首页「今日 N 次会话」，
+    // 否则「点开计时器没记就退出」会凭空多出 1 次会话（与写回/统计/记录页判据三处打架）
+    check('B2 空壳会话不计入「今日会话数」', Number(d.contraction_sessions) === 0, String(d.contraction_sessions));
   }
 
   console.log('\n===== 场景 C：结束今天的会话后，标志要回落 =====');
