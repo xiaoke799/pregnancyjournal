@@ -723,7 +723,11 @@ async function switchPregnancy(id: string) {
     await pregnancyStore.fetchActivePregnancy()
     activePregnancyId.value = id
     if (pregnancyStore.currentPregnancy) {
-      primaryDate.value = pregnancyStore.currentPregnancy.last_period_date || ''
+      // ⚠️ 必须按当前模式回填（loadDateForMode），不能无脑取 last_period_date：
+      //    后端 PUT 会双向派生（给了 LMP 就重算预产期、给了预产期就反推 LMP），
+      //    所以两个字段都有值。若「直接填预产期」模式下把 LMP 填进标着「预产期」的框，
+      //    用户看着是错的；再点一次保存就会被当成新预产期写回去 ⇒ 孕周整体差 280 天。
+      loadDateForMode()
       babyName.value = pregnancyStore.currentPregnancy.baby_name || ''
     }
     await loadAllPregnancies()
@@ -761,7 +765,8 @@ async function savePregnancy() {
     }
     await pregnancyStore.fetchActivePregnancy()
     if (pregnancyStore.currentPregnancy) {
-      primaryDate.value = pregnancyStore.currentPregnancy.last_period_date || ''
+      // 同上：按模式回填。否则「直接填预产期」保存后框里会变成末次月经日期。
+      loadDateForMode()
       babyName.value = pregnancyStore.currentPregnancy.baby_name || ''
     }
     await loadAllPregnancies()
