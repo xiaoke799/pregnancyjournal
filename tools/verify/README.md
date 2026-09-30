@@ -9,7 +9,7 @@
 ## 快速开始
 
 ```bash
-# 全套（62 套 / 约 1334 项，跑完约 8–13 分钟）
+# 全套（63 套 / 约 1343 项，跑完约 8–13 分钟）
 node tools/verify/run_all_suites.js
 
 # 只跑名字含关键字的套件（路径或中文名都能命中）
@@ -43,14 +43,24 @@ tools/verify/
 ├── _vue_extract.js      ← 从 .vue 源码里抽取 <script> 内容的共用小工具
 ├── e2e_*.js             ← 端到端（真起 server.js + 真库 + 真 HTTP）
 ├── verify_*.js          ← 静态/契约核查
-│   └── verify_frontend_types.js
-│                        ← 前端类型体检：包装 `vue-tsc --noEmit`
-│                          （先清掉的 15 个常驻错误：client.ts 未暴露"解包后"签名。
-│                            用 PJ_VUE_TSC=<入口> 可指向桩做反例验证）
+│   ├── verify_frontend_types.js
+│   │                    ← 前端类型体检：包装 `vue-tsc --noEmit`
+│   │                      （先清掉的 15 个常驻错误：client.ts 未暴露"解包后"签名。
+│   │                        用 PJ_VUE_TSC=<入口> 可指向桩做反例验证）
+│   └── verify_pkg_versions.js
+│                        ← 发版版本号同步：manifest 之外的 **3 处**（frontend / app/server/node 的
+│                          package.json，以及 package-lock.json 的**两处**自指版本。
+│                          真源 = `manifest`；PJ_PKG_ROOT=<dir> 可指向别处）。
+│                          **同一份判定被 `build.ps1` Step1 直接调用**（fail-closed）
+│                          —— 判定逻辑刻意放 node 不放 PowerShell：本机 PS 无法执行、没法验证
 ├── probe_*.js           ← 探针（诊断型，多数不打汇总行）
 ├── repro_*.js           ← 复现脚本（无头浏览器，产出截图 + JSON）
 ├── shot_*.js            ← 截图脚本（无头浏览器）
 ├── t*.js                ← 2026-09-28 十九项修复的专用探针（t9/t11–t18 已收进运行器）
+├── _pkgver_gate_probe.ps1
+│                        ← build.ps1「package.json / lock 版本号」闸门的**手工**反例探针
+│                          （验的是外层包装会不会真把 node 的非零退出码变成打包错误。
+│                            本机 PS 无法被自动化驱动 ⇒ 有意不进 run_all_suites，发版前手工跑）
 ├── *_color*.py / review_*.py / _check_chart_ink.py / _crop_cards.py
 │                        ← 配色与图表"可读性体检"（铁律 #22 的 5 个配色审查脚本在此）
 ├── review_exercise_tokens.py
@@ -122,6 +132,8 @@ tools/verify/
 | 判定逻辑真的会红 | `PJ_VUE_TSC=tools/verify/_fake_tsc_bad.js node tools/verify/verify_frontend_types.js`（桩件打两行 `error TS` + 退出码 2） | `0 通过 / 1 失败`，并列出这两行 |
 | 真工具链能抓到真错误 | 往 `frontend/src/` 临时放一个 `__typecheck_probe.ts`，内容 `export const probe: number = 'not a number';` | 红，且报 `__typecheck_probe.ts(3,14): error TS2322`。**验完立即删除该文件** |
 | 工具链缺失不报假绿 | `PJ_VUE_TSC=<不存在的路径>` | 红，提示"找不到 vue-tsc 入口"+ 排查建议 |
+| 版本号判定真的会红 | `verify_pkg_versions.js` **自带**反例自检（无需手工构造）：它把 4 个文件复制到临时目录，依次① 把 `frontend/package.json` 版本改成 `9.9.9` ② 截断成非法 JSON ③ 删掉 lock 的 `packages[""]`，每步都要求判定**必须变红** | `9 通过 / 0 失败`（6 项实校 + 3 项反例自检）；任何一步没红 ⇒ 报"假护栏"并判红 |
+| **闸门的外层包装**会真的拦下打包（**手工**） | `pwsh -File tools/verify/_pkgver_gate_probe.ps1` —— 逐字复刻 `build.ps1` Step1 那段，用 `%TEMP%` 里的假根验三个场景 | 三行 `OK`：真实仓库不拦 / 同步丢了被拦（node 退出码 1）/ 缺脚本 fail-closed。⚠️ **进不了自动套件**：本机 PowerShell 无法被驱动（工具 stdout 恒空、bash 调 `powershell.exe` 被安全策略拦）⇒ 改过 `build.ps1` Step1 后手工跑一次 |
 
 > ⚠️ 反例用的探针文件一律放 `tools/verify/.tmp/`（gitignore），源码里的探针用完即时删；
 > 跑完 `git status` 确认没有 `??` 残留。需要长期保留的桩件用 `_` 前缀入库（如 `_fake_tsc_bad.js`），
@@ -172,3 +184,4 @@ tools/verify/
 | 改 `saveDb` / 落盘逻辑 | `t9_verify_db_fixes.js`、`verify_db_persist.js`、`probe_async_save_race.js` |
 | 改配色 / 主题令牌 | `audit_checkup_colors.py` 等 5 个配色审查脚本 + `_check_chart_ink.py` |
 | 改 `cmd/upgrade_init` | `test_upgrade_init.sh` |
+| **发版 / 改版本号 / 改 `manifest`** | `verify_pkg_versions.js`（manifest 之外的 3 处：frontend / server 的 `package.json` + `package-lock.json` 的两处自指版本）。**改完 `manifest` 必须 `cd frontend && npm run build`**（版本号被 `vite.config.ts` 的 define 烤进产物，不重建 ⇒ 包里还是旧号）；打包前 `build.ps1` Step1 会再跑一遍同一份判定（fail-closed） |

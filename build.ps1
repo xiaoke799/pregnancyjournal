@@ -8,6 +8,12 @@
 # ============================================================
 param([switch]$AllowDirty, [switch]$Force)
 $ErrorActionPreference = "Stop"
+# 让子进程（node / npm / fnpack）输出的中文**不乱码**：PowerShell 默认拿控制台的 OEM 代码页
+# （中文 Windows = 936/GBK）去解码它们的 UTF-8 字节 ⇒ 「核查脚本」那些中文说明行会变成
+# 「鏍￠獙鏍圭洰褰」这种鬼画符（Step1 的版本号闸门就是这么暴露出来的）。
+# 只影响本进程对子进程输出的**显示解码**，不改任何文件编码。
+# ⚠️ 输出被重定向、没有真实控制台时该赋值可能抛错 ⇒ 吞掉异常，不能让它拖垮打包。
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 # 打包根目录：应用位于脚本目录（仓库根）；仍兼容旧的 pregnancyjournal/ 子目录布局
 $PkgDir    = Join-Path $PSScriptRoot "pregnancyjournal"
 if (-not (Test-Path (Join-Path $PkgDir "manifest"))) { $PkgDir = $PSScriptRoot }
@@ -111,6 +117,26 @@ if (Test-Path $changelogPath) {
         $errors += "CHANGELOG.md 未记录 [$Version]（说明还停在上一个版本）"
     }
 } else { $errors += "缺少 CHANGELOG.md" }
+# package.json / package-lock.json 是发版需同步的**另 3 处**（此前闸门完全没查、只能靠人记；
+# v0.0.31 前是靠一次性脚本 vercheck.js **人工**核的 ⇒ 人一忘就漏，而且没有回归护栏）。
+# 它们对开源使用者直接可见：frontend/server 的 package.json version、
+# 以及 package-lock.json **两处**自指版本（顶层 version 与 packages[""].version）。
+# ⚠️ 判定逻辑刻意放在 tools\verify\verify_pkg_versions.js 里而不是写在这里：本机 PowerShell
+#    无法执行脚本（工具输出恒空、bash 调 powershell.exe 被安全策略拦），写在 PS 里的断言
+#    **没法验证**；放 node 里既可被本脚本调用，也能作为回归套件天天跑（已入 run_all_suites.js）。
+# ⚠️ fail-closed：脚本缺失 / 缺 node / 判定失败 一律拒绝打包，**不报「跳过」**
+#    —— 核验不到 ≠ 没问题，这是本项目反复踩过的自欺。
+$pkgVerChk = Join-Path $PSScriptRoot "tools\verify\verify_pkg_versions.js"
+if (-not (Test-Path $pkgVerChk)) {
+    $errors += "缺少 tools\verify\verify_pkg_versions.js（package.json / lock 版本号闸门）"
+} elseif (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    $errors += "未找到 node，无法校验 package.json / package-lock.json 的版本号（fail-closed，不跳过）"
+} else {
+    & node $pkgVerChk
+    if ($LASTEXITCODE -ne 0) {
+        $errors += "package.json / package-lock.json 的版本号与 manifest 不同步（见上方 node 输出）"
+    }
+}
 # 前端产物新鲜度：app/ui 被 gitignore，脏树检查看不见它 —— 必须直接比 mtime。
 # 源码比产物新 ⇒ 产物是旧的，打出去就是「新号旧货」（本次 0.0.32 污染事故同款）。
 $FrontendSrc = Join-Path $PkgDir "frontend\src"
