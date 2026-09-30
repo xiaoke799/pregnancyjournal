@@ -38,7 +38,7 @@
 import { ref, computed, h, watch, onMounted, onUnmounted } from 'vue'
 import { dailyRecordApi } from '@/api/daily-record'
 import { usePregnancyStore } from '@/stores/pregnancy'
-import { getMoodEmoji as moodEmojiOf, normalizeSleepQuality, sleepQualityLabel } from '@/utils/format'
+import { getMoodEmoji as moodEmojiOf, normalizeSleepQuality, sleepQualityLabel, normalizeContractionPain } from '@/utils/format'
 import AppIcon from '@/components/common/AppIcon.vue'
 
 const props = defineProps<{
@@ -331,10 +331,22 @@ function getPreview(type: string): string {
       return r.water_intake ? r.water_intake + ' ml' : ''
     case 'stool':
       return getStoolPreview()
-    case 'contraction':
-      return r.contraction_duration ? r.contraction_duration + 's' + (r.contraction_interval ? ' · ' + r.contraction_interval + 'min间隔' : '') : ''
-    case 'fetal_movement':
-      return r.fetal_movement_count ? r.fetal_movement_count + '次 · ' + (r.fetal_movement_duration ? r.fetal_movement_duration + 'min' : '') : ''
+    case 'contraction': {
+      // 🔴 三段各自独立拼接，不再嵌在「有没有 duration」的三元里：
+      //    旧写法只填了间隔、没填持续时（hasData 判「有数据」），预览却是空串。
+      //    疼痛程度走 utils/format 的唯一真源（历史『中度』→『明显』读时归一）。
+      let t = r.contraction_duration != null && r.contraction_duration !== '' ? r.contraction_duration + 's' : ''
+      if (r.contraction_interval != null && r.contraction_interval !== '') t += (t ? ' · ' : '') + r.contraction_interval + 'min间隔'
+      const pain = normalizeContractionPain(r.contraction_pain)
+      if (pain) t += (t ? ' · ' : '') + pain
+      return t
+    }
+    case 'fetal_movement': {
+      // 同宫缩：次数与用时各自独立拼接（只填用时不填次数的日子，预览不再是空串）
+      let t = r.fetal_movement_count != null && r.fetal_movement_count !== '' ? r.fetal_movement_count + '次' : ''
+      if (r.fetal_movement_duration != null && r.fetal_movement_duration !== '') t += (t ? ' · ' : '') + r.fetal_movement_duration + 'min'
+      return t
+    }
     case 'temperature':
       return r.body_temperature ? r.body_temperature + '℃' : ''
     case 'hcg':

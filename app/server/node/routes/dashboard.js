@@ -188,13 +188,17 @@ router.get('/dashboard', async function(req, res) {
     // 今天记了「几次会话」——首页卡片要写清 «N 次会话 · 共 M 次»：
     // 统计曲线一天只取次数最高的那一次，若首页只写一个数字，用户会拿它去跟曲线比、
     // 以为哪边算错了。会话条数（次数）与明细行数一并给出，口径一目了然。
+    // ⚠️ 必须加 total_count > 0：进一次计数器/计时器页面就建会话，一条没记就退出会留下
+    //    count=0 的空壳会话。「空会话不代表这一天」是 daily-rollup 的统一口径
+    //    （写回、统计代表值、记录页「有没有会话」判据都已排除它）——
+    //    这里若把空壳也计入，用户点开计时器没记就退出，首页会凭空多出「1 次会话」。
     var fmSessionRow = await db.queryOne(
-      'SELECT COUNT(*) as n FROM fetal_movement_session WHERE pregnancy_id = ? AND session_date = ?',
+      'SELECT COUNT(*) as n FROM fetal_movement_session WHERE pregnancy_id = ? AND session_date = ? AND total_count > 0',
       [pregnancy_id, todayStr]
     );
     var fetalMovementSessions = fmSessionRow ? fmSessionRow.n : 0;
     var ctSessionRow = await db.queryOne(
-      'SELECT COUNT(*) as n FROM contraction_session WHERE pregnancy_id = ? AND session_date = ?',
+      'SELECT COUNT(*) as n FROM contraction_session WHERE pregnancy_id = ? AND session_date = ? AND total_count > 0',
       [pregnancy_id, todayStr]
     );
     var contractionSessions = ctSessionRow ? ctSessionRow.n : 0;
