@@ -897,7 +897,7 @@ const vegRecipes:SimpleRcp[]=[
 .meal-combo { display: flex; flex-direction: column; gap: 8px; }
 .combo-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .combo-tag { flex-shrink: 0; font-size: 12px; font-weight: 600; color: white; background: #f8a4c8; padding: 2px 8px; border-radius: 10px; min-width: 52px; text-align: center; }
-.combo-name { font-size: 15px; font-weight: 700; color: #1e293b; }
+.combo-name { font-size: 15px; font-weight: 700; color: var(--text-color, #1e293b); }
 .combo-desc { font-size: 11px; color: #94a3b8; margin-left: 8px; flex-shrink: 1; min-width: 0; max-width: 180px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .refresh-btn { margin-top: 12px; }
 .safety-section { padding-top: 8px; }
@@ -961,9 +961,9 @@ const vegRecipes:SimpleRcp[]=[
 
 /* 食谱网格 */
 .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap: 10px; margin: 8px 0 14px; }
-.rcp-card { background: #fafafa; border: 1px solid #eee; border-radius: 10px; padding: 14px 16px; transition: transform .15s; }
+.rcp-card { background: var(--bg-color-2, #fafafa); border: 1px solid var(--border-color, #eee); border-radius: 10px; padding: 14px 16px; transition: transform .15s; }
 .rcp-card:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-.rcp-name { font-size: 14.5px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+.rcp-name { font-size: 14.5px; font-weight: 700; color: var(--text-color, #1e293b); margin-bottom: 4px; }
 .rcp-desc { font-size: 12.5px; color: #64748b; line-height: 1.55; margin: 4px 0 0; }
 .rcp-ingr { font-size: 11.5px; color: #94a3b8; margin: 2px 0; }
 
@@ -990,7 +990,7 @@ const vegRecipes:SimpleRcp[]=[
 .plain-list li { padding: 6px 0 6px 22px; position: relative; border-bottom: 1px solid #f1f5f9; font-size: 13.5px; color: #475569; line-height: 1.55; }
 .plain-list li::before { content:'•';position:absolute;left:6px;color:#3b82f6;font-weight:700; }
 .plain-list li:last-child { border-bottom: none; }
-.plain-list li strong { color: #1e293b; }
+.plain-list li strong { color: var(--text-color, #1e293b); }
 
 /* 催奶分类 */
 .boost-cats { margin: 14px 0 10px; }

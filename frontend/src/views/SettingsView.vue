@@ -329,7 +329,7 @@
           <n-switch v-model:value="channelState[ch.key].enabled" @update:value="saveChannelPrefs(ch.key)" />
         </div>
         <div v-if="channelState[ch.key].configured && channelState[ch.key].enabled" class="setting-item" style="flex-direction:column; align-items:stretch; gap:6px;">
-          <label style="font-size:13px;color:#666;">推送内容</label>
+          <label style="font-size:13px;color:var(--text-secondary);">推送内容</label>
           <n-checkbox-group v-model:value="channelState[ch.key].types" @update:value="saveChannelPrefs(ch.key)">
             <n-space>
               <n-checkbox value="push_daily" label="孕期概览" />
@@ -1371,8 +1371,8 @@ function formatLogTime(t?: string): string {
 .push-log-count { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--text-tertiary, #94a3b8); }
 .push-log-item { background: #f8fafc; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
 .push-log-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.push-log-type { font-weight: 500; color: #333; font-size: 12px; }
-.push-log-content { color: #666; font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .push-log-type { font-weight: 500; color: var(--text-color, #333); font-size: 12px; }
+  .push-log-content { color: var(--text-secondary, #666); font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .push-log-right { display: flex; align-items: center; gap: 8px; margin-top: 4px; justify-content: flex-end; }
 .push-log-time { color: #999; font-size: 11px; }
 .push-log-error { color: #e53e3e; font-size: 11px; margin-top: 4px; }
@@ -1504,18 +1504,19 @@ function formatLogTime(t?: string): string {
 .export-target {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px;
 }
-.export-target-label { font-size: 12.5px; color: #64748b; }
+.export-target-label { font-size: 12.5px; color: var(--text-secondary, #64748b); }
 .export-target-path {
-  font-size: 12.5px; color: #1e293b; background: #fff;
-  border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 10px;
+  font-size: 12.5px; color: var(--text-color, #1e293b); background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 6px; padding: 4px 10px;
   max-width: 100%; word-break: break-all;
 }
-.export-target-path.empty { color: #94a3b8; font-style: italic; }
+.export-target-path.empty { color: var(--text-hint, #94a3b8); font-style: italic; }
 
 .export-manual { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .export-input {
   flex: 1 1 190px; min-width: 0; padding: 5px 10px; font-size: 12.5px;
-  border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #1e293b;
+  border: 1px solid var(--border-color, #cbd5e1); border-radius: 6px;
+  background: var(--bg-card, #fff); color: var(--text-color, #1e293b);
 }
 .export-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
 
@@ -1545,14 +1546,14 @@ function formatLogTime(t?: string): string {
   }
   .export-diag[open] > summary::before { transform: rotate(90deg); }
 .export-diag[open] > summary {
-  border-bottom: 1px solid #e2e8f0; background: #f1f5f9;
-  color: #1e293b; font-weight: 600;
+  border-bottom: 1px solid var(--border-color, #e2e8f0); background: var(--bg-color-2, #f1f5f9);
+  color: var(--text-color, #1e293b); font-weight: 600;
 }
 .diag-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
 .diag-row { display: flex; flex-wrap: wrap; gap: 2px 8px; }
-.diag-k { flex: 0 0 124px; color: #64748b; font-size: 12px; }
+.diag-k { flex: 0 0 124px; color: var(--text-secondary, #64748b); font-size: 12px; }
 .diag-v {
-  flex: 1 1 150px; min-width: 0; color: #1e293b; word-break: break-all;
+  flex: 1 1 150px; min-width: 0; color: var(--text-color, #1e293b); word-break: break-all;
   font-family: ui-monospace, Consolas, monospace; font-size: 11.5px;
 }
 .diag-v.bad { color: #dc2626; font-weight: 600; }

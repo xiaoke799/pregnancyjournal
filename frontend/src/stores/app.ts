@@ -1,7 +1,7 @@
 /** 孕程记 - 全局应用状态 Store。 */
 
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref, onScopeDispose } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
   const sidebarCollapsed = ref(false)
@@ -27,6 +27,31 @@ export const useAppStore = defineStore('app', () => {
     try { localStorage.setItem(THEME_KEY, mode) } catch { /* 同上 */ }
   }
 
+  // ===== 实际是否深色（effectiveDark）=====
+  // ⚠️ 放在 store 而不是 App.vue：图表是 canvas 渲染，**不吃 CSS 变量**，
+  //    必须让它们也能读到「当前是否深色」，否则深色下坐标轴/标签是深字压深底、看不见。
+  //    App.vue 仍负责把这个值落到 <html> 的 dark 类上（激活 variables.css 那套变量）。
+  const systemDark = ref(false)
+  let themeMql: MediaQueryList | null = null
+  function onThemeMql(e: MediaQueryListEvent) { systemDark.value = e.matches }
+
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    themeMql = window.matchMedia('(prefers-color-scheme: dark)')
+    systemDark.value = themeMql.matches
+    // 旧浏览器没有 addEventListener → 兼容写法
+    if (themeMql.addEventListener) themeMql.addEventListener('change', onThemeMql)
+    else if ((themeMql as any).addListener) (themeMql as any).addListener(onThemeMql)
+  }
+  onScopeDispose(() => {
+    if (!themeMql) return
+    if (themeMql.removeEventListener) themeMql.removeEventListener('change', onThemeMql)
+    else if ((themeMql as any).removeListener) (themeMql as any).removeListener(onThemeMql)
+  })
+
+  const effectiveDark = computed(() =>
+    themeMode.value === 'dark' || (themeMode.value === 'system' && systemDark.value),
+  )
+
   function toggleSidebar() {
     sidebarCollapsed.value = !sidebarCollapsed.value
   }
@@ -39,6 +64,7 @@ export const useAppStore = defineStore('app', () => {
     sidebarCollapsed,
     initialized,
     themeMode,
+    effectiveDark,
     setThemeMode,
     toggleSidebar,
     setInitialized,

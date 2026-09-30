@@ -1,7 +1,7 @@
 <template>
   <n-config-provider
-    :theme="effectiveDark ? darkTheme : lightTheme"
-    :theme-overrides="effectiveDark ? darkThemeOverrides : lightThemeOverrides"
+    :theme="appStore.effectiveDark ? darkTheme : lightTheme"
+    :theme-overrides="appStore.effectiveDark ? darkThemeOverrides : lightThemeOverrides"
     :locale="zhCN"
     :date-locale="dateZhCN"
   >
@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, onErrorCaptured } from 'vue'
+import { ref, watch, onErrorCaptured } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useAppStore } from '@/stores/app'
@@ -90,33 +90,10 @@ function goHome() {
 // 之前 currentTheme 是死状态、config-provider 只传 theme-overrides 没传 theme，
 // 于是「深色」永远不生效（铁律 #18 说的「深色模式未接上」）。
 const appStore = useAppStore()
-const systemDark = ref(false)
-let themeMql: MediaQueryList | null = null
-function onThemeMql(e: MediaQueryListEvent) { systemDark.value = e.matches }
 
-onMounted(() => {
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    themeMql = window.matchMedia('(prefers-color-scheme: dark)')
-    systemDark.value = themeMql.matches
-    // addEventListener 旧浏览器没有 → 兼容写法
-    if (themeMql.addEventListener) themeMql.addEventListener('change', onThemeMql)
-    else if ((themeMql as any).addListener) (themeMql as any).addListener(onThemeMql)
-  }
-})
-onBeforeUnmount(() => {
-  if (themeMql) {
-    if (themeMql.removeEventListener) themeMql.removeEventListener('change', onThemeMql)
-    else if ((themeMql as any).removeListener) (themeMql as any).removeListener(onThemeMql)
-  }
-})
-
-const effectiveDark = computed(() =>
-  appStore.themeMode === 'dark' ||
-  (appStore.themeMode === 'system' && systemDark.value),
-)
-
-// immediate: 首屏就按存储/系统偏好定好，避免亮→暗闪一下
-watch(effectiveDark, (v) => {
+// 系统深色偏好的监听已经收进 store（图表要读），这里只负责把结果落到 DOM 上。
+// immediate: 首屏就按存储/系统偏好定好，避免亮→暗闪一下。
+watch(() => appStore.effectiveDark, (v) => {
   if (typeof document !== 'undefined') {
     document.documentElement.classList.toggle('dark', v)
   }
@@ -414,17 +391,17 @@ const darkThemeOverrides: GlobalThemeOverrides = {
 .app-error-card {
   max-width: 380px;
   width: 100%;
-  background: #fff;
-  border: 1px solid #f1ebf2;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #f1ebf2);
   border-radius: 20px;
   padding: 28px 24px;
   text-align: center;
-  box-shadow: 0 8px 30px rgba(31, 23, 48, 0.08);
+  box-shadow: var(--shadow-lg, 0 8px 30px rgba(31, 23, 48, 0.08));
 }
 .app-error-emoji { font-size: 40px; line-height: 1; }
-.app-error-title { font-size: 17px; font-weight: 600; color: #1f1730; margin-top: 12px; }
+.app-error-title { font-size: 17px; font-weight: 600; color: var(--text-color, #1f1730); margin-top: 12px; }
 .app-error-desc {
-  font-size: 13px; color: #5c5275; margin-top: 8px; line-height: 1.6;
+  font-size: 13px; color: var(--text-secondary, #5c5275); margin-top: 8px; line-height: 1.6;
   word-break: break-all; max-height: 120px; overflow: auto;
 }
 .app-error-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
