@@ -9,7 +9,7 @@
 ## 快速开始
 
 ```bash
-# 全套（42 套 / 约 778 项，跑完约 6–10 分钟）
+# 全套（58 套 / 约 1267 项，跑完约 6–10 分钟）
 node tools/verify/run_all_suites.js
 
 # 只跑名字含关键字的套件（路径或中文名都能命中）
@@ -27,6 +27,7 @@ node tools/verify/run_all_suites.js --only=DB修复
 |---|---|
 | Node.js | 直接用当前进程的 `process.execPath`，**不写死路径** |
 | 后端依赖 | `app/server/node/node_modules` 必须已 `npm install`（`build.ps1` 会装） |
+| 前端依赖 | `frontend/node_modules` 必须已 `npm install` —— `verify_frontend_types.js` 要用 `vue-tsc`（在 devDependencies）。**缺了它该套件判红**（fail-closed：工具链不可用 ≠ 类型没问题，这里报"通过"就是假绿） |
 | 前端产物 | `app/ui/` 需已构建；模板类套件读它。未构建时这几套会红 |
 | 夹具 | `fixtures/heic-test/sample.heic`、`rot.jpg` **已随仓库入库**，无需另行准备 |
 
@@ -42,6 +43,10 @@ tools/verify/
 ├── _vue_extract.js      ← 从 .vue 源码里抽取 <script> 内容的共用小工具
 ├── e2e_*.js             ← 端到端（真起 server.js + 真库 + 真 HTTP）
 ├── verify_*.js          ← 静态/契约核查
+│   └── verify_frontend_types.js
+│                        ← 前端类型体检：包装 `vue-tsc --noEmit`
+│                          （先清掉的 15 个常驻错误：client.ts 未暴露"解包后"签名。
+│                            用 PJ_VUE_TSC=<入口> 可指向桩做反例验证）
 ├── probe_*.js           ← 探针（诊断型，多数不打汇总行）
 ├── repro_*.js           ← 复现脚本（无头浏览器，产出截图 + JSON）
 ├── shot_*.js            ← 截图脚本（无头浏览器）
@@ -57,7 +62,7 @@ tools/verify/
 ├── test_image_thumb.js  ← 缩略图生成
 ├── test_upgrade_init.sh ← cmd/upgrade_init 数据抢救逻辑的本地仿真
 ├── fkprobe.js           ← 外键探针
-├── wecom/               ← 企业微信 / 飞书推送 4 套
+├── wecom/               ← 推送 5 套（企业微信 / 企微调度器 / 飞书 / 钉钉 / Bark）
 ├── fixtures/heic-test/  ← HEIC 测试样本（被 4 个套件依赖，勿删）
 ├── .tmp/                ← 运行期临时产物（gitignore）
 └── regress-out/         ← 逐套日志（gitignore）
@@ -67,8 +72,13 @@ tools/verify/
 
 ## 三类脚本，别混用
 
-**① 收进运行器的 40 套**：判定口径是「能打出 `N 通过 / M 失败` 汇总行」。
-按主题分为：推送 3、导出/兼容/媒体 18、契约/探针 6、首屏+路由契约 2、路径安全 2、t 系列 9。
+**① 收进运行器的 58 套**：判定口径是「能打出 `N 通过 / M 失败` 汇总行」。
+主题覆盖：推送、导出/备份/恢复、媒体（HEIC/缩略图/视频）、相册与日记、
+产检迁移与排序、记录类入口与全类型、路径安全（穿越 + 锚定白名单）、
+首屏/路由契约/导航、用药与补充（规则 + 计划 + 到点提醒）、前端类型体检、
+无头浏览器点击类探针、`t9`–`t18` 系列。
+⚠️ **逐套清单以 `run_all_suites.js` 的 `SUITES` 为准**（此处不再抄一份数量，避免像
+「推送 3 → 实际 5」「56 套 → 实际 57」那样漂移；运行器末尾有绊线会自动比对本页声明的数字）。
 
 **② 诊断型探针（有意**不**收）**：`t1`–`t8`、`t10_probe_choice`。
 它们只打印对照表、没有断言与汇总行，收进运行器只会得到 `NO-SUMMARY` 噪声。
@@ -97,6 +107,23 @@ tools/verify/
    也不要用提交号：仓库历史一旦被重写（filter-branch + force-push），提交号就直接查不到了。
 5. **换机器时**：只改 `_env.js` 一处。若某个外部程序（git / bash / node）探测不到，
    用 `PJ_NODE` / `PJ_BASH` / `PJ_GIT` / `PJ_VERIFY_TMP` 环境变量覆盖。
+
+---
+
+## 反例口径（写新套件必须自证"会红"）
+
+铁律 #11：**一个从不失败的检查 = 安慰剂**。任何新套件上线前，必须让它**真的红一次**，
+并保留复现方式。已实测的写法（可照抄）：
+
+| 反例 | 做法 | 期望 |
+|---|---|---|
+| 判定逻辑真的会红 | `PJ_VUE_TSC=tools/verify/_fake_tsc_bad.js node tools/verify/verify_frontend_types.js`（桩件打两行 `error TS` + 退出码 2） | `0 通过 / 1 失败`，并列出这两行 |
+| 真工具链能抓到真错误 | 往 `frontend/src/` 临时放一个 `__typecheck_probe.ts`，内容 `export const probe: number = 'not a number';` | 红，且报 `__typecheck_probe.ts(3,14): error TS2322`。**验完立即删除该文件** |
+| 工具链缺失不报假绿 | `PJ_VUE_TSC=<不存在的路径>` | 红，提示"找不到 vue-tsc 入口"+ 排查建议 |
+
+> ⚠️ 反例用的探针文件一律放 `tools/verify/.tmp/`（gitignore），源码里的探针用完即时删；
+> 跑完 `git status` 确认没有 `??` 残留。需要长期保留的桩件用 `_` 前缀入库（如 `_fake_tsc_bad.js`），
+> 否则别人 clone 下来复现不了反例。
 
 ---
 
@@ -133,10 +160,12 @@ tools/verify/
 
 | 场景 | 必须先跑 |
 |---|---|
+| 改前端任意 `.ts` / `.vue` / 动 `api/client.ts` 的类型 | `verify_frontend_types.js`（`vue-tsc --noEmit`；**常驻类型错误会淹没真错误**，必须保持 0 处） |
 | 改前端模板 / 加页面功能 | `verify_template_vars.js`、`verify_render.js`、`verify_record_entrypoints.js`；**改记录页小弹窗**再加 `shot_record_quickmodals.js`（看风格是否与其它类型一致） |
 | 改记录页任何字段的「提交 / 读回 / 备注写入」 | `verify_record_page_functions.js`（真后端端到端：25 类别逐类跑「建/读/部分更新/改/删」+ 写入格式与 remark 语义），再跑 `verify_record_entrypoints.js`（静态：取值域唯一真源、入口齐全） |
 | 改睡眠质量 / 心情 / 其它「多处必须一致」的字面量 | 两套都跑：`verify_record_entrypoints.js`（会红在「全前端只有 format.ts 一处映射」）+ `verify_record_page_functions.js` |
 | 改前后端接口 | `verify_api_contracts.js`、`verify_upload_field_names.js` |
+| 动用药/补充方案、打卡、到点提醒 | `verify_dose_rules.js`（**纯函数 17 项**：7 天节奏串正反例，专防"静默错判该不该吃"；自带 `TZ=Asia/Shanghai`）+ `verify_dose_plan.js`（真后端：建/校验/孕周·日期·频率约束/打卡幂等/撤销/停用/删连带）+ `verify_dose_push.js`（到点只推该推的、**打卡后当天不再推**、开关生效、日志可机读） |
 | 动产检排期 json 的 id / 改 pregnancy·schedule_dates·custom_checkup·reminder 四表 | `probe_push_schedule_impact.js` |
 | 改 `saveDb` / 落盘逻辑 | `t9_verify_db_fixes.js`、`verify_db_persist.js`、`probe_async_save_race.js` |
 | 改配色 / 主题令牌 | `audit_checkup_colors.py` 等 5 个配色审查脚本 + `_check_chart_ink.py` |

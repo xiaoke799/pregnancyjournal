@@ -26,6 +26,8 @@ const db = require('../db');
 const dayjs = require('dayjs');
 const config = require('../config');
 const log = require('../logger');
+// 用药 / 营养补充「医嘱计划」的唯一判定口径（与前端今日列表共用，避免两处规则漂移）
+const dosePlan = require('./dose-plan-service');
 
 // ========== 时间工具 ==========
 // 统一使用「本地时间」字符串（YYYY-MM-DD HH:mm:ss）。
@@ -163,6 +165,19 @@ const CHANNELS = {
       let u;
       try { u = new URL(url); } catch { return 'Bark 推送地址格式不正确'; }
       if (u.protocol !== 'https:' && u.protocol !== 'http:') return 'Bark 推送地址必须以 http(s):// 开头';
+      // SSRF 加固（上线前检查 #8）：推送地址由用户填、服务端发起请求，
+      // 必须拒绝本机/内网地址，防止把 NAS 当跳板探测或打内网服务。
+      const host = u.hostname.toLowerCase();
+      const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+      const isLoopback = host === 'localhost' || host === '::1' || host === '0.0.0.0'
+        || (v4 && (Number(v4[1]) === 127 || Number(v4[1]) === 0));
+      const isPrivate = (v4 && (
+        Number(v4[1]) === 10
+        || (Number(v4[1]) === 172 && Number(v4[2]) >= 16 && Number(v4[2]) <= 31)
+        || (Number(v4[1]) === 192 && Number(v4[2]) === 168)
+        || (Number(v4[1]) === 169 && Number(v4[2]) === 254)
+      )) || host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80:');
+      if (isLoopback || isPrivate) return 'Bark 推送地址不能是本机或内网地址，请用公网地址（自建服务器请填公网可达域名）';
       // 地址末段就是设备的推送 Key（自建服务器域名任意，但必须有 key 段）
       const keySeg = u.pathname.split('/').filter(Boolean)[0];
       if (!keySeg) return 'Bark 推送地址缺少 Key，请在 Bark App 里复制完整推送 URL（https://api.day.app/你的Key）';
@@ -279,6 +294,7 @@ const DEFAULT_CONFIG = {
   push_checkup: true,
   push_daily: true,
   push_reminder: true,
+  push_dose: true,        // 用药 / 营养补充到点提醒（独立于每日看板，按方案时间点单独推）
   push_time: '08:00',
 };
 
@@ -318,9 +334,20 @@ function writeChannelConfig(channelKey, cfg) {
   fs.writeFileSync(file, JSON.stringify(out, null, 2), 'utf-8');
 }
 
-/** 是否至少勾选了一类推送内容（三项全关 = 不推送） */
+/**
+ * 是否至少勾选了一类推送内容（全关 = 不推送）。
+ *
+ * ⚠️ 这里**只管每日看板**的三类内容（孕期概览 / 产检 / 提醒），
+ *    `push_dose`（用药·补充提醒）**不计入** —— 它是「到点单独推」，
+ *    由 doseReminderTick 自己判（那边直接遍历 channelList，不走 activeChannels）。
+ *    混进来的后果（2026-09-29 实测踩到）：
+ *      · 老配置没有 push_dose 字段 ⇒ undefined !== false ⇒ 恒为真
+ *        ⇒ "每日看板三项全不勾" 也不再报"未勾选"，反而发一条空看板；
+ *      · 只开了用药提醒的渠道会被判定成"有内容"，每天多推一条无意义看板。
+ */
 function hasAnyContent(cfg) {
-  return cfg.push_daily !== false || cfg.push_checkup !== false || cfg.push_reminder !== false;
+  return cfg.push_daily !== false || cfg.push_checkup !== false
+    || cfg.push_reminder !== false;
 }
 
 // ========== 发送 ==========
@@ -386,8 +413,10 @@ function sendChannelOnce(channel, cfg, textContent) {
         res.on('data', (chunk) => { body += chunk; });
         res.on('end', () => {
           // 1) HTTP 状态码必须 2xx（此前完全不看，错误页会被当成成功）
+          // ⚠️ 不回显对端响应体（上线前检查 #8）：对端内容不可信，可能是 HTML 错误页
+          //    也可能含内网信息，只把状态码告诉调用方。
           if (res.statusCode < 200 || res.statusCode >= 300) {
-            const e = new Error(`${channel.name}接口返回 HTTP ${res.statusCode}${body ? `：${body.slice(0, 120)}` : ''}`);
+            const e = new Error(`${channel.name}接口返回 HTTP ${res.statusCode}`);
             if (res.statusCode === 400 || res.statusCode === 401 || res.statusCode === 404) e.permanent = true;
             return fail(e);
           }
@@ -395,7 +424,7 @@ function sendChannelOnce(channel, cfg, textContent) {
           let json = null;
           try { json = JSON.parse(body); } catch { /* 交给下面 */ }
           if (!json || typeof json !== 'object') {
-            const e = new Error(`${channel.name}返回了无法识别的内容，可能网络被拦截或地址不正确${body ? `：${body.slice(0, 80)}` : ''}`);
+            const e = new Error(`${channel.name}返回了无法识别的内容，可能网络被拦截或地址不正确`);
             e.permanent = true;
             return fail(e);
           }
@@ -672,6 +701,109 @@ async function executeChannelPush(pregnancyId, channelKey, cfg, sourceType, exis
   }
 }
 
+// ========== 用药 / 营养补充「到点提醒」 ==========
+// 与每日看板是**两套独立推送**：看板一天只在 push_time 推一次；
+// 服药提醒按方案配置的时间点逐个推（08:00 优甲乐、20:00 钙片…）。
+// ⚠️ 复用同一个 schedulerTick 心跳，**不新增调度器**（历史上往 server.js 加第二套调度器踩过坑）。
+/** 药品与营养补充用不同图标：都顶个 💊 看不出是哪一类 */
+const DOSE_KIND_ICON = { medication: '💊', supplement: '🥛' };
+
+function buildDoseReminderText(plan) {
+  const times = dosePlan.planTimes(plan);
+  const label = dosePlan.KIND_LABEL[plan.kind] || '其它';
+  const icon = DOSE_KIND_ICON[plan.kind] || '💊';
+  const lines = [
+    `${icon} ${label}提醒`,
+    // 剂量后留空格再接「了」：`该吃【优甲乐】50μg 了`，比 `】 50μg了` 顺
+    `该吃【${plan.name}】${plan.dosage ? plan.dosage + ' ' : ''}了`,
+  ];
+  if (times.length > 1) lines.push(`今日共 ${times.length} 次：${times.join('、')}`);
+  if (plan.note) lines.push(`📌 ${plan.note}`);
+  lines.push('吃完记得回 App 打卡，打完卡今天就不再提醒了');
+  return lines.join('\n');
+}
+
+// 推送记录的 content 用**可机读**的格式（计划 id + 时间点），
+// 这样重启后能精确恢复「今天这一顿已经推过了」，避免重启重复推送。
+const DOSE_CONTENT_RE = /^用药\/补充提醒\|([^|]+)\|(\d{2}:\d{2})$/;
+
+async function executeDosePush(pregnancyId, channelKey, cfg, plan, time, sourceType) {
+  const channel = getChannel(channelKey);
+  if (!channel) throw new Error(`未知推送渠道: ${channelKey}`);
+
+  const logId = await recordPushLog(
+    'dose',
+    `用药/补充提醒|${plan.id}|${time}`,
+    'pending', null, null, channelKey
+  );
+  try {
+    const messageText = buildDoseReminderText(plan);
+    const result = await sendChannelMessage(channelKey, cfg, messageText);
+    await finishPushLog(logId, 'success', null, messageText);
+    return { success: true, truncated: result.truncated };
+  } catch (e) {
+    await finishPushLog(logId, 'failed', e.message);
+    throw e;
+  }
+}
+
+/**
+ * 用药 / 补充到点提醒（在现有 schedulerTick 里被调用，共用同一个心跳）。
+ * 「已完成的就不提醒」= 查 dose_checkin：当天打过卡的方案直接跳过。
+ */
+async function doseReminderTick(now, today, nowMinutes) {
+  const pregnancy = db.queryOne('SELECT id FROM pregnancy ORDER BY created_at DESC LIMIT 1');
+  if (!pregnancy) return;
+  const pregnancyId = pregnancy.id;
+
+  // 今天「按医嘱该吃」的方案（起止日期 / 起止孕周 / 频率 / 开关 —— 全部由 service 判定）
+  const due = dosePlan.listDuePlans(pregnancyId, today);
+  // ⚠️ 打卡状态**一次查完**，别在循环里逐个 isCheckedOn（N+1）。
+  //    每 60 秒跑一次，方案一多就是几十条查询白跑。
+  const checkedIds = dosePlan.checkedPlanIdsOn(pregnancyId, today);
+
+  for (const channel of channelList()) {
+    try {
+      const cfg = readChannelConfig(channel.key);
+      if (!cfg.webhook_url) continue;
+      if (cfg.enabled === false) continue;
+      if (cfg.push_dose === false) continue;
+
+      for (const plan of due) {
+        if (checkedIds.has(plan.id)) continue;                   // 已打卡 ⇒ 当天不再提醒
+
+        for (const t of dosePlan.planTimes(plan)) {
+          const minutes = timeToMinutes(t);
+          if (minutes === null) continue;
+          if (nowMinutes < minutes) continue;                                  // 还没到点
+          if (nowMinutes - minutes > CATCHUP_WINDOW_MIN) continue;             // 超出补推窗口
+
+          const key = `${channel.key}|${plan.id}|${t}`;
+          const st = doseStateFor(key, today);
+          if (st.done) continue;
+          if (st.attempts >= MAX_ATTEMPTS_PER_DAY) continue;
+          if (st.attempts > 0 && Date.now() - st.lastAttemptTs < RETRY_GAP_MS) continue;
+
+          st.attempts++;
+          st.lastAttemptTs = Date.now();
+          const sourceType = st.attempts === 1
+            ? (nowMinutes - minutes > 1 ? 'catchup' : 'scheduled')
+            : 'retry';
+          try {
+            await executeDosePush(pregnancyId, channel.key, cfg, plan, t, sourceType);
+            st.done = true;
+            log.info('推送', `[${channel.name}] 用药提醒成功：${plan.name} ${t}`);
+          } catch (e) {
+            log.error('推送', `[${channel.name}] 用药提醒失败（第 ${st.attempts} 次）：${e.message}`);
+          }
+        }
+      }
+    } catch (e) {
+      log.error('推送', `[${channel.name}] 用药提醒调度异常: ${e.message}`);
+    }
+  }
+}
+
 /** 本次推送应该覆盖哪些渠道（已配置 + 开关打开 + 至少勾了一类内容） */
 function activeChannels() {
   const out = [];
@@ -764,6 +896,7 @@ function channelConfigSummary(channelKey) {
     push_checkup: cfg.push_checkup !== false,
     push_daily: cfg.push_daily !== false,
     push_reminder: cfg.push_reminder !== false,
+    push_dose: cfg.push_dose !== false,
     push_time: cfg.push_time || '08:00',
   };
   if (channel.needsSecret) out.secret_set = !!String(cfg.secret || '').trim();
@@ -775,10 +908,10 @@ async function saveChannelConfig(channelKey, body) {
   const channel = getChannel(channelKey);
   if (!channel) throw httpError(`未知推送渠道: ${channelKey}`);
 
-  const { webhook_url, secret, enabled, push_checkup, push_daily, push_reminder, push_time } = body || {};
+  const { webhook_url, secret, enabled, push_checkup, push_daily, push_reminder, push_dose, push_time } = body || {};
   const existing = readChannelConfig(channelKey);
   const hasPrefs = enabled !== undefined || push_checkup !== undefined || push_daily !== undefined
-    || push_reminder !== undefined || push_time !== undefined || secret !== undefined;
+    || push_reminder !== undefined || push_dose !== undefined || push_time !== undefined || secret !== undefined;
 
   // 显式传空字符串 = 清除配置（前端「清除」按钮）。
   // 之前传空串会走「地址不能为空」的报错分支 → 界面看着清了、实际配置还在，刷新就复活。
@@ -802,6 +935,7 @@ async function saveChannelConfig(channelKey, body) {
     if (push_checkup !== undefined) next.push_checkup = push_checkup !== false;
     if (push_daily !== undefined) next.push_daily = push_daily !== false;
     if (push_reminder !== undefined) next.push_reminder = push_reminder !== false;
+    if (push_dose !== undefined) next.push_dose = push_dose !== false;
     if (push_time) next.push_time = push_time;
     if (!next.push_time) next.push_time = '08:00';
     if (channel.needsSecret && secret !== undefined) next.secret = String(secret || '').trim();
@@ -825,6 +959,7 @@ async function saveChannelConfig(channelKey, body) {
     push_checkup: push_checkup !== undefined ? push_checkup !== false : existing.push_checkup !== false,
     push_daily: push_daily !== undefined ? push_daily !== false : existing.push_daily !== false,
     push_reminder: push_reminder !== undefined ? push_reminder !== false : existing.push_reminder !== false,
+    push_dose: push_dose !== undefined ? push_dose !== false : existing.push_dose !== false,
     push_time: push_time || existing.push_time || '08:00',
   };
   if (channel.needsSecret) {
@@ -1001,6 +1136,38 @@ function stateFor(channelKey, today) {
   return s;
 }
 
+// 用药提醒的状态键 = 渠道 + 方案 + 时间点（一顿一条，互不干扰）
+const doseSchedulerStates = {};
+
+function doseStateFor(key, today) {
+  let s = doseSchedulerStates[key];
+  if (!s || s.date !== today) {
+    s = { date: today, attempts: 0, lastAttemptTs: 0, done: false };
+    doseSchedulerStates[key] = s;
+  }
+  return s;
+}
+
+/** 重启后恢复「今天已经推过的顿次」，防止重启重复推送 */
+function restoreDoseStatesFromLog(today) {
+  try {
+    const rows = db.queryAll(
+      "SELECT push_content, channel FROM push_log WHERE push_type='dose' AND status='success' AND pushed_at LIKE ?",
+      [today + '%']
+    );
+    let n = 0;
+    for (const r of rows) {
+      const m = DOSE_CONTENT_RE.exec(String(r.push_content || ''));
+      if (!m) continue;
+      doseStateFor(`${r.channel || 'wecom'}|${m[1]}|${m[2]}`, today).done = true;
+      n++;
+    }
+    if (n > 0) log.info('推送', `用药提醒：从推送记录恢复 ${n} 个已推顿次（今天）`);
+  } catch (e) {
+    log.warn('推送', `用药提醒状态恢复失败: ${e.message}`);
+  }
+}
+
 async function schedulerTick() {
   try {
     const now = new Date();
@@ -1051,6 +1218,9 @@ async function schedulerTick() {
         log.error('推送', `[${channel.name}] 渠道调度异常: ${e.message}`);
       }
     }
+
+    // 用药 / 补充到点提醒（复用同一心跳，不新增调度器）
+    await doseReminderTick(now, today, nowMinutes);
   } catch (e) {
     log.error('推送', `调度器异常: ${e.message}`);
   }
@@ -1063,6 +1233,7 @@ function startScheduler() {
   // 启动时检查各渠道今天是否已成功推送过（防止重启后重复推送）
   try {
     const today = localDateStr();
+    restoreDoseStatesFromLog(today);
     for (const channel of channelList()) {
       const row = db.queryOne(
         "SELECT id FROM push_log WHERE push_type='daily' AND status='success' AND pushed_at LIKE ? AND (channel = ? OR (channel IS NULL AND ? = 'wecom')) LIMIT 1",
@@ -1109,6 +1280,9 @@ module.exports = {
   pushToAllChannels,
   startScheduler,
   schedulerTick,
+  // 用药 / 补充到点提醒（doseReminderTick 已挂进 schedulerTick；单独导出便于端到端验证）
+  doseReminderTick,
+  buildDoseReminderText,
   pruneOldPushLogs,
   PUSH_LOG_RETENTION_DAYS,
   // 对外能力（路由层用）

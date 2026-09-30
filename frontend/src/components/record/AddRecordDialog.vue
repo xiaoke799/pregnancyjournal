@@ -184,8 +184,11 @@
           </div>
         </template>
 
-        <!-- 用药 -->
+        <!-- 用药（临时补记：长期按医嘱吃的请去 /dose-plan 建计划，会到点提醒 + 打卡） -->
         <template v-if="selectedType === 'medication'">
+          <div class="dose-hint">
+            长期按医嘱吃的（如优甲乐）请到<router-link to="/dose-plan">「用药/补充」</router-link>建计划 —— 到点自动提醒、吃完打卡。这里只做临时补记。
+          </div>
           <div class="form-group">
             <label>药品名称</label>
             <n-input v-model:value="formData.medName" placeholder="请输入药品名称" />
@@ -233,6 +236,13 @@
           <div class="form-group">
             <label>运动时长 (分钟)</label>
             <n-input-number v-model:value="formData.exerciseDuration" :min="0" :max="300" placeholder="分钟" style="width: 100%" />
+          </div>
+          <!-- 强度感受：记录页小弹窗早就有这一项，这里一直没有 —— 补上以保持两个录入入口一致 -->
+          <div class="form-group">
+            <label>强度感受（可选）</label>
+            <n-radio-group v-model:value="formData.exerciseIntensity">
+              <n-radio-button v-for="o in exerciseIntensityOptions" :key="o.value" :value="o.value">{{ o.label }}</n-radio-button>
+            </n-radio-group>
           </div>
         </template>
 
@@ -336,8 +346,11 @@
           <div class="form-hint">女性正常范围155-357 μmol/L</div>
         </template>
 
-        <!-- 营养补充 -->
+        <!-- 营养补充（临时补记：同上） -->
         <template v-if="selectedType === 'supplement'">
+          <div class="dose-hint">
+            长期按医嘱吃的（如叶酸、钙片）请到<router-link to="/dose-plan">「用药/补充」</router-link>建计划 —— 到点自动提醒、吃完打卡。这里只做临时补记。
+          </div>
           <div class="form-group">
             <label>今日补充</label>
             <div class="tag-grid">
@@ -517,7 +530,7 @@ import { dailyRecordApi } from '@/api/daily-record'
 import { reminderApi } from '@/api/reminder'
 import client from '@/api/client'
 import { getApiBase } from '@/utils/api-base'
-import { MOOD_OPTIONS as moodOptions, SLEEP_QUALITY_OPTIONS as sleepQualityOptions, normalizeSleepQuality, type SleepQuality, isValidDateStr, normalizeContractionPain } from '@/utils/format'
+import { MOOD_OPTIONS as moodOptions, SLEEP_QUALITY_OPTIONS as sleepQualityOptions, normalizeSleepQuality, EXERCISE_INTENSITY_OPTIONS as exerciseIntensityOptions, type SleepQuality, type ExerciseIntensity, isValidDateStr, normalizeContractionPain } from '@/utils/format'
 import dayjs from 'dayjs'
 import AppIcon from '@/components/common/AppIcon.vue'
 
@@ -671,6 +684,7 @@ const formData = ref({
   // 运动
   exerciseType: '',
   exerciseDuration: null as number | null,
+  exerciseIntensity: '' as '' | ExerciseIntensity,
   // 睡眠
   // 睡眠（入/起床时间）
     sleepBedtime: '' as string,
@@ -836,6 +850,7 @@ watch(() => props.show, (val) => {
         case 'exercise':
           formData.value.exerciseType = r.exercise_type || ''
           formData.value.exerciseDuration = r.exercise_duration ?? null
+          formData.value.exerciseIntensity = (r.exercise_intensity || '') as '' | ExerciseIntensity
           break
         case 'sleep':
           // 历史中文值（好/一般/差）由 normalizeSleepQuality 统一归一，不用在这里再抄一份映射
@@ -1095,6 +1110,8 @@ async function saveRecord() {
         if (!formData.value.exerciseType) { message.warning('请输入运动类型'); saving.value = false; return }
         data.exercise_type = formData.value.exerciseType
         data.exercise_duration = formData.value.exerciseDuration
+        // 可选字段：没选就不提交（后端按 `!== undefined` 判更新 ⇒ 不提交即保持原值，不会被清掉）
+        data.exercise_intensity = formData.value.exerciseIntensity || undefined
         break
       case 'sleep':
         // 从入/起床时间计算睡眠时长
@@ -1284,6 +1301,7 @@ function resetForm() {
     dietMeals: [] as { type: string; content: string }[],
     exerciseType: '',
     exerciseDuration: null,
+    exerciseIntensity: '',
     // 睡眠（入/起床时间）
     sleepBedtime: '',
     sleepWaketime: '',
@@ -1370,6 +1388,24 @@ onBeforeUnmount(() => {
 
 .form-area {
   min-height: 120px;
+}
+
+/* 「临时补记」提示条：把长期按医嘱吃的引导到 /dose-plan 计划页。
+   ⚠️ 文字用 ink（≥4.5:1），不用 --info-color 那种填充色写字（只够 3:1）。 */
+.dose-hint {
+  background: var(--bg-tint-blue, #f4f8ff);
+  border-left: 3px solid var(--info-color, #4fb6e8);
+  border-radius: var(--radius-sm, 8px);
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--info-ink, #17709b);
+}
+.dose-hint a {
+  color: var(--primary-color, #c44680);
+  font-weight: 600;
+  text-decoration: none;
 }
 
 .form-group {

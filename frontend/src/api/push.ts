@@ -15,6 +15,8 @@ export interface PushChannelConfig {
   push_checkup: boolean
   push_daily: boolean
   push_reminder: boolean
+  /** 用药 / 营养补充到点提醒（独立于每日看板，按方案时间点单独推） */
+  push_dose: boolean
   push_time: string
   secret_set?: boolean
   status?: { success: boolean; message: string }
@@ -37,6 +39,8 @@ export interface PushPrefs {
   push_checkup?: boolean
   push_daily?: boolean
   push_reminder?: boolean
+  /** 用药 / 补充提醒：到点单独推，不并进每日看板 */
+  push_dose?: boolean
   push_time?: string
   secret?: string
   webhook_url?: string

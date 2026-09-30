@@ -35,6 +35,9 @@
       <span class="weekly-entry-more">查看详情 ›</span>
     </router-link>
 
+    <!-- ===== 今日用药 / 补充打卡（按医嘱计划提醒，打卡记今天；打完卡当天不再推） ===== -->
+    <DoseTodayCard />
+
     <!-- ===== 提醒看板（未来一个月） ===== -->
     <div class="section reminder-board">
       <div class="section-header">
@@ -317,6 +320,7 @@ import client from '@/api/client'
 import { calculateGestationalAge } from '@/utils/gestational'
 import { getMoodEmoji as moodEmojiOf, sleepQualityLabel } from '@/utils/format'
 import dayjs from 'dayjs'
+import DoseTodayCard from '@/components/dose/DoseTodayCard.vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { LineChart } from 'echarts/charts'
@@ -424,7 +428,7 @@ const gestationalAge = computed(() => {
 
 const dueDate = computed(() => {
   const p = pregnancyStore.currentPregnancy
-  return p?.due_date || p?.dueDate || null
+  return p?.due_date || null
 })
 const daysUntilDue = computed(() => {
   if (dashboardData.value?.gestational_age?.days_until_due != null) {

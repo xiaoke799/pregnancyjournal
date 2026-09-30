@@ -96,6 +96,15 @@
         :dates="chartDates" :values="chartValues('water_intake')"
         :table-data="tableData('water', 'water_intake')" />
 
+      <!-- 运动时长（记录页/快捷弹窗都能录入，此前统计里一直缺这一项；配色沿用记录列表的「运动」色） -->
+      <MetricCard v-if="hasData('exercise')" title="运动时长" unit="分钟" color="#22c55e"
+        :dates="chartDates" :values="chartValues('exercise_duration')"
+        :table-data="tableData('exercise', 'exercise_duration', {
+          filter: (r: any) => r.exercise_duration != null || (r.exercise_type != null && r.exercise_type !== '') || (r.exercise_intensity != null && r.exercise_intensity !== ''),
+          extra: 'exercise_type', extraLabel: '运动类型',
+          noteField: 'exercise_intensity',
+        })" />
+
       <!-- 胎心率（记录页有录入入口，此前统计里一直缺这一项） -->
       <MetricCard v-if="hasData('fhr')" title="胎心率" unit="bpm" color="#f472b6"
         :dates="chartDates" :values="chartValues('fetal_heart_rate')"
@@ -258,6 +267,8 @@ function hasData(metric: string): boolean {
     case 'girth': return any((r) => r.bust != null || r.waist != null || r.hip != null)
     case 'sleep': return any((r) => r.sleep_hours != null)
     case 'water': return any((r) => r.water_intake != null)
+    // 运动：类型/时长/强度任一有值即出图（老数据可能只填了类型没填时长，曲线那份自然为空）
+    case 'exercise': return any((r) => r.exercise_duration != null || (r.exercise_type != null && r.exercise_type !== '') || (r.exercise_intensity != null && r.exercise_intensity !== ''))
     case 'fhr': return any((r) => r.fetal_heart_rate != null)
     case 'fm': return any((r) => r.fetal_movement_count != null)
     case 'contraction': return any((r) => r.contraction_duration != null || r.contraction_count != null)
@@ -299,6 +310,12 @@ function tableData(
     sub?: string
     format?: (r: any) => string
     cols?: Array<{ key: string; label: string }>
+    /**
+     * 「这行算不算有数据」的自定义判据（优先于 cols / format / mainField）。
+     * ⚠️ 给「主数值可缺、但别的字段有值也算一条」的指标用：运动可以只填类型不填时长，
+     *    若仍按 mainField 过滤，这类记录会在表格里凭空消失（卡片在、表却是 0 条）。
+     */
+    filter?: (r: any) => boolean
     extra?: string
     extraLabel?: string
     /**
@@ -313,6 +330,7 @@ function tableData(
 ): TableCol[] {
   return records.value
     .filter((r: any) => {
+      if (opts?.filter) return opts.filter(r)
       if (opts?.cols) return opts.cols.some((c) => r[c.key] != null)
       if (opts?.format) return true
       return r[mainField] != null

@@ -85,7 +85,7 @@ function isNavActive(item: { path: string; extraPaths?: string[] }): boolean {
 }
 
 const navItems = [
-  { path: '/', label: '首页', extraPaths: ['/exercise-guide', '/weekly-detail'], paths: [
+  { path: '/', label: '首页', extraPaths: ['/exercise-guide', '/weekly-detail', '/dose-plan'], paths: [
     'M3 9.5L12 3l9 6.5V19a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2z',
   ] },
   { path: '/record', label: '记录', paths: [

@@ -184,3 +184,19 @@ export function normalizeContractionPain(p: unknown): ContractionPain | '' {
   if ((CONTRACTION_PAIN_VALUES as readonly string[]).includes(s)) return s as ContractionPain
   return CONTRACTION_PAIN_LEGACY[s] || ''
 }
+
+/**
+ * 运动「强度感受」取值域（唯一真源）。
+ *
+ * 【背景】记录页的运动快捷弹窗一直有「强度感受」单选项，但 saveExercise() 从来没把它
+ * 提交给后端（库里也没有这一列）—— **用户选了等于白选**，保存后什么都不剩。
+ * 现在补上 exercise_intensity 列，并把取值域收在这里：记录页小弹窗与「添加记录」大弹窗
+ * 都从这里取，避免再次各写一份而漂移（铁律 #10）。
+ *
+ * ⚠️ 与睡眠质量不同，这里**不设默认值**：用户没点就存空，不替他"顺手"记一个「轻松」
+ * （历史取值只有这三项，无历史脏值需要归一）。
+ */
+export const EXERCISE_INTENSITY_VALUES = ['轻松', '中等', '较累'] as const
+export type ExerciseIntensity = (typeof EXERCISE_INTENSITY_VALUES)[number]
+export const EXERCISE_INTENSITY_OPTIONS: { value: ExerciseIntensity; label: string }[] =
+  EXERCISE_INTENSITY_VALUES.map((v) => ({ value: v, label: v }))

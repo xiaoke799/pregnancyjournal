@@ -24,14 +24,16 @@ fs.mkdirSync(OUT, { recursive: true });
 
 // [脚本路径, 中文名, 备注]
 const SUITES = [
-  // ---- 推送 4 套 ----
+  // ---- 推送（企业微信 / 企微调度器 / 飞书 / 钉钉 / Bark）----
+  // ⚠️ 分组注释**不写套数**：这类写死的数字已漂过多次（「推送 4 套」实际 5、
+  //    README「56 套」实际 57）。要数量请看运行器末尾的汇总，别在这里抄。
   [path.join(WECOM, 'test_wecom_push.js'), '企业微信推送', ''],
   [path.join(WECOM, 'test_wecom_scheduler.js'), '企微调度器', ''],
   [path.join(WECOM, 'test_feishu_push.js'), '飞书推送', ''],
   [path.join(WECOM, 'test_dingtalk_push.js'), '钉钉推送', ''],
   [path.join(WECOM, 'test_bark_push.js'), 'Bark推送', ''],
   // e2e_push_real_server 不自包含（要外部先起 smoke 服务），单独在最后手跑
-  // ---- 导出 / 兼容 / 媒体 18 套 ----
+  // ---- 导出 / 兼容 / 媒体 ----
   [path.join(UP, 'e2e_export_dir.js'), '导出到指定目录', ''],
   [path.join(UP, 'e2e_restore_dirs.js'), '恢复目录分流', '约 95 秒'],
   [path.join(UP, 'e2e_checkup_migration.js'), '产检老用户迁移', ''],
@@ -59,7 +61,7 @@ const SUITES = [
   [path.join(UP, 'e2e_album_pdf.js'), '相册 PDF', ''],
   [path.join(UP, 'e2e_diary_image.js'), '日记插图', ''],
   [path.join(UP, 'e2e_checkup_upload.js'), '产检报告上传', ''],
-  // ---- 契约 / 探针 6 套 ----
+  // ---- 契约 / 探针 ----
   [path.join(UP, 'verify_navbar_highlight.js'), '导航高亮', ''],
   [path.join(UP, 'verify_push_log_limit.js'), '推送记录限量', ''],
   [path.join(UP, 'probe_cancel_still_completed.js'), '取消完成三场景', ''],
@@ -68,10 +70,27 @@ const SUITES = [
   [path.join(UP, 'probe_dashboard_checkup.js'), '首页最近产检', ''],
   // ---- 2026-09-28 新增 ----
   [path.join(UP, 'verify_boot_perf.js'), '首屏性能', ''],
+  // ---- 2026-09-29 新增：用药/补充 医嘱计划 + 打卡 + 到点提醒 ----
+  // ⚠️ rules 那套是**纯函数**（不起服务），跑得快，专防「静默错判该不该吃」；
+  //    它自带 TZ=Asia/Shanghai（UTC→本地 换算的缺陷只有在非 UTC 时区才暴露）。
+  [path.join(UP, 'verify_dose_rules.js'), '用药/补充判定规则', '纯函数'],
+  [path.join(UP, 'verify_dose_plan.js'), '用药/补充计划与打卡', '真后端'],
+  [path.join(UP, 'verify_dose_push.js'), '用药/补充到点提醒', ''],
+  // ---- 2026-09-30 新增：发布前升级闸门 ----
+  // 用线上 v0.0.27 的真实库结构造老库、灌老数据，再跑当前代码的迁移。
+  // ⚠️ 含 31 秒落盘等待；并会顺带复现「D1 业务写入不落盘」（只打印、不判红）。
+  [path.join(UP, 'e2e_upgrade_from_0027.js'), '线上老库升级闸门', '约 45 秒'],
   [path.join(UP, 'verify_api_contracts.js'), '前后端路由契约', ''],
   [path.join(UP, 'verify_ui_orphans.js'), 'UI产物孤儿', ''],
+  // ---- 2026-09-30 新增：前端类型体检 ----
+  // 把 `vue-tsc --noEmit` 收进回归。此前仓库常驻 15 个类型错误（client.ts 没暴露
+  // 「解包后」的调用签名），噪音大到真错误没人看；清零后必须有套件守住，否则会悄悄攒回来。
+  // ⚠️ 需要 frontend/node_modules（vue-tsc 在 devDependencies）；缺了它按**失败**处理，
+  //    不报"通过"（fail-closed：工具链缺失 ≠ 类型没问题）。
+  [path.join(UP, 'verify_frontend_types.js'), '前端类型体检(vue-tsc)', '约 15 秒'],
   // ---- 路径安全 ----
   [path.join(UP, 'verify_path_traversal.js'), '路径穿越', ''],
+  [path.join(UP, 'verify_path_guard.js'), '路径锚定与白名单', '上线前检查修复回归'],
   [path.join(UP, 'verify_db_persist.js'), '落盘验证', ''],
   // ====================================================================
   // 2026-09-28 v0.0.31 十九项修复的专用探针（t9 / t11–t18）。
@@ -189,4 +208,31 @@ async function runOne(script, name, note) {
   console.log(`\n套件：${okc}/${results.length} 全绿；有红灯的：${bad.length ? bad.map(b => b.name + '(' + b.verdict + ')').join(', ') : '无'}`);
   const totalItems = results.reduce((a, r) => a + (r.sum ? r.sum.pass + r.sum.fail : 0), 0);
   console.log(`项数合计：${totalItems}`);
+
+  // ---- 文档一致性绊线：README 声明的「N 套 / M 项」必须与实际相符 ----
+  // 为什么设：这套数字已漂过两次（42/778 → 56/1220 → 57/1266），靠人记必漏，
+  //   而 README 是外部读者判断"这套回归有多大"的唯一依据。
+  // ⚠️ 只在全量跑时检查：--only 的部分运行数字天然对不上。
+  // ⚠️ 套数不一致**计入退出码**；项数不一致只告警（环境缺浏览器时会有套件变 NO-SUMMARY，
+  //    那种情况下项数会少，属于环境噪音，不该判死）。
+  if (!only) {
+    const docs = [path.join(REPO, 'README.md'), path.join(V, 'README.md')];
+    const rx = /(\d+)\s*套\s*\/\s*约?\s*(\d+)\s*项/;
+    let docBad = 0;
+    for (const f of docs) {
+      if (!fs.existsSync(f)) continue;
+      const m = rx.exec(fs.readFileSync(f, 'utf-8'));
+      if (!m) { console.log(`⚠️ 文档声明：${path.relative(REPO, f)} 里找不到「N 套 / M 项」声明行（已跳过）`); continue; }
+      const [, suites, items] = m;
+      const rel = path.relative(REPO, f);
+      if (Number(suites) !== SUITES.length) {
+        docBad++;
+        console.log(`🔴 文档声明不符：${rel} 写「${suites} 套」，实际 ${SUITES.length} 套 —— 请同步`);
+      }
+      if (Number(items) !== totalItems) {
+        console.log(`⚠️ 文档项数：${rel} 写「${items} 项」，本次实际 ${totalItems} 项（环境差异时可忽略，改过套件请同步）`);
+      }
+    }
+    if (docBad) process.exitCode = 1;
+  }
 })();

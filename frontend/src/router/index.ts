@@ -19,6 +19,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'stats', name: 'stats', component: () => import('@/views/StatsView.vue'), meta: { title: '统计' } },
       { path: 'exercise-guide', name: 'exercise-guide', component: () => import('@/views/ExerciseGuideView.vue'), meta: { title: '运动指南' } },
       { path: 'weekly-detail', name: 'weekly-detail', component: () => import('@/views/WeeklyDetailView.vue'), meta: { title: '本周变化' } },
+      { path: 'dose-plan', name: 'dose-plan', component: () => import('@/views/DosePlanView.vue'), meta: { title: '用药/补充' } },
       { path: 'reference', redirect: '/diet' },
       { path: 'settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { title: '设置' } },
     ],

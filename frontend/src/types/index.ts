@@ -44,6 +44,8 @@ export interface DailyRecord {
   symptoms: string | null
   exercise_type: string | null
   exercise_duration: number | null
+  /** 强度感受（轻松/中等/较累），未填为 null */
+  exercise_intensity: string | null
   diet_note: string | null
   medication: string | null
   edema_level: string | null

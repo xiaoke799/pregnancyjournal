@@ -100,7 +100,7 @@ const TYPES = [
   { key: '睡眠', write: { sleep_hours: 7.5, sleep_quality: 'good' }, numeric: ['sleep_hours'], str: ['sleep_quality'] },
   { key: '饮水', write: { water_intake: 1800 }, numeric: ['water_intake'], str: [] },
   { key: '饮食', write: { diet_note: '早餐吃了鸡蛋' }, numeric: [], str: ['diet_note'] },
-  { key: '运动', write: { exercise_type: '散步', exercise_duration: 30 }, numeric: ['exercise_duration'], str: ['exercise_type'] },
+  { key: '运动', write: { exercise_type: '散步', exercise_duration: 30, exercise_intensity: '中等' }, numeric: ['exercise_duration'], str: ['exercise_type', 'exercise_intensity'] },
   { key: '胎动', write: { fetal_movement_count: 12, fetal_movement_duration: 20 }, numeric: ['fetal_movement_count', 'fetal_movement_duration'], str: [] },
   { key: '宫缩', write: { contraction_count: 1, contraction_duration: 45, contraction_interval: 8.5, contraction_pain: '轻微' }, numeric: ['contraction_duration', 'contraction_interval'], str: ['contraction_pain'] },
   { key: '计划', write: { plan_text: '明天去产检', plan_date: '2026-10-01' }, numeric: [], str: ['plan_text', 'plan_date'] },
@@ -353,7 +353,11 @@ function killTree(pid) {
       if (m) cols.push({ name: m[1], type: m[2].toUpperCase() });
     }
   }
-  check(`解析出 ${cols.length} 个列（期望 50）`, cols.length === 50, `实得 ${cols.length}`);
+  // ⚠️ 这个数字是**故意的绊线**：正则一旦解析不到某个列（如字段名含数字），这里立刻变红，
+  //    否则下面「遍历解析出来的列去比对」的断言会静默少查几列 = 假绿。
+  //    **加/删 daily_record 的列时必须同步改这里**（2026-09-30 加 exercise_intensity：50 → 51）。
+  const EXPECTED_COLS = 51;
+  check(`解析出 ${cols.length} 个列（期望 ${EXPECTED_COLS}）`, cols.length === EXPECTED_COLS, `实得 ${cols.length}`);
   const numeric = quoted(mNumeric), insertCols = quoted(mInsert), updateCols = quoted(mFields);
 
   // ① 数值列必须都登记进 NUMERIC_FIELDS

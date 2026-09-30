@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-FnOS%20x86--64%20%2F%20ARM64-8c8c8c.svg)](https://www.fnos.com/)
-[![Version](https://img.shields.io/badge/version-0.0.32-green.svg)](manifest)
+[![Version](https://img.shields.io/badge/version-0.0.33-green.svg)](manifest)
 
 > 飞牛 OS 原生应用 · 数据 100% 本地存储 · 零上云
 >
@@ -35,9 +35,9 @@
 
 ### 安装方式 / Installation
 
-从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.32.fpk`（约 13.0MB，以 Releases 页最新版为准），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
+从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.33.fpk`（约 13.0MB，以 Releases 页最新版为准），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
 
-Download `pregnancyjournal_v0.0.32.fpk` (≈13.0MB; always grab the latest on the Releases page) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
+Download `pregnancyjournal_v0.0.33.fpk` (≈13.0MB; always grab the latest on the Releases page) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
 
 > 应用依赖已完整内置在安装包中，安装后无需联网下载任何组件。
 > All dependencies are bundled in the package — no network download needed after install.
@@ -77,7 +77,10 @@ pregnancyjournal/                    # 仓库根 = 应用根 / repo root == app 
 │   ├── install_callback    #   安装回调 / Install callback
 │   ├── config_init         #   配置初始化 / Config init
 │   ├── config_callback     #   配置回调 / Config callback
+│   ├── main                #   主入口（常驻服务）/ Main entry (resident service)
 │   ├── uninstall_init      #   卸载前 / Pre-uninstall
+│   ├── uninstall_callback  #   卸载回调 / Uninstall callback
+│   ├── upgrade_init        #   升级前（数据抢救唯一钩子）/ Pre-upgrade (data rescue hook)
 │   └── upgrade_callback    #   升级回调 / Upgrade callback
 ├── wizard/                 # 安装向导 / Installation wizard
 ├── config/                 # 应用权限与资源限制 / App privilege & resource
@@ -187,7 +190,7 @@ fnpack build --directory <组装好的 stage 目录>
 
 ### 回归测试 / Regression Tests
 
-仓库自带一套端到端回归与核查脚本（**42 套 / 778 项**），位于 `tools/verify/`：
+仓库自带一套端到端回归与核查脚本（**58 套 / 1267 项**），位于 `tools/verify/`：
 
 ```bash
 node tools/verify/run_all_suites.js              # 全套，约 6–10 分钟
@@ -196,9 +199,9 @@ node tools/verify/run_all_suites.js --only=HEIC  # 只跑名字含关键字的�
 
 它会真起后端服务（经 `tcp_shim.js` 把 Unix Socket 改写成 TCP 环回）、连真库、发真 HTTP，
 覆盖上传/导出/备份恢复/推送/HEIC/迁移/权限/路径穿越等链路。
-前置条件：`app/server/node` 依赖已安装、`app/ui` 已构建。详见 [`tools/verify/README.md`](tools/verify/README.md)。
+前置条件：`app/server/node` 依赖已安装、`app/ui` 已构建、`frontend` 依赖已安装（类型体检要 `vue-tsc`）。详见 [`tools/verify/README.md`](tools/verify/README.md)。
 
-> This repo ships a 42-suite / 778-check regression harness under `tools/verify/`.
+> This repo ships a 58-suite / 1267-check regression harness under `tools/verify/`.
 > Run `node tools/verify/run_all_suites.js`. See `tools/verify/README.md` for details.
 
 ---

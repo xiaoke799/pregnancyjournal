@@ -2,7 +2,11 @@
 # 孕程记 一键打包脚本（唯一打包入口）
 # 流程：校验源码完整性 -> 安装生产依赖 -> 组装干净stage目录 -> fnpack打包 -> 解包验证
 # 用法：在项目根目录（含本脚本的目录）执行：pwsh -File build.ps1
+# 发布闸门（2026-09-30 上线前检查 #6 补）：
+#   - 工作区脏（有未提交改动）拒绝打包，-AllowDirty 放行；
+#   - 同名版本 fpk 已存在拒绝覆盖，-Force 放行。
 # ============================================================
+param([switch]$AllowDirty, [switch]$Force)
 $ErrorActionPreference = "Stop"
 # 打包根目录：应用位于脚本目录（仓库根）；仍兼容旧的 pregnancyjournal/ 子目录布局
 $PkgDir    = Join-Path $PSScriptRoot "pregnancyjournal"
@@ -11,7 +15,7 @@ $ServerDir = Join-Path $PkgDir "app\server\node"
 $AppUi     = Join-Path $PkgDir "app\ui"
 # 注：不再有 $RootUi（根 ui/ 是历史死重，既不进包也不是运行时目录；
 # 运行时 STATIC_DIR = ${TRIM_APPDEST}/ui，来自 app.tgz:ui，即 app/ui）。
-$Version   = "0.0.32"   # 发版同步：必须与 manifest 的 version 一致（唯一真源=manifest）
+$Version   = "0.0.33"   # 发版同步：必须与 manifest 的 version 一致（唯一真源=manifest）
 if ($PkgDir -eq $PSScriptRoot) { $Parent = $PSScriptRoot } else { $Parent = Split-Path $PkgDir -Parent }
 $Stage     = Join-Path $env:TEMP "pregnancyjournal_stage_$Version"
 
@@ -92,6 +96,41 @@ if ($serverJs -notmatch "app\.get\('\*'") { $errors += "server.js 缺少 catch-a
 foreach ($cfg in @((Join-Path $AppUi "config"))) {
     $c = Get-Content $cfg -Raw
     if ($c -notmatch 'gatewaySocket.*app\.sock') { $errors += "$cfg 缺少统一网关配置" }
+}
+# config.js 的 APP_VERSION（用户可见：启动日志、PDF 导出页脚）必须与 manifest 一致。
+# 上面 71 行注释早就声称覆盖 config.js/CHANGELOG，但代码从未真正读取过这两个文件 —— 补上。
+$configJsPath = Join-Path $ServerDir "config.js"
+if (Test-Path $configJsPath) {
+    $configVer = [regex]::Match((Get-Content $configJsPath -Raw), "APP_VERSION:\s*'([0-9][0-9.]*)'").Groups[1].Value
+    if ($configVer -ne $Version) { $errors += "config.js APP_VERSION($configVer) 与 `$Version($Version) 不一致" }
+} else { $errors += "缺少 config.js" }
+# CHANGELOG.md 必须记录了本版（manifest changelog 面向应用中心，仓库内面向开源用户）
+$changelogPath = Join-Path $PkgDir "CHANGELOG.md"
+if (Test-Path $changelogPath) {
+    if ((Get-Content $changelogPath -Raw) -notmatch [regex]::Escape("[$Version]")) {
+        $errors += "CHANGELOG.md 未记录 [$Version]（说明还停在上一个版本）"
+    }
+} else { $errors += "缺少 CHANGELOG.md" }
+# 前端产物新鲜度：app/ui 被 gitignore，脏树检查看不见它 —— 必须直接比 mtime。
+# 源码比产物新 ⇒ 产物是旧的，打出去就是「新号旧货」（本次 0.0.32 污染事故同款）。
+$FrontendSrc = Join-Path $PkgDir "frontend\src"
+if ((Test-Path $FrontendSrc) -and (Test-Path $indexHtml)) {
+    $srcNewest = Get-ChildItem $FrontendSrc -Recurse -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    $uiStamp   = (Get-Item $indexHtml).LastWriteTime
+    if ($srcNewest -and $srcNewest.LastWriteTime -gt $uiStamp) {
+        $errors += "前端源码($($srcNewest.Name) @ $($srcNewest.LastWriteTime)) 比构建产物(@ $uiStamp) 新：先在 frontend 执行 npm run build 再打包"
+    }
+}
+# 脏树闸门：未提交改动一旦打进包，就可能以未 bump 的版本号覆盖已发布产物。
+if (-not $AllowDirty -and (Test-Path (Join-Path $PkgDir ".git"))) {
+    Push-Location $PkgDir
+    try {
+        $dirty = & git status --porcelain
+        if ($LASTEXITCODE -eq 0 -and $dirty) {
+            $n = ($dirty | Measure-Object).Count
+            $errors += "工作区有 $n 项未提交改动，禁止打包（先提交；确认无风险可加 -AllowDirty 放行）"
+        }
+    } finally { Pop-Location }
 }
 if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Host "  [X] $_" -ForegroundColor Red }; throw "源码完整性校验失败" }
 Write-Host "  路由文件 $($routeFiles.Count) 个、静态数据、前端入口、网关配置 全部在位" -ForegroundColor Green
@@ -247,6 +286,11 @@ Pop-Location
 $fpk = Get-Item (Join-Path $Parent "pregnancyjournal.fpk") -ErrorAction SilentlyContinue
 if (-not $fpk) { throw "未找到输出 fpk" }
 $finalPath = Join-Path $Parent "pregnancyjournal_v$Version.fpk"
+# 同名版本拒绝覆盖：防止「版本号没 bump + 重打包」把已发布产物悄悄换成另一份内容。
+# 开发期反复调包属正常，确认要覆盖时显式加 -Force。
+if ((Test-Path $finalPath) -and -not $Force) {
+    throw "已存在 $finalPath —— 同名版本拒绝覆盖。要重打包请加 -Force；要发新版请先同步 5 处版本号。"
+}
 Move-Item $fpk.FullName $finalPath -Force
 
 # ---------- Step 5.5: 补包内脚本的执行权限 ----------

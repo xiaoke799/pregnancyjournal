@@ -152,13 +152,20 @@ function writeConfig(extra) {
     hits.lastRaw && Buffer.byteLength(hits.lastRaw, 'utf8') <= 3600,
     hits.lastRaw && Buffer.byteLength(hits.lastRaw, 'utf8'));
 
-  // ========== 6. 自建服务器 http:// 可用 ==========
-  writeConfig({ webhook_url: 'http://127.0.0.1:' + PORT + '/barkkey1' });
+  // ========== 6. 自建服务器 http:// + SSRF 加固（2026-09-30 上线前检查 #8） ==========
+  // 本机/内网地址保存被拒：推送由服务端发起，不拒就等于把 NAS 当跳板打内网。
   r = await call('POST', '/bark/config', { webhook_url: 'http://127.0.0.1:' + PORT + '/barkkey1' });
-  check('http:// 自建地址允许保存', r.code === 0, JSON.stringify(r));
+  check('本机地址(127.0.0.1) 保存被拒绝（SSRF 加固）', r.code !== 0, JSON.stringify(r));
+  r = await call('POST', '/bark/config', { webhook_url: 'http://192.168.1.50:8080/key' });
+  check('内网地址(192.168.x) 保存被拒绝', r.code !== 0, JSON.stringify(r));
+  // 公网域名自建服务器（即便 http://）仍是合法场景，允许保存
+  r = await call('POST', '/bark/config', { webhook_url: 'http://bark-selfhosted.example.com:8080/key' });
+  check('公网域名自建地址(http) 允许保存', r.code === 0, JSON.stringify(r));
+  // 历史已存配置（绕过保存校验直接落盘）→ 发送链路不二次校验，仍应能推
+  writeConfig({ webhook_url: 'http://127.0.0.1:' + PORT + '/barkkey1' });
   hits.byPath['/barkkey1'] = 0;
   r = await call('POST', '/bark/daily-push', { pregnancy_id: P1 });
-  check('http:// 自建地址能推送成功', r.code === 0 && hits.byPath['/barkkey1'] === 1, JSON.stringify(r));
+  check('已存配置仍能推送成功（发送链路不二次校验）', r.code === 0 && hits.byPath['/barkkey1'] === 1, JSON.stringify(r));
 
   // ========== 7. 地址校验 ==========
   r = await call('POST', '/bark/config', { webhook_url: 'https://api.day.app/' });

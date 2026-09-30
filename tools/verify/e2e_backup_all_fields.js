@@ -92,6 +92,7 @@ const REC = {
   water_intake: 1800,
   exercise_type: `散步${STAMP}`,
   exercise_duration: 30,
+  exercise_intensity: '中等',
   edema_level: 'mild',
   vaginal_discharge: 'normal',
   skin_condition: 'normal',
@@ -158,7 +159,11 @@ const SKIP = new Set(['id', 'pregnancy_id', 'record_date', 'created_at', 'update
     // ⚠️ 表数据在 `tables` 下面（顶层是 {version, exported_at, app_name, tables, file_manifest}），
     //    直接取 raw.daily_record 会全部读成 undefined ⇒ 43 个字段「没进备份」的假红。
     const rows = (raw && raw.tables && raw.tables.daily_record) || [];
-    backupRow = rows.find((r) => r.record_date === DATE) || null;
+    // ⚠️ 必须同时按 `pregnancy_id` 过滤：本脚本的临时库**跨次运行累加**（T 目录不清理），
+    //    而 DATE 是写死的常量 ⇒ 每跑一次就多一条 record_date 相同的记录（属于不同孕期）。
+    //    只按日期 find 会**取到上一轮遗留的旧行**，于是新增字段会被判成「备份里没有」。
+    //    （2026-09-30 加 exercise_intensity 时踩到；第 3 步本来就按 pregnancy_id 取，故没中招。）
+    backupRow = rows.find((r) => r.record_date === DATE && r.pregnancy_id === pid) || null;
   }
   check('备份里找得到这条记录', !!backupRow);
 

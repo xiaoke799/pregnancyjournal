@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const log = require('../logger');
 const PDFDocument = require('pdfkit');
+const pathGuard = require('../services/path-guard');
 
 // 导入/恢复端点的最大请求体大小（100MB），防止内存耗尽
 const MAX_PAYLOAD_BYTES = 100 * 1024 * 1024;
@@ -33,6 +34,7 @@ const ALL_TABLES = [
   'contraction', 'pregnancy_photo', 'diary_entry', 'checklist',
   'checklist_item', 'reminder', 'fetal_movement_session', 'fetal_movement',
   'habit_checkin', 'supplement_checkin', 'app_config', 'schedule_dates',
+  'dose_plan', 'dose_checkin',
   // 推送流水（设置页「推送记录」与手动重试都读它）。补入备份：
   //  · 纯新增 —— 老备份里没有这张表，恢复时按「缺表跳过」处理，不会清空现有记录；
   //  · 新备份恢复时按「恢复至该备份状态」语义整表替换，与其它表一致。
@@ -269,7 +271,7 @@ const TABLE_COLUMNS = {
   checkup_photo: ['id','checkup_id','file_path','thumbnail_path','note','created_at'],
   checkup_report: ['id','checkup_id','checkup_type','filename','file_path','file_type','mime_type','file_size','report_category','sub_item','created_at'],
   lab_result: ['id','checkup_id','category','item_name','value','unit','reference_min','reference_max','status','updated_at','created_at'],
-  daily_record: ['id','pregnancy_id','record_date','weight','fetal_heart_rate','body_temperature','bust','waist','hip','blood_glucose_fasting','blood_glucose_1h','blood_glucose_2h','mood','mood_note','stool','stool_record','note','blood_pressure_systolic','blood_pressure_diastolic','sleep_hours','sleep_quality','symptoms','exercise_type','exercise_duration','diet_note','medication','edema_level','vaginal_discharge','skin_condition','urination_frequency','hcg_value','hcg_weeks','uric_acid','uric_acid_period','supplement_record','intimacy_note','plan_text','plan_date','is_plan_done','water_intake','habit_text','contraction_count','contraction_interval','contraction_duration','contraction_pain','fetal_movement_count','fetal_movement_duration','intimacy_record','created_at','updated_at'],
+  daily_record: ['id','pregnancy_id','record_date','weight','fetal_heart_rate','body_temperature','bust','waist','hip','blood_glucose_fasting','blood_glucose_1h','blood_glucose_2h','mood','mood_note','stool','stool_record','note','blood_pressure_systolic','blood_pressure_diastolic','sleep_hours','sleep_quality','symptoms','exercise_type','exercise_duration','exercise_intensity','diet_note','medication','edema_level','vaginal_discharge','skin_condition','urination_frequency','hcg_value','hcg_weeks','uric_acid','uric_acid_period','supplement_record','intimacy_note','plan_text','plan_date','is_plan_done','water_intake','habit_text','contraction_count','contraction_interval','contraction_duration','contraction_pain','fetal_movement_count','fetal_movement_duration','intimacy_record','created_at','updated_at'],
   contraction_session: ['id','pregnancy_id','session_date','start_time','end_time','total_count','avg_duration','avg_interval','notes','created_at'],
   contraction: ['id','session_id','start_time','end_time','duration','interval_from_prev','created_at'],
   pregnancy_photo: ['id','pregnancy_id','checkup_id','photo_type','gestational_week','gestational_day','milestone_type','file_path','thumbnail_path','note','media_type','created_at','updated_at'],
@@ -282,6 +284,8 @@ const TABLE_COLUMNS = {
   fetal_movement: ['id','session_id','timestamp','created_at'],
   habit_checkin: ['id','pregnancy_id','date','items','notes','created_at','updated_at'],
   supplement_checkin: ['id','pregnancy_id','date','items','notes','created_at','updated_at'],
+  dose_plan: ['id','pregnancy_id','kind','name','dosage','reminder_times','frequency','weekdays','start_date','end_date','start_week','end_week','note','is_enabled','sort_order','created_at','updated_at'],
+  dose_checkin: ['id','pregnancy_id','plan_id','date','taken_at','created_at'],
   app_config: ['id','key','value','description','created_at','updated_at'],
   push_log: ['id','push_type','push_content','status','error_message','pushed_at','created_at','payload','channel'],
 };
@@ -296,17 +300,40 @@ function sanitizeColumns(table, row) {
   return sanitized;
 }
 
-function writeTable(table, rows) {
+// 路径锚定（写入侧，2026-09-30 上线前检查 阻塞1/2 同源修复）：
+// file_path 类列只允许 ① 落在应用允许目录内，或 ② 备份 _file_map 里登记了
+// 重写映射（恢复时会被改写到允许目录内）的旧路径。越界的**整行丢弃** ——
+// 防止 import/restore 投毒把指针指向数据目录之外的任意文件（再经下载/删除读出或删掉）；
+// 不能置 null：file_path 列是 NOT NULL，置空会让整行插入失败、导入计数失真。
+// 返回该行走丢弃的原因列数（>0 = 该行不可信）。
+function guardRowPaths(table, row, fileMap) {
+  const cols = pathGuard.PATH_COLUMNS[table];
+  if (!cols) return 0;
+  let bad = 0;
+  const sections = fileMap ? [fileMap.album, fileMap.media, fileMap.checkup_photos, fileMap.checkup_reports, fileMap.diary] : [];
+  for (const col of cols) {
+    const v = row[col];
+    if (!v) continue;
+    const mapped = sections.some((sec) => sec && Object.prototype.hasOwnProperty.call(sec, v));
+    if (!pathGuard.isAllowed(v) && !mapped) bad++;
+  }
+  return bad;
+}
+
+function writeTable(table, rows, fileMap) {
   if (!rows || rows.length === 0) return 0;
   let count = 0;
+  let droppedRows = 0;
   for (const row of rows) {
     const sanitized = sanitizeColumns(table, row);
     if (!sanitized || Object.keys(sanitized).length === 0) continue;
+    if (guardRowPaths(table, sanitized, fileMap) > 0) { droppedRows++; continue; }
     const keys = Object.keys(sanitized);
     const placeholders = keys.map(() => '?').join(',');
     const sql = `INSERT OR REPLACE INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`;
     try { db.run(sql, keys.map(k => sanitized[k])); count++; } catch (e) { log.warn('导入', `${table} 行导入失败`, { error: e.message }); }
   }
+  if (droppedRows) log.warn('安全', `导入路径锚定：${table} 丢弃 ${droppedRows} 行越界路径记录`);
   return count;
 }
 
@@ -1032,6 +1059,8 @@ router.post('/restore', async (req, res) => {
     const results = {};
     try {
       db.beginTransaction();
+      // 路径映射表要提前取：写入时要用它放行「会被重写到允许目录」的旧路径（路径锚定）
+      const fileMap = importData._file_map || { album: {}, media: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
       for (const [table, rows] of Object.entries(importData.tables || {})) {
         if (ALL_TABLES.includes(table) && Array.isArray(rows)) {
           // 与 /restore-latest 保持一致：**先清空该表再按备份写入**（=「恢复到该备份的状态」）。
@@ -1039,14 +1068,13 @@ router.post('/restore', async (req, res) => {
           // 用户会以为"我恢复过了"却发现数据没变回去 —— 两个恢复入口语义不同，极易误解。
           // 空数组时跳过（与 /restore-latest 一致）：旧版备份里缺的表/空表不应把现有数据清空。
           if (rows.length > 0) db.run(`DELETE FROM ${table}`);
-          const count = writeTable(table, rows);
+          const count = writeTable(table, rows, fileMap);
           results[table] = count;
           totalRows += count;
         }
       }
 
-      // ====== 2. 获取路径映射表（跨机器迁移核心） ======
-      const fileMap = importData._file_map || { album: {}, media: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
+      // ====== 2. 路径映射表（跨机器迁移核心） ======
 
       // ====== 3. 重写数据库中的绝对路径 → 本机路径 ======
       function rewriteTablePaths(table, pathColumn, mapObj, newBaseDir) {
@@ -1188,6 +1216,7 @@ const CSV_FIELDS = [
   { key: 'water_intake', label: '饮水量(ml)' },
   { key: 'exercise_type', label: '运动类型' },
   { key: 'exercise_duration', label: '运动时长(min)' },
+  { key: 'exercise_intensity', label: '运动强度' },
   { key: 'fetal_movement_count', label: '胎动次数' },
   { key: 'fetal_movement_duration', label: '胎动时长(min)' },
   { key: 'contraction_count', label: '宫缩次数' },
@@ -2014,13 +2043,26 @@ router.post('/restore-latest', async (req, res) => {
     try {
       db.beginTransaction();
 
+      // 路径映射表要提前取：写入时要用它放行「会被重写到允许目录」的旧路径（路径锚定）
+      const fileMap = importData._file_map || { album: {}, media: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
+
       for (const [table, rows] of Object.entries(importData.tables)) {
         if (!Array.isArray(rows) || rows.length === 0) continue;
+        // 表名白名单（2026-09-30 上线前检查 #12）：/restore 有校验而这里曾漏掉 ——
+        // DELETE FROM ${table} 直接拼 data.json 里的表名，备份被投毒时可拼进任意
+        // 表名/语句片段（如 "dose_plan WHERE 1=1"）造成数据破坏。未知表一律跳过。
+        if (!ALL_TABLES.includes(table)) {
+          log.warn('安全', `restore-latest 跳过未知表: ${table}`);
+          continue;
+        }
         try {
           db.run(`DELETE FROM ${table}`);
           if (rows.length > 0) {
             // 使用白名单过滤列名，防止备份数据包含恶意/多余列
-            const sanitizedRows = rows.map(r => sanitizeColumns(table, r)).filter(Boolean);
+            const sanitizedRows = rows.map(r => sanitizeColumns(table, r)).filter(Boolean)
+              .filter((sr) => guardRowPaths(table, sr, fileMap) === 0);
+            const droppedRows = rows.length - sanitizedRows.length;
+            if (droppedRows > 0) log.warn('安全', `restore-latest 路径锚定：${table} 丢弃 ${droppedRows} 行越界路径记录`);
             if (sanitizedRows.length > 0) {
               const insertStmt = prepareInsertStatement(table, sanitizedRows[0]);
               for (const row of sanitizedRows) {
@@ -2037,7 +2079,7 @@ router.post('/restore-latest', async (req, res) => {
       }
 
       // ====== 路径重写（同一事务内） ======
-      const fileMap = importData._file_map || { album: {}, media: {}, checkup_photos: {}, checkup_reports: {}, config: {} };
+      // fileMap 已在写入表数据前声明（路径锚定要用），这里直接用。
 
       // 先缓存视频的路径映射（在通用重写前读取原始旧路径）
       // 新版备份把视频放进 _file_map.media；旧备份把视频也放在 _file_map.album —— 两者都要认。

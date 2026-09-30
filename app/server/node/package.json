@@ -1,6 +1,6 @@
 {
   "name": "pregnancyjournal-server",
-  "version": "1.0.0",
+  "version": "0.0.33",
   "description": "孕程记 - Node.js 后端服务",
   "main": "server.js",
   "scripts": {
@@ -15,7 +15,7 @@
     "heic-convert": "^2.1.0",
     "jpeg-js": "^0.4.4",
     "mime-types": "^2.1.35",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.4.0",
     "pdfkit": "^0.19.0",
     "pngjs": "^6.0.0",
     "sql.js": "^1.10.0",

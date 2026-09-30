@@ -27,6 +27,35 @@ function _convertSafetyToByStage(safety) {
   return mapping[safety] || mapping.caution;
 }
 
+// 餐别归属（缺 meals 字段时的兜底推导）：保证三餐推荐只从对应餐别的菜里选
+function deriveMeals(r) {
+  const cat = r.category, name = r.name || '';
+  if (cat === '早餐') return ['早餐'];
+  if (cat === '主食') return (name.includes('粥') || name.includes('糊')) ? ['早餐', '晚餐'] : ['早餐', '午餐', '晚餐'];
+  if (cat === '荤菜' || cat === '素菜' || cat === '汤品') return ['午餐', '晚餐'];
+  return ['早餐', '午餐', '晚餐']; // 饮品 / 甜品
+}
+
+// 孕妇禁用食材集合（来自 food_safety_v3.json 的 avoid 项），用于服务端过滤，保证“推荐出去的菜孕妇都能吃”
+let _avoidIngredientsCache = null;
+function loadAvoidIngredients() {
+  if (_avoidIngredientsCache) return _avoidIngredientsCache;
+  const s = new Set();
+  const p = path.join(config.ASSETS_DIR, 'food_safety_v3.json');
+  if (fs.existsSync(p)) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(p, 'utf-8'));
+      for (const c of (raw.categories || [])) {
+        for (const it of (c.items || [])) {
+          if (it.safety === 'avoid') s.add(it.name);
+        }
+      }
+    } catch (e) { logger.warn('diet', `loadAvoidIngredients - ${e.message}`); }
+  }
+  _avoidIngredientsCache = s;
+  return s;
+}
+
 function loadRecipes() {
   if (_recipesCache) return _recipesCache;
   const filePath = path.join(config.ASSETS_DIR, 'recipes.json');
@@ -54,7 +83,7 @@ function loadRecipes() {
       { id: 'def_06', name: '玉米排骨汤', category: '主食', suitable_weeks: [0, 42], suitable_stage: ['early','mid','late'], ingredients: ['玉米','排骨'], nutrition: '钙、蛋白质', description: '补钙佳品' },
       { id: 'def_07', name: '燕麦牛奶粥', category: '早餐', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['燕麦','牛奶'], nutrition: '钙、蛋白质、膳食纤维', description: '早餐首选，营养全面' },
       { id: 'def_08', name: '蔬菜鸡蛋饼', category: '早餐', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['鸡蛋','面粉','青菜'], nutrition: '优质蛋白', description: '快手早餐，营养均衡' },
-      { id: 'def_09', name: '豆浆油条', category: '早餐', suitable_weeks: [0, 13], suitable_stage: ['preparing','early'], ingredients: ['豆浆','油条'], nutrition: '植物蛋白', description: '经典搭配，孕早期开胃' },
+      { id: 'def_09', name: '豆浆蒸饺', category: '早餐', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['豆浆','饺子','葱花'], nutrition: '植物蛋白、碳水', description: '豆浆配蒸饺，经典安全早餐', meals: ['早餐'] },
       { id: 'def_10', name: '全麦面包', category: '早餐', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['全麦面粉'], nutrition: '维生素B族、纤维', description: '低糖饱腹' },
       // 荤菜
       { id: 'def_11', name: '清蒸鲈鱼', category: '荤菜', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['鲈鱼','姜','葱'], nutrition: 'DHA、优质蛋白', description: '健脑益智，少刺安全' },
@@ -79,7 +108,7 @@ function loadRecipes() {
       { id: 'def_28', name: '莲藕花生汤', category: '汤品', suitable_weeks: [0, 42], suitable_stage: ['early','mid','late'], ingredients: ['莲藕','花生'], nutrition: '膳食纤维、维生素', description: '清甜滋补，全孕期' },
       // 饮品
       { id: 'def_29', name: '鲜榨橙汁', category: '饮品', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['橙子'], nutrition: '维生素C、叶酸', description: '补充维C，助消化' },
-      { id: 'def_30', name: '红豆薏米水', category: '饮品', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['红豆','薏米'], nutrition: '祛湿消肿', description: '去水肿必备' },
+      { id: 'def_30', name: '红豆水', category: '饮品', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['红豆'], nutrition: '利水消肿', description: '温和去水肿饮品', meals: ['早餐','午餐','晚餐'] },
       { id: 'def_31', name: '柠檬蜂蜜水', category: '饮品', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['柠檬','蜂蜜'], nutrition: '维生素C', description: '清新提神' },
       { id: 'def_32', name: '红枣枸杞茶', category: '饮品', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['红枣','枸杞'], nutrition: '铁、抗氧化物', description: '补血养颜' },
       { id: 'def_33', name: '牛奶', category: '饮品', suitable_weeks: [0, 42], suitable_stage: ['preparing','early','mid','late','nursing'], ingredients: ['牛奶'], nutrition: '钙、蛋白质', description: '每日补钙首选' },
@@ -95,6 +124,15 @@ function loadRecipes() {
   if (topUp.length > 0) {
     logger.info('diet', `菜谱补齐: 数据文件 ${_recipesCache.length} 条，追加内置 ${topUp.length} 条`);
     _recipesCache = [..._recipesCache, ...topUp];
+  }
+  // 兜底：确保所有菜谱都有 meals 字段（兼容旧数据/内置兜底），避免三餐推荐逻辑因缺字段而取到 null
+  _recipesCache = _recipesCache.map(r => r.meals ? r : ({ ...r, meals: deriveMeals(r) }));
+  // 孕妇安全过滤：剔除含禁用食材的菜，保证推荐出去的菜孕妇都能吃
+  const avoid = loadAvoidIngredients();
+  if (avoid.size > 0) {
+    const before = _recipesCache.length;
+    _recipesCache = _recipesCache.filter(r => !(r.ingredients || []).some(i => avoid.has(i)));
+    if (_recipesCache.length < before) logger.info('diet', `孕妇安全过滤：剔除 ${before - _recipesCache.length} 道含禁用食材的菜`);
   }
   logger.info('diet', `食谱池共 ${_recipesCache.length} 条`);
   return _recipesCache;

@@ -99,6 +99,7 @@ const PAGES = [
   { key: 'checklist', hash: 'checklist', title: '清单' },
   { key: 'exercise', hash: 'exercise-guide', title: '运动指南' },
   { key: 'weekly', hash: 'weekly-detail', title: '本周变化' },
+  { key: 'dose', hash: 'dose-plan', title: '用药/补充' },
   { key: 'settings', hash: 'settings', title: '设置', budget: 30000 },
   { key: 'contraction', hash: 'contraction-timer', title: '宫缩计时器' },
   { key: 'fetal', hash: 'fetal-movement-counter', title: '胎动计数' },

@@ -76,7 +76,8 @@ for a in "$@"; do
   esac
 done
 if [ "$has_data" = "1" ]; then
-  cat > "$CAPTURE_BODY"
+  # 绝对路径：本机 git-bash 的 PATH 里可能不含 /usr/bin（cat 缺失会让 body 恒为空、3 项断言假红）
+  /usr/bin/cat > "$CAPTURE_BODY"
 else
   : > "$CAPTURE_BODY"
 fi
