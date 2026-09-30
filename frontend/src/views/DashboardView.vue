@@ -311,6 +311,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { NInput, NButton, NTag, NDatePicker, NSelect, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
+import { useAppStore } from '@/stores/app'
+import { chartPalette } from '@/utils/chart-theme'
 import { useGestationalAge } from '@/composables/useGestationalAge'
 import { weekBabyTeaser, weekMomTeaser } from '@/data/weekly-development'
 import { getDashboard } from '@/api/dashboard'
@@ -333,6 +335,7 @@ import AppIcon from '@/components/common/AppIcon.vue'
 
 use([LineChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, CanvasRenderer])
 const pregnancyStore = usePregnancyStore()
+const appStore = useAppStore()
 const message = useMessage()
 
 // ====== 实时孕周数据（基于预产期自动修正） ======
@@ -475,6 +478,8 @@ const fetalCurveData = computed(() => dashboardData.value?.fetal_development_cur
 const weightHistory = computed(() => dashboardData.value?.weight_history || [])
 
 const growthChartOption = computed(() => {
+  // 图表是 canvas 渲染、不吃 CSS 变量 ⇒ 轴/刻度/图例要显式按主题取色
+  const p = chartPalette(appStore.effectiveDark)
   const currentWeek = gestationalAge.value?.weeks || 0
   const curve = fetalCurveData.value as any[]
   const weeks = curve.map((d: any) => d.week + '周')
@@ -519,7 +524,7 @@ const growthChartOption = computed(() => {
     },
     legend: {
       bottom: 0,
-      textStyle: { fontSize: 11, color: '#888' },
+      textStyle: { fontSize: 11, color: p.text },
       itemWidth: 14,
       itemHeight: 8,
     },
@@ -529,11 +534,11 @@ const growthChartOption = computed(() => {
       data: weeks,
       axisLabel: {
         fontSize: 10,
-        color: '#999',
+        color: p.textWeak,
         interval: (i: number) => i % 4 === 0 || curve[i]?.week === currentWeek,
       },
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: '#e5e7eb' } },
+      axisLine: { lineStyle: { color: p.axisLine } },
     },
     yAxis: [
       {
@@ -541,7 +546,7 @@ const growthChartOption = computed(() => {
         name: '宝宝(g)',
         nameTextStyle: { fontSize: 10, color: '#AB47BC' },
         axisLabel: { fontSize: 10, color: '#AB47BC' },
-        splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
+        splitLine: { lineStyle: { type: 'dashed', color: p.splitLine } },
       },
       {
         type: 'value',
@@ -667,33 +672,54 @@ const contractionActive = computed(() => !!dashboardData.value?.contraction_acti
 const fetalMovementStatText = computed(() => {
   const r: any = todayRecord.value
   const c = r?.fetal_movement_count
-  if (c == null || c === '') return '今天还没记 · 点「记一笔」或右侧进计数器'
   const d = r?.fetal_movement_duration
+  // 空态判据与记录页 hasDataForType 对齐：只填了用时、没填次数的日子不是「还没记」
+  if ((c == null || c === '') && !d) return '今天还没记 · 点「记一笔」或右侧进计数器'
   const n = Number(dashboardData.value?.fetal_movement_sessions || 0)
   // 会话数写出来：统计曲线一天只取次数最高的那一次，首页写清「几次会话 · 共几次」，
   // 用户拿去跟曲线比时不会以为有一边算错了
-  const head = n > 1 ? `今日 ${n} 次会话 · 共 ${c} 次` : `今日 ${c} 次`
+  let head: string
+  if (c == null || c === '') {
+    head = '今日次数未记'
+  } else {
+    head = n > 1 ? `今日 ${n} 次会话 · 共 ${c} 次` : `今日 ${c} 次`
+  }
   return head + (d ? ` · 用时 ${d} 分钟` : '')
 })
 const fetalMovementStatEmpty = computed(() => {
-  const c: any = todayRecord.value?.fetal_movement_count
-  return c == null || c === ''
+  const r: any = todayRecord.value
+  const c: any = r?.fetal_movement_count
+  return (c == null || c === '') && !r?.fetal_movement_duration
 })
 
 const contractionStatText = computed(() => {
-  if (contractionActive.value) return '计时中…（点右侧继续）'
+  // 🔴 「计时中」不再整块盖掉当日统计：此前该分支直接 return「计时中…」，
+  //    用户今天已经记下的「N 次 · 持续 X 秒」整个看不见。计时是「正在进行」的状态，
+  //    与「今天已经记了什么」并不互斥 —— 状态放最前，统计照常拼在后面。
   const r: any = todayRecord.value
+  const live = contractionActive.value
   const c = r?.contraction_count
-  if (c == null || c === '') return '今天还没记 · 点「记一笔」或右侧进计时器'
+  const d = r?.contraction_duration
+  const itv = r?.contraction_interval
+  if (live && (c == null || c === '') && !d && !itv) return '计时中…（点右侧继续）'
+  if (!live && (c == null || c === '') && !d && !itv) return '今天还没记 · 点「记一笔」或右侧进计时器'
   const n = Number(dashboardData.value?.contraction_sessions || 0)
-  let t = n > 1 ? `今日 ${n} 次会话 · 共 ${c} 次` : `今日 ${c} 次`
-  if (r?.contraction_duration) t += ` · 持续 ${r.contraction_duration} 秒`
-  if (r?.contraction_interval) t += ` · 间隔 ${r.contraction_interval} 分`
+  let t = live ? '计时中… ' : ''
+  // 只手填了持续/间隔、没记次数的日子：不写「今日 0 次」、也不谎称「还没记」
+  if (c == null || c === '') {
+    t += '今日次数未记'
+  } else {
+    t += n > 1 ? `今日 ${n} 次会话 · 共 ${c} 次` : `今日 ${c} 次`
+  }
+  if (d) t += ` · 持续 ${d} 秒`
+  if (itv) t += ` · 间隔 ${itv} 分`
   return t
 })
 const contractionStatEmpty = computed(() => {
-  const c: any = todayRecord.value?.contraction_count
-  return c == null || c === ''
+  if (contractionActive.value) return false
+  const r: any = todayRecord.value
+  const c: any = r?.contraction_count
+  return (c == null || c === '') && !r?.contraction_duration && !r?.contraction_interval
 })
 
 // 快捷记一笔保存后，本页的「今日」数字要立刻跟着变

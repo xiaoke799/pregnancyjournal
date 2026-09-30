@@ -813,10 +813,11 @@ onMounted(async () => {
 .album-date-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
   font-size: 14px;
-  background: #fff;
+  background: var(--bg-card, #fff);
+  color: var(--text-color, #1f2937);
 }
 .album-date-input:focus {
   border-color: var(--primary-color, #c44680);

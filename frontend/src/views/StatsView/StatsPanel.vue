@@ -427,7 +427,7 @@ function tableData(
   font-size: 15px;
   font-weight: 700;
   margin: 0 0 10px;
-  color: #1e293b;
+  color: var(--text-color, #1e293b);
 }
 .period-tabs {
   display: flex;

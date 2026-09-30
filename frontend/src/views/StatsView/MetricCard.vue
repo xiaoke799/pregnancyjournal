@@ -58,6 +58,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useAppStore } from '@/stores/app'
+import { chartPalette } from '@/utils/chart-theme'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -68,6 +70,11 @@ import {
 } from 'echarts/components'
 
 use([CanvasRenderer, LineChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, DataZoomComponent])
+
+// 图表是 canvas 渲染，**不吃 CSS 变量**：轴/刻度/提示框的颜色必须显式按主题取，
+// 否则深色模式下是「深字压深底」直接看不见。改成 computed，主题一变图表自动重算重绘。
+const appStore = useAppStore()
+const palette = computed(() => chartPalette(appStore.effectiveDark))
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -189,6 +196,7 @@ function buildSeries(data: (number | null)[], name: string, lineColor: string, i
 const colors = ['#c44680', '#f97316', '#10b981']
 
 const chartOption = computed(() => {
+  const p = palette.value
   const series = []
   series.push(buildSeries(props.values, props.legend[0] || props.title, props.color, 0))
 
@@ -206,10 +214,10 @@ const chartOption = computed(() => {
   return {
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(255,255,255,.95)',
-      borderColor: '#e2e8f0',
+      backgroundColor: p.tooltipBg,
+      borderColor: p.tooltipBorder,
       borderWidth: 1,
-      textStyle: { color: '#1e293b', fontSize: 12 },
+      textStyle: { color: p.tooltipText, fontSize: 12 },
       formatter: (params: any) => {
         if (!Array.isArray(params)) params = [params]
         let html = `<strong>${params[0]?.axisValue || ''}</strong>`
@@ -223,7 +231,7 @@ const chartOption = computed(() => {
     legend: {
       show: series.length > 1,
       bottom: showZoom.value ? 24 : 0,
-      textStyle: { fontSize: 11, color: '#64748b' },
+      textStyle: { fontSize: 11, color: p.legendText },
       itemWidth: 16,
       itemHeight: 3,
     },
@@ -239,13 +247,13 @@ const chartOption = computed(() => {
       data: props.dates,
       axisLabel: {
         fontSize: 10,
-        color: '#94a3b8',
+        color: p.axisLabel,
         // 不再手算 interval：以前按「总点数」算，一缩放窗口里就只剩一个标签。
         // 交给 echarts 按**当前可见窗口**自动排布并隐藏重叠标签。
         hideOverlap: true,
         rotate: props.dates.length > 12 ? 45 : 0,
       },
-      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLine: { lineStyle: { color: p.axisLine } },
       axisTick: { show: false },
     },
     yAxis: {
@@ -253,8 +261,8 @@ const chartOption = computed(() => {
       // scale: true = 轴上下界贴合数据范围。原来一律从 0 起，
       // 体温 36.1~36.7 被画在 0~40 的轴上、三围 87~104 画在 0~120 的轴上 —— 全被压成一条直线。
       scale: true,
-      axisLabel: { fontSize: 10, color: '#94a3b8' },
-      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' as const } },
+      axisLabel: { fontSize: 10, color: p.axisLabel },
+      splitLine: { lineStyle: { color: p.splitLine, type: 'dashed' as const } },
       axisLine: { show: false },
       axisTick: { show: false },
     },
@@ -277,14 +285,14 @@ const chartOption = computed(() => {
         bottom: 4,
         borderColor: 'transparent',
         handleSize: 16,
-        handleStyle: { color: '#fff', borderColor: '#c44680', borderWidth: 1.5 },
-        moveHandleStyle: { color: '#e8d9e3' },
+        handleStyle: { color: p.zoomHandle, borderColor: p.zoomHandleBorder, borderWidth: 1.5 },
+        moveHandleStyle: { color: p.zoomMoveHandle },
         // 关掉缩放条里的"数据小预览"：多条曲线/大量空值时它会被画成锯齿状的一团，很噪，
         // 而卡片本身已经把这些信息画清楚了。
         showDataShadow: false,
         backgroundColor: '#f1ebf2',
         fillerColor: 'rgba(196, 70, 128, 0.14)',
-        textStyle: { fontSize: 10, color: '#94a3b8' },
+        textStyle: { fontSize: 10, color: p.axisLabel },
         brushSelect: false,
       },
     ] : [],
@@ -321,7 +329,7 @@ function adjustColor(hex: string, amount: number): string {
   font-size: 15px;
   font-weight: 700;
   margin: 0;
-  color: #1e293b;
+  color: var(--text-color, #1e293b);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
