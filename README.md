@@ -190,7 +190,7 @@ fnpack build --directory <组装好的 stage 目录>
 
 ### 回归测试 / Regression Tests
 
-仓库自带一套端到端回归与核查脚本（**61 套 / 1333 项**），位于 `tools/verify/`：
+仓库自带一套端到端回归与核查脚本（**62 套 / 1334 项**），位于 `tools/verify/`：
 
 ```bash
 node tools/verify/run_all_suites.js              # 全套，约 6–10 分钟
@@ -201,7 +201,7 @@ node tools/verify/run_all_suites.js --only=HEIC  # 只跑名字含关键字的�
 覆盖上传/导出/备份恢复/推送/HEIC/迁移/权限/路径穿越等链路。
 前置条件：`app/server/node` 依赖已安装、`app/ui` 已构建、`frontend` 依赖已安装（类型体检要 `vue-tsc`）。详见 [`tools/verify/README.md`](tools/verify/README.md)。
 
-> This repo ships a 61-suite / 1333-check regression harness under `tools/verify/`.
+> This repo ships a 62-suite / 1334-check regression harness under `tools/verify/`.
 > Run `node tools/verify/run_all_suites.js`. See `tools/verify/README.md` for details.
 
 ---
