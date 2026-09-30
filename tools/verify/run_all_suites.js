@@ -113,6 +113,12 @@ const SUITES = [
   // v-else 挡掉）；另外首页「查看详情 →」带的 `?date=` 曾被记录页**静默忽略**（RecordView 不读 route.query）。
   // ⚠️ 这套是**真后端 + 无头浏览器**，5 个场景各起一次浏览器 + 2 次记录页取证 ⇒ 约 2 分钟。
   [path.join(UP, 'probe_dashboard_record_coverage.js'), '首页↔记录页 覆盖与 ?date= 采纳', '约 120 秒·需无头浏览器'],
+  // 首页「计时中…」标志的**日期归属**：进一次计时器页面（onMounted 立刻建会话）却没点
+  // 「结束计时」，这条会话 end_time 永远是 NULL；本应用没有恢复旧会话的入口（每次进来都新建），
+  // 所以只按 pregnancy_id 找未结束会话 ⇒ 一次中途退出就让首页宫缩卡**永久**显示「计时中…」，
+  // 而 contractionStatText 在该分支直接 return，把「今日 N 次 · 持续 X 秒」整个盖掉、无法自愈。
+  // 三个场景：昨天遗留空壳会话（必须 false）/ 今天确实在计时（true）/ 结束后回落（false）。
+  [path.join(UP, 'probe_contraction_active_stale.js'), '首页「计时中」只认今天(陈旧会话不卡住)', ''],
   // ---- 路径安全 ----
   [path.join(UP, 'verify_path_traversal.js'), '路径穿越', ''],
   [path.join(UP, 'verify_path_guard.js'), '路径锚定与白名单', '上线前检查修复回归'],

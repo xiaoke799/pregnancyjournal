@@ -198,9 +198,15 @@ router.get('/dashboard', async function(req, res) {
       [pregnancy_id, todayStr]
     );
     var contractionSessions = ctSessionRow ? ctSessionRow.n : 0;
+    // ⚠️ 必须按「今天」过滤：进一次计时器页面（`onMounted` 立刻建会话）而没点「结束计时」，
+    //    这条会话的 end_time 就永远是 NULL。此前这里只按 pregnancy_id 找未结束会话，
+    //    于是**任何一天**遗留的空壳会话都会让首页宫缩卡永久显示「计时中…」——
+    //    而 `contractionStatText` 在该分支直接 return，把「今日 N 次 · 持续 X 秒」整个盖掉，
+    //    用户再也看不到当天真实数据；且计时器页没有恢复旧会话的入口（每次进来都新建），
+    //    所以这个状态**无法自愈**。本应用没有 /active 恢复接口 ⇒ 隔天的会话不可能还在计时。
     var csResult = await db.queryOne(
-      'SELECT id FROM contraction_session WHERE pregnancy_id = ? AND end_time IS NULL LIMIT 1',
-      [pregnancy_id]
+      'SELECT id FROM contraction_session WHERE pregnancy_id = ? AND session_date = ? AND end_time IS NULL LIMIT 1',
+      [pregnancy_id, todayStr]
     );
     var contractionActive = !!csResult;
     var upcomingReminders = await db.queryAll(
