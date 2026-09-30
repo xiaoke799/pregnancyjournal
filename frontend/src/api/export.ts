@@ -1,7 +1,7 @@
 import client from './client'
 
 export const exportApi = {
-  backup: (dir: string) => client.post('/backup', { dir }),
+  backup: (dir?: string) => client.post('/backup', { dir }),
   restore: (dir: string) => client.post('/restore', { dir }),
   restoreLatest: () => client.post('/restore-latest'),
 

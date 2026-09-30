@@ -64,6 +64,59 @@ check('统计面板 hasData 认 bust/waist/hip', has('panel', "case 'girth': ret
 check('RecordView 统计标签用共享 StatsPanel', has('view', "import StatsPanel from './StatsView/StatsPanel.vue'") && has('view', '<StatsPanel v-if="activeSubTab === \'stats\'" />'));
 check('独立统计页也用同一份 StatsPanel', has('statsPage', "import StatsPanel from './StatsView/StatsPanel.vue'") && has('statsPage', '<StatsPanel size="page" />'));
 
+// ============ 运动（统计可视化 + 强度感受落库）============
+// 【背景】运动数据一直有（类型 + 时长），但统计页 12 张卡里**从来没有运动**；
+// 同时记录页小弹窗的「强度感受」收了值却从不提交（库里连列都没有）—— 用户选了等于白选。
+out.push('');
+out.push('【运动：统计可视化 + 强度感受落库】');
+check('统计面板有「运动时长」卡（主曲线 exercise_duration）',
+  has('panel', 'title="运动时长"') && has('panel', "hasData('exercise')") && has('panel', "chartValues('exercise_duration')"));
+check('统计面板 hasData 认 exercise（时长/类型/强度任一有值）',
+  has('panel', "case 'exercise': return any((r) => r.exercise_duration != null"));
+check('统计面板运动卡带「运动类型」补充列',
+  has('panel', "extra: 'exercise_type'") && has('panel', "extraLabel: '运动类型'"));
+check('统计面板运动表有自定义 filter（只填类型没填时长也进表格，不出现「卡片在、表 0 条」）',
+  has('panel', 'filter: (r: any) => r.exercise_duration != null'));
+check('统计面板运动表展示强度感受', has('panel', "noteField: 'exercise_intensity'"));
+check('运动卡排位：饮水之后、胎心之前',
+  src.panel.indexOf("hasData('exercise')") > src.panel.indexOf("hasData('water')")
+  && src.panel.indexOf("hasData('exercise')") < src.panel.indexOf("hasData('fhr')"));
+
+// 强度取值域必须只有一处出处（铁律 #34）：两个录入入口都不许再各写一份
+check('强度取值域唯一真源在 utils/format.ts',
+  has('fmt', "EXERCISE_INTENSITY_VALUES = ['轻松', '中等', '较累']"));
+check('记录页小弹窗不再硬写强度选项', !has('view', 'value="轻松"') && has('view', 'exerciseIntensityOptions'));
+check('大弹窗也不再硬写强度选项', !has('dialog', 'value="轻松"') && has('dialog', 'exerciseIntensityOptions'));
+check('大弹窗运动块补齐强度（模板 + formData + 回填 + 保存 + 重置）',
+  has('dialog', 'formData.exerciseIntensity') && has('dialog', 'data.exercise_intensity = formData.value.exerciseIntensity')
+  && has('dialog', "formData.value.exerciseIntensity = (r.exercise_intensity || '')")
+  && has('dialog', "exerciseIntensity: ''"));
+check('记录页小弹窗 saveExercise 真的提交 exercise_intensity',
+  has('view', 'exercise_intensity: exerciseForm.value.intensity || undefined'));
+check('记录页小弹窗强度不预选（不替用户"顺手"记一个「轻松」）',
+  has('view', "intensity: '' as '' | ExerciseIntensity"));
+check('记录列表预览显示强度', has('list', 'r.exercise_intensity'));
+check('记录列表 hasDataForType 认 exercise_intensity',
+  has('list', '(r.exercise_type || r.exercise_duration || r.exercise_intensity)'));
+
+out.push('');
+out.push('【后端字段（exercise_intensity）】');
+check('db.js 建表含 exercise_intensity', has('db', 'exercise_intensity TEXT,'));
+check('db.js migrateDb 会补 exercise_intensity 列（老库升级）', has('db', 'exercise_intensity: null,'));
+check('daily-record.js 更新字段含 exercise_intensity（POST + PUT 各 1）',
+  count('api', /'exercise_duration', 'exercise_intensity'/g) >= 2,
+  '出现 ' + count('api', /'exercise_duration', 'exercise_intensity'/g) + ' 次');
+check('daily-record.js INSERT 列含 exercise_intensity',
+  has('api', "'exercise_type', 'exercise_duration', 'exercise_intensity',"));
+check('daily-record.js INSERT 参数含 exercise_intensity',
+  has('api', 'req.body.exercise_intensity || null,'));
+check('export.js CSV 导出字段含运动强度',
+  fs.readFileSync(`${ROOT}/app/server/node/routes/export.js`, 'utf-8').includes("key: 'exercise_intensity'"));
+// ⚠️ 「备份白名单是否登记了本列」**故意不在这里手写断言**：本脚本下方有一条**从建表语句自动派生**的
+//    覆盖检查（「备份覆盖的每张表，白名单都包含其全部字段」）。手写版在反例验证时被 CSV 标签行
+//    `key: 'exercise_intensity'` 误命中而恒绿（假绿），已删；交给那条自动派生的检查更可靠。
+check('types/index.ts 有 exercise_intensity', has('types', 'exercise_intensity: string | null'));
+
 // ============ 后端字段 ============
 out.push('');
 out.push('【后端字段（bust / hip）】');

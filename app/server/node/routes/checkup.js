@@ -12,6 +12,7 @@ const uuidv4 = () => crypto.randomUUID();
 const logger = require('../logger');
 const { MIME_BY_EXT } = require('../services/media-types');
 const heic = require('../services/heic');
+const pathGuard = require('../services/path-guard');
 
 const ALLOWED_PHOTO_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'application/pdf'];
 const PHOTO_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.heic', '.heif', '.pdf'];
@@ -127,7 +128,12 @@ const NAS_WHITELIST = _nasRoots();
 const schedule_dates_file = path.join(config.DATA_DIR, 'schedule_dates.json');
 
 function _deleteReportFile(filePath) {
-  if (filePath && fs.existsSync(filePath)) {
+  // 路径锚定：只删应用自己目录里的文件（库里的路径可能被 import/restore 投毒）
+  if (!pathGuard.isAllowed(filePath)) {
+    if (filePath) logger.warn('checkup', `跳过删除越界文件: ${filePath}`);
+    return;
+  }
+  if (fs.existsSync(filePath)) {
     try { fs.unlinkSync(filePath); } catch (e) {}
   }
   // 显示用的是转出来的 .jpg，HEIC 原图与它同目录同名，一并清理
@@ -535,6 +541,10 @@ router.get('/checkups/reports/:id/download', async (req, res) => {
     const report = await db.queryOne('SELECT * FROM checkup_report WHERE id = ?', [req.params.id]);
     if (!report || !report.file_path) return res.status(404).json({ code: 1001, data: null, message: '报告不存在' });
     const resolvedPath = path.resolve(report.file_path);
+    // 路径锚定：库里的 file_path 可能被 import/restore 投毒成任意绝对路径，拒绝越界读取
+    if (!pathGuard.isAllowed(resolvedPath)) {
+      return res.status(403).json({ code: 1001, data: null, message: '不允许访问该路径' });
+    }
     if (!fs.existsSync(resolvedPath)) return res.status(404).json({ code: 1001, data: null, message: '文件不存在' });
     // 图片类型用 inline（浏览器可直接显示），其他用 attachment（下载）
     const isImage = /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(report.filename || '');

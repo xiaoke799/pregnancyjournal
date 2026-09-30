@@ -94,7 +94,7 @@ async function loadDates() {
 
 function calculateStageDates() {
   const lmp = pregnancyStore.currentPregnancy?.last_period_date
-  const dueDate = pregnancyStore.currentPregnancy?.due_date || pregnancyStore.currentPregnancy?.dueDate || null
+  const dueDate = pregnancyStore.currentPregnancy?.due_date || null
   if (!lmp && !dueDate) {
     stageDates.value = []
     return

@@ -199,7 +199,7 @@ const PROBE = `
           for (var c = 0; c < tds.length; c++) cells.push(tds[c].textContent.replace(/\\s+/g, ' ').trim());
           rows.push(cells.join('~'));
         }
-        if (name === '胎心率' || name === '宫缩持续时间' || name === '胎动次数') {
+        if (name === '胎心率' || name === '宫缩持续时间' || name === '胎动次数' || name === '运动时长') {
           dump.push(name + '[' + rows.length + '行]' + rows.join(' ; '));
         }
       }
@@ -308,11 +308,13 @@ const PROBE = `
     {
       record_date: dstr(-21), weight: 62.5, blood_pressure_systolic: 112, blood_pressure_diastolic: 72,
       body_temperature: 36.5, sleep_hours: 7.5, water_intake: 1500,
+      exercise_type: '散步', exercise_duration: 30, exercise_intensity: '轻松',
     },
     {
       record_date: dstr(-14), weight: 63.8, blood_pressure_systolic: 114, blood_pressure_diastolic: 74,
       blood_glucose_fasting: 4.8, blood_glucose_1h: 7.2, blood_glucose_2h: 6.1,
       bust: 98, waist: 92, hip: 100, water_intake: 1800,
+      exercise_type: '孕妇瑜伽', exercise_duration: 45, exercise_intensity: '中等',
     },
     {
       record_date: dstr(-7), weight: 64.6, blood_pressure_systolic: 118, blood_pressure_diastolic: 78,

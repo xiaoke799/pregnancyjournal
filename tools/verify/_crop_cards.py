@@ -21,7 +21,9 @@ import sys
 
 from PIL import Image
 
-ROOT = require('./_env').REPO
+# ⚠️ 这里原有一行 `ROOT = require('./_env').REPO` —— 从 JS 脚本抄过来的语法，
+#    在 Python 里必然 NameError（而且 ROOT 根本没人用，真正用的是上面的 _REPO/_TMP）。
+#    2026-09-30 删除；本脚本依赖 pillow（`pip install pillow`）。
 SHOT_DIR = os.path.join(_TMP, 'stats-shot')
 
 label = sys.argv[1] if len(sys.argv) > 1 else 'big-pregnancy'

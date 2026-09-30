@@ -43,6 +43,7 @@ const ROUTES = [
   ['/stats', '统计'],
   ['/exercise-guide', '运动指南'],
   ['/weekly-detail', '本周变化'],
+  ['/dose-plan', '用药/补充'],
   ['/settings', '设置'],
   ['/contraction-timer', '宫缩计时'],
   ['/fetal-movement-counter', '胎动计数'],

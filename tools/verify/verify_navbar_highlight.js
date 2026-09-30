@@ -92,6 +92,8 @@ const cases = [
   ['/checklist', ['/checklist']],
   ['/settings', ['/settings']],
   ['/exercise-guide', ['/']],        // 从首页点进去的子页面：首页保持高亮
+  ['/weekly-detail', ['/']],
+  ['/dose-plan', ['/']],
   ['/stats', []],                    // 隐藏路由：不高亮任何一个
   ['/contraction-timer', []],        // 全屏页
 ];

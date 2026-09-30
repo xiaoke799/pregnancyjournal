@@ -167,6 +167,12 @@ for (const file of walk(SRC)) {
     // 去掉 TypeScript 类型断言：模板里写 `(e.target as HTMLInputElement)` 时，
     // as / HTMLInputElement / Event 这些都不是变量（@change="..." 里很常见）
     e = e.replace(/\s+as\s+[A-Za-z_$][\w$.<>[\]]*/g, '');
+    // 去掉箭头函数参数上的 TS 类型标注：`@update:value="(v: boolean) => fn(v)"` 里的
+    // boolean 是类型不是变量，不剥掉会被当成"未定义"报出来（2026-09-29 DosePlanView 实测假红）。
+    // ⚠️ 只处理「后面紧跟 =>」的那一对括号，避免误伤普通函数调用里的实参。
+    e = e.replace(/\(([^()]*)\)\s*=>/g, (_f, params) =>
+      `(${params.split(',').map((s) => s.split(':')[0]).join(',')}) =>`,
+    );
     // 去掉属性访问（item.name → item），避免把属性名当成变量
     e = e.replace(/\??\.[A-Za-z_$][\w$]*/g, '');
     // ⚠️ 去掉对象字面量的**键名**：:class="{ active: cond }"、:style="{ padding: x }"

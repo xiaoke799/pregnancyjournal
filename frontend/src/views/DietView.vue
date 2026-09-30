@@ -550,7 +550,7 @@ const activeTab = ref('spin')
 interface Recipe {
   id: string; name: string; category: string; suitable_weeks: number[]
   suitable_stage: string[]; ingredients: string[]; nutrition: string
-  image: string | null; description: string
+  image: string | null; description: string; meals?: string[]
 }
 interface ComboSlot { type: string; icon: string; recipe: Recipe | null }
 interface MealCombo { staple: Recipe|null; meat: Recipe|null; veggie: Recipe|null;
@@ -619,19 +619,39 @@ function doPick(){
       if(avail.length>0){const r=avail[Math.floor(Math.random()*avail.length)];used.add(r.id);return r}}
     return null
   }
-  const stapleCat=byCat('主食品'),breakfastCat=byCat('早餐'),meatCat=byCat('荤菜')
-  const veggieCat=byCat('素菜'),soupCat=byCat('汤品'),drinkCat=byCat('饮品'),dessertCat=byCat('甜品')
+  // 餐别归属：以 recipes.json 的 meals 字段为准；缺字段时按分类兜底（兼容旧数据/兜底菜谱）
+  const mealSet=(r:Recipe):string[]=>{
+    if(Array.isArray(r.meals)&&r.meals.length) return r.meals
+    const cat=r.category,n=r.name||''
+    if(cat==='早餐') return ['早餐']
+    if(cat==='主食') return (n.includes('粥')||n.includes('糊'))?['早餐','晚餐']:['早餐','午餐','晚餐']
+    if(cat==='荤菜'||cat==='素菜'||cat==='汤品') return ['午餐','晚餐']
+    return ['早餐','午餐','晚餐']
+  }
+  const byMeal=(m:string)=>shuffled.filter(r=>mealSet(r).includes(m))
+  const isCat=(r:Recipe,cat:string)=>r.category===cat
 
   meals.value={
-    breakfast:{staple:pick(breakfastCat,stapleCat.filter(r=>/粥|面|糊|饭|饺|饼/.test(r.name)),stapleCat),meat:null,veggie:null,soup:null,
-      drink:pick(drinkCat,breakfastCat.filter(r=>/豆浆|奶|汁|茶|水/.test(r.name))),
-      dessert:pick(dessertCat.filter(r=>/羹|汤圆|奶|糕/.test(r.name)),dessertCat,stapleCat.filter(r=>/糊|粥/.test(r.name)))},
-    lunch:{staple:pick(stapleCat.filter(r=>/饭|面|饺|饼|馒|包/.test(r.name)),stapleCat,breakfastCat),
-      meat:pick(meatCat),veggie:pick(veggieCat),soup:pick(soupCat),drink:null,dessert:null},
-    dinner:{staple:pick(stapleCat.filter(r=>/粥|面|饭|糊/.test(r.name)),stapleCat,breakfastCat),
-      meat:pick(meatCat.filter(r=>r.id!==meals.value.lunch.meat?.id),meatCat),
-      veggie:pick(veggieCat.filter(r=>r.id!==meals.value.lunch.veggie?.id),veggieCat),
-      soup:pick(soupCat.filter(r=>r.id!==meals.value.lunch.soup?.id),soupCat),drink:null,dessert:null},
+    breakfast:{
+      staple:pick(byMeal('早餐')),
+      meat:null,veggie:null,soup:null,
+      drink:pick(byCat('饮品')),
+      dessert:pick(byCat('甜品').filter(r=>/羹|汤圆|奶|糕|炖|沙|杯|泥/.test(r.name)),byCat('甜品'))
+    },
+    lunch:{
+      staple:pick(byMeal('午餐').filter(r=>isCat(r,'主食')),byMeal('午餐')),
+      meat:pick(byMeal('午餐').filter(r=>isCat(r,'荤菜'))),
+      veggie:pick(byMeal('午餐').filter(r=>isCat(r,'素菜'))),
+      soup:pick(byMeal('午餐').filter(r=>isCat(r,'汤品'))),
+      drink:null,dessert:null
+    },
+    dinner:{
+      staple:pick(byMeal('晚餐').filter(r=>isCat(r,'主食')),byMeal('晚餐')),
+      meat:pick(byMeal('晚餐').filter(r=>isCat(r,'荤菜')&&r.id!==meals.value.lunch.meat?.id),byMeal('晚餐').filter(r=>isCat(r,'荤菜'))),
+      veggie:pick(byMeal('晚餐').filter(r=>isCat(r,'素菜')&&r.id!==meals.value.lunch.veggie?.id),byMeal('晚餐').filter(r=>isCat(r,'素菜'))),
+      soup:pick(byMeal('晚餐').filter(r=>isCat(r,'汤品')&&r.id!==meals.value.lunch.soup?.id),byMeal('晚餐').filter(r=>isCat(r,'汤品'))),
+      drink:null,dessert:null
+    }
   }
   ;[meals.value.breakfast.staple,meals.value.breakfast.drink,meals.value.breakfast.dessert,
     meals.value.lunch.staple,meals.value.lunch.meat,meals.value.lunch.veggie,meals.value.lunch.soup,

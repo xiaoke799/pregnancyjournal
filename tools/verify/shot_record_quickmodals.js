@@ -57,12 +57,13 @@ const WIN_H = Number(process.env.PJ_SHOT_H || 900);
 const NEW_TYPES = ['水肿', '分泌物', '皮肤状况', '排尿情况', '用药'];
 const REF_TYPES = ['饮水'];
 const ALL_TYPES = NEW_TYPES.concat(REF_TYPES);
-/** 类型名 → 小弹窗标题（用来在 DOM 里精确定位到「这一个」弹窗） */
-const TITLES = {
-  '水肿': '记录水肿', '分泌物': '记录分泌物', '皮肤状况': '记录皮肤状况',
-  '排尿情况': '记录排尿情况', '用药': '记录用药',
-  '饮水': '记录饮水', '便便': '记录便便',
-};
+/**
+ * ⚠️ 定位弹窗**不要写死标题全文**（铁律 #44）。
+ *    2026-09-29 用药弹窗改名为「临时补记 · 用药」后，这里原来写死的
+ *    `TITLES = { 用药: '记录用药' }` 直接把整套判成"弹出的不是本类型"，假红。
+ *    改成：**标题里含该类型名就算命中**（参照物 = 类型名本身），
+ *    以后给标题加前后缀都不会再误判。
+ */
 
 /**
  * 准备一个干净的临时目录。
@@ -201,7 +202,6 @@ const PROBE = `
 <script>
 (function () {
   var TYPES = __TYPES__;
-  var TITLES = __TITLES__;
   var SHOT = '__SHOT__';
   var out = [];
   var i = 0;
@@ -225,11 +225,10 @@ const PROBE = `
 
   /** 按标题精确定位「这一个」弹窗（不能按 DOM 顺序取，会拿到正在关闭的旧弹窗） */
   function modalFor(label) {
-    var want = TITLES[label] || '';
     var ms = visibleModals();
     for (var k = ms.length - 1; k >= 0; k--) {
       var h = ms[k].querySelector('.n-card-header__main') || ms[k].querySelector('.n-card-header');
-      if (h && clean(h.textContent) === want) return ms[k];
+      if (h && clean(h.textContent).indexOf(label) >= 0) return ms[k];
     }
     return null;
   }
@@ -280,7 +279,7 @@ const PROBE = `
       type: label,
       found: true,
       /** 弹出来的弹窗标题不是本类型的（例如掉进了通用大弹窗） */
-      titleMismatch: title !== (TITLES[label] || ''),
+      titleMismatch: title.indexOf(label) < 0,
       isQuick: !m.querySelector('.type-selector'),   // 通用大弹窗会带 26 类型的 .type-selector
       title: title,
       /** 只用 max-width 做宽度断言；rectWidth 仅作参考（会受动画影响） */
@@ -422,7 +421,6 @@ const PROBE = `
   const html = fs.readFileSync(path.join(UI_DIR, 'index.html'), 'utf-8');
   const probeJs = PROBE
     .replace('__TYPES__', JSON.stringify(ALL_TYPES))
-    .replace('__TITLES__', JSON.stringify(TITLES))
     .replace('__SHOT__', SHOT_TYPE);
   fs.writeFileSync(variant, html.replace('</body>', probeJs + '</body>'), 'utf-8');
 

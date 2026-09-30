@@ -12,6 +12,7 @@ const uuidv4 = () => crypto.randomUUID();
 const logger = require('../logger');
 const heic = require('../services/heic');
 const imageThumb = require('../services/image-thumb');
+const pathGuard = require('../services/path-guard');
 
 const VIDEO_EXTS = new Set([
   'mp4', 'webm', 'mov', 'avi', 'ogg', 'mkv', 'flv', 'wmv', 'm4v',
@@ -252,11 +253,21 @@ router.delete('/photos/:id', async (req, res) => {
       logger.warn('photo', `DELETE /photos/${id} - photo not found`);
       return res.json({ code: 1001, data: null, message: '照片不存在' });
     }
+    // 路径锚定：库里的 file_path 可能被 import/restore 投毒成任意绝对路径，越界的只删记录不动文件
+    if (photo.file_path && !pathGuard.isAllowed(photo.file_path)) {
+      logger.warn('photo', `DELETE /photos/${id} - 越界路径，仅删记录: ${photo.file_path}`);
+      photo.file_path = null;
+    }
+    if (photo.thumbnail_path && !pathGuard.isAllowed(photo.thumbnail_path)) {
+      photo.thumbnail_path = null;
+    }
     if (photo.file_path && fs.existsSync(photo.file_path)) { try { fs.unlinkSync(photo.file_path); } catch (e) {} }
     if (photo.thumbnail_path && photo.thumbnail_path !== photo.file_path && fs.existsSync(photo.thumbnail_path)) { try { fs.unlinkSync(photo.thumbnail_path); } catch (e) {} }
     // 连带给 HEIC 原图（显示用的是转出来的 .jpg，原图与它同目录同名）
-    for (const p of heic.siblingOriginals(photo.file_path)) {
-      try { fs.unlinkSync(p); } catch (e) { /* 单个失败不影响删除记录 */ }
+    if (photo.file_path) {
+      for (const p of heic.siblingOriginals(photo.file_path)) {
+        try { fs.unlinkSync(p); } catch (e) { /* 单个失败不影响删除记录 */ }
+      }
     }
     await db.run('DELETE FROM pregnancy_photo WHERE id = ?', [id]);
     logger.info('photo', `DELETE /photos/${id} - deleted successfully, file=${photo.file_path}`);

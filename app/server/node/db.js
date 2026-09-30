@@ -153,6 +153,7 @@ CREATE TABLE IF NOT EXISTS daily_record (
   symptoms TEXT,
   exercise_type TEXT,
   exercise_duration INTEGER,
+  exercise_intensity TEXT,
   diet_note TEXT,
   medication TEXT,
   edema_level TEXT,
@@ -329,6 +330,45 @@ CREATE TABLE IF NOT EXISTS supplement_checkin (
   FOREIGN KEY (pregnancy_id) REFERENCES pregnancy(id) ON DELETE CASCADE
 );
 
+-- 用药 / 营养补充「方案」：用户一次配置，之后每天自动生成待办 + 到点提醒。
+-- ⚠️ 为什么不能复用 reminder 表：reminder.is_completed 是**一次性**开关（勾完就永不再提醒），
+--    而服药是每天重复的事 —— 用它做每日服药，勾一次后面就再也不提醒，反而更危险。
+--    「今天吃没吃」必须由 dose_checkin 按日期记。
+CREATE TABLE IF NOT EXISTS dose_plan (
+  id TEXT PRIMARY KEY,
+  pregnancy_id TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'medication',
+  name TEXT NOT NULL,
+  dosage TEXT,
+  reminder_times TEXT,
+  frequency TEXT DEFAULT 'daily',
+  weekdays TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  -- 医嘱常按孕周下（"孕20周开始吃钙片""叶酸吃到孕12周"），
+  -- 与 start_date/end_date 是**并列约束**（都配了就都要满足），不是二选一。
+  start_week INTEGER,
+  end_week INTEGER,
+  note TEXT,
+  is_enabled INTEGER DEFAULT 1,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (pregnancy_id) REFERENCES pregnancy(id) ON DELETE CASCADE
+);
+
+-- 每日打卡：按「种类」勾（如叶酸），一天一条（plan_id + date 唯一 ⇒ 重复打卡幂等）。
+-- 到点提醒会先查这里：**已打卡的当天不再推**。
+CREATE TABLE IF NOT EXISTS dose_checkin (
+  id TEXT PRIMARY KEY,
+  pregnancy_id TEXT NOT NULL,
+  plan_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  taken_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (pregnancy_id) REFERENCES pregnancy(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS app_config (
   id TEXT PRIMARY KEY,
   key TEXT NOT NULL UNIQUE,
@@ -357,6 +397,10 @@ CREATE TABLE IF NOT EXISTS push_log (
 CREATE INDEX IF NOT EXISTS idx_daily_record_preg_date ON daily_record (pregnancy_id, record_date);
 CREATE INDEX IF NOT EXISTS idx_habit_checkin_preg_date ON habit_checkin (pregnancy_id, date);
 CREATE INDEX IF NOT EXISTS idx_supplement_checkin_preg_date ON supplement_checkin (pregnancy_id, date);
+CREATE INDEX IF NOT EXISTS idx_dose_plan_preg ON dose_plan (pregnancy_id);
+CREATE INDEX IF NOT EXISTS idx_dose_checkin_preg_date ON dose_checkin (pregnancy_id, date);
+-- 唯一索引：同一方案同一天只能有一条打卡 ⇒ 重复提交走「已打卡」而不是插两行
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dose_checkin_plan_date ON dose_checkin (plan_id, date);
 CREATE INDEX IF NOT EXISTS idx_checkup_preg_date ON prenatal_checkup (pregnancy_id, checkup_date);
 CREATE INDEX IF NOT EXISTS idx_checkup_photo_checkup ON checkup_photo (checkup_id);
 CREATE INDEX IF NOT EXISTS idx_checkup_report_checkup ON checkup_report (checkup_id);
@@ -563,6 +607,7 @@ function migrateDb() {
       waist: null,                 // 腰围记录（v0.0.28 新增）
       bust: null,                  // 胸围（v0.0.29 新增，与 waist/hip 合称三围）
       hip: null,                   // 臀围（v0.0.29 新增）
+      exercise_intensity: null,    // 运动强度感受（轻松/中等/较累，v0.0.33 新增）
     },
     push_log: {
       payload: null,               // 推送正文（重试时原样重发，v0.0.28 新增）

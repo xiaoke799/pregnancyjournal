@@ -170,7 +170,7 @@ function hasDataForType(type: string): boolean {
       } catch { return false }
     }
     case 'sleep': return !!(r.sleep_hours || r.sleep_quality)
-    case 'exercise': return !!(r.exercise_type || r.exercise_duration)
+    case 'exercise': return !!(r.exercise_type || r.exercise_duration || r.exercise_intensity)
     case 'diet': return !!r.diet_note
     case 'medication': {
       try {
@@ -249,8 +249,11 @@ function getPreview(type: string): string {
     }
     case 'sleep':
       return r.sleep_hours ? r.sleep_hours + 'h' + (r.sleep_quality ? ' · ' + getSleepQualityLabel() : '') : ''
-    case 'exercise':
-      return (r.exercise_type || '运动') + (r.exercise_duration ? ' ' + r.exercise_duration + 'min' : '')
+    case 'exercise': {
+      // 强度感受是可选项，只有用户真的选了才拼进去（不显示「未填」占位）
+      const ex = (r.exercise_type || '运动') + (r.exercise_duration ? ' ' + r.exercise_duration + 'min' : '')
+      return r.exercise_intensity ? ex + ' · ' + r.exercise_intensity : ex
+    }
     case 'diet':
       if (!r.diet_note) return ''
       try {

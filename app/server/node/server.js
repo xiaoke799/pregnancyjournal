@@ -245,6 +245,7 @@ async function start() {
     './routes/export',
     './routes/habit-checkin',
     './routes/supplement-checkin',
+    './routes/dose-plan',
     './routes/app-config',
     './routes/diet',
     './routes/checkup-schedule',

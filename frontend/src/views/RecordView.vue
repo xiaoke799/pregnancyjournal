@@ -307,12 +307,17 @@
     <n-modal
       v-model:show="showSupplementModal"
       preset="card"
-      title="营养补充"
+      title="临时补记 · 营养补充"
       style="max-width: 440px; width: 94vw;"
       :mask-closable="true"
       @after-leave="resetSupplementForm"
     >
       <div class="quick-form">
+        <!-- 长期按医嘱吃的走「用药/补充」计划页：那里到点会提醒、吃完打卡，
+             打完卡当天就不再推；这里只负责偶尔的临时补记。 -->
+        <div class="qf-dose-hint">
+          长期按医嘱吃的（如叶酸、钙片）请到<router-link to="/dose-plan">「用药/补充」</router-link>建计划 —— 到点自动提醒、吃完打卡。这里只做临时补记。
+        </div>
         <div class="qf-group">
           <label>日期</label>
           <n-date-picker v-model:formatted-value="supplementForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
@@ -366,12 +371,15 @@
     <n-modal
       v-model:show="showMedicationModal"
       preset="card"
-      title="记录用药"
+      title="临时补记 · 用药"
       style="max-width: 420px; width: 92vw;"
       :mask-closable="true"
       @after-leave="resetMedicationForm"
     >
       <div class="quick-form">
+        <div class="qf-dose-hint">
+          长期按医嘱吃的（如优甲乐）请到<router-link to="/dose-plan">「用药/补充」</router-link>建计划 —— 到点自动提醒、吃完打卡。这里只做临时补记。
+        </div>
         <div class="qf-group">
           <label>日期</label>
           <n-date-picker v-model:formatted-value="medForm.date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
@@ -453,7 +461,7 @@
           <div class="qf-group flex1"><label>运动类型</label><n-select v-model:value="exerciseForm.type" :options="exerciseTypeOptions" placeholder="选择运动类型" style="width:100%" /></div>
           <div class="qf-group flex1"><label>时长(分钟)</label><n-input-number v-model:value="exerciseForm.duration" :min="0" :max="300" :step="5" placeholder="分钟" style="width:100%" /></div>
         </div>
-        <div class="qf-group"><label>强度感受</label><n-radio-group v-model:value="exerciseForm.intensity" size="small"><n-radio-button value="轻松">轻松</n-radio-button><n-radio-button value="中等">中等</n-radio-button><n-radio-button value="较累">较累</n-radio-button></n-radio-group></div>
+        <div class="qf-group"><label>强度感受（可选）</label><n-radio-group v-model:value="exerciseForm.intensity" size="small"><n-radio-button v-for="o in exerciseIntensityOptions" :key="o.value" :value="o.value">{{ o.label }}</n-radio-button></n-radio-group></div>
         <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="exerciseForm.note" placeholder="可选" /></div>
       </div>
       <template #action><n-button @click="showExerciseModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveExercise">保存</n-button></template>
@@ -709,7 +717,7 @@ import dayjs from 'dayjs'
 import MiniCalendar from '@/components/record/MiniCalendar.vue'
 import RecordList from '@/components/record/RecordList.vue'
 import AddRecordDialog from '@/components/record/AddRecordDialog.vue'
-import { getMoodEmoji as moodEmojiOf, MOOD_OPTIONS as moodOptions, SLEEP_QUALITY_OPTIONS as sleepQualityOptions, type SleepQuality, isValidDateStr } from '@/utils/format'
+import { getMoodEmoji as moodEmojiOf, MOOD_OPTIONS as moodOptions, SLEEP_QUALITY_OPTIONS as sleepQualityOptions, EXERCISE_INTENSITY_OPTIONS as exerciseIntensityOptions, type SleepQuality, type ExerciseIntensity, isValidDateStr } from '@/utils/format'
 import StatsPanel from './StatsView/StatsPanel.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 
@@ -806,7 +814,7 @@ const exerciseTypeOptions = [
   { label: '散步', value: '散步' }, { label: '瑜伽', value: '瑜伽' }, { label: '游泳', value: '游泳' },
   { label: '孕妇操', value: '孕妇操' }, { label: '骑行', value: '骑行' }, { label: '其他', value: '其他' },
 ]
-const exerciseForm = ref({ date: '', type: '散步', duration: null as number | null, intensity: '轻松' as '轻松' | '中等' | '较累', note: '' })
+const exerciseForm = ref({ date: '', type: '散步', duration: null as number | null, intensity: '' as '' | ExerciseIntensity, note: '' })
 // 胎动
 const fmForm = ref({ date: '', count: null as number | null, duration: null as number | null, note: '' })
 // 宫缩
@@ -1203,7 +1211,7 @@ function resetTempForm() { tempForm.value = { date: '', value: null, note: '' } 
 function resetSleepForm() { sleepForm.value = { date: '', bedtime: '', waketime: '', quality: 'fair', note: '' } }
 function resetWaterForm() { waterForm.value = { date: '', value: null, note: '' } }
 function resetDietForm() { dietForm.value = { date: '', meal: '早餐', content: '' } }
-function resetExerciseForm() { exerciseForm.value = { date: '', type: '散步', duration: null, intensity: '轻松', note: '' } }
+function resetExerciseForm() { exerciseForm.value = { date: '', type: '散步', duration: null, intensity: '', note: '' } }
 function resetFmForm() { fmForm.value = { date: '', count: null, duration: null, note: '' } }
 function resetContrForm() { contrForm.value = { date: '', duration: null, interval: null, pain: '轻微', note: '' } }
 function resetPlanForm() { planForm.value = { date: '', time: null, text: '' } }
@@ -1258,6 +1266,8 @@ async function saveExercise() {
     record_date: exerciseForm.value.date,
     exercise_type: exerciseForm.value.type,
     exercise_duration: exerciseForm.value.duration,
+    // 强度是可选：没选就不提交（后端按 `!== undefined` 判更新，不提交即保持原值，不会被清掉）
+    exercise_intensity: exerciseForm.value.intensity || undefined,
     note: exerciseForm.value.note,
   })
   if (ok) showExerciseModal.value = false
@@ -1628,6 +1638,24 @@ function toggleSuppItem(s: string) {
   font-size: 12px;
   color: var(--text-hint, #94a3b8);
   margin-top: -6px;
+}
+
+/* 「临时补记」提示条：把长期按医嘱吃的引导到 /dose-plan 计划页。
+   ⚠️ 文字用 ink（≥4.5:1），底色用 tint（浅色），不用 --info-color 那种填充色写字。 */
+.qf-dose-hint {
+  background: var(--bg-tint-blue, #f4f8ff);
+  border-left: 3px solid var(--info-color, #4fb6e8);
+  border-radius: var(--radius-sm, 8px);
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--info-ink, #17709b);
+}
+.qf-dose-hint a {
+  color: var(--primary-color, #c44680);
+  font-weight: 600;
+  text-decoration: none;
 }
 
 /* 心情选择按钮行 */

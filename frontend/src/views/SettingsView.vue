@@ -323,7 +323,13 @@
               <n-checkbox value="push_reminder" label="提醒事项" />
             </n-space>
           </n-checkbox-group>
-          <span style="font-size:12px;color:#999;">到达推送时间后，会推送上面勾选的内容（至少勾选一项，改完立即生效）</span>
+          <span style="font-size:12px;color:#999;">到达「每日推送时间」后，会推送上面勾选的内容（至少勾选一项，改完立即生效）</span>
+        </div>
+        <!-- 用药/补充提醒：是「到点单独推」，不并进每日看板，所以单列一个开关 -->
+        <div v-if="channelState[ch.key].configured && channelState[ch.key].enabled" class="setting-item">
+          <label>用药/补充提醒</label>
+          <n-switch v-model:value="channelState[ch.key].dose" @update:value="saveChannelPrefs(ch.key)" />
+          <span style="font-size:12px;color:#999;margin-left:8px;">按「用药/补充」里配的时间点单独推；打完卡当天就不再提醒</span>
         </div>
         <div v-if="channelState[ch.key].configured && channelState[ch.key].enabled" class="setting-item">
           <label>每日推送时间</label>
@@ -613,6 +619,7 @@ type ChannelState = {
   configured: boolean
   enabled: boolean
   types: string[]
+  dose: boolean
   time: string
   status: any
   saving: boolean
@@ -620,10 +627,10 @@ type ChannelState = {
 }
 
 const channelState = reactive<Record<string, ChannelState>>({
-  wecom: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
-  feishu: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
-  dingtalk: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
-  bark: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], time: '08:00', status: null, saving: false, testing: false },
+  wecom: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], dose: true, time: '08:00', status: null, saving: false, testing: false },
+  feishu: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], dose: true, time: '08:00', status: null, saving: false, testing: false },
+  dingtalk: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], dose: true, time: '08:00', status: null, saving: false, testing: false },
+  bark: { url: '', secret: '', placeholder: '', secretSet: false, configured: false, enabled: true, types: ['push_daily', 'push_checkup', 'push_reminder'], dose: true, time: '08:00', status: null, saving: false, testing: false },
 })
 
 const anyChannelConfigured = computed(() => pushChannelMeta.some(ch => channelState[ch.key].configured))
@@ -925,7 +932,8 @@ async function handleBackup() {
   backingUp.value = true
   backupResult.value = null
   try {
-    const res: any = await exportApi.backup(undefined)
+    // 不传目录 = 后端按「用户指定 > 共享目录/backups > …」自动挑落点（与 /backup 的注释一致）
+    const res: any = await exportApi.backup()
     if (res.code === 0) {
       const dirPath = res.data?.dir || '未知路径'
       backupResult.value = { success: true, message: `备份完成！共 ${res.data?.total_rows || 0} 条记录，${res.data?.files?.total || 0} 个文件。备份位置：${dirPath}，请手动复制该备份文件到安全位置保存。` }
@@ -1071,6 +1079,7 @@ async function loadChannel(chKey: string) {
     if (d.push_checkup !== false) types.push('push_checkup')
     if (d.push_reminder !== false) types.push('push_reminder')
     st.types = types
+    st.dose = d.push_dose !== false
     st.time = d.push_time || '08:00'
     // 地址与密钥不回显，输入框留空（重新填写才会覆盖）
     st.url = ''
@@ -1096,6 +1105,7 @@ async function loadChannels() {
       if (ch.push_checkup !== false) types.push('push_checkup')
       if (ch.push_reminder !== false) types.push('push_reminder')
       st.types = types
+      st.dose = ch.push_dose !== false
       st.time = ch.push_time || '08:00'
       st.status = ch.status || null
     }
@@ -1119,6 +1129,7 @@ async function saveChannel(chKey: string) {
       push_daily: st.types.includes('push_daily'),
       push_checkup: st.types.includes('push_checkup'),
       push_reminder: st.types.includes('push_reminder'),
+      push_dose: st.dose !== false,
       push_time: st.time,
     }
     if (st.url.trim()) payload.webhook_url = st.url.trim()
@@ -1183,6 +1194,7 @@ async function saveChannelPrefs(chKey: string) {
       push_checkup: st.types.includes('push_checkup'),
       push_daily: st.types.includes('push_daily'),
       push_reminder: st.types.includes('push_reminder'),
+      push_dose: st.dose !== false,
       push_time: st.time,
     })
   } catch (e: any) { console.error('保存推送偏好失败:', e?.message) }
