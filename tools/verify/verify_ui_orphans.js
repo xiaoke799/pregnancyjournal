@@ -9,6 +9,12 @@
  * 做法：从 index.html 出发 BFS 引用链（js/css 内部互相引用也算），
  * assets/ 里不可达的文件即孤儿。
  *
+ * ⚠️ **只能从 index.html 出发**（2026-09-30 修）：以前是「从 app/ui 下所有 *.html 出发」，
+ *    调试脚本往 app/ui 里写的临时 html（如探针的 `_tmp_dashcover_*.html`）会**引用旧 hash 的
+ *    chunk** ⇒ 那些本该是孤儿的文件全被算成"可达"，检查静默失效、还把它们当正常产物。
+ *    ⇒ 现在：① 只从 index.html 走；② app/ui 里出现 index.html 之外的 html 一律判红
+ *    （它们会随 fpk 一起发出去）。
+ *
  * 用法：node tools/verify/verify_ui_orphans.js
  * 退出码：有孤儿 = 1（提醒清理），无孤儿 = 0。
  * 清理方式：移入隔离目录（.workbuddy/trash-*），不要直接删。
@@ -21,7 +27,10 @@ const ASSETS = path.join(UI, 'assets');
 
 const assets = new Set(fs.readdirSync(ASSETS));
 const reachable = new Set();
-const queue = fs.readdirSync(UI).filter((f) => f.endsWith('.html'));
+// 只认 index.html；其余根级 html 视为**不该存在的调试产物**
+const rootHtml = fs.readdirSync(UI).filter((f) => f.endsWith('.html'));
+const strays = rootHtml.filter((f) => f !== 'index.html');
+const queue = rootHtml.filter((f) => f === 'index.html');
 
 while (queue.length) {
   const f = queue.pop();
@@ -38,7 +47,13 @@ while (queue.length) {
 
 const orphans = [...assets].filter((a) => !reachable.has(path.join('assets', a)));
 const reachableCount = assets.size - orphans.length;
-if (orphans.length === 0) {
+const fails = orphans.length + strays.length;
+if (strays.length) {
+  console.log(`⚠️ app/ui 根目录有 ${strays.length} 个「index.html 之外」的 html（调试产物，会随包发出）：`);
+  for (const s of strays) console.log('  ' + s);
+  if (!orphans.length) console.log('  ⚠️ 注意：这些文件会让"孤儿"判定失真 —— 它们引用的旧 chunk 会被当成可达。');
+}
+if (fails === 0) {
   console.log(`✅ ${reachableCount} 个产物文件全部可达（无孤儿）`);
   console.log('==================================================');
   console.log(`结果：${reachableCount} 通过 / 0 失败`);
@@ -46,12 +61,14 @@ if (orphans.length === 0) {
   process.exit(0);
 }
 
-const kb = orphans.reduce((s, a) => s + fs.statSync(path.join(ASSETS, a)).size, 0) / 1024;
-console.log(`⚠️ UI 产物有 ${orphans.length} 个孤儿文件，共 ${kb.toFixed(0)} KB（不被加载但会随包发出）：`);
-for (const a of orphans.slice(0, 20)) console.log('  ' + a);
-if (orphans.length > 20) console.log(`  … 共 ${orphans.length} 个`);
+if (orphans.length) {
+  const kb = orphans.reduce((s, a) => s + fs.statSync(path.join(ASSETS, a)).size, 0) / 1024;
+  console.log(`⚠️ UI 产物有 ${orphans.length} 个孤儿文件，共 ${kb.toFixed(0)} KB（不被加载但会随包发出）：`);
+  for (const a of orphans.slice(0, 20)) console.log('  ' + a);
+  if (orphans.length > 20) console.log(`  … 共 ${orphans.length} 个`);
+}
 console.log('清理方式：移入 .workbuddy/trash-*/ 隔离目录，跑回归确认后再清空');
 console.log('==================================================');
-console.log(`结果：${reachableCount} 通过 / ${orphans.length} 失败`);
+console.log(`结果：${reachableCount} 通过 / ${fails} 失败`);
 console.log('==================================================');
 process.exit(1);

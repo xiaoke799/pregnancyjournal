@@ -53,6 +53,12 @@
 
     <!-- ====== 4. 记录分类列表（独立滚动区域）====== -->
     <div class="list-section">
+      <!-- 今天每次会话的明细（计数器 / 计时器产生的原始记录）：汇总在下方列表里，
+           明细在这里，两者都在 ⇒ 同一天数了几次都留痕，不会被合并掉 -->
+      <SessionDetailList
+        :pregnancy-id="pregnancyStore.currentPregnancy?.id"
+        :date="selectedDate"
+      />
       <RecordList
         :date="selectedDate"
         :records="currentRecords"
@@ -467,33 +473,21 @@
       <template #action><n-button @click="showExerciseModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveExercise">保存</n-button></template>
     </n-modal>
 
-    <!-- 胎动弹窗 -->
-    <n-modal v-model:show="showFmModal" preset="card" title="记录胎动" style="max-width:400px;width:92vw;" :mask-closable="true" @after-leave="resetFmForm">
-      <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="fmForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
-        <div class="qf-row">
-          <div class="qf-group flex1"><label>胎动次数</label><n-input-number v-model:value="fmForm.count" :min="0" :max="200" placeholder="次数" style="width:100%" /></div>
-          <div class="qf-group flex1"><label>用时(分钟)</label><n-input-number v-model:value="fmForm.duration" :min="0" :max="180" :step="5" placeholder="分钟" style="width:100%" /></div>
-        </div>
-        <div class="form-hint-text">正常胎动：每小时≥3次，每天累计10次以上</div>
-        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="fmForm.note" placeholder="可选" /></div>
-      </div>
-      <template #action><n-button @click="showFmModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveFm">保存</n-button></template>
-    </n-modal>
-
-    <!-- 宫缩弹窗 -->
-    <n-modal v-model:show="showContrModal" preset="card" title="记录宫缩" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetContrForm">
-      <div class="quick-form">
-        <div class="qf-group"><label>日期</label><n-date-picker v-model:formatted-value="contrForm.date" type="date" value-format="yyyy-MM-dd" style="width:100%" /></div>
-        <div class="qf-row">
-          <div class="qf-group flex1"><label>持续时间(秒)</label><n-input-number v-model:value="contrForm.duration" :min="0" :max="300" placeholder="秒" style="width:100%" /></div>
-          <div class="qf-group flex1"><label>间隔时间(分钟)</label><n-input-number v-model:value="contrForm.interval" :min="0" :max="60" :step="0.5" placeholder="分钟" style="width:100%" /></div>
-        </div>
-        <div class="qf-group"><label>疼痛程度</label><n-radio-group v-model:value="contrForm.pain" size="small"><n-radio-button value="无感">无感</n-radio-button><n-radio-button value="轻微">轻微</n-radio-button><n-radio-button value="明显">明显</n-radio-button><n-radio-button value="剧烈">剧烈</n-radio-button></n-radio-group></div>
-        <div class="qf-group"><label>当天备注（可选）</label><n-input v-model:value="contrForm.note" placeholder="可选" /></div>
-      </div>
-      <template #action><n-button @click="showContrModal=false">取消</n-button><n-button type="primary" :loading="saving" @click="saveContr">保存</n-button></template>
-    </n-modal>
+    <!-- 胎动 / 宫缩小弹窗：已抽成共享组件（首页也要用同一份，避免两处实现漂移） -->
+    <QuickLogDialog
+      v-model:show="showFmModal"
+      type="fetal_movement"
+      :pregnancy-id="pregnancyStore.currentPregnancy?.id"
+      :date="selectedDate"
+      :note="quickLogNote"
+    />
+    <QuickLogDialog
+      v-model:show="showContrModal"
+      type="contraction"
+      :pregnancy-id="pregnancyStore.currentPregnancy?.id"
+      :date="selectedDate"
+      :note="quickLogNote"
+    />
 
     <!-- 计划弹窗 -->
     <n-modal v-model:show="showPlanModal" preset="card" title="添加计划" style="max-width:440px;width:94vw;" :mask-closable="true" @after-leave="resetPlanForm">
@@ -711,12 +705,15 @@ import {
 } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useResize } from '@/composables/useResize'
+import { useRoute } from 'vue-router'
 import { dailyRecordApi } from '@/api/daily-record'
 import { reminderApi } from '@/api/reminder'
 import dayjs from 'dayjs'
 import MiniCalendar from '@/components/record/MiniCalendar.vue'
 import RecordList from '@/components/record/RecordList.vue'
 import AddRecordDialog from '@/components/record/AddRecordDialog.vue'
+import QuickLogDialog from '@/components/record/QuickLogDialog.vue'
+import SessionDetailList from '@/components/record/SessionDetailList.vue'
 import { getMoodEmoji as moodEmojiOf, MOOD_OPTIONS as moodOptions, SLEEP_QUALITY_OPTIONS as sleepQualityOptions, EXERCISE_INTENSITY_OPTIONS as exerciseIntensityOptions, type SleepQuality, type ExerciseIntensity, isValidDateStr } from '@/utils/format'
 import StatsPanel from './StatsView/StatsPanel.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
@@ -724,10 +721,42 @@ import AppIcon from '@/components/common/AppIcon.vue'
 const pregnancyStore = usePregnancyStore()
 const { isMobile } = useResize()
 const message = useMessage()
+const route = useRoute()
 
-const selectedDate = ref(dayjs().format('YYYY-MM-DD'))
+/**
+ * 初始选中日期。
+ *
+ * ⚠️ 首页「今日记录」板块的「查看详情 →」一直带着 `?date=YYYY-MM-DD` 跳过来
+ * （`/record?date=...`），但本页**从不读 route.query** ⇒ 那个参数一直是**死的**。
+ * 平时看不出来（首页传的就是今天，与本页默认值相同），一旦从别处带日期进来就会静默落到今天，
+ * 用户以为在看 A 那天、实际看到的是今天 —— 正是本项目最忌讳的"静默错位"。
+ * 现在：带过来且合法就用它，否则（非法 / 没带）回退今天。
+ * 校验用共享的 `isValidDateStr()`，不要用 dayjs 严格模式（本项目未 extend customParseFormat，不生效）。
+ */
+const selectedDate = ref(
+  (() => {
+    const q = route.query && route.query.date
+    const s = typeof q === 'string' ? q : ''
+    return isValidDateStr(s) ? s : dayjs().format('YYYY-MM-DD')
+  })()
+)
+// 已经在记录页时再带新日期跳进来（同一路由不同 query 不会重新挂载）也要跟着切
+watch(
+  () => (route.query ? route.query.date : ''),
+  (q) => {
+    const s = typeof q === 'string' ? q : ''
+    if (isValidDateStr(s) && s !== selectedDate.value) selectedDate.value = s
+  }
+)
 const saving = ref(false)
 const currentRecords = ref<any[]>([])
+
+/**
+ * 传给共享组件 QuickLogDialog 的「当天备注」预填值。
+ * `daily_record.note` 是**按天共享的一列**（一天一行、所有类型共用），所以要预填，
+ * 否则用户只在胎动弹窗里写备注、保存时会把当天其它类型写的备注覆盖掉（纯静默丢数据）。
+ */
+const quickLogNote = computed(() => (currentRecords.value[0] && currentRecords.value[0].note) || '')
 
 // ====== 子级 Tab 切换 ======
 const activeSubTab = ref<'record' | 'stats'>('record')
@@ -815,10 +844,8 @@ const exerciseTypeOptions = [
   { label: '孕妇操', value: '孕妇操' }, { label: '骑行', value: '骑行' }, { label: '其他', value: '其他' },
 ]
 const exerciseForm = ref({ date: '', type: '散步', duration: null as number | null, intensity: '' as '' | ExerciseIntensity, note: '' })
-// 胎动
-const fmForm = ref({ date: '', count: null as number | null, duration: null as number | null, note: '' })
-// 宫缩
-const contrForm = ref({ date: '', duration: null as number | null, interval: null as number | null, pain: '轻微' as '无感' | '轻微' | '明显' | '剧烈', note: '' })
+// 胎动 / 宫缩的表单、校验与保存逻辑已移入共享组件 components/record/QuickLogDialog.vue
+// （首页也要能快捷记录同一件事，两处共用一份实现，避免日后再写一遍）
 // 计划
 // 🔴 time 的初值必须是 **null**，不能是空字符串：
 //    n-time-picker 绑的是 formatted-value，收到 '' 会在内部解析时抛
@@ -870,6 +897,12 @@ const quickTypes = [
   { value: 'medication', icon: '💊', label: '用药' },
   { value: 'habit', icon: '✅', label: '好习惯' },
   { value: 'blood_glucose', icon: '🩸', label: '血糖' },
+  // ⚠️ hCG / 尿酸 此前**只差这一行**：openQuickAdd 分支、小弹窗、表单、NOTE_FORMS 登记、
+  //    记录列表条目全都在（首页「今日记录」宫格也会显示它们），唯独「＋」快捷菜单里没有 ⇒
+  //    用户在记录页的 ＋ 里根本找不到，只能碰运气点列表里的条目。属"入口漏接"（铁律 #10 那类）。
+  //    位置与记录列表保持一致（孕期血糖 → hCG → 尿酸 → 心情），有三处顺序一致性断言守着。
+  { value: 'hcg', icon: '🧬', label: 'hCG' },
+  { value: 'uric_acid', icon: '🧪', label: '尿酸' },
   { value: 'mood', icon: '😊', label: '心情' },
   { value: 'plan', icon: '📌', label: '计划' },
   { value: 'intimacy', icon: '💑', label: '爱爱' },
@@ -986,10 +1019,11 @@ function onEditRecord(payload: { type: string; record: any }) {
 const NOTE_FORMS: Record<string, any> = {
   weight: weightForm, waist: waistForm, blood_pressure: bpForm, blood_glucose: glucoseForm,
   fetal_heart_rate: fhrForm, stool: stoolForm, temperature: tempForm, sleep: sleepForm,
-  water: waterForm, exercise: exerciseForm, fetal_movement: fmForm, contraction: contrForm,
+  water: waterForm, exercise: exerciseForm,
   intimacy: intimacyForm, hcg: hcgForm, uric_acid: uaForm, edema: edemaForm,
   discharge: dischargeForm, skin: skinForm, urination: urinationForm, medication: medForm,
 }
+// 胎动 / 宫缩不在这里：它们的表单在共享组件里，备注由组件通过 :note 预填（见 quickLogNote）
 
 // ====== 快捷添加：根据类型打开对应小弹窗 ======
 function openQuickAdd(type: string) {
@@ -1010,8 +1044,8 @@ function openQuickAdd(type: string) {
     case 'water': resetWaterForm(); waterForm.value.date = d; showWaterModal.value = true; break
     case 'diet': resetDietForm(); dietForm.value.date = d; showDietModal.value = true; break
     case 'exercise': resetExerciseForm(); exerciseForm.value.date = d; showExerciseModal.value = true; break
-    case 'fetal_movement': resetFmForm(); fmForm.value.date = d; showFmModal.value = true; break
-    case 'contraction': resetContrForm(); contrForm.value.date = d; showContrModal.value = true; break
+    case 'fetal_movement': showFmModal.value = true; break
+    case 'contraction': showContrModal.value = true; break
     case 'plan': resetPlanForm(); planForm.value.date = d; showPlanModal.value = true; break
     case 'intimacy': resetIntimacyForm(); intimacyForm.value.date = d; showIntimacyModal.value = true; break
     case 'hcg': resetHcgForm(); hcgForm.value.date = d; showHcgModal.value = true; break
@@ -1212,8 +1246,7 @@ function resetSleepForm() { sleepForm.value = { date: '', bedtime: '', waketime:
 function resetWaterForm() { waterForm.value = { date: '', value: null, note: '' } }
 function resetDietForm() { dietForm.value = { date: '', meal: '早餐', content: '' } }
 function resetExerciseForm() { exerciseForm.value = { date: '', type: '散步', duration: null, intensity: '', note: '' } }
-function resetFmForm() { fmForm.value = { date: '', count: null, duration: null, note: '' } }
-function resetContrForm() { contrForm.value = { date: '', duration: null, interval: null, pain: '轻微', note: '' } }
+// resetFmForm / resetContrForm 已随胎动·宫缩弹窗移入共享组件（组件每次打开自己重置）
 function resetPlanForm() { planForm.value = { date: '', time: null, text: '' } }
 function resetIntimacyForm() { intimacyForm.value = { date: '', count: null, hasProtection: 'no', protectionType: '', note: '' } }
 
@@ -1273,28 +1306,7 @@ async function saveExercise() {
   if (ok) showExerciseModal.value = false
 }
 
-async function saveFm() {
-  if (!fmForm.value.count) { message.warning('请输入胎动次数'); return }
-  const ok = await doUpsert({
-    record_date: fmForm.value.date,
-    fetal_movement_count: fmForm.value.count,
-    fetal_movement_duration: fmForm.value.duration || undefined,
-    note: fmForm.value.note,
-  })
-  if (ok) showFmModal.value = false
-}
-
-async function saveContr() {
-  const ok = await doUpsert({
-    record_date: contrForm.value.date,
-    contraction_count: contrForm.value.duration ? 1 : 0,
-    contraction_duration: contrForm.value.duration || undefined,  // 持续时间(秒)
-    contraction_interval: contrForm.value.interval || undefined,   // 间隔时间(分钟)
-    contraction_pain: contrForm.value.pain || undefined,           // 疼痛程度
-    note: contrForm.value.note,
-  })
-  if (ok) showContrModal.value = false
-}
+// saveFm / saveContr 已移入共享组件 QuickLogDialog.vue（首页用同一份）
 
 /**
  * 保存计划。
@@ -1605,40 +1617,10 @@ function toggleSuppItem(s: string) {
   margin: 4px 10px;
 }
 
-/* ====== 小弹窗表单通用样式 ====== */
-.quick-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.qf-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.qf-group label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary, #64748b);
-}
-
-.qf-row {
-  display: flex;
-  gap: 12px;
-}
-
-.flex1 {
-  flex: 1;
-  min-width: 0;
-}
-
-.form-hint-text {
-  font-size: 12px;
-  color: var(--text-hint, #94a3b8);
-  margin-top: -6px;
-}
+/* ====== 小弹窗表单通用样式 ======
+   .quick-form / .qf-group / .qf-row / .flex1 / .form-hint-text 已移到
+   styles/global.css（共享组件 QuickLogDialog 也要用，scoped 样式跨不过组件边界）。
+   改那里的定义即可，本页二十多个小弹窗与共享组件同步生效。 */
 
 /* 「临时补记」提示条：把长期按医嘱吃的引导到 /dose-plan 计划页。
    ⚠️ 文字用 ink（≥4.5:1），底色用 tint（浅色），不用 --info-color 那种填充色写字。 */

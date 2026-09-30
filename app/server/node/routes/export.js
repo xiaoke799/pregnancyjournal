@@ -1240,7 +1240,7 @@ const CSV_FIELDS = [
   { key: 'plan_date', label: '计划日期' },
   { key: 'habit_text', label: '习惯打卡' },
   { key: 'contraction_interval', label: '宫缩间隔(分)' },
-  { key: 'contraction_duration', label: '宫缩持续(分)' },
+  { key: 'contraction_duration', label: '宫缩持续(秒)' },
   { key: 'contraction_pain', label: '宫缩疼痛感' },
   { key: 'intimacy_record', label: '爱爱详情' },
 ];

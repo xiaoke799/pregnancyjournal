@@ -185,6 +185,19 @@ router.get('/dashboard', async function(req, res) {
       [pregnancy_id, todayStr]
     );
     var fetalMovementCount = fmResult ? fmResult.count : 0;
+    // 今天记了「几次会话」——首页卡片要写清 «N 次会话 · 共 M 次»：
+    // 统计曲线一天只取次数最高的那一次，若首页只写一个数字，用户会拿它去跟曲线比、
+    // 以为哪边算错了。会话条数（次数）与明细行数一并给出，口径一目了然。
+    var fmSessionRow = await db.queryOne(
+      'SELECT COUNT(*) as n FROM fetal_movement_session WHERE pregnancy_id = ? AND session_date = ?',
+      [pregnancy_id, todayStr]
+    );
+    var fetalMovementSessions = fmSessionRow ? fmSessionRow.n : 0;
+    var ctSessionRow = await db.queryOne(
+      'SELECT COUNT(*) as n FROM contraction_session WHERE pregnancy_id = ? AND session_date = ?',
+      [pregnancy_id, todayStr]
+    );
+    var contractionSessions = ctSessionRow ? ctSessionRow.n : 0;
     var csResult = await db.queryOne(
       'SELECT id FROM contraction_session WHERE pregnancy_id = ? AND end_time IS NULL LIMIT 1',
       [pregnancy_id]
@@ -479,6 +492,8 @@ router.get('/dashboard', async function(req, res) {
         has_pregnancy: true,
         has_today_record: hasTodayRecord,
         fetal_movement_count: fetalMovementCount,
+        fetal_movement_sessions: fetalMovementSessions,
+        contraction_sessions: contractionSessions,
         contraction_active: contractionActive,
         pregnancy: {
           id: pregnancy.id,

@@ -115,23 +115,53 @@
       <span class="eg-entry-arrow">→</span>
     </router-link>
 
-    <!-- ===== 孕期工具入口（独立全屏页：此前这两个页面没有任何入口，用户点不到）===== -->
+    <!-- ===== 胎动 / 宫缩：展示今日真实数据 + 就地快捷记录 =====
+         以前这里两张卡是**纯跳转**（点了直接进计数器全屏页），既看不到今天记了多少、
+         也没法随手补一笔 —— 用户反馈「首页相关功能是展示和快捷记录啊」。
+         现在：卡上直接显示今天的数字（读 daily_record 的汇总，计数器/计时器结束会话
+         或每记一次都会写回），并提供「记一笔」就地弹出小弹窗；
+         想用实时计数/计时器再点标题行右侧的箭头进全屏页。 -->
     <div class="tool-row">
-      <router-link to="/contraction-timer" class="tool-card">
-        <span class="tool-card-icon"><AppIcon name="timer" :size="18" /></span>
-        <div class="tool-card-body">
-          <strong>宫缩计时器</strong>
-          <span>5-1-1 规律宫缩提醒</span>
+      <div class="tool-card">
+        <div class="tool-card-head">
+          <span class="tool-card-icon"><AppIcon name="timer" :size="18" /></span>
+          <router-link to="/contraction-timer" class="tool-card-title">宫缩计时器</router-link>
+          <router-link to="/contraction-timer" class="tool-card-more" aria-label="进入宫缩计时器">›</router-link>
         </div>
-      </router-link>
-      <router-link to="/fetal-movement-counter" class="tool-card">
-        <span class="tool-card-icon">🦶</span>
-        <div class="tool-card-body">
-          <strong>胎动计数器</strong>
-          <span>实时计数 · 达标提示</span>
+        <div class="tool-card-stat" :class="{ 'is-live': contractionActive, 'is-empty': contractionStatEmpty }">
+          {{ contractionStatText }}
         </div>
-      </router-link>
+        <n-button size="tiny" type="primary" secondary @click="openQuickLog('contraction')">记一笔</n-button>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-head">
+          <span class="tool-card-icon">🦶</span>
+          <router-link to="/fetal-movement-counter" class="tool-card-title">胎动计数器</router-link>
+          <router-link to="/fetal-movement-counter" class="tool-card-more" aria-label="进入胎动计数器">›</router-link>
+        </div>
+        <div class="tool-card-stat" :class="{ 'is-empty': fetalMovementStatEmpty }">
+          {{ fetalMovementStatText }}
+        </div>
+        <n-button size="tiny" type="primary" secondary @click="openQuickLog('fetal_movement')">记一笔</n-button>
+      </div>
     </div>
+
+    <!-- 胎动 / 宫缩「快捷记一笔」——与记录页共用同一份小弹窗组件 -->
+    <QuickLogDialog
+      v-model:show="showFmQuickLog"
+      type="fetal_movement"
+      :pregnancy-id="pregnancyStore.currentPregnancy?.id"
+      :date="todayStr"
+      :note="todayRecord?.note || ''"
+    />
+    <QuickLogDialog
+      v-model:show="showContrQuickLog"
+      type="contraction"
+      :pregnancy-id="pregnancyStore.currentPregnancy?.id"
+      :date="todayStr"
+      :note="todayRecord?.note || ''"
+    />
 
     <!-- ===== 今日记录 ===== -->
     <div class="section record-section">
@@ -141,55 +171,29 @@
           {{ dashboardData?.has_today_record ? '查看详情 →' : '去记录 →' }}
         </router-link>
       </div>
-      <div v-if="todayRecord && Object.keys(todayRecord).length > 1" class="record-content">
-        <!-- 健康数据宫格：只显示健康指标，统一卡片样式 -->
+      <div v-if="healthCards.length > 0" class="record-content">
+        <!-- 健康数据宫格：只显示健康指标，统一卡片样式。
+             ⚠️ 由 healthCards 计算属性数据驱动。这里以前是 9 条并列的 v-if，
+                而外层判据却是 `Object.keys(todayRecord).length > 1`（只看「有没有任意一列」），
+                两者口径不一致 ⇒ 只记了饮水/运动/备注、或只用过一次胎动计数器
+                （daily-rollup 会补建当天记录行）时，外层判据为真、宫格一张卡都没有，
+                于是渲染出一块 **0px 高的空盒子**，连「今天还没有记录」的空态也被 v-else 挡掉。
+                （实测见 tools/verify/probe_dashboard_record_coverage.js） -->
         <div class="health-grid">
-          <!-- 体重 -->
-          <div class="hg-card" v-if="todayRecord.weight != null">
-            <span class="hg-val">{{ todayRecord.weight }}<small>kg</small></span>
-            <span class="hg-label">体重</span>
+          <div class="hg-card" v-for="c in healthCards" :key="c.key">
+            <span class="hg-icon" v-if="c.icon">{{ c.icon }}</span>
+            <span class="hg-val">{{ c.value }}<small v-if="c.unit">{{ c.unit }}</small></span>
+            <span class="hg-label">{{ c.label }}</span>
           </div>
-          <!-- 心情 -->
-          <div class="hg-card" v-if="todayRecord.mood != null">
-            <span class="hg-icon">{{ moodEmoji(todayRecord.mood) }}</span>
-            <span class="hg-val">{{ moodLabel(todayRecord.mood) }}</span>
-            <span class="hg-label">心情</span>
-          </div>
-          <!-- 胎心 -->
-          <div class="hg-card" v-if="todayRecord.fetal_heart_rate != null">
-            <span class="hg-val">{{ todayRecord.fetal_heart_rate }}<small>bpm</small></span>
-            <span class="hg-label">胎心</span>
-          </div>
-          <!-- 睡眠 -->
-          <div class="hg-card" v-if="todayRecord.sleep_hours != null || todayRecord.sleep_quality">
-            <span class="hg-val">{{ todayRecord.sleep_hours ?? '--' }}<small>h</small></span>
-            <span class="hg-label">睡眠 {{ sleepQualityLabel(todayRecord.sleep_quality) }}</span>
-          </div>
-          <!-- 血压 -->
-          <div class="hg-card" v-if="todayRecord.blood_pressure_systolic">
-            <span class="hg-val">{{ todayRecord.blood_pressure_systolic }}/{{ todayRecord.blood_pressure_diastolic || '--' }}</span>
-            <span class="hg-label">血压</span>
-          </div>
-          <!-- 体温 -->
-          <div class="hg-card" v-if="todayRecord.body_temperature">
-            <span class="hg-val">{{ todayRecord.body_temperature }}<small>°C</small></span>
-            <span class="hg-label">体温</span>
-          </div>
-          <!-- 血糖（优先显示空腹，多值时合并） -->
-          <div class="hg-card" v-if="hasGlucose">
-            <span class="hg-val">{{ glucoseDisplayText }}</span>
-            <span class="hg-label">血糖</span>
-          </div>
-          <!-- 尿酸 -->
-          <div class="hg-card" v-if="todayRecord.uric_acid != null">
-            <span class="hg-val">{{ todayRecord.uric_acid }}<small>μmol/L</small></span>
-            <span class="hg-label">尿酸</span>
-          </div>
-          <!-- HCG -->
-          <div class="hg-card" v-if="todayRecord.hcg_value != null">
-            <span class="hg-val">{{ todayRecord.hcg_value }}</span>
-            <span class="hg-label">HCG</span>
-          </div>
+        </div>
+      </div>
+      <!-- 有记录、但没有任何「健康指标」能上宫格（饮水/运动/便便/症状/备注…，或只用过计数器）：
+           说清楚「今天已经记了什么」，而不是给一个空盒子，也不能谎称「今天还没有记录」。 -->
+      <div v-else-if="hasTodayRecord" class="record-content">
+        <div class="other-recorded">
+          <span class="or-lead">今天已记录</span>
+          <span class="or-chip" v-for="t in otherRecordedItems" :key="t">{{ t }}</span>
+          <span class="or-hint">健康数据（体重 / 血压 / 胎心…）还没填，点右上角去补 →</span>
         </div>
       </div>
       <router-link v-else :to="{ path: '/record', query: { date: todayStr } }" class="empty-record">
@@ -306,7 +310,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { NInput, NButton, NTag, NDatePicker, NSelect, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useGestationalAge } from '@/composables/useGestationalAge'
@@ -321,6 +325,7 @@ import { calculateGestationalAge } from '@/utils/gestational'
 import { getMoodEmoji as moodEmojiOf, sleepQualityLabel } from '@/utils/format'
 import dayjs from 'dayjs'
 import DoseTodayCard from '@/components/dose/DoseTodayCard.vue'
+import QuickLogDialog from '@/components/record/QuickLogDialog.vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { LineChart } from 'echarts/charts'
@@ -644,6 +649,60 @@ function todoIcon(item: any): string {
 
 const todayStr = dayjs().format('YYYY-MM-DD')
 
+// ===== 胎动 / 宫缩卡片的「展示 + 快捷记录」=====
+// 数值一律读 today_record（daily_record 的汇总列）。口径说明：
+//   · 计数器/计时器：每记一次以及结束会话时，后端 daily-rollup 都会把当天所有会话汇总写回
+//     ⇒ 汇总列拿到的就是「今天一共数了多少」；
+//   · 只手填、没用过计数器的用户：汇总列就是他自己填的值，同样正确。
+// 所以不需要在前端再调会话接口求和，少一次请求也不会两处数字打架。
+const showFmQuickLog = ref(false)
+const showContrQuickLog = ref(false)
+
+function openQuickLog(type: 'fetal_movement' | 'contraction') {
+  if (type === 'fetal_movement') showFmQuickLog.value = true
+  else showContrQuickLog.value = true
+}
+
+/** 宫缩正在进行（计时器还没点结束）——后端 dashboard 已算好这个标志，此前前端 0 处引用 */
+const contractionActive = computed(() => !!dashboardData.value?.contraction_active)
+
+const fetalMovementStatText = computed(() => {
+  const r: any = todayRecord.value
+  const c = r?.fetal_movement_count
+  if (c == null || c === '') return '今天还没记 · 点「记一笔」或右侧进计数器'
+  const d = r?.fetal_movement_duration
+  const n = Number(dashboardData.value?.fetal_movement_sessions || 0)
+  // 会话数写出来：统计曲线一天只取次数最高的那一次，首页写清「几次会话 · 共几次」，
+  // 用户拿去跟曲线比时不会以为有一边算错了
+  const head = n > 1 ? `今日 ${n} 次会话 · 共 ${c} 次` : `今日 ${c} 次`
+  return head + (d ? ` · 用时 ${d} 分钟` : '')
+})
+const fetalMovementStatEmpty = computed(() => {
+  const c: any = todayRecord.value?.fetal_movement_count
+  return c == null || c === ''
+})
+
+const contractionStatText = computed(() => {
+  if (contractionActive.value) return '计时中…（点右侧继续）'
+  const r: any = todayRecord.value
+  const c = r?.contraction_count
+  if (c == null || c === '') return '今天还没记 · 点「记一笔」或右侧进计时器'
+  const n = Number(dashboardData.value?.contraction_sessions || 0)
+  let t = n > 1 ? `今日 ${n} 次会话 · 共 ${c} 次` : `今日 ${c} 次`
+  if (r?.contraction_duration) t += ` · 持续 ${r.contraction_duration} 秒`
+  if (r?.contraction_interval) t += ` · 间隔 ${r.contraction_interval} 分`
+  return t
+})
+const contractionStatEmpty = computed(() => {
+  const c: any = todayRecord.value?.contraction_count
+  return c == null || c === ''
+})
+
+// 快捷记一笔保存后，本页的「今日」数字要立刻跟着变
+onMounted(() => window.addEventListener('record-added', loadDashboard))
+onUnmounted(() => window.removeEventListener('record-added', loadDashboard))
+
+
 // ⚠️ 这里曾有第三份睡眠质量映射（中文↔英文），且兜底返回 '一般' ——
 //    于是「没记质量」会被显示成「一般」，而记录列表/统计面板的兜底各不相同。
 //    现已收口到 utils/format 的唯一真源（铁律 #34），本页直接用共享函数。
@@ -666,6 +725,103 @@ const glucoseDisplayText = computed(() => {
 
 const lmpDate = computed(() => pregnancyStore.currentPregnancy?.last_period_date)
 
+/** 今天到底有没有记录行（后端按 `today_record.id` 判的，前端只读同一个标志，不自己再判一次）。 */
+const hasTodayRecord = computed(() => !!dashboardData.value?.has_today_record)
+
+/**
+ * 首页「今日记录」宫格要显示的卡片 —— **数据驱动，唯一真源**。
+ *
+ * 这里以前是模板里 9 条并列的 `v-if="todayRecord.xxx != null"`，和外层判据各说各话；
+ * 现在收成一份数组，卡片数量 = 数组长度，模板不再自己判断。
+ * 判定条件逐条照搬原来的写法（含 `!= null` 与真值判断的区别），行为不变。
+ *
+ * ⚠️ 只放「健康指标」。其余类别（饮水/运动/症状/…）不上宫格，
+ *    但必须在这块板块里露名字，见 otherRecordedItems —— 否则板块会变成空盒子。
+ */
+const healthCards = computed<Array<{ key: string; icon?: string; value: any; unit?: string; label: string }>>(() => {
+  const r: any = todayRecord.value
+  if (!r) return []
+  const cards: Array<{ key: string; icon?: string; value: any; unit?: string; label: string }> = []
+  if (r.weight != null) {
+    cards.push({ key: 'weight', value: r.weight, unit: 'kg', label: '体重' })
+  }
+  if (r.mood != null) {
+    cards.push({ key: 'mood', icon: moodEmoji(r.mood), value: moodLabel(r.mood), label: '心情' })
+  }
+  if (r.fetal_heart_rate != null) {
+    cards.push({ key: 'fetal_heart_rate', value: r.fetal_heart_rate, unit: 'bpm', label: '胎心' })
+  }
+  if (r.sleep_hours != null || r.sleep_quality) {
+    const q = sleepQualityLabel(r.sleep_quality)
+    cards.push({ key: 'sleep', value: r.sleep_hours ?? '--', unit: 'h', label: q ? '睡眠 ' + q : '睡眠' })
+  }
+  if (r.blood_pressure_systolic) {
+    cards.push({ key: 'blood_pressure', value: `${r.blood_pressure_systolic}/${r.blood_pressure_diastolic || '--'}`, label: '血压' })
+  }
+  if (r.body_temperature) {
+    cards.push({ key: 'body_temperature', value: r.body_temperature, unit: '°C', label: '体温' })
+  }
+  if (hasGlucose.value) {
+    cards.push({ key: 'blood_glucose', value: glucoseDisplayText.value, label: '血糖' })
+  }
+  if (r.uric_acid != null) {
+    cards.push({ key: 'uric_acid', value: r.uric_acid, unit: 'μmol/L', label: '尿酸' })
+  }
+  if (r.hcg_value != null) {
+    cards.push({ key: 'hcg', value: r.hcg_value, label: 'HCG' })
+  }
+  return cards
+})
+
+function parseJsonArray(v: any): any[] {
+  try {
+    const a = JSON.parse(v || '[]')
+    return Array.isArray(a) ? a : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 「非健康指标」的记录类别里，今天哪些有数据 —— 给空宫格时兜底展示用。
+ *
+ * ⚠️ label 逐字抄自记录页 `RecordList.allCategories`（饮水/饮食备注/皮肤状况/排尿情况…），
+ *    两边必须一一对应，否则首页写的名字和记录页对不上。
+ *    `verify_record_entrypoints.js` 有断言盯着这件事：记录页每新增一个类别，
+ *    这里不跟上就会红（防止首页悄悄漏掉一整类）。
+ *
+ * 不在这里列的：9 个健康指标（上面宫格）；计划（在「今日待办」板块里，且它的"完成」
+ * 是待办语义，不适合当普通记录列出来）。
+ *
+ * 胎动 / 宫缩虽然下面各有一张工具卡，也照样列 —— 它们确实写回了当天的 daily_record
+ * （见后端 services/daily-rollup.js），只说「今天已记录」却不说是哪两类，读起来是断的。
+ */
+const OTHER_RECORD_CATEGORIES: Array<{ label: string; has: (r: any) => boolean }> = [
+  { label: '胎动', has: r => !!(r.fetal_movement_count || r.fetal_movement_duration) },
+  { label: '宫缩', has: r => !!(r.contraction_duration || r.contraction_interval) },
+  { label: '三围', has: r => (r.bust != null && r.bust !== '') || (r.waist != null && r.waist !== '') || (r.hip != null && r.hip !== '') },
+  { label: '水肿', has: r => r.edema_level != null && r.edema_level !== '' },
+  { label: '症状', has: r => parseJsonArray(r.symptoms).length > 0 },
+  { label: '分泌物', has: r => r.vaginal_discharge != null && r.vaginal_discharge !== '' },
+  { label: '皮肤状况', has: r => r.skin_condition != null && r.skin_condition !== '' },
+  { label: '排尿情况', has: r => r.urination_frequency != null && r.urination_frequency !== '' },
+  { label: '便便', has: r => !!r.stool_record },
+  { label: '饮水', has: r => !!r.water_intake },
+  { label: '饮食备注', has: r => !!r.diet_note },
+  { label: '运动', has: r => !!(r.exercise_type || r.exercise_duration || r.exercise_intensity) },
+  { label: '营养补充', has: r => !!r.supplement_record },
+  { label: '用药', has: r => parseJsonArray(r.medication).length > 0 },
+  { label: '好习惯', has: r => !!r.habit_text },
+  { label: '爱爱', has: r => !!(r.intimacy_record || r.intimacy_note) },
+  { label: '备注', has: r => !!r.note },
+]
+
+const otherRecordedItems = computed<string[]>(() => {
+  const r: any = todayRecord.value
+  if (!r) return []
+  return OTHER_RECORD_CATEGORIES.filter(c => c.has(r)).map(c => c.label)
+})
+
 /**
  * 是不是「计划」条目。
  * 两种来源：① 新的计划存在待办表（reminder_type='plan'）；② 历史计划曾是当天记录的
@@ -680,37 +836,59 @@ const todayCount = computed(() => todayTodos.value.filter((t: any) => t.days_unt
 /** 孕期计划：今天之后的（含产检安排） */
 const upcomingCount = computed(() => todayTodos.value.filter((t: any) => t.days_until !== 0).length)
 
-/** 判断该条目是否可在首页看板直接完成（计划+手动提醒可以，产检不行） */
+/**
+ * 判断该条目是否可在首页看板直接完成（计划+手动提醒可以，产检不行）。
+ *
+ * ⚠️ **历史计划**（存在 `daily_record.plan_text` 里的那些）只有"今天这一条"能在首页完成：
+ *    它的完成态是当天记录上的一列 `is_plan_done` —— **一天一个布尔**，不是待办表里的一行。
+ *    所以在未来/过去那几天的历史计划上点「完成」，实际只会把**今天**标成已完成（语义是错的）。
+ *    新计划都已存进待办表（`reminder_type='plan'`）、一条一状态，不受这个限制。
+ */
 function canCompleteOnDashboard(item: any): boolean {
   const t = item.type || ''
-  // 计划项 和 手动提醒 可以在首页完成
-  if (t === 'plan' || item.id === 'plan_today') return true
-  // reminder 表的条目（无 type 或 type=manual）可以完成
+  // 历史计划（plan_text）：只有今天这条能在首页完成
+  if (t === 'plan') return item.trigger_date === todayStr || item.id === 'plan_today'
+  // 待办表里的条目（新计划 reminder_type='plan' / 手动提醒）：一条一状态，随时可完成
   if (!t || t === 'manual' || t === 'reminder') return true
-  // 产检相关：去产检页完成
+  // 产检相关（产检提醒 / 自定义产检）：去产检页完成
   return false
 }
 
 async function completeTodo(item: any) {
-  try {
-    const type = item.type || ''
-    // 1) 计划项 → 更新 daily_record 的 is_plan_done = 1
-    if (type === 'plan' || item.id === 'plan_today') {
-      const recordId = dashboardData.value?.today_record?.id
-      if (recordId) {
-        await client.put(`/daily-records/${recordId}`, { is_plan_done: 1 })
-      }
+  const type = item.type || ''
+  // 1) 历史计划 → 写当天记录的 is_plan_done
+  if (type === 'plan') {
+    const recordId = dashboardData.value?.today_record?.id
+    if (!recordId) {
+      // 🔴 以前这里是 `if (recordId) { … }`：不成立时**什么都不写**，却照样走到下面提示「已完成」
+      //    —— 纯假成功（用户以为标上了、刷新一下又回来了）。现在直接告诉他为什么不行。
+      message.error('今天还没有任何记录，暂时无法标记计划完成')
+      return
     }
-    // 2) 手动提醒 → 标记完成
-    else if (item.id && !type.startsWith('checkup')) {
+    try {
+      await client.put(`/daily-records/${recordId}`, { is_plan_done: 1 })
+    } catch (e: any) {
+      message.error('操作失败: ' + (e?.message || ''))
+      return
+    }
+  }
+  // 2) 待办表条目（手动提醒 / 新计划）→ 标记这一条完成
+  //    ⚠️ 只认待办表的两种；自定义产检的 id 是 `custom_xxx`，拿它去 PUT /reminders 必然失败，
+  //    所以判据与 canCompleteOnDashboard 保持一致（不再用 `!type.startsWith('checkup')` 这种松条件）。
+  else if (type === 'reminder' || type === 'manual' || !type) {
+    if (!item.id) { message.error('这条待办缺少 id，无法完成'); return }
+    try {
       await reminderApi.complete(item.id)
+    } catch (e: any) {
+      message.error('操作失败: ' + (e?.message || ''))
+      return
     }
-    // 3) 产检类型 → 不在首页处理（去产检页完成）
-    else { return }
+  }
+  // 3) 产检类型 → 不在首页处理（去产检页完成）
+  else { return }
 
-    await loadDashboard()
-    message.success('已完成')
-  } catch (e: any) { message.error('操作失败: ' + (e?.message || '')) }
+  await loadDashboard()
+  message.success('已完成')
 }
 
 async function quickAddReminder() {
@@ -1099,7 +1277,9 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .eg-entry-body span { font-size: 12px; color: #888; margin-top: 2px; }
 .eg-entry-arrow { font-size: 18px; color: #7c5cbf; font-weight: 700; }
 
-/* ===== 孕期工具入口（宫缩计时器 / 胎动计数器）===== */
+/* ===== 胎动 / 宫缩卡片：展示今日数据 + 快捷记录 =====
+   ⚠️ 卡片不再是整体 router-link（里面有按钮，套一层链接会变成嵌套可点区域）。
+      进全屏计数器/计时器改由标题右侧的「›」承担。配色沿用原卡片（浅粉→浅紫渐变）。 */
 .tool-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1108,23 +1288,49 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 }
 .tool-card {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   padding: 12px;
   border-radius: 12px;
-  text-decoration: none;
-  color: inherit;
   background: linear-gradient(135deg, #fdf1f5, #f2f0fd);
   border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
   min-width: 0;
 }
-.tool-card:active { transform: scale(0.98); }
-.tool-card-icon { font-size: 24px; flex-shrink: 0; }
-.tool-card-body { display: flex; flex-direction: column; min-width: 0; }
-.tool-card-body strong { font-size: 14px; color: #333; }
-.tool-card-body span { font-size: 11px; color: #888; line-height: 1.3; margin-top: 2px; }
+.tool-card-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tool-card-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+.tool-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-card-title:hover { color: var(--primary-color, #c44680); }
+.tool-card-more {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+  color: #7c5cbf;
+  text-decoration: none;
+  padding: 0 4px;
+}
+.tool-card-more:hover { color: var(--primary-color, #c44680); }
+.tool-card-stat {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #4b5563;
+  /* 留最小高度：没数据时卡片不至于比有数据时矮一截、两卡高度不一致 */
+  min-height: 32px;
+}
+.tool-card-stat.is-empty { color: #9aa3af; }
+.tool-card-stat.is-live { color: var(--primary-color, #c44680); font-weight: 600; }
+.tool-card :deep(.n-button) { align-self: flex-start; }
 
 .record-content { display: flex; flex-direction: column; gap: 10px; }
 
@@ -1147,6 +1353,18 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .hg-val { font-size: 16px; font-weight: 700; color: var(--text-color, #1e293b); }
 .hg-val small { font-size: 11px; font-weight: 500; color: var(--text-hint, #94a3b8); margin-left: 1px; }
 .hg-label { font-size: 11px; color: var(--text-hint, #94a3b8); text-align: center; }
+
+/* 有记录、但没填任何健康指标时的兜底：把「今天记了什么」列出来，不留空盒子 */
+.other-recorded {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 12px; border-radius: 10px; background: #fdf4ff;
+}
+.or-lead { font-size: 12px; color: var(--text-secondary, #64748b); font-weight: 600; }
+.or-chip {
+  font-size: 12px; padding: 2px 9px; border-radius: 999px;
+  background: #fff; color: var(--primary-color, #c44680); border: 1px solid #f5d0e6;
+}
+.or-hint { flex-basis: 100%; font-size: 11px; color: var(--text-hint, #94a3b8); margin-top: 2px; }
 
 .empty-record {
   display: flex; flex-direction: column; align-items: center; gap: 6px;

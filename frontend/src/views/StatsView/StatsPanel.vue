@@ -111,12 +111,18 @@
         :table-data="tableData('fhr', 'fetal_heart_rate')" />
 
       <!-- 胎动 -->
+      <!-- ⚠️ 口径：一天可能记好几次会话（记录页会把每一次都列出来、可以往回翻），
+           但曲线一天只画**一个点** —— 取当天**次数最高的那一次会话**。
+           把一天几次相加会抬高曲线、也没有临床意义（胎动看的是单次计数）。 -->
       <MetricCard v-if="hasData('fm')" title="胎动次数" unit="次" color="#10b981"
+        hint="每天一个点：取当天次数最高的那一次会话（当天只用表格手填的日子，用手填值）"
         :dates="chartDates" :values="chartValues('fetal_movement_count')"
         :table-data="tableData('fm', 'fetal_movement_count', { extra: 'fetal_movement_duration', extraLabel: '用时(分)' })" />
 
       <!-- 宫缩：主曲线用「持续时间(秒)」；间隔与疼痛放在表格里（单位不同，不共用一条 Y 轴） -->
+      <!-- 口径同胎动：每天一个点，取当天**条数最多的那一次会话**，持续/间隔都取同一次 -->
       <MetricCard v-if="hasData('contraction')" title="宫缩持续时间" unit="秒" color="#dc2626"
+        hint="每天一个点：取当天条数最多的那一次会话（持续与间隔都来自同一次，不会前后不一致）"
         :dates="chartDates" :values="chartValues('contraction_duration')"
         :table-data="tableData('contraction', 'contraction_duration', { extra: 'contraction_interval', extraLabel: '间隔(分)', noteField: 'contraction_pain' })" />
     </div>
@@ -166,6 +172,11 @@ const PERIODS: Array<{ value: Period; label: string; days: number | null; short:
 const loading = ref(false)
 /** 该孕期的全部记录（一次取回，切时段在本地过滤 —— 顺带让「孕期增重」的基准稳定） */
 const allRecords = ref<any[]>([])
+/**
+ * 每天「次数最高的那一次会话」（日期 → 该次会话的次数/持续/间隔）。
+ * 只有「当天有会话」的日期在里面；只手填的日子沿用 daily_record 的值。
+ */
+const sessionDaily = ref<Record<string, any>>({})
 const period = ref<Period>('30d')
 const periodOptions = PERIODS
 
@@ -175,6 +186,41 @@ const records = computed(() => {
   if (!p || p.days == null) return allRecords.value
   const start = dayjs().subtract(p.days - 1, 'day').format('YYYY-MM-DD')
   return allRecords.value.filter((r: any) => String(r.record_date || '') >= start)
+})
+
+/**
+ * 画图 / 列表用的记录：**只在胎动、宫缩这两项上**换成「当天次数最高的那一次会话」的值。
+ *
+ * 用户要求：「统计里面只统计今天最高的一个值来做曲线」。
+ * 理由：一天可能记好几次会话（且每条都要保留、用户可以往回翻），
+ * 把一天几次**相加**画到曲线上点会被抬高，也失去临床意义 ——
+ * 胎动 / 宫缩看的都是**单次**计数。
+ *
+ * 实现上把「取哪一次」放在后端（`/daily-records/session-daily`），这里只做**字段覆盖**：
+ *   · 当天有会话 ⇒ 用那一次会话的次数 / 持续 / 间隔（三项同源，不会出现
+ *     「次数来自 A 次会话、间隔来自 B 次会话」这种前后不一致）；
+ *   · 当天没会话（用户只手填）⇒ 原样沿用 daily_record 里的手填值，不会漏点。
+ * 其它指标（体重 / 血压 / …）字段完全没动，曲线不受影响。
+ */
+const chartRecords = computed(() => {
+  const daily = sessionDaily.value || {}
+  return records.value.map((r: any) => {
+    const rep = daily[String(r.record_date || '')]
+    if (!rep) return r
+    const out: any = { ...r }
+    const fm = rep.fetal_movement
+    if (fm) {
+      out.fetal_movement_count = fm.count
+      if (fm.duration_minutes != null) out.fetal_movement_duration = fm.duration_minutes
+    }
+    const ct = rep.contraction
+    if (ct) {
+      out.contraction_count = ct.count
+      if (ct.duration_seconds != null) out.contraction_duration = ct.duration_seconds
+      if (ct.interval_minutes != null) out.contraction_interval = ct.interval_minutes
+    }
+    return out
+  })
 })
 
 const periodLabel = computed(() => {
@@ -221,6 +267,15 @@ async function loadData() {
       list.sort((a: any, b: any) => (a.record_date || '').localeCompare(b.record_date || ''))
       allRecords.value = list
     }
+    // 每天「次数最高的那一次会话」——同样一次取回（胎动 / 宫缩曲线只取一个点用）。
+    // 取不到就退化成「全部用手填值」，不能因为这一个请求失败就让整页统计空白。
+    try {
+      const sd: any = await dailyRecordApi.getSessionDaily(pid)
+      sessionDaily.value = (sd && sd.code === 0 && sd.data) ? sd.data : {}
+    } catch (e) {
+      console.error('[Stats] session-daily error:', e)
+      sessionDaily.value = {}
+    }
   } catch (e) {
     console.error('[Stats] load error:', e)
   } finally {
@@ -241,12 +296,15 @@ onMounted(() => loadData())
 watch(() => pregnancyStore.currentPregnancy?.id, (id) => { if (id) loadData() })
 
 // ====== 图表数据提取 ======
+// ⚠️ 一律走 `chartRecords`（而不是 `records`）：它只在胎动 / 宫缩两项上换成了
+//    「当天次数最高的那一次会话」的值，其它字段与 records 完全相同。
+//    日期序列长度与顺序也一致，所以各指标共用同一份 chartDates 不会错位。
 const chartDates = computed(() =>
-  records.value.map((r: any) => dayjs(r.record_date).format('MM/DD'))
+  chartRecords.value.map((r: any) => dayjs(r.record_date).format('MM/DD'))
 )
 
 function chartValues(field: string): (number | null)[] {
-  return records.value.map((r: any) => {
+  return chartRecords.value.map((r: any) => {
     const v = r[field]
     if (v == null || v === '') return null
     const n = Number(v)
@@ -255,7 +313,7 @@ function chartValues(field: string): (number | null)[] {
 }
 
 function hasData(metric: string): boolean {
-  const any = (fn: (r: any) => boolean) => records.value.some(fn)
+  const any = (fn: (r: any) => boolean) => chartRecords.value.some(fn)
   switch (metric) {
     case 'weight': return any((r) => r.weight != null)
     case 'bp': return any((r) => r.blood_pressure_systolic != null || r.blood_pressure_diastolic != null)
@@ -328,7 +386,9 @@ function tableData(
     noteField?: string
   }
 ): TableCol[] {
-  return records.value
+  // 同样走 chartRecords：胎动 / 宫缩表格里的数字与曲线**同源**，
+  // 不会出现「曲线一个值、表格另一个值」这种自相矛盾
+  return chartRecords.value
     .filter((r: any) => {
       if (opts?.filter) return opts.filter(r)
       if (opts?.cols) return opts.cols.some((c) => r[c.key] != null)

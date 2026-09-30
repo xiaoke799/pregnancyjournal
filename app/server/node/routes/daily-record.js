@@ -7,6 +7,8 @@ const db = require('../db');
 const config = require('../config');
 const logger = require('../logger');
 const heic = require('../services/heic');
+// 会话（胎动计数 / 宫缩计时）→ 当天记录的汇总写回 + 明细查询
+const rollup = require('../services/daily-rollup');
 
 // ===== 版本标记：部署后可通过日志确认是否加载了最新代码 =====
 // ⚠️ 不要在这里写死版本号（曾因写死旧版本号导致「升级没生效」的误判）；
@@ -393,6 +395,53 @@ router.get('/daily-records/by-date/:record_date', (req, res) => {
     res.json({ code: 0, data: shape(record), message: 'success' });
   } catch (e) {
     logger.error('daily-record', `GET /daily-records/by-date error: ${e.message}`);
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
+/**
+ * 当天「胎动 / 宫缩」每次会话的明细（只读）。
+ *
+ * 为什么要有它：计数器 / 计时器把明细存在 `*_session` 与 `*` 表，
+ * 而记录页原来只读 `daily_record` 一行汇总 ⇒ 用户同一天数了三次胎动，
+ * 页面上只能看到一个合并后的总数，看不到「几点到几点数了多少次」。
+ * 用户明确要求「都要记录下来」，所以明细单独取出来给它展示。
+ *
+ * ⚠️ 路由必须注册在 `GET /daily-records/:record_date` **之前**：
+ * 否则 `session-detail` 会被当成一个 record_date 匹配走，永远返回「记录不存在」。
+ */
+/**
+ * 每天「次数最高的那一次会话」—— 统计页画胎动 / 宫缩曲线用。
+ *
+ * 为什么统计不直接用 /daily-records 里的汇总值：一天可能有好几次会话
+ *（用户要求每条都保留、可以往回翻），把一天几次**相加**画曲线会把点抬高，
+ * 也失去临床意义 —— 胎动 / 宫缩看的都是单次计数。所以统计每天取一个点：
+ * 当天次数最高的那次会话，持续 / 间隔取同一次的值。
+ * 当天没有会话（只手填）的日期不会出现在结果里，前端沿用 daily_record 的手填值。
+ *
+ * ⚠️ 同样必须注册在 `GET /daily-records/:record_date` 之前。
+ */
+router.get('/daily-records/session-daily', (req, res) => {
+  try {
+    const { pregnancy_id, start_date, end_date } = req.query;
+    if (!pregnancy_id) return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
+    const map = rollup.getDailyRepresentative(pregnancy_id, start_date || null, end_date || null);
+    res.json({ code: 0, data: map, message: 'success' });
+  } catch (e) {
+    logger.error('daily-record', `GET /daily-records/session-daily error: ${e.message}`);
+    res.json({ code: 1001, data: null, message: e.message });
+  }
+});
+
+router.get('/daily-records/session-detail', (req, res) => {
+  try {
+    const { pregnancy_id, date } = req.query;
+    if (!pregnancy_id) return res.json({ code: 1001, data: null, message: 'pregnancy_id 为必填项' });
+    const dateStr = date && config.isValidDate(date) ? date : config.localToday();
+    const detail = rollup.getSessionDetail(pregnancy_id, dateStr);
+    res.json({ code: 0, data: detail, message: 'success' });
+  } catch (e) {
+    logger.error('daily-record', `GET /daily-records/session-detail error: ${e.message}`);
     res.json({ code: 1001, data: null, message: e.message });
   }
 });
