@@ -149,7 +149,12 @@ while ($queue.Count -gt 0) {
     $p = Join-Path $assetsDir $f
     if (-not (Test-Path $p)) { continue }
     $c = [System.IO.File]::ReadAllText($p)
-    $refs = [regex]::Matches($c, '[\./"]([A-Za-z0-9_-]+-[A-Za-z0-9_-]{8,12}\.(?:js|css))["'']')
+    # ⚠️ 字符类里**必须允许 `.`**：Vite 对被两个以上 chunk 共享的 `.vue` 组件会产出
+    #    `Foo.vue_vue_type_script_setup_true_lang-<hash>.js` 这种**文件名带点**的 chunk。
+    #    旧的 `[A-Za-z0-9_-]+` 匹配不到 ⇒ 它被当成冗余移出包 ⇒ 运行时 404、页面白屏。
+    #    2026-09-30 实测：QuickLogDialog 被 DashboardView / RecordView 共享，正是这种形态，
+    #    且因为 `$assetCount -lt 30` 之类的数量断言够不着，Step6 一路"验证通过"。
+    $refs = [regex]::Matches($c, '[\./"]([A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8,12}\.(?:js|css))["'']')
     foreach ($r in $refs) {
         $n = $r.Groups[1].Value
         if (Test-Path (Join-Path $assetsDir $n)) { $queue.Enqueue($n) }
@@ -159,14 +164,31 @@ $removed = 0
 # ⚠️ 用「移动到隔离目录」而不是 Remove-Item：
 # ① 这是**构建产物**，误删顶多重编一次，但直接删会触发部分环境的删除护栏（fail-closed 直接中断打包）；
 # ② 移走后仍可回收，出问题能对照。隔离目录在仓库根的 .trash/ 下（已 gitignored）。
+# ⚠️ 搬之前先做 **fail-closed 自检**：待搬的文件若仍被「剩下的产物」或 index.html 引用，
+#    说明上面的依赖图漏了它（正则写窄 / Vite 换了命名），搬走就等于发出一个白屏包。
+#    这种情况必须**当场中断打包**，而不是靠 Step6 的数量断言兜底（它够不着）。
 $assetsTrash = $null
-Get-ChildItem $assetsDir -File | ForEach-Object {
-    if (-not $keep.Contains($_.Name)) {
-        if (-not $assetsTrash) {
-            $assetsTrash = Join-Path $PkgDir ".trash\ui-assets-$(Get-Date -Format yyyyMMdd-HHmmss)"
-            New-Item -ItemType Directory -Force -Path $assetsTrash | Out-Null
+$toRemove = @(Get-ChildItem $assetsDir -File | Where-Object { -not $keep.Contains($_.Name) })
+if ($toRemove.Count -gt 0) {
+    $scanFiles = @(Get-ChildItem $assetsDir -File | Where-Object { $keep.Contains($_.Name) } | ForEach-Object { $_.FullName })
+    $scanFiles += $indexHtml
+    $misjudged = @()
+    foreach ($f in $toRemove) {
+        foreach ($s in $scanFiles) {
+            if ([System.IO.File]::ReadAllText($s).Contains($f.Name)) {
+                $misjudged += "$($f.Name)  ← 仍被 $([System.IO.Path]::GetFileName($s)) 引用"
+                break
+            }
         }
-        Move-Item $_.FullName -Destination (Join-Path $assetsTrash $_.Name) -Force
+    }
+    if ($misjudged.Count -gt 0) {
+        throw ("冗余清理误判（搬走这些文件会让页面白屏，已中止打包）：`n  " + ($misjudged -join "`n  ") +
+               "`n  ⇒ 请修 Step 1.5 的依赖图正则，不要靠 -Force 硬过。")
+    }
+    $assetsTrash = Join-Path $PkgDir ".trash\ui-assets-$(Get-Date -Format yyyyMMdd-HHmmss)"
+    New-Item -ItemType Directory -Force -Path $assetsTrash | Out-Null
+    foreach ($f in $toRemove) {
+        Move-Item $f.FullName -Destination (Join-Path $assetsTrash $f.Name) -Force
         $removed++
     }
 }
