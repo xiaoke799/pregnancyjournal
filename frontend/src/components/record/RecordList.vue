@@ -38,7 +38,14 @@
 import { ref, computed, h, watch, onMounted, onUnmounted } from 'vue'
 import { dailyRecordApi } from '@/api/daily-record'
 import { usePregnancyStore } from '@/stores/pregnancy'
-import { getMoodEmoji as moodEmojiOf, normalizeSleepQuality, sleepQualityLabel, normalizeContractionPain } from '@/utils/format'
+import {
+  getMoodEmoji as moodEmojiOf,
+  normalizeSleepQuality,
+  sleepQualityLabel,
+  normalizeContractionPain,
+  hasFetalMovementData,
+  hasContractionData,
+} from '@/utils/format'
 import AppIcon from '@/components/common/AppIcon.vue'
 
 const props = defineProps<{
@@ -242,8 +249,12 @@ function hasDataForType(type: string): boolean {
     case 'fetal_heart_rate': return !!r.fetal_heart_rate
     case 'water': return !!r.water_intake
     case 'stool': return !!r.stool_record
-    case 'contraction': return !!(r.contraction_duration || r.contraction_interval)
-    case 'fetal_movement': return !!(r.fetal_movement_count || r.fetal_movement_duration)
+    // 🔴 胎动 / 宫缩走 utils/format 的唯一判据（首页卡片同款）：
+    //    旧判据只看「持续/间隔」，于是「只选了个疼痛程度」的日子库里有数据、
+    //    条目上却挂着「＋」—— 用户点进去看到空表单，以为刚才白填了。
+    //    另外 `!!(r.x)` 会把**手填的 0 次**当成没填，一并修掉。
+    case 'contraction': return hasContractionData(r)
+    case 'fetal_movement': return hasFetalMovementData(r)
     case 'temperature': return !!r.body_temperature
     case 'hcg': return !!r.hcg_value
     case 'uric_acid': return !!r.uric_acid

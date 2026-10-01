@@ -15,6 +15,20 @@
 
       <div class="session-info" v-if="startTime">
         <span>开始时间：{{ startTime }}</span>
+        <span v-if="isRunning"> · 已计 {{ elapsedText }}</span>
+      </div>
+
+      <!-- 实时对照（**不是诊断**）：数到一半就能知道「折合每小时几次」，
+           不用等结束再自己拿计算器算。不足 1 分钟不折算（那会得出荒谬的数字）。 -->
+      <div v-if="isRunning && fmJudge.level !== 'unknown'" class="fm-live">
+        <span class="fml-text" :style="{ color: LEVEL_TOKEN[fmJudge.level] }">{{ fmJudge.text }}</span>
+        <span class="fml-detail">{{ fmJudge.detail }}</span>
+      </div>
+
+      <div class="fm-std">
+        参考：孕 {{ FM_STANDARD.startWeek }} 周起每天早、中、晚各数 1 小时，
+        正常每小时 ≥{{ FM_STANDARD.perHourNormal }} 次（12 小时累计 ≥{{ FM_STANDARD.per12hNormal }} 次）；
+        明显比平时少一半以上请及时就医。
       </div>
     </div>
 
@@ -28,11 +42,12 @@
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useFetalMovementCounter } from '@/composables/useFetalMovementCounter'
+import { judgeFetalMovement, FM_STANDARD, LEVEL_TOKEN } from '@/utils/clinical-standards'
 
 const router = useRouter()
 const pregnancyStore = usePregnancyStore()
@@ -53,6 +68,62 @@ const {
 } = useFetalMovementCounter()
 
 const starting = ref(false)
+
+/**
+ * 「已计多久」要能走字，必须有一个每秒变化的**响应式**值参与计算
+ * （与计时器页同一个坑：直接写 `Date.now()` 不是响应式依赖，computed 不会重算）。
+ */
+const nowTick = ref(Date.now())
+let ticker: ReturnType<typeof setInterval> | null = null
+function stopTicker() { if (ticker) { clearInterval(ticker); ticker = null } }
+watch(isRunning, (running) => {
+  if (running && !ticker) {
+    ticker = setInterval(() => { nowTick.value = Date.now() }, 1000)
+  } else if (!running) {
+    stopTicker()
+  }
+}, { immediate: true })
+
+/** 'HH:MM:SS' → 当日秒数（后端 start_time 的写法，见 daily-rollup.toSeconds） */
+function hmsToSec(hms?: string | null): number | null {
+  if (!hms) return null
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(String(hms).trim())
+  if (!m) return null
+  return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3] || 0)
+}
+
+const elapsedSeconds = computed(() => {
+  const s = hmsToSec(startTime.value)
+  if (s == null || !isRunning.value) return null
+  const d = new Date(nowTick.value)
+  const nowSec = d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()
+  let diff = nowSec - s
+  if (diff < 0) diff += 86400 // 跨零点（数胎动常在晚间，不能漏）
+  return diff
+})
+
+const elapsedText = computed(() => {
+  const t = elapsedSeconds.value
+  if (t == null) return ''
+  const m = Math.floor(t / 60)
+  const s = t % 60
+  return m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`
+})
+
+/**
+ * 实时折算「每小时几次」（**不是诊断**）。
+ *
+ * ⚠️ 不足 1 分钟一律不折算：数 3 次只过了 20 秒 ⇒ 折合 540 次/小时，
+ *    这种数字除了吓人没有任何意义，所以这里传 null，让判读返回 unknown（页面上就不显示）。
+ */
+const fmJudge = computed(() => {
+  const t = elapsedSeconds.value
+  return judgeFetalMovement({
+    count: kickCount.value,
+    durationMin: t != null && t >= 60 ? t / 60 : null,
+    weeks: pregnancyStore.gestationalAge?.weeks ?? null,
+  })
+})
 
 function goBack() { router.push('/') }
 
@@ -96,7 +167,7 @@ async function endCounting() {
   router.push('/')
 }
 
-onUnmounted(() => { reset() })
+onUnmounted(() => { stopTicker(); reset() })
 </script>
 
 <style scoped>
@@ -117,6 +188,18 @@ onUnmounted(() => { reset() })
 .kick-button:active { transform: scale(0.95); }
 .kick-button:disabled { opacity: 0.5; cursor: not-allowed; }
 .session-info { margin-top: 24px; color: var(--text-hint); font-size: 14px; }
+/* 实时折算（不是诊断） */
+.fm-live {
+  margin: 12px auto 0; max-width: 320px; padding: 10px 12px; border-radius: 10px;
+  background: var(--bg-color-2, #f8fafc); border: 1px solid var(--border-color-soft, #efe7ef);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.fml-text { font-size: 14px; font-weight: 700; }
+.fml-detail { font-size: 12px; line-height: 1.5; color: var(--text-secondary, #64748b); }
+.fm-std {
+  margin: 10px auto 0; max-width: 320px;
+  font-size: 11.5px; line-height: 1.5; color: var(--text-hint, #94a3b8);
+}
 .counter-actions { margin-top: 24px; display: flex; gap: 16px; }
 .start-btn, .end-btn {
   padding: 12px 32px; border: none; border-radius: var(--radius-lg); cursor: pointer;
