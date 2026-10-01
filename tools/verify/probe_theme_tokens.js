@@ -305,6 +305,78 @@ function fixCss(css) {
   return { css: out, n };
 }
 
+/* ---------- ③ Naive themeOverrides 对称性 + 与 CSS 令牌同口径 ----------
+ * 卡片色有两套来源：Naive UI 的 themeOverrides（App.vue）和自定义 CSS 令牌（variables.css）。
+ * 两边只要漂移，同一屏就会出现「两种卡片白」——构建不报错、肉眼容易忽略。
+ * 检查三项：a) 亮暗两版的 key 路径集合必须完全对称（漏 key = 该组件另一主题没适配）
+ *          b) 非颜色项（圆角/字号/间距）两版必须等值；颜色项两版必须**不等**（相同=忘了翻）
+ *          c) 关键语义色必须与 variables.css 的对应令牌同值（唯一真源，不许各写一套）   */
+const PARITY = [                    // [App.vue 的 common key, variables.css 令牌]
+  ['cardColor', '--bg-card'],
+  ['modalColor', '--bg-elev'],
+  ['popoverColor', '--bg-elev'],
+  ['inputColor', '--bg-elev'],
+  ['dividerColor', '--divider-color'],
+  ['borderColor', '--border-color'],
+  ['primaryColor', '--primary-color'],
+  ['textColorBase', '--text-color'],
+  ['textColor1', '--text-color'],
+  ['textColor2', '--text-secondary'],
+  ['actionColor', '--bg-tint-pink'],
+  ['tableHeaderColor', '--bg-tint-pink'],
+];
+/** 从 App.vue 里抠出 `const xxxThemeOverrides: GlobalThemeOverrides = { … }` 的对象体（配平大括号） */
+function extractOverrides(appSrc, name) {
+  const anchor = appSrc.indexOf(`const ${name}: GlobalThemeOverrides = `);
+  if (anchor < 0) return null;
+  const open = appSrc.indexOf('{', anchor);
+  if (open < 0) return null;
+  let d = 0, j = open;
+  for (; j < appSrc.length; j++) {
+    if (appSrc[j] === '{') d++;
+    else if (appSrc[j] === '}') { d--; if (!d) break; }
+  }
+  const body = appSrc.slice(open, j + 1);
+  try { return new Function('return ' + body)(); }
+  catch (e) { return { __parseError: String(e) }; }
+}
+/** 展平成 'common.cardColor' / 'Select.peers.InternalSelection.border' 这类路径 */
+function flatten(obj, prefix = '', acc = new Map()) {
+  for (const [k, v] of Object.entries(obj)) {
+    const p = prefix ? `${prefix}.${k}` : k;
+    if (v && typeof v === 'object' && !Array.isArray(v)) flatten(v, p, acc);
+    else acc.set(p, String(v));
+  }
+  return acc;
+}
+// ⚠️ 复合值（'1px solid #efe7ef'、'inset 0 0 0 1px #c44680'）里也含颜色，
+//    必须判为颜色项；只看开头会把它们误判成"非颜色项却亮暗不一致"。
+const COLORISH = /(#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|\bwhite\b|\bblack\b|\bwhitesmoke\b)/;
+// 刻意保持同色、不随主题翻转的例外（写明理由，别让例外变成后门）
+const SAME_OK = {
+  'Slider.handleColor': '滑块抓握点在深色轨道上要更醒目，白手柄是有意设计',
+  'common.bodyColor': '页面底色交给 CSS 变量控制，Naive 侧必须透明',
+};
+function cssTokenValue(cssSrc, token, dark) {
+  // 只取对应作用域块内的声明：dark ? html.dark : :root
+  const blocks = blocksIdx(cssSrc);
+  for (const b of blocks) {
+    const head = b.head.trim();
+    if (dark ? !/html\.dark/.test(head) : !/:root/.test(head)) continue;
+    const body = cssSrc.slice(b.open + 1, b.close);
+    const m = new RegExp('(?:^|[;{\\s])' + token.replace(/-/g, '\\-') + '\\s*:\\s*([^;}]+)').exec(body);
+    if (m) return m[1].trim();
+  }
+  return null;
+}
+
+const appSrc = (() => { try { return fs.readFileSync(path.join(ROOT, 'App.vue'), 'utf8'); } catch { return ''; } })();
+const cssSrc = (() => { try { return fs.readFileSync(path.join(ROOT, 'styles', 'variables.css'), 'utf8'); } catch { return ''; } })();
+const L = appSrc ? extractOverrides(appSrc, 'lightThemeOverrides') : null;
+const D = appSrc ? extractOverrides(appSrc, 'darkThemeOverrides') : null;
+const FL = L && !L.__parseError ? flatten(L) : null;
+const FD = D && !D.__parseError ? flatten(D) : null;
+
 /* ---------- --fix：按映射表改写源文件（改完请再跑一次本脚本验证归零）---------- */
 if (doFix) {
   let files = 0, decls = 0;
@@ -426,6 +498,48 @@ if (onlyHard || noFilter) {
   }
   if (unresolved.length) fail(`硬写高危色 ${unresolved.length} 处未核定（涉及 ${[...new Set(unresolved.map(x => x.file))].length} 个文件）`);
   else ok(`无未核定的硬写高危色（白名单内 ${allowUsed} 处 / ${changedFiles.length} 个文件）`);
+}
+
+if (!(onlyGhost || onlyHard)) {
+  console.log('');
+  if (!L || !D) {
+    fail('App.vue 找不到 lightThemeOverrides / darkThemeOverrides（Naive 主题都没配）');
+  } else if (L.__parseError || D.__parseError) {
+    fail(`App.vue 主题对象解析失败：${L.__parseError || D.__parseError}`);
+  } else {
+    console.log('【③ Naive 主题对称性 + 与 CSS 令牌同口径】');
+    const onlyL = [...FL.keys()].filter(k => !FD.has(k));
+    const onlyD = [...FD.keys()].filter(k => !FL.has(k));
+    if (onlyL.length || onlyD.length) {
+      for (const k of onlyL) fail(`亮色有 "${k}"、深色没有 ⇒ 该组件深色下走 Naive 默认`);
+      for (const k of onlyD) fail(`深色有 "${k}"、亮色没有 ⇒ 该组件亮色下未适配`);
+    } else ok(`key 路径完全对称（${FL.size} 项）`);
+
+    let sameColor = 0, diffNonColor = 0;
+    for (const [k, v] of FL) {
+      const dv = FD.get(k);
+      if (dv === undefined) continue;
+      const isColor = COLORISH.test(v) || COLORISH.test(dv);
+      if (isColor && v.toLowerCase() === dv.toLowerCase()) {
+        if (SAME_OK[k]) console.log(`  ⚪ ${k} 刻意同值 ${v} —— ${SAME_OK[k]}`);
+        else { sameColor++; fail(`${k} 亮暗同值 ${v} —— 忘了翻深色`); }
+      }
+      if (!isColor && v !== dv) { diffNonColor++; fail(`${k} 非颜色项亮暗不一致：${v} vs ${dv}`); }
+    }
+    if (!sameColor && !diffNonColor) ok(`颜色项全部翻转、非颜色项全部一致（共检 ${FL.size} 项）`);
+
+    let drift = 0;
+    for (const [naiveKey, token] of PARITY) {
+      const lv = FL.get('common.' + naiveKey);
+      const dv = FD.get('common.' + naiveKey);
+      const expL = cssTokenValue(cssSrc, token, false);
+      const expD = cssTokenValue(cssSrc, token, true);
+      if (lv == null || dv == null) { fail(`缺少 common.${naiveKey}`); drift++; continue; }
+      if (expL && lv.toLowerCase() !== expL.toLowerCase()) { fail(`亮色 ${naiveKey}=${lv} ≠ ${token}=${expL}（同屏两种卡片白）`); drift++; }
+      if (expD && dv.toLowerCase() !== expD.toLowerCase()) { fail(`深色 ${naiveKey}=${dv} ≠ ${token}=${expD}`); drift++; }
+    }
+    if (!drift) ok(`关键语义色与 variables.css 令牌一致（核对 ${PARITY.length} 项）`);
+  }
 }
 
 console.log(`\n=== ${bad} 项不通过（共 ${ghosts.length + hard.length} 处待处理） ===`);

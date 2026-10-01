@@ -1605,11 +1605,11 @@ function toggleSuppItem(s: string) {
 }
 
 .type-menu-item:hover {
-  background: rgba(232, 160, 191, 0.08);
+  background: var(--tint-hover, rgba(232, 160, 191, 0.08));
 }
 
 .type-menu-item:active {
-  background: rgba(232, 160, 191, 0.15);
+  background: var(--tint-active, rgba(232, 160, 191, 0.15));
 }
 
 .type-menu-icon {

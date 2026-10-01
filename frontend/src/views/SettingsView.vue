@@ -1322,7 +1322,7 @@ function formatLogTime(t?: string): string {
   font-size: 15px; color: var(--text-color, #1e293b);
   background: var(--bg-elev, #ffffff); outline: none; transition: border-color 0.2s; box-sizing: border-box;
 }
-.date-input:focus { border-color: var(--primary-color, #c44680); box-shadow: 0 0 0 2px rgba(196,70,128,.15); }
+.date-input:focus { border-color: var(--primary-color, #c44680); box-shadow: 0 0 0 2px var(--focus-ring-color, rgba(196,70,128,.15)); }
 .date-input::-webkit-calendar-picker-indicator { cursor: pointer; }
 .form-actions { padding-top: 8px; }
 
@@ -1331,8 +1331,8 @@ function formatLogTime(t?: string): string {
   border-radius: 8px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s;
   border: 2px solid transparent; margin-bottom: 4px;
 }
-.pregnancy-item:hover { background: rgba(232,160,191,0.05); }
-.pregnancy-item.active { border-color: var(--primary-color, #c44680); background: rgba(232,160,191,0.1); }
+.pregnancy-item:hover { background: var(--tint-hover, rgba(232,160,191,0.05)); }
+.pregnancy-item.active { border-color: var(--primary-color, #c44680); background: var(--tint-active, rgba(232,160,191,0.1)); }
 .log-box {
   background: #1e1e2e;
   color: #a6e3a1;

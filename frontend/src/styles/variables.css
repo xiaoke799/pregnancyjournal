@@ -16,9 +16,21 @@
   --bg-tint-cream: #fff9ec;
   --bg-tint-danger: #fdf2f2;
 
-  /* hover / active 的叠加层：必须是**半透明**，压在任意底色上都成立，
+  /* hover / active / selected 的叠加层：必须是**半透明**，压在任意底色上都成立，
      实心色会让 hover 前的背景透不出来。亮色用淡墨叠加，深色反过来用淡白叠加。 */
   --bg-hover: rgba(107, 100, 128, 0.07);
+
+  /* 品牌色的交互态叠加（hover/选中/激活）。
+     ⚠️ 深色下必须换成**浅粉 + 提高透明度**：同样的 0.06 深粉压在 #1a1730 上
+        只差 rgb(+10,+3,+5)，肉眼看不见 ⇒ 深色的 hover/选中反馈等于没有。 */
+  --tint-hover: rgba(196, 70, 128, 0.06);
+  --tint-active: rgba(196, 70, 128, 0.10);
+  --tint-selected: rgba(232, 160, 191, 0.04);
+  /* 焦点环颜色（不含尺寸：各处 2px/3px 不同，尺寸留在原地写） */
+  --focus-ring-color: rgba(196, 70, 128, 0.14);
+  /* 导航激活态渐变 / 文字选中背景 */
+  --nav-active-bg: linear-gradient(135deg, rgba(244, 140, 176, 0.14), rgba(196, 70, 128, 0.1));
+  --selection-bg: rgba(196, 70, 128, 0.18);
 
   --text-color: #1f1730;
   --text-secondary: #5c5275;
@@ -183,6 +195,13 @@ html.dark {
   --bg-tint-danger: #2b1c20;
 
   --bg-hover: rgba(236, 233, 243, 0.08);
+
+  --tint-hover: rgba(240, 166, 200, 0.10);
+  --tint-active: rgba(240, 166, 200, 0.16);
+  --tint-selected: rgba(240, 166, 200, 0.12);
+  --focus-ring-color: rgba(240, 166, 200, 0.30);
+  --nav-active-bg: linear-gradient(135deg, rgba(240, 166, 200, 0.20), rgba(240, 166, 200, 0.12));
+  --selection-bg: rgba(240, 166, 200, 0.28);
 
   --text-color: #ece9f3;
   --text-secondary: #b6afc7;

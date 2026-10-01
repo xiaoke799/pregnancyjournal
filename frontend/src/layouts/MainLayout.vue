@@ -267,12 +267,12 @@ const tabbarItems = computed(() => navItems.filter(i =>
 }
 
 .nav-item:hover {
-  background: rgba(196, 70, 128, 0.06);
+  background: var(--tint-hover, rgba(196, 70, 128, 0.06));
   color: var(--primary-color);
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, rgba(244, 140, 176, 0.14), rgba(196, 70, 128, 0.1));
+  background: var(--nav-active-bg, linear-gradient(135deg, rgba(244, 140, 176, 0.14), rgba(196, 70, 128, 0.1)));
   color: var(--primary-color);
   font-weight: 600;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
@@ -405,7 +405,7 @@ const tabbarItems = computed(() => navItems.filter(i =>
 }
 
 .tabbar-item:active {
-  background: rgba(196, 70, 128, 0.08);
+  background: var(--tint-active, rgba(196, 70, 128, 0.08));
 }
 
 .tabbar-icon {
