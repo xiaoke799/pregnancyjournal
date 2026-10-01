@@ -130,6 +130,8 @@ import { useRouter } from 'vue-router'
 import { NDatePicker, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useContractionTimer } from '@/composables/useContractionTimer'
+import { contractionApi } from '@/api/contraction'
+import { pickResumableSession } from '@/utils/session-resume'
 import { judgeContraction, CT_STANDARD, LEVEL_TOKEN } from '@/utils/clinical-standards'
 import dayjs from 'dayjs'
 import AppIcon from '@/components/common/AppIcon.vue'
@@ -146,7 +148,7 @@ const {
   sessionId, isRunning, contractions, lastDuration, lastInterval,
   alert511, totalCount, currentStartTime,
   startContraction, endContraction, recordManual, endSession, reset,
-  startSession,
+  startSession, resumeSession,
 } = useContractionTimer()
 
 /**
@@ -263,11 +265,41 @@ async function ensurePregnancy(): Promise<boolean> {
   return false
 }
 
+/**
+ * 进页面前先看今天有没有**还没结束**的会话：有就接着用它。
+ *
+ * 🔴 修的是「计到一半退出 = 会话永远挂着」：本页 onMounted 会建会话、onUnmounted 只做本地
+ *    reset（不结束服务端会话），而以前进来**无条件新建** ⇒ 每退一次就多一条 end_time=NULL 的
+ *    会话，首页一直显示「计时中…」，回来又新建一条，之前那几条宫缩在页面上再也接不上。
+ * 今天遗留多条时：留**最晚**的那条继续用，更早的顺手收尾（它们的明细早已汇总进当天记录，
+ * 收尾只是把 end_time 补上，不会再凭空产生数据）。
+ */
+async function resumeTodayIfAny(pregnancyId: string): Promise<boolean> {
+  const today = dayjs().format('YYYY-MM-DD')
+  try {
+    const res: any = await contractionApi.listSessions(pregnancyId, today)
+    const { keep, stale } = pickResumableSession(res && res.code === 0 ? res.data : [], today)
+    if (!keep) return false
+    for (const s of stale) {
+      try { await contractionApi.endSession(s.id as string) } catch (e) { /* 收尾失败不影响恢复 */ }
+    }
+    const ok = await resumeSession(keep)
+    if (ok) {
+      message.info(`已恢复今天 ${String(keep.start_time || '').slice(0, 5)} 开始的会话，可以接着计时`)
+    }
+    return ok
+  } catch (e) {
+    return false
+  }
+}
+
 onMounted(async () => {
   // ⚠️ 以前是 `if (currentPregnancy) startSession(...)`：孕期没取回时会话根本没建，
   //    而所有按钮又都是「sessionId 为空就静默返回」⇒ 整个页面点了全没反应。
   if (!(await ensurePregnancy())) return
-  const ok = await startSession(pregnancyStore.currentPregnancy!.id)
+  const pid = pregnancyStore.currentPregnancy!.id
+  if (await resumeTodayIfAny(pid)) return
+  const ok = await startSession(pid)
   if (!ok) message.error('初始化失败，计时可能不可用，请返回后重新进入')
 })
 

@@ -32,6 +32,30 @@ export function useFetalMovementCounter() {
     }
   }
 
+  /**
+   * **恢复**今天还没结束的那次计数（中途退出页面留下的）。
+   *
+   * 同宫缩：本页退出时不结束服务端会话 ⇒ 一条 end_time=NULL 的会话挂在那里，
+   * 以前再进来点「开始计数」会**新建**一条，之前数的次数虽然已汇总进当天记录，
+   * 但会话页面接不上、明细里那条永远显示「未计时」。
+   * 现在进页面时先把它接回来：次数、开始时间、逐次明细都还原。
+   */
+  async function resumeSession(session: any): Promise<boolean> {
+    if (!session || !session.id) return false
+    try {
+      sessionId.value = session.id
+      startTime.value = session.start_time || null
+      const res: any = await fetalMovementApi.listKicks(session.id)
+      kicks.value = res && res.code === 0 && Array.isArray(res.data) ? res.data : []
+      // 明细条数优先（它就是「记录胎动」按下几次的真身）；取不到才退回会话汇总
+      kickCount.value = kicks.value.length || Number(session.total_count) || 0
+      isRunning.value = true
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
   async function recordKick(): Promise<boolean> {
     if (!sessionId.value) return false
     try {
@@ -69,6 +93,6 @@ export function useFetalMovementCounter() {
 
   return {
     sessionId, kickCount, isRunning, startTime, kicks,
-    startSession, recordKick, endSession, reset,
+    startSession, resumeSession, recordKick, endSession, reset,
   }
 }
