@@ -195,6 +195,13 @@ const SUITES = [
   // ⚠️ 四层证据：契约（类型定义无 modelValue）+ 全项目扫描 + **编译期**（看 createVNode
   //    实际绑到哪个 prop）+ **组件级运行时**（SSR 真实渲染，数 checked 个数）+ 反例自检。
   [path.join(UP, 'verify_naive_vmodel.js'), 'naive-ui 裸 v-model 误用', ''],
+  // 饮食页「催奶食谱大全」的 5 个分类切换（真后端 + 无头浏览器）。
+  // verify_naive_vmodel 钉的是「**绑定名**对不对」，本套件钉的是「**行为**对不对」：
+  // 真点 5 个分类，确认**内容与选中态都跟着换**。反例已验证：源码改回裸 v-model 会 ❌
+  // （内容一直停在猪蹄，且 radio 列表里一个选中态都没有）。
+  // ⚠️ 踩坑：naive-ui 的折叠头**不响应合成 click()**（点了 DOM 也不展开、内容区还是
+  //    `<!---->`），必须派发冒泡的真实 MouseEvent（mousedown/mouseup/click）。
+  [path.join(UP, 'probe_diet_categories.js'), '饮食页催奶食谱分类切换', '约 90 秒·需无头浏览器'],
 ];
 
 const onlyArg = process.argv.find(a => a.startsWith('--only='));
