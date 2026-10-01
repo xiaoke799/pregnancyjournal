@@ -389,7 +389,7 @@
         <div v-else class="push-log-list">
           <div v-for="log in pushLogs" :key="log.id" class="push-log-item">
             <div class="push-log-left">
-              <n-tag :bordered="false" size="small" style="background:var(--bg-secondary,#f1f5f9); color:var(--text-secondary,#64748b);">{{ channelLabel(log.channel) }}</n-tag>
+              <n-tag :bordered="false" size="small" style="background:var(--bg-elev,#f1f5f9); color:var(--text-secondary,#64748b);">{{ channelLabel(log.channel) }}</n-tag>
               <n-tag :type="log.status === 'success' ? 'success' : log.status === 'failed' ? 'error' : 'default'" size="small">
                 {{ log.status === 'success' ? '成功' : log.status === 'failed' ? '失败' : '等待中' }}
               </n-tag>
@@ -1304,7 +1304,7 @@ function formatLogTime(t?: string): string {
 .mode-switcher label { min-width: auto; }
 
 .pregnancy-status {
-  background: var(--bg-secondary, #f8f9fa);
+  background: var(--bg-elev, #f8f9fa);
   border-radius: 10px;
   padding: 14px 16px;
   margin-bottom: 16px;

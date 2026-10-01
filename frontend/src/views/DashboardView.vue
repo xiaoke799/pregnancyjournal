@@ -1253,12 +1253,12 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .plan-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .plan-item {
   display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-  border-radius: 10px; background: #f8fafc; transition: background .15s;
+  border-radius: 10px; background: var(--bg-color-2, #f8fafc); transition: background .15s;
 }
-.plan-item:hover { background: #f1f5f9; }
+.plan-item:hover { background: var(--border-color-soft, #f1f5f9); }
 .plan-item.is-today { background: #fef3c7; border-left: 3px solid #f59e0b; }
 .plan-item.is-past { opacity: 0.6; }
-.plan-item.is-completed { opacity: 0.55; background: #f1f5f9; }
+.plan-item.is-completed { opacity: 0.55; background: var(--border-color-soft, #f1f5f9); }
 .plan-item.is-completed .plan-icon { filter: grayscale(0.5); }
 .completed-text { text-decoration: line-through; color: #94a3b8 !important; }
 .completed-badge { font-size: 11px; color: #16a34a; font-weight: 500; }
