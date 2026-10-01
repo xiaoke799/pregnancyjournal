@@ -130,6 +130,11 @@
         <div class="tool-card-stat" :class="{ 'is-live': contractionActive, 'is-empty': contractionStatEmpty }">
           {{ contractionStatText }}
         </div>
+        <!-- 临床参考（**不是诊断**）：只给一行结论，判不出来（数据不足）就不显示，
+             免得在「今天还没记」下面再挂一行灰字。展开说明放在计时器页。 -->
+        <div v-if="ctJudge.level !== 'unknown'" class="tool-card-level" :style="{ color: LEVEL_TOKEN[ctJudge.level] }">
+          {{ ctJudge.text }}
+        </div>
         <n-button size="tiny" type="primary" secondary @click="openQuickLog('contraction')">记一笔</n-button>
       </div>
 
@@ -140,6 +145,9 @@
         </div>
         <div class="tool-card-stat" :class="{ 'is-empty': fetalMovementStatEmpty }">
           {{ fetalMovementStatText }}
+        </div>
+        <div v-if="fmJudge.level !== 'unknown'" class="tool-card-level" :style="{ color: LEVEL_TOKEN[fmJudge.level] }">
+          {{ fmJudge.text }}
         </div>
         <n-button size="tiny" type="primary" secondary @click="openQuickLog('fetal_movement')">记一笔</n-button>
       </div>
@@ -152,6 +160,8 @@
       :pregnancy-id="pregnancyStore.currentPregnancy?.id"
       :date="todayStr"
       :note="todayRecord?.note || ''"
+      :existing="fmExisting"
+      lock-date
     />
     <QuickLogDialog
       v-model:show="showContrQuickLog"
@@ -159,6 +169,8 @@
       :pregnancy-id="pregnancyStore.currentPregnancy?.id"
       :date="todayStr"
       :note="todayRecord?.note || ''"
+      :existing="ctExisting"
+      lock-date
     />
 
     <!-- ===== 今日记录 ===== -->
@@ -322,7 +334,13 @@ import { markCheckupCompleted } from '@/api/checkup-schedule'
 import { checkupApi } from '@/api/checkup'
 import client from '@/api/client'
 import { calculateGestationalAge } from '@/utils/gestational'
-import { getMoodEmoji as moodEmojiOf, sleepQualityLabel } from '@/utils/format'
+import {
+  getMoodEmoji as moodEmojiOf,
+  sleepQualityLabel,
+  hasFetalMovementData,
+  hasContractionData,
+} from '@/utils/format'
+import { judgeFetalMovement, judgeContraction, LEVEL_TOKEN } from '@/utils/clinical-standards'
 import dayjs from 'dayjs'
 import DoseTodayCard from '@/components/dose/DoseTodayCard.vue'
 import QuickLogDialog from '@/components/record/QuickLogDialog.vue'
@@ -666,6 +684,30 @@ function openQuickLog(type: 'fetal_movement' | 'contraction') {
   else showContrQuickLog.value = true
 }
 
+/**
+ * 传给「记一笔」弹窗的**当天已有汇总值**。
+ *
+ * 🔴 不传的后果：弹窗每次打开都是空表单，用户填「5 次」就把计数器刚写回的
+ *    「20 次」整个覆盖掉，而且全程没有任何提示 —— 上午那 20 次就这么没了。
+ *    传下去之后弹窗会先显示「这一天已记 20 次」，再让用户选追加还是改为。
+ */
+const fmExisting = computed(() => {
+  const r: any = todayRecord.value
+  return {
+    count: r?.fetal_movement_count ?? null,
+    duration: r?.fetal_movement_duration ?? null,
+  }
+})
+const ctExisting = computed(() => {
+  const r: any = todayRecord.value
+  return {
+    count: r?.contraction_count ?? null,
+    duration: r?.contraction_duration ?? null,
+    interval: r?.contraction_interval ?? null,
+    pain: r?.contraction_pain ?? null,
+  }
+})
+
 /** 宫缩正在进行（计时器还没点结束）——后端 dashboard 已算好这个标志，此前前端 0 处引用 */
 const contractionActive = computed(() => !!dashboardData.value?.contraction_active)
 
@@ -674,7 +716,9 @@ const fetalMovementStatText = computed(() => {
   const c = r?.fetal_movement_count
   const d = r?.fetal_movement_duration
   // 空态判据与记录页 hasDataForType 对齐：只填了用时、没填次数的日子不是「还没记」
-  if ((c == null || c === '') && !d) return '今天还没记 · 点「记一笔」或右侧进计数器'
+  // ⚠️ 别写「点右侧」：卡片的进入方式是标题链接的 ::after 铺满整卡（点卡片任意位置都能进），
+  //    右侧并没有一个专门入口。写错位置等于把人指到一个不存在的按钮上。
+  if ((c == null || c === '') && !d) return '今天还没记 · 点「记一笔」或点卡片进计数器'
   const n = Number(dashboardData.value?.fetal_movement_sessions || 0)
   // 会话数写出来：统计曲线一天只取次数最高的那一次，首页写清「几次会话 · 共几次」，
   // 用户拿去跟曲线比时不会以为有一边算错了
@@ -686,11 +730,29 @@ const fetalMovementStatText = computed(() => {
   }
   return head + (d ? ` · 用时 ${d} 分钟` : '')
 })
-const fetalMovementStatEmpty = computed(() => {
-  const r: any = todayRecord.value
-  const c: any = r?.fetal_movement_count
-  return (c == null || c === '') && !r?.fetal_movement_duration
-})
+// 🔴 空态判据走 utils/format 的唯一真源（首页卡片 / 记录页条目 / 宫格三处共用）。
+//    此前三处各写一份，判据一改就漏 —— 例如「只选了疼痛程度」的日子，
+//    旧判据只看持续/间隔 ⇒ 库里有数据、页面却写「今天还没记」。
+const fetalMovementStatEmpty = computed(() => !hasFetalMovementData(todayRecord.value))
+
+/**
+ * 临床参考判读（**不是诊断**）：拿今天的次数 / 用时按指南口径折算。
+ * 只给一行短结论贴在卡片上，展开说明放在计数器页。
+ */
+const fmJudge = computed(() =>
+  judgeFetalMovement({
+    count: fmExisting.value.count,
+    durationMin: fmExisting.value.duration,
+    weeks: gestationalAge.value?.weeks ?? null,
+  })
+)
+const ctJudge = computed(() =>
+  judgeContraction({
+    durationSec: ctExisting.value.duration,
+    intervalMin: ctExisting.value.interval,
+    weeks: gestationalAge.value?.weeks ?? null,
+  })
+)
 
 const contractionStatText = computed(() => {
   // 🔴 「计时中」不再整块盖掉当日统计：此前该分支直接 return「计时中…」，
@@ -701,8 +763,8 @@ const contractionStatText = computed(() => {
   const c = r?.contraction_count
   const d = r?.contraction_duration
   const itv = r?.contraction_interval
-  if (live && (c == null || c === '') && !d && !itv) return '计时中…（点右侧继续）'
-  if (!live && (c == null || c === '') && !d && !itv) return '今天还没记 · 点「记一笔」或右侧进计时器'
+  if (live && (c == null || c === '') && !d && !itv) return '计时中…（点卡片继续）'
+  if (!live && (c == null || c === '') && !d && !itv) return '今天还没记 · 点「记一笔」或点卡片进计时器'
   const n = Number(dashboardData.value?.contraction_sessions || 0)
   let t = live ? '计时中… ' : ''
   // 只手填了持续/间隔、没记次数的日子：不写「今日 0 次」、也不谎称「还没记」
@@ -715,12 +777,10 @@ const contractionStatText = computed(() => {
   if (itv) t += ` · 间隔 ${itv} 分`
   return t
 })
-const contractionStatEmpty = computed(() => {
-  if (contractionActive.value) return false
-  const r: any = todayRecord.value
-  const c: any = r?.contraction_count
-  return (c == null || c === '') && !r?.contraction_duration && !r?.contraction_interval
-})
+// 同胎动：走唯一真源（计时中不算空态 —— 正在进行与「今天已记了什么」不互斥）
+const contractionStatEmpty = computed(() =>
+  contractionActive.value ? false : !hasContractionData(todayRecord.value)
+)
 
 // 快捷记一笔保存后，本页的「今日」数字要立刻跟着变
 onMounted(() => window.addEventListener('record-added', loadDashboard))
@@ -1351,6 +1411,12 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 }
 .tool-card-stat.is-empty { color: #9aa3af; }
 .tool-card-stat.is-live { color: var(--primary-color, #c44680); font-weight: 600; }
+/* 临床参考判读：一行结论，颜色由 LEVEL_TOKEN 给（跟随主题，深色下自动翻转） */
+.tool-card-level {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
 .tool-card :deep(.n-button) { align-self: flex-start; position: relative; z-index: 1; }
 
 .record-content { display: flex; flex-direction: column; gap: 10px; }

@@ -200,3 +200,50 @@ export const EXERCISE_INTENSITY_VALUES = ['轻松', '中等', '较累'] as const
 export type ExerciseIntensity = (typeof EXERCISE_INTENSITY_VALUES)[number]
 export const EXERCISE_INTENSITY_OPTIONS: { value: ExerciseIntensity; label: string }[] =
   EXERCISE_INTENSITY_VALUES.map((v) => ({ value: v, label: v }))
+
+/* ============================================================================
+ * 胎动 / 宫缩「这一天到底记没记」—— 全项目唯一判据
+ * ==========================================================================*/
+
+/**
+ * 一个字段算不算「填了」。
+ *
+ * ⚠️ 刻意用 `!= null && !== ''` 而**不是**真值判断：`0` 是有意义的值。
+ *    计数器写回时「一次都没数」根本不写（见 daily-rollup 的空会话规则），
+ *    但用户**手填 0 次**是他明确表达的事实，若被当成"没填"，条目上就显示不出
+ *    「0 次」，用户会以为自己没保存成功。
+ */
+function filled(v: unknown): boolean {
+  return v != null && v !== ''
+}
+
+/**
+ * 这一天记没记胎动 —— 首页卡片空态、记录页条目「有没有数据」的**唯一真源**。
+ *
+ * 【为什么收口】此前三处各写一份（`DashboardView.fetalMovementStatEmpty`、
+ * `RecordList.hasDataForType`、首页宫格），判据一旦要加字段就得改三处，
+ * 漏一处就成了「数据存进去了、页面上却说没记」（铁律 #34）。
+ */
+export function hasFetalMovementData(r?: any): boolean {
+  if (!r) return false
+  return filled(r.fetal_movement_count) || filled(r.fetal_movement_duration)
+}
+
+/**
+ * 这一天记没记宫缩 —— 同上，唯一真源。
+ *
+ * ⚠️ 判据必须包含 `contraction_count` 与 `contraction_pain`：
+ *    小弹窗保存时这两个字段**一定会写**（次数按是否填了持续时间记 1 条、疼痛是必选单选），
+ *    于是「只选了个疼痛程度、没填持续/间隔」的日子，库里明明有数据，
+ *    旧判据（只看 duration/interval）却说"没记" ⇒ 条目上挂着「＋」、首页写「今天还没记」，
+ *    用户点进去看到表单是空的，以为自己刚才白填了。
+ */
+export function hasContractionData(r?: any): boolean {
+  if (!r) return false
+  return (
+    filled(r.contraction_count) ||
+    filled(r.contraction_duration) ||
+    filled(r.contraction_interval) ||
+    filled(r.contraction_pain)
+  )
+}

@@ -92,6 +92,17 @@
       </div>
     </template>
 
+    <!-- 对照参考（**不是诊断**）：拿本次的持续 / 间隔按指南口径给结论。
+         放在两个模式都能看到的位置 —— 手动补记的人同样需要知道这个数字意味着什么。 -->
+    <div v-if="ctJudge.level !== 'unknown'" class="ct-judge">
+      <span class="ctj-text" :style="{ color: LEVEL_TOKEN[ctJudge.level] }">{{ ctJudge.text }}</span>
+      <span class="ctj-detail">{{ ctJudge.detail }}</span>
+    </div>
+    <div class="ct-std">
+      参考：规律宫缩为持续 ≥{{ CT_STANDARD.laborDurationSec }} 秒、间隔 {{ CT_STANDARD.laborIntervalMin }} 分钟内；
+      不规律、时强时弱且休息后能缓解的多为假宫缩。是否临产以产科检查为准。
+    </div>
+
     <!-- 宫缩记录列表 -->
     <div class="contraction-list" v-if="contractions.length > 0">
       <h3>宫缩记录</h3>
@@ -119,6 +130,7 @@ import { useRouter } from 'vue-router'
 import { NDatePicker, useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useContractionTimer } from '@/composables/useContractionTimer'
+import { judgeContraction, CT_STANDARD, LEVEL_TOKEN } from '@/utils/clinical-standards'
 import dayjs from 'dayjs'
 import AppIcon from '@/components/common/AppIcon.vue'
 
@@ -185,6 +197,21 @@ function formatDuration(seconds: number): string {
   const sec = Math.round(seconds % 60)
   return min > 0 ? `${min}分${sec}秒` : `${sec}秒`
 }
+
+/**
+ * 本次宫缩的**临床参考判读**（不是诊断）。
+ *
+ * ⚠️ `lastInterval` 在 composable 里是**秒**（`formatDuration` 也是按秒算的），
+ *    而判读函数要的是**分钟** —— 差 60 倍，是本模块最容易写错的一处
+ *    （daily-rollup 里同样栽过：会话表 avg_interval 是秒，记录列是分）。
+ */
+const ctJudge = computed(() =>
+  judgeContraction({
+    durationSec: lastDuration.value || null,
+    intervalMin: lastInterval.value ? lastInterval.value / 60 : null,
+    weeks: pregnancyStore.gestationalAge?.weeks ?? null,
+  })
+)
 
 function formatTime(isoStr?: string): string {
   if (!isoStr) return '--'
@@ -326,6 +353,21 @@ onUnmounted(() => {
 .item-index { font-weight: 600; color: var(--primary-color); min-width: 48px; }
 .item-duration { font-weight: 600; color: #e74c3c; }
 .item-interval { color: var(--text-hint); }
+
+/* 临床参考判读（不是诊断）：结论 + 展开说明 */
+.ct-judge {
+  width: 100%; max-width: 400px; margin-top: 16px;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--bg-color-2, #f8fafc);
+  border: 1px solid var(--border-color-soft, #efe7ef);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ctj-text { font-size: 14px; font-weight: 700; }
+.ctj-detail { font-size: 12px; line-height: 1.5; color: var(--text-secondary, #64748b); }
+.ct-std {
+  width: 100%; max-width: 400px; margin-top: 8px;
+  font-size: 11.5px; line-height: 1.5; color: var(--text-hint, #94a3b8);
+}
 
 /* 警告 & 结束按钮 */
 .alert-banner { background: #FF4D4F; color: white; padding: 14px; border-radius: 10px; margin-top: 16px; font-weight: 600; text-align: center; width: 100%; max-width: 400px; }

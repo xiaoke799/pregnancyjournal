@@ -478,6 +478,7 @@
       :pregnancy-id="pregnancyStore.currentPregnancy?.id"
       :date="selectedDate"
       :note="quickLogNote"
+      :existing="fmExisting"
     />
     <QuickLogDialog
       v-model:show="showContrModal"
@@ -485,6 +486,7 @@
       :pregnancy-id="pregnancyStore.currentPregnancy?.id"
       :date="selectedDate"
       :note="quickLogNote"
+      :existing="ctExisting"
     />
 
     <!-- 点「胎动」「宫缩」条目 → 看每次会话明细（替代此前页面上铺开的明细块） -->
@@ -493,6 +495,7 @@
       :type="sessionDetailType"
       :pregnancy-id="pregnancyStore.currentPregnancy?.id"
       :date="selectedDate"
+      @quick-log="onDetailQuickLog"
     />
 
     <!-- 计划弹窗 -->
@@ -763,6 +766,34 @@ const currentRecords = ref<any[]>([])
  * 否则用户只在胎动弹窗里写备注、保存时会把当天其它类型写的备注覆盖掉（纯静默丢数据）。
  */
 const quickLogNote = computed(() => (currentRecords.value[0] && currentRecords.value[0].note) || '')
+
+/**
+ * 传给 QuickLogDialog 的「这一天已记的汇总值」（同首页那一份，见 DashboardView）。
+ * 不传 ⇒ 弹窗是空表单，用户填「5 次」就把当天已记的 20 次整个覆盖掉、且无任何提示。
+ */
+const fmExisting = computed(() => {
+  const r: any = currentRecords.value[0]
+  return { count: r?.fetal_movement_count ?? null, duration: r?.fetal_movement_duration ?? null }
+})
+const ctExisting = computed(() => {
+  const r: any = currentRecords.value[0]
+  return {
+    count: r?.contraction_count ?? null,
+    duration: r?.contraction_duration ?? null,
+    interval: r?.contraction_interval ?? null,
+    pain: r?.contraction_pain ?? null,
+  }
+})
+
+/**
+ * 明细弹窗里点「再记一笔」：关掉明细、打开对应的快捷弹窗。
+ * 不接这个事件的话，明细弹窗就是条死路 —— 看完既不能补记、也回不去编辑。
+ */
+function onDetailQuickLog(type: 'fetal_movement' | 'contraction') {
+  showSessionDetail.value = false
+  if (type === 'contraction') showContrModal.value = true
+  else showFmModal.value = true
+}
 
 // ====== 子级 Tab 切换 ======
 const activeSubTab = ref<'record' | 'stats'>('record')
