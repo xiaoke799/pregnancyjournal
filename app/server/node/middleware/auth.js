@@ -96,8 +96,7 @@ function isDirectLocal(req) {
  *   ③ 直连本机/内网（isDirectLocal）→ 视为可信
  *   ④ 其余 → 403
  *
- * ⚠️ 本闸门**不改变可见性**，不要拿它当"用户隔离"用 —— 零隔离是有意决策，见
- *    `.workbuddy/memory/references/security-model.md`。
+ * ⚠️ 本闸门**不改变可见性**，不要拿它当"用户隔离"用 —— 零隔离是有意决策。
  */
 function requireAdmin(req, res, next) {
   if (config.APP_MODE === 'dev') return next();

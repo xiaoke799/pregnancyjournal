@@ -151,7 +151,3 @@ Thumbs.db
 # node_modules 永远不入库：后端依赖由 build.ps1 现场 npm install 并打进 app.tgz。
 # 不要在本文件里再加任何 `!...node_modules...` 形式的例外。
 # ===========================================
-
-# AI 工作区与本地工具状态（原在 .git/info/exclude，.git 重建即失效，移入已提交的忽略表）
-/.workbuddy/
-/.trae-cn/

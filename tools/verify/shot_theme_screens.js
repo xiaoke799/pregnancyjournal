@@ -19,7 +19,7 @@
  *   残留会让 verify_ui_orphans 假绿、还会随 fpk 发出去（套件注释里的教训）。
  *
  * 用法：node tools/verify/shot_theme_screens.js
- * 产物：.workbuddy/.tmp/theme_shots/<mode>-<page>.png
+ * 产物：tools/verify/.tmp/theme-shots/<mode>-<page>.png
  */
 const { spawn, execFileSync } = require('child_process');
 const http = require('http');
@@ -32,7 +32,7 @@ const env = require('./_env');
 const PORT = Number(process.env.PJ_TCP_PORT || 38567);
 const GW = '/app/pregnancyjournal';
 const T = fs.mkdtempSync(path.join(os.tmpdir(), 'pj-theme-'));
-const OUT = path.join(env.REPO, '.workbuddy', '.tmp', 'theme_shots');
+const OUT = path.join(env.TMP, 'theme-shots');
 fs.mkdirSync(OUT, { recursive: true });
 
 const spawned = new Set();

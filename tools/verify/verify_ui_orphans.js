@@ -17,7 +17,7 @@
  *
  * 用法：node tools/verify/verify_ui_orphans.js
  * 退出码：有孤儿 = 1（提醒清理），无孤儿 = 0。
- * 清理方式：移入隔离目录（.workbuddy/trash-*），不要直接删。
+ * 清理方式：移入隔离目录（如 .trash/ 下），不要直接删。
  */
 const fs = require('fs');
 const path = require('path');
@@ -67,7 +67,7 @@ if (orphans.length) {
   for (const a of orphans.slice(0, 20)) console.log('  ' + a);
   if (orphans.length > 20) console.log(`  … 共 ${orphans.length} 个`);
 }
-console.log('清理方式：移入 .workbuddy/trash-*/ 隔离目录，跑回归确认后再清空');
+console.log('清理方式：移入隔离目录（如 .trash/ 下），跑回归确认后再清空');
 console.log('==================================================');
 console.log(`结果：${reachableCount} 通过 / ${fails} 失败`);
 console.log('==================================================');
