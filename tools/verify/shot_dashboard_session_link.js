@@ -134,6 +134,55 @@ const PROBE = `
     return false;
   }
   /**
+   * 点单选按钮（追加 / 改为本次值）。
+   * ⚠️ 不能用 clickByText：Naive 的 n-radio-button 渲染成 label/div，**不是 button**，
+   *    按 button 找会一个都找不到，于是「模式没切」被误当成「覆盖功能坏了」。
+   */
+  function clickRadio(root, text) {
+    var nodes = root.querySelectorAll('label, [class*="radio-button"]');
+    for (var k = 0; k < nodes.length; k++) {
+      if (clean(nodes[k].textContent) !== text) continue;
+      var inp = nodes[k].querySelector('input');
+      // ⚠️ 只 click() 不够稳：Naive 的 radio-button 是受控组件，input 常被样式藏起来，
+      //    单靠 click 有时不触发 change ⇒ 表现为「点到了但模式没切」，随机复现（flaky）。
+      //    这里 click + 显式置 checked + 派发 change 三件套都上。
+      if (inp) {
+        try { inp.checked = true; } catch (e) {}
+        inp.click();
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      }
+      nodes[k].click();
+      return true;
+    }
+    return false;
+  }
+  /** 当前选中项的文字（用于确认「真的切过去了」，而不是点完就假设成功） */
+  function checkedRadioText(root) {
+    var ns = root.querySelectorAll('[class*="radio-button"]');
+    for (var k = 0; k < ns.length; k++) {
+      var cn = ns[k].className;
+      if (cn && String(cn).indexOf('checked') >= 0) return clean(ns[k].textContent);
+    }
+    return '';
+  }
+  /**
+   * 按 **label 文字**找输入框（.qf-group 里的 label + 同组内的 input）。
+   * 位置索引定位在这个弹窗里已经翻过车（见 dashboard() 里的说明），一律改用这个。
+   */
+  function inputByLabel(root, labelText) {
+    var gs = root.querySelectorAll('.qf-group');
+    for (var i = 0; i < gs.length; i++) {
+      var l = gs[i].querySelector('label');
+      if (!l) continue;
+      if (clean(l.textContent).indexOf(labelText) < 0) continue;
+      var el = gs[i].querySelector('input');
+      if (el) return el;
+    }
+    return null;
+  }
+  /**
    * 读首页两张工具卡。整卡可点＝「标题链接铺满整卡」的拉伸链接（用户要求：去掉「›」进入符号、
    * 点卡片任意位置都能进全屏页）—— 不看 DOM 结构，用 elementFromPoint 做**真实命中测试**：
    *   · 卡片中部 / 原来挂「›」的右上角 → 命中元素必须落在标题链接上（= 整卡可点）；
@@ -202,22 +251,69 @@ const PROBE = `
       var l = groups[g].querySelector('label');
       labels.push(l ? clean(l.textContent) : '(无label)');
     }
+    // 「这一天已记 …」那一行 —— 不先说清已经记了什么，用户填「6」时不知道在盖掉什么
+    var exEl = m.querySelector('.qf-existing');
     out.dialog = {
       found: true,
       title: modalTitle(m),
       labels: labels.join(' / '),
+      existingText: exEl ? clean(exEl.textContent) : '',
       isQuick: !m.querySelector('.type-selector'),   // 通用大弹窗会带 26 类型的 .type-selector
       hasHint: !!m.querySelector('.form-hint-text'),
       maxWidth: parseInt(getComputedStyle(m).maxWidth, 10)
     };
-    // 卡片里显示「今日 4 次」⇒ 在弹窗里改成 6 并保存，卡片应当场变成「今日 6 次」
-    var nums = m.querySelectorAll('.qf-group input');
-    if (nums.length >= 2) { setInput(nums[1], 6); }   // [0]=日期, [1]=胎动次数
+    // ⚠️ 绝不能再按 ".qf-group input" 的**位置索引**定位输入框：
+    //    弹窗结构一变（首页锁日期后日期 input 消失、新增「本次怎么记」的 radio input）
+    //    索引就整体错位 —— 实测把「6」填进了「用时」框，次数纹丝不动，探针却报
+    //    「保存后数字没跟着变」，看着像产品 bug，其实是探针自己填错了框。
+    //    现在一律按 **label 文字**找框。
+    var before = (fmCard && fmCard.querySelector('.tool-card-stat')) ? clean(fmCard.querySelector('.tool-card-stat').textContent) : '';
+    var countInput = inputByLabel(m, '本次胎动次数');
+    var dupInput = inputByLabel(m, '本次用时(分钟)');
+    out.dialog.foundCountInput = !!countInput;
+    out.dialog.foundDurationInput = !!dupInput;
+    if (countInput) setInput(countInput, 6);
     await sleep(200);
     clickByText(m, '保存');
     for (var w = 0; w < 60; w++) { await sleep(200); if (!modalByTitle('胎动')) break; }
     await sleep(600);
+    out.beforeSave = { stat: before };
     out.afterSave = { cards: await readCards() };
+
+    // ===== 第二段：再开一次弹窗，切「改为本次值」填 3 ⇒ 卡片应当场变成 3。
+    //      默认追加（上一段）与显式覆盖（本段）是两条不同的路径，都得验证：
+    //      只测追加 ⇒ 覆盖分支写坏了没人知道；只测覆盖 ⇒ 又回到「第二次记一笔抹掉第一次」的老 bug。
+    var btn2 = null;
+    var cards2 = document.querySelectorAll('.tool-card');
+    for (var c2 = 0; c2 < cards2.length && !btn2; c2++) {
+      if (!/胎动/.test(clean(cards2[c2].textContent))) continue;
+      var b2s = cards2[c2].querySelectorAll('button');
+      for (var b2 = 0; b2 < b2s.length; b2++) if (clean(b2s[b2].textContent) === '记一笔') { btn2 = b2s[b2]; break; }
+    }
+    if (btn2) {
+      btn2.click();
+      for (var t2 = 0; t2 < 40 && !modalByTitle('胎动'); t2++) await sleep(150);
+      var m2 = modalByTitle('胎动');
+      if (m2) {
+        out.replaceTried = true;
+        // 点到为止不算数 —— 必须**读到选中态真的变了**才继续，否则就是拿时序碰运气
+        for (var g = 0; g < 12; g++) {
+          clickRadio(m2, '改为本次值');
+          await sleep(150);
+          if (checkedRadioText(m2) === '改为本次值') break;
+        }
+        out.modeSwitched = checkedRadioText(m2) === '改为本次值';
+        out.modeChecked = checkedRadioText(m2);
+        await sleep(300);
+        var ci2 = inputByLabel(m2, '本次胎动次数');
+        if (ci2) setInput(ci2, 3);
+        await sleep(200);
+        clickByText(m2, '保存');
+        for (var w2 = 0; w2 < 60; w2++) { await sleep(200); if (!modalByTitle('胎动')) break; }
+        await sleep(600);
+        out.afterReplace = { cards: await readCards() };
+      }
+    }
   }
 
   /**
@@ -391,6 +487,15 @@ const PROBE = `
 </script>
 `;
 
+/** 从卡片文案里解析「共 N 次」；只有一次会话时卡片写「今日 N 次」 */
+function parseCount(stat) {
+  if (!stat) return null;
+  let m = /共\s*(\d+)\s*次/.exec(stat);
+  if (m) return Number(m[1]);
+  m = /今日\s*(\d+)\s*次(?!\s*会话)/.exec(stat);
+  return m ? Number(m[1]) : null;
+}
+
 function judge(r) {
   const bad = [];
   const cards = r.cards || [];
@@ -424,16 +529,43 @@ function judge(r) {
   else {
     if (!/胎动/.test(d.title)) bad.push('弹出的不是胎动弹窗（标题「' + d.title + '」）');
     if (!d.isQuick) bad.push('打开的是通用大弹窗，不是专属小弹窗');
-    if (d.labels !== '日期 / 胎动次数 / 用时(分钟) / 当天备注（可选）') bad.push('弹窗字段不对（' + d.labels + '）');
+    // ⚠️ 断言**关键字段在不在**，不要逐字比对整串 label：
+    //    首页锁日期（日期行换成静态文字）、且新增「本次怎么记」单选后，
+    //    整串比对会随任何一次文案微调而假红。
+    ['本次胎动次数', '本次用时', '本次怎么记', '当天备注'].forEach(function (need) {
+      if (d.labels.indexOf(need) < 0) bad.push('弹窗缺字段「' + need + '」（实际 ' + d.labels + '）');
+    });
+    if (d.labels.indexOf('日期') >= 0) bad.push('首页「记一笔」不该再露出日期选择器（首页只显示今天，改日期看不到反馈）：' + d.labels);
+    if (!d.foundCountInput) bad.push('按 label 找不到「本次胎动次数」输入框（定位方式又双叒失效了）');
+    if (!d.foundDurationInput) bad.push('按 label 找不到「本次用时(分钟)」输入框');
+    if (d.existingText.indexOf('共') >= 0 && d.existingText.indexOf('次') < 0) bad.push('「这一天已记」那行文案不对（' + d.existingText + '）');
     if (!d.hasHint) bad.push('弹窗缺就医提示文案');
     if (!(d.maxWidth >= 400 && d.maxWidth <= 440)) bad.push('弹窗 max-width ' + d.maxWidth + ' 不在小弹窗档位 400~440');
   }
 
+  // ===== 保存后卡片数字要当场跟着变 —— 两种模式分别验证 =====
+  // 语义（2026-10-01 定稿）：默认**追加**（一天分几次数，第二次不该抹掉第一次），
+  // 另有「改为本次值」用于修正。两种都得有渲染级证据，只测一种等于没测。
   const after = (r.afterSave && r.afterSave.cards) || [];
   const afm = after.filter((c) => /胎动/.test(c.title))[0];
+  const beforeCount = parseCount((r.beforeSave || {}).stat);
+  const afterCount = afm ? parseCount(afm.stat) : null;
   if (!d.found) bad.push('（跳过）保存后数字未核对');
   else if (!afm) bad.push('保存后找不到胎动卡');
-  else if (!/共\s*6\s*次/.test(afm.stat)) bad.push('保存后卡片数字没跟着变（实际「' + afm.stat + '」，期望含「共 6 次」）');
+  else if (beforeCount == null || afterCount == null) {
+    bad.push('解析不出保存前后的次数（前「' + (r.beforeSave || {}).stat + '」后「' + afm.stat + '」）');
+  } else if (afterCount !== beforeCount + 6) {
+    bad.push('默认「追加」没生效：' + beforeCount + ' + 6 应得 ' + (beforeCount + 6) + '，卡片实际「' + afm.stat + '」');
+  }
+
+  const after2 = (r.afterReplace && r.afterReplace.cards) || [];
+  const afm2 = after2.filter((c) => /胎动/.test(c.title))[0];
+  if (!r.replaceTried) bad.push('（跳过）「改为本次值」未核对');
+  else if (!r.modeSwitched) bad.push('「改为本次值」点完选中态仍是「' + (r.modeChecked || '(空)') + '」（n-radio-button 不是 button，别用 clickByText）');
+  else if (!afm2) bad.push('第二次保存后找不到胎动卡');
+  else if (parseCount(afm2.stat) !== 3) {
+    bad.push('切「改为本次值」后没用本次值覆盖：填 3 应得 3，卡片实际「' + afm2.stat + '」');
+  }
 
   const rec = r.record || {};
   if (!rec.found) bad.push('记录页没打开（' + (rec.why || '') + '）');
