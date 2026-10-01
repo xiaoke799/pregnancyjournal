@@ -64,6 +64,110 @@ img {
   max-width: 100%;
 }
 
+/* ============ 桌面端光标与文本选择（App 观感）============
+   【症状】电脑上点卡片/列表项会出现**输入光标（I 形）**，点两下还会选中文字 ——
+   看起来像在编辑一份文档，而不是在用 App。
+   ⚠️ 另有一种长得很像的现象：**闪烁的文本插入符**出现在标题、大数字这类纯文本上
+   （2026-10-01 用户反馈）。那不是本应用的元素 —— 实测点击后 `document.activeElement`
+   就是 `body`，全站也没有任何自写的 contenteditable / tabindex。它是浏览器的
+   **插入符浏览**（Caret Browsing，快捷键 F7）：开启后整个页面被当成一份可编辑文档，
+   点哪儿都能落下插入符。判断方法：按一下 F7，竖线应当立即消失。
+   ⇒ 本节的 `user-select: none` 是**顺带**的防线（界面文字不可选，插入符没有落脚点），
+     但真正的开关在浏览器侧；这两件事别混为一谈。
+   【成因】`cursor` 的初始值是 `auto`，而 `auto` 对**文本内容**的渲染结果就是 I 形；
+   项目里只有原生 `button` 设了 `pointer`，用 div/span 做的几十个可点元素全都没有；
+   同时全站没有任何 `user-select` 控制，界面文字默认可被选中。
+   【口径】App 式 Web 的常规做法：
+     ① 全站默认**箭头**光标 + 界面文本**不可选**（`cursor` 可继承，一条就够）；
+     ② 交互元素显式手型；
+     ③ 输入类与 `.selectable` 恢复「可选中 + I 形光标」——
+        诊断信息、路径、正文这些用户**真的要复制**的内容必须留口子，别为了观感把功能砍掉。 */
+html,
+body {
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ② 交互元素：手型。
+   下面这串是按「带 @click 但不是 button/a」扫出来的类名 —— 它们散落在各页的
+   scoped 样式里，scoped 规则大多**不设 cursor**（所以不会被特异性挡住），
+   在这里集中列一次，比在 30 处分别补更不容易漏。 */
+button,
+a[href],
+label,
+summary,
+[role='button'],
+[role='tab'],
+[role='menuitem'],
+[role='option'],
+.n-button,
+.n-tag,
+.n-radio-button,
+.n-checkbox,
+.n-switch,
+.n-tabs-tab,
+.n-base-selection,
+.n-collapse-item__header,
+.clickable,
+/* —— 记录页 / 首页 —— */
+.category-row,
+.category-tab,
+.type-menu-item,
+.symptom-tag,
+.symptom-chip,
+.supp-tag,
+.pt-option,
+/* —— 相册 / 日记 —— */
+.album-tab,
+.diary-card,
+.report-thumb,
+.report-thumb-sm,
+.card-main,
+.card-media,
+.card-header,
+/* —— 产检 / 计划 / 用药 —— */
+.day-cell,
+.group-header,
+.sub-item-header,
+.sub-item-upload-btn,
+.sub-item-nas-btn,
+.upload-link,
+.prepared-toggle,
+.preparation-toggle,
+.sub-items-toggle,
+.current-recommend,
+.preset-item-tag,
+.custom-item-del,
+.type-tag,
+.nas-entry,
+.refresh-btn {
+  cursor: pointer;
+}
+
+/* ③ 可选中区：恢复文本选择 + I 形光标（语义上「这里能选」） */
+input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='range']),
+textarea,
+[contenteditable='true'],
+.selectable,
+[data-selectable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='range']),
+textarea,
+[contenteditable='true'] {
+  cursor: text;
+}
+
+/* 勾选/单选类控件本身应该是手型（它们属于「交互元素」不是「输入文本」） */
+input[type='checkbox'],
+input[type='radio'],
+select {
+  cursor: pointer;
+}
+
 /* ============ 排版 ============ */
 h1, h2, h3, h4, h5, h6 {
   font-weight: 700;

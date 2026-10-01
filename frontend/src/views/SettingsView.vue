@@ -168,7 +168,9 @@
               <!-- 排查区：授权了目录却读不到时，这里的原始值能直接说明是哪一环断了 -->
               <details v-if="diag" class="export-diag">
                 <summary>看不到我刚授权的目录？点这里排查</summary>
-                <div class="diag-body">
+                <!-- ⚠️ .selectable：全局已把界面文字设成「不可选中」（防点击时误选、光标像在编辑文档），
+                     但这一块是**给人复制去排查**的（路径、版本、uid），必须留口子。 -->
+                <div class="diag-body selectable">
                   <div class="diag-row">
                     <span class="diag-k">版本 / 启动于</span>
                     <span class="diag-v">
