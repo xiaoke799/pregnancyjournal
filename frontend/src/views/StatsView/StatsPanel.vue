@@ -417,7 +417,7 @@ function tableData(
   padding: 0 2px;
 }
 .stats-header {
-  background: white;
+  background: var(--bg-card, #ffffff);
   border-radius: 14px;
   padding: 14px 16px;
   margin-bottom: 12px;
@@ -437,16 +437,16 @@ function tableData(
 }
 .period-tab {
   padding: 6px 14px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--border-color, #e2e8f0);
   border-radius: 20px;
-  background: white;
+  background: var(--bg-elev, #ffffff);
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   cursor: pointer;
   transition: all 0.2s;
 }
-.period-tab:hover { border-color: #c44680; color: #c44680; }
+.period-tab:hover { border-color: var(--primary-color, #c44680); color: var(--primary-color, #c44680); }
 .period-tab.active {
   background: linear-gradient(135deg, #e879a0, #c44680);
   color: white;
@@ -454,7 +454,7 @@ function tableData(
 }
 .period-info {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-hint, #94a3b8);
 }
 
 .charts-section {
@@ -475,7 +475,7 @@ function tableData(
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 3px solid #e2e8f0;
+  border: 3px solid var(--border-color, #e2e8f0);
   border-top-color: #c44680;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;

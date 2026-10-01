@@ -16,6 +16,10 @@
   --bg-tint-cream: #fff9ec;
   --bg-tint-danger: #fdf2f2;
 
+  /* hover / active 的叠加层：必须是**半透明**，压在任意底色上都成立，
+     实心色会让 hover 前的背景透不出来。亮色用淡墨叠加，深色反过来用淡白叠加。 */
+  --bg-hover: rgba(107, 100, 128, 0.07);
+
   --text-color: #1f1730;
   --text-secondary: #5c5275;
   --text-hint: #6b6480;
@@ -96,6 +100,13 @@
   --warning-ink: #7d4f0d;
   --error-ink: #b32d2d;
 
+  /* 语义色·文字级（彩色 ink）
+     用途：分类标签 / 徽标上的紫、玫红、靛蓝文字色。亮色值直接沿用页面原有色值
+     （保证亮色模式零视觉变化），深色值换成同色系浅色，压在 tint 底上仍 ≥ 4.5:1。 */
+  --lilac-ink: #7c3aed;
+  --rose-ink: #9d174d;
+  --indigo-ink: #4f46e5;
+
   /* ============ 圆角 ============ */
   --radius-xs: 4px;
   --radius-sm: 8px;
@@ -171,6 +182,8 @@ html.dark {
   --bg-tint-cream: #2a241a;
   --bg-tint-danger: #2b1c20;
 
+  --bg-hover: rgba(236, 233, 243, 0.08);
+
   --text-color: #ece9f3;
   --text-secondary: #b6afc7;
   --text-hint: #8a83a0;
@@ -192,6 +205,11 @@ html.dark {
   --success-ink: #93d49b;
   --warning-ink: #f2cd7a;
   --error-ink: #f2a0a0;
+
+  /* 同上面的彩色 ink，深色底上的浅色版 */
+  --lilac-ink: #c4b5fd;
+  --rose-ink: #f9a8c4;
+  --indigo-ink: #a5b4fc;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);

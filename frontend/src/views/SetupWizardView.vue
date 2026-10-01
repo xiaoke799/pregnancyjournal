@@ -236,7 +236,7 @@ async function submitSetup() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #FDF2F8, #F5F3FF);
+  background: linear-gradient(135deg, var(--bg-tint-pink, #FDF2F8), var(--bg-tint-pink, #F5F3FF));
   padding: 20px;
 }
 
@@ -262,8 +262,8 @@ async function submitSetup() {
   justify-content: center;
   font-size: 14px;
   font-weight: 600;
-  background: #e2e8f0;
-  color: #94a3b8;
+  background: var(--bg-color-2, #e2e8f0);
+  color: var(--text-hint, #94a3b8);
   transition: all 0.3s;
 }
 
@@ -288,7 +288,7 @@ async function submitSetup() {
 }
 
 .wizard-card {
-  background: white;
+  background: var(--bg-card, #ffffff);
   border-radius: var(--radius-xl, 16px);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   padding: 40px;
@@ -389,7 +389,7 @@ async function submitSetup() {
   border: 2px solid var(--border-color, #e2e8f0);
   border-radius: 10px;
   font-size: 15px;
-  background: white;
+  background: var(--bg-elev, #ffffff);
   color: var(--text-color, #1e293b);
   -webkit-appearance: none;
 }

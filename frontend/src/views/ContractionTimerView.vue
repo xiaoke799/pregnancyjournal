@@ -254,7 +254,7 @@ onUnmounted(() => {
   min-height: 100vh; padding: 20px; background: var(--bg-color);
   display: flex; flex-direction: column; align-items: center;
 }
-.contraction-timer.alert { background: #fff2f0; }
+.contraction-timer.alert { background: var(--bg-tint-danger, #fff2f0); }
 .timer-header { width: 100%; display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .close-btn { background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-secondary); }
 
@@ -269,7 +269,7 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 .mode-tab.active {
-  background: white; color: var(--primary-color); font-weight: 600;
+  background: var(--bg-card, white); color: var(--primary-color); font-weight: 600;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 
@@ -277,10 +277,10 @@ onUnmounted(() => {
 .timer-main { text-align: center; display: flex; flex-direction: column; align-items: center; min-height: 200px; justify-content: center; }
 .big-button {
   width: 180px; height: 180px; border-radius: 50%; border: 4px solid var(--primary-color);
-  background: white; font-size: 30px; font-weight: 700; color: var(--primary-color);
+  background: var(--bg-card, white); font-size: 30px; font-weight: 700; color: var(--primary-color);
   cursor: pointer; transition: background-color 0.3s, border-color 0.3s, color 0.3s; box-shadow: var(--shadow-lg);
 }
-.big-button.running { border-color: #FF4D4F; color: #FF4D4F; background: #fff2f0; animation: pulse 1.5s infinite; }
+.big-button.running { border-color: #FF4D4F; color: #FF4D4F; background: var(--bg-tint-danger, #fff2f0); animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,77,79,0.3); } 50% { box-shadow: 0 0 0 20px rgba(255,77,79,0); } }
 .timer-stats { display: flex; gap: 28px; margin-top: 28px; flex-wrap: wrap; justify-content: center; }
 .stat { text-align: center; min-width: 70px; }
@@ -290,7 +290,7 @@ onUnmounted(() => {
 
 /* 手动输入 */
 .manual-input-section {
-  width: 100%; max-width: 400px; background: white;
+  width: 100%; max-width: 400px; background: var(--bg-card, #ffffff);
   border-radius: 12px; padding: 24px 20px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
 }
@@ -306,7 +306,7 @@ onUnmounted(() => {
 .manual-duration {
   text-align: center; font-size: 15px; font-weight: 600;
   color: var(--primary-color); margin-bottom: 16px; padding: 8px;
-  background: #fff5f7; border-radius: 8px;
+  background: var(--bg-tint-pink, #fff5f7); border-radius: 8px;
 }
 .save-manual-btn {
   width: 100%; padding: 12px; background: var(--primary-color); color: white;

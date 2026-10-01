@@ -888,12 +888,12 @@ const vegRecipes:SimpleRcp[]=[
 /* ─── 原有样式 ─── */
 .diet-view { max-width: 800px; margin: 0 auto; padding: 16px; }
 .spin-section { display: flex; flex-direction: column; align-items: center; padding: 20px 0; }
-.random-area { text-align: center; padding: 48px 20px; background: linear-gradient(135deg,#fef3c7,#fce7f3); border-radius: 16px; margin-bottom: 24px; width: 100%; max-width: 400px; }
+.random-area { text-align: center; padding: 48px 20px; background: linear-gradient(135deg,var(--bg-tint-cream, #fef3c7),var(--bg-tint-pink, #fce7f3)); border-radius: 16px; margin-bottom: 24px; width: 100%; max-width: 400px; }
 .random-icon { font-size: 64px; margin-bottom: 12px; }
-.random-title { font-size: 18px; font-weight: 600; color: #64748b; margin-bottom: 20px; }
+.random-title { font-size: 18px; font-weight: 600; color: var(--text-secondary, #64748b); margin-bottom: 20px; }
 .meals-result { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 12px; }
-.meal-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.05); border-left: 4px solid var(--primary-color,#c44680); }
-.meal-label { font-size: 15px; font-weight: 700; color: var(--primary-color,#c44680); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px dashed #f3e8f0; }
+.meal-card { background: var(--bg-card, #ffffff); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.05); border-left: 4px solid var(--primary-color,#c44680); }
+.meal-label { font-size: 15px; font-weight: 700; color: var(--primary-color,#c44680); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--border-color, #f3e8f0); }
 .meal-combo { display: flex; flex-direction: column; gap: 8px; }
 .combo-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .combo-tag { flex-shrink: 0; font-size: 12px; font-weight: 600; color: white; background: #f8a4c8; padding: 2px 8px; border-radius: 10px; min-width: 52px; text-align: center; }
@@ -912,7 +912,7 @@ const vegRecipes:SimpleRcp[]=[
 .loading-hint { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 20px; color: var(--text-hint,#94a3b8); font-size: 14px; }
 .loading-hint-center { padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--text-hint,#94a3b8); }
 .loading-hint-center p { margin: 0; font-size: 14px; }
-.no-meals-hint { text-align: center; padding: 24px; color: var(--text-hint,#94a3b8); font-size: 14px; background: white; border-radius: 12px; margin-top: 16px; }
+.no-meals-hint { text-align: center; padding: 24px; color: var(--text-hint,#94a3b8); font-size: 14px; background: var(--bg-card, #ffffff); border-radius: 12px; margin-top: 16px; }
 .search-hint { cursor: pointer; color: var(--primary-color,#c44680); font-size: 12px; }
 
 /* ─── 新增：饮食指南样式 ─── */
@@ -935,44 +935,44 @@ const vegRecipes:SimpleRcp[]=[
 .dg-tip { border-radius: 8px; padding: 10px 14px; display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; line-height: 1.55; margin: 10px 0; }
 .dg-tip .tip-icon { font-size: 17px; flex-shrink: 0; }
 .dg-tip strong { font-size: 12.5px; }
-.dg-tip-pink   { background:#fef3f0;border-left:3px solid #ec4899;color:#9d174d; }
-.dg-tip-green  { background:#f0fdf4;border-left:3px solid #22c55e;color:#166534; }
-.dg-tip-yellow { background:#fffbeb;border-left:3px solid #eab308;color:#854d0e; }
-.dg-tip-blue   { background:#eff6ff;border-left:3px solid #3b82f6;color:#1e40af; }
-.dg-tip-warn   { background:#fff7ed;border-left:3px solid #f97316;color:#9a3412; }
-.dg-tip-red    { background:#fef2f2;border-left:3px solid #ef4444;color:#991b1b; }
-.dg-tip-info   { background:#f8fafc;border-left:3px solid #64748b;color:#334155; }
+.dg-tip-pink   { background:var(--bg-tint-cream, #fef3f0);border-left:3px solid #ec4899;color:var(--rose-ink, #9d174d); }
+.dg-tip-green  { background:var(--bg-tint-mint, #f0fdf4);border-left:3px solid #22c55e;color:var(--success-ink, #166534); }
+.dg-tip-yellow { background:var(--bg-tint-cream, #fffbeb);border-left:3px solid #eab308;color:var(--warning-ink, #854d0e); }
+.dg-tip-blue   { background:var(--bg-tint-blue, #eff6ff);border-left:3px solid #3b82f6;color:var(--info-ink, #1e40af); }
+.dg-tip-warn   { background:var(--bg-tint-cream, #fff7ed);border-left:3px solid #f97316;color:var(--warning-ink, #9a3412); }
+.dg-tip-red    { background:var(--bg-tint-danger, #fef2f2);border-left:3px solid #ef4444;color:var(--error-ink, #991b1b); }
+.dg-tip-info   { background:var(--bg-color-2, #f8fafc);border-left:3px solid #64748b;color:var(--text-color, #334155); }
 
 /* 营养网格 */
 .nutrient-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(150px,1fr)); gap: 8px; margin: 12px 0; }
-.nut-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; text-align: center; }
-.nut-item strong { display: block; font-size: 14px; color: #334155; margin-bottom: 2px; }
+.nut-item { background: var(--bg-color-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; padding: 10px 12px; text-align: center; }
+.nut-item strong { display: block; font-size: 14px; color: var(--text-color, #334155); margin-bottom: 2px; }
 .nut-item small { font-size: 11.5px; color: #94a3b8; }
 
 /* 小标题 */
-.sec-title { font-size: 15px; font-weight: 700; margin: 18px 0 10px; color: #334155; }
+.sec-title { font-size: 15px; font-weight: 700; margin: 18px 0 10px; color: var(--text-color, #334155); }
 
 /* 食物表格 */
 .food-table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 13px; }
-.ft-row { display: grid; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
-.ft-head { background: #f1f5f9; border-radius: 6px 6px 0 0; font-weight: 600; font-size: 12.5px; color: #475569; }
-.ft-row span:nth-child(1) { font-weight: 600; color: #334155; min-width: 56px; }
-.ft-row span:nth-child(3) { color: #64748b; font-size: 12px; }
+.ft-row { display: grid; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--bg-color-2, #f1f5f9); }
+.ft-head { background: var(--bg-color-2, #f1f5f9); border-radius: 6px 6px 0 0; font-weight: 600; font-size: 12.5px; color: var(--text-secondary, #475569); }
+.ft-row span:nth-child(1) { font-weight: 600; color: var(--text-color, #334155); min-width: 56px; }
+.ft-row span:nth-child(3) { color: var(--text-secondary, #64748b); font-size: 12px; }
 
 /* 食谱网格 */
 .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap: 10px; margin: 8px 0 14px; }
 .rcp-card { background: var(--bg-color-2, #fafafa); border: 1px solid var(--border-color, #eee); border-radius: 10px; padding: 14px 16px; transition: transform .15s; }
 .rcp-card:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
 .rcp-name { font-size: 14.5px; font-weight: 700; color: var(--text-color, #1e293b); margin-bottom: 4px; }
-.rcp-desc { font-size: 12.5px; color: #64748b; line-height: 1.55; margin: 4px 0 0; }
+.rcp-desc { font-size: 12.5px; color: var(--text-secondary, #64748b); line-height: 1.55; margin: 4px 0 0; }
 .rcp-ingr { font-size: 11.5px; color: #94a3b8; margin: 2px 0; }
 
 /* 哺乳姿势 */
 .pos-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 10px; margin: 10px 0; }
-.pos-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px; text-align: center; }
+.pos-card { background: var(--bg-tint-blue, #eff6ff); border: 1px solid var(--border-color, #bfdbfe); border-radius: 10px; padding: 14px; text-align: center; }
 .pos-icon { font-size: 28px; display: block; margin-bottom: 6px; }
-.pos-card strong { font-size: 13.5px; color: #1d4ed8; display: block; margin-bottom: 4px; }
-.pos-card p { font-size: 12px; color: #64748b; line-height: 1.5; margin: 0; }
+.pos-card strong { font-size: 13.5px; color: var(--info-ink, #1d4ed8); display: block; margin-bottom: 4px; }
+.pos-card p { font-size: 12px; color: var(--text-secondary, #64748b); line-height: 1.5; margin: 0; }
 
 /* 两列布局 */
 .two-col-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
@@ -980,14 +980,14 @@ const vegRecipes:SimpleRcp[]=[
 .col-box strong { display: block; font-size: 14px; margin-bottom: 6px; }
 .col-box ul { margin: 0; padding-left: 18px; }
 .col-box li { margin-bottom: 2px; }
-.col-pink { background:#fef3f0;border-left:3px solid #ec4899;color:#9d174d; }
-.col-blue { background:#eff6ff;border-left:3px solid #3b82f6;color:#1e40af; }
-.col-green { background:#f0fdf4;border-left:3px solid #22c55e;color:#166534; }
-.col-red { background:#fef2f2;border-left:3px solid #ef4444;color:#991b1b; }
+.col-pink { background:var(--bg-tint-cream, #fef3f0);border-left:3px solid #ec4899;color:var(--rose-ink, #9d174d); }
+.col-blue { background:var(--bg-tint-blue, #eff6ff);border-left:3px solid #3b82f6;color:var(--info-ink, #1e40af); }
+.col-green { background:var(--bg-tint-mint, #f0fdf4);border-left:3px solid #22c55e;color:var(--success-ink, #166534); }
+.col-red { background:var(--bg-tint-danger, #fef2f2);border-left:3px solid #ef4444;color:var(--error-ink, #991b1b); }
 
 /* 简单列表 */
 .plain-list { list-style: none; padding: 0; margin: 8px 0; }
-.plain-list li { padding: 6px 0 6px 22px; position: relative; border-bottom: 1px solid #f1f5f9; font-size: 13.5px; color: #475569; line-height: 1.55; }
+.plain-list li { padding: 6px 0 6px 22px; position: relative; border-bottom: 1px solid var(--bg-color-2, #f1f5f9); font-size: 13.5px; color: var(--text-secondary, #475569); line-height: 1.55; }
 .plain-list li::before { content:'•';position:absolute;left:6px;color:#3b82f6;font-weight:700; }
 .plain-list li:last-child { border-bottom: none; }
 .plain-list li strong { color: var(--text-color, #1e293b); }
@@ -1001,7 +1001,7 @@ const vegRecipes:SimpleRcp[]=[
 
 /* Baby theme tweaks */
 .baby-theme .stage-banner { background: linear-gradient(135deg,#67e8f9,#22d3ee); }
-.baby-theme .stage-banner h3,.baby-theme .stage-banner p { color: #0e7490; }
+.baby-theme .stage-banner h3,.baby-theme .stage-banner p { color: var(--info-ink, #0e7490); }
 
 @media (max-width: 600px) {
   .diet-view { padding: 12px; }

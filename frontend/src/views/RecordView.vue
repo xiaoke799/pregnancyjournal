@@ -1851,17 +1851,17 @@ function toggleSuppItem(s: string) {
 }
 .sub-tab-btn {
   padding: 5px 16px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid var(--border-color, #e2e8f0);
   border-radius: 20px;
-  background: white;
+  background: var(--bg-elev, #ffffff);
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   cursor: pointer;
   transition: all .2s;
   white-space: nowrap;
 }
-.sub-tab-btn:hover { border-color: #c44680; color: #c44680; }
+.sub-tab-btn:hover { border-color: #c44680; color: var(--primary-color, #c44680); }
 .sub-tab-btn.active {
   background: linear-gradient(135deg, #e879a0, #c44680);
   color: white;

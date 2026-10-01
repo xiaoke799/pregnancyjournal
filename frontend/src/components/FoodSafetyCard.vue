@@ -247,7 +247,7 @@ function eatingTips(level: string): string[] {
   margin-bottom: 10px;
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
   overflow: hidden;
-  border-left: 4px solid #e2e8f0;
+  border-left: 4px solid var(--border-color, #e2e8f0);
   transition: border-color .2s;
 }
 .food-safety-card.level-safe { border-left-color: #52C41A; }
@@ -261,7 +261,7 @@ function eatingTips(level: string): string[] {
   padding: 12px 14px; cursor: pointer;
   transition: background .15s;
 }
-.card-main:hover { background: #f8fafc; }
+.card-main:hover { background: var(--bg-color-2, #f8fafc); }
 
 .card-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; flex-wrap: wrap; }
 .food-name { font-size: 15px; font-weight: 700; color: var(--text-color); }
@@ -270,10 +270,10 @@ function eatingTips(level: string): string[] {
   padding: 2px 10px; border-radius: 8px; font-size: 11px; font-weight: 600;
   white-space: nowrap; flex-shrink: 0;
 }
-.badge-safe { background: #F6FFED; color: #52C41A; }
-.badge-caution { background: #FFFBE6; color: #FAAD14; }
-.badge-unsafe { background: #FFF2F0; color: #FF4D4F; }
-.badge-limit { background: #FFF7E6; color: #FF9800; }
+.badge-safe { background: var(--bg-tint-mint, #F6FFED); color: #52C41A; }
+.badge-caution { background: var(--bg-tint-cream, #FFFBE6); color: #FAAD14; }
+.badge-unsafe { background: var(--bg-tint-danger, #FFF2F0); color: #FF4D4F; }
+.badge-limit { background: var(--bg-tint-cream, #FFF7E6); color: #FF9800; }
 
 /* 右侧小标签 */
 .stage-mini-list { display: flex; gap: 3px; flex-wrap: wrap; justify-content: flex-end; }
@@ -281,10 +281,10 @@ function eatingTips(level: string): string[] {
   padding: 2px 5px; border-radius: 4px; font-size: 10px; font-weight: 600;
   white-space: nowrap;
 }
-.mini-safe { background: #F6FFED; color: #52C41A; }
-.mini-caution { background: #FFFBE6; color: #D48806; }
-.mini-unsafe { background: #FFF2F0; color: #FF4D4F; }
-.mini-limit { background: #FFF7E6; color: #FF9800; }
+.mini-safe { background: var(--bg-tint-mint, #F6FFED); color: #52C41A; }
+.mini-caution { background: var(--bg-tint-cream, #FFFBE6); color: #D48806; }
+.mini-unsafe { background: var(--bg-tint-danger, #FFF2F0); color: #FF4D4F; }
+.mini-limit { background: var(--bg-tint-cream, #FFF7E6); color: #FF9800; }
 
 .expand-icon { font-size: 10px; color: #94a3b8; margin-left: 4px; flex-shrink: 0; }
 
@@ -295,15 +295,15 @@ function eatingTips(level: string): string[] {
 .detail-current-stage {
   border-radius: 10px; padding: 16px; margin-bottom: 14px;
 }
-.bg-safe { background: linear-gradient(135deg, #F6FFED, #D9F7BE); }
-.bg-caution { background: linear-gradient(135deg, #FFFBE6, #FFF1B8); }
-.bg-unsafe { background: linear-gradient(135deg, #FFF2F0, #FFCCC7); }
-.bg-limit { background: linear-gradient(135deg, #FFF7E6, #FFE7BA); }
+.bg-safe { background: linear-gradient(135deg, var(--bg-tint-mint, #F6FFED), var(--bg-tint-mint, #D9F7BE)); }
+.bg-caution { background: linear-gradient(135deg, var(--bg-tint-cream, #FFFBE6), var(--bg-tint-cream, #FFF1B8)); }
+.bg-unsafe { background: linear-gradient(135deg, var(--bg-tint-danger, #FFF2F0), #FFCCC7); }
+.bg-limit { background: linear-gradient(135deg, var(--bg-tint-cream, #FFF7E6), var(--bg-tint-cream, #FFE7BA)); }
 
 .detail-current-header { display: flex; align-items: center; gap: 12px; }
 .detail-current-icon { font-size: 32px; flex-shrink: 0; }
 .detail-current-text { display: flex; flex-direction: column; gap: 2px; }
-.detail-current-title { font-size: 13px; color: #64748b; font-weight: 500; }
+.detail-current-title { font-size: 13px; color: var(--text-secondary, #64748b); font-weight: 500; }
 .detail-current-verdict { font-size: 17px; font-weight: 800; }
 
 /* 分阶段网格 */
@@ -311,34 +311,34 @@ function eatingTips(level: string): string[] {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
 }
 .detail-stage-cell {
-  padding: 10px 12px; border-radius: 8px; background: #f8fafc;
+  padding: 10px 12px; border-radius: 8px; background: var(--bg-color-2, #f8fafc);
   border: 1px solid transparent; transition: border-color .2s;
 }
 .detail-stage-cell.is-current {
-  background: white; border-color: var(--primary-color, #c44680);
+  background: var(--bg-elev, #ffffff); border-color: var(--primary-color, #c44680);
   box-shadow: 0 1px 4px rgba(232,160,191,.15);
 }
 .cell-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.cell-stage { font-size: 12px; font-weight: 600; color: #334155; }
+.cell-stage { font-size: 12px; font-weight: 600; color: var(--text-color, #334155); }
 .cell-status {
   padding: 1px 7px; border-radius: 6px; font-size: 10px; font-weight: 700;
 }
-.status-safe { background: #F6FFED; color: #52C41A; }
-.status-caution { background: #FFFBE6; color: #D48806; }
-.status-unsafe { background: #FFF2F0; color: #FF4D4F; }
-.status-limit { background: #FFF7E6; color: #FF9800; }
-.cell-advice { font-size: 11.5px; color: #64748b; line-height: 1.6; margin: 0; }
+.status-safe { background: var(--bg-tint-mint, #F6FFED); color: #52C41A; }
+.status-caution { background: var(--bg-tint-cream, #FFFBE6); color: #D48806; }
+.status-unsafe { background: var(--bg-tint-danger, #FFF2F0); color: #FF4D4F; }
+.status-limit { background: var(--bg-tint-cream, #FFF7E6); color: #FF9800; }
+.cell-advice { font-size: 11.5px; color: var(--text-secondary, #64748b); line-height: 1.6; margin: 0; }
 
 /* 备注 */
 .detail-note-section { margin-bottom: 12px; }
-.note-label { font-size: 12px; font-weight: 700; color: #475569; }
-.note-content { font-size: 13px; color: #64748b; line-height: 1.7; margin: 4px 0 0; padding: 8px 12px; background: #f8fafc; border-radius: 8px; }
+.note-label { font-size: 12px; font-weight: 700; color: var(--text-secondary, #475569); }
+.note-content { font-size: 13px; color: var(--text-secondary, #64748b); line-height: 1.7; margin: 4px 0 0; padding: 8px 12px; background: var(--bg-color-2, #f8fafc); border-radius: 8px; }
 
 /* 食用建议 */
-.detail-tips { padding: 10px 12px; background: #EFF6FF; border-radius: 8px; border-left: 3px solid #4FC3F7; }
-.tips-title { font-size: 12px; font-weight: 700; color: #0369A1; display: block; margin-bottom: 6px; }
+.detail-tips { padding: 10px 12px; background: var(--bg-tint-blue, #EFF6FF); border-radius: 8px; border-left: 3px solid #4FC3F7; }
+.tips-title { font-size: 12px; font-weight: 700; color: var(--info-ink, #0369A1); display: block; margin-bottom: 6px; }
 .tips-list { margin: 0; padding-left: 18px; }
-.tips-list li { font-size: 12px; color: #475569; line-height: 1.8; }
+.tips-list li { font-size: 12px; color: var(--text-secondary, #475569); line-height: 1.8; }
 
 /* 动画 */
 .slide-enter-active, .slide-leave-active { transition: max-height .25s ease, opacity .25s ease, margin-bottom .25s ease, padding-bottom .25s ease, padding-top .25s ease; overflow: hidden; }
