@@ -143,6 +143,73 @@ if (!fs.existsSync(sfcPath)) {
 }
 
 // ==========================================================================
+console.log('\n########## F. 绑定名对账：v-model:* / @update:* 必须命中组件契约 ##########');
+// ==========================================================================
+// naive-ui 组件在**运行时**就暴露 props（`NXxx.props`）⇒ 拿它当唯一真源，
+// 逐条检查项目里每个 `v-model:NAME` / `@update:NAME` 是否真能命中（写错就静默失效）。
+// ⚠️ 必须做 kebab→camel 归一：模板写 `v-model:formatted-value`，而组件声明的是
+//    `formattedValue` —— Vue 运行时会把 kebab 归一到 camel（实测：kebab 命中、camel 命中、
+//    但 `formatted-VALUE` 这种混合写法**不命中**）。不做归一就会把 33 处合法用法误判成错。
+function camelize(s) { return String(s).replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase()); }
+
+/** 扫一段模板源码，返回「绑定名命中不了任何组件 prop」的明细 */
+function scanBindings(srcText, relName, naive) {
+  const bad = [];
+  const unknown = [];
+  const masked = maskStrings(srcText);
+  const tagRe = /<(n-[a-z0-9-]+)\b([^>]*)>/gs;
+  let m;
+  while ((m = tagRe.exec(masked)) !== null) {
+    const tag = m[1];
+    const attrs = m[2];
+    const comp = 'N' + tag.slice(2).split('-').map((s) => s[0].toUpperCase() + s.slice(1)).join('');
+    const c = naive[comp];
+    if (!c || !c.props) { unknown.push(`${tag}→${comp}`); continue; }
+    const names = Object.keys(c.props);
+    const line = masked.slice(0, m.index).split('\n').length;
+    for (const mm of attrs.matchAll(/\bv-model:([a-z0-9-]+)/g)) {
+      const p = camelize(mm[1]);
+      if (!names.includes(p) && !names.includes('onUpdate:' + p)) {
+        bad.push(`${relName}:${line} <${tag} v-model:${mm[1]}>（${comp} 无 ${p}/onUpdate:${p}）`);
+      }
+    }
+    for (const mm of attrs.matchAll(/@update:([a-z0-9-]+)/g)) {
+      const p = camelize(mm[1]);
+      if (!names.includes('onUpdate:' + p)) {
+        bad.push(`${relName}:${line} <${tag} @update:${mm[1]}>（${comp} 无 onUpdate:${p}）`);
+      }
+    }
+  }
+  return { bad, unknown };
+}
+
+const naiveDir = path.join(env.REPO, 'frontend', 'node_modules', 'naive-ui');
+if (!fs.existsSync(naiveDir)) {
+  check('能找到 naive-ui（缺了按失败处理，fail-closed）', false, naiveDir);
+} else {
+  const naive = require(naiveDir);
+  const allBad = [];
+  const allUnknown = [];
+  for (const f of files) {
+    const r = scanBindings(fs.readFileSync(f, 'utf8'), path.relative(env.REPO, f), naive);
+    allBad.push(...r.bad);
+    allUnknown.push(...r.unknown);
+  }
+  check('每个 n-* 组件都能在 naive-ui 运行时解析到', allUnknown.length === 0, [...new Set(allUnknown)].join('; '));
+  check(`v-model:* / @update:* 全部命中组件契约（扫了 ${files.length} 个 .vue）`,
+    allBad.length === 0, allBad.slice(0, 5).join('; '));
+  // 反例 / 正例：确认这套对账真的分得清
+  check('[反例] v-model:value 用在只认 show 的 n-modal 上会被报出',
+    scanBindings('<n-modal v-model:value="x" />', 'x.vue', naive).bad.length === 1);
+  check('[正例] v-model:show 用在 n-modal 上不报',
+    scanBindings('<n-modal v-model:show="x" />', 'x.vue', naive).bad.length === 0);
+  check('[正例] v-model:formatted-value（kebab）不误报',
+    scanBindings('<n-date-picker v-model:formatted-value="x" />', 'x.vue', naive).bad.length === 0);
+  check('[反例] @update:valu 这种打错的事件名会被报出',
+    scanBindings('<n-input @update:valu="f" />', 'x.vue', naive).bad.length === 1);
+}
+
+// ==========================================================================
 console.log('\n########## E. 组件级运行时：naive-ui 只认 value（真实渲染，不是推测）##########');
 // ==========================================================================
 // 用 @vue/server-renderer 把**真实的 naive-ui 组件**渲染成 HTML，数一下有几项处于选中态：
