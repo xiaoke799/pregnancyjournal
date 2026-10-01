@@ -186,6 +186,15 @@ const SUITES = [
   [path.join(V, 't16_storage_migrate.js'), '存储迁移不落假标记', ''],
   [path.join(V, 't17_index_cgi_body.js'), 'CGI 请求体转发', ''],
   [path.join(V, 't18_fk_schema_fix.js'), '错误外键重建(逐字校验)', ''],
+  // ---- 2026-10-01 新增：naive-ui 「裸 v-model」误用 ----
+  // naive-ui **没有** modelValue 约定（各组件用**具名** prop：value / show / checked）
+  // ⇒ 写 `v-model="x"` 时 Vue 编译成 modelValue，**组件一个都不认**：外部状态永不更新、
+  //   选中态也不动（渲染出来一个 checked 都没有）。真实事故：饮食页「催奶食谱大全」
+  //   只有「猪蹄系列」能显示 —— 因为 boostCat 停在初值 'pig'，点其它分类只 emit
+  //   `update:value` 而没人听。
+  // ⚠️ 四层证据：契约（类型定义无 modelValue）+ 全项目扫描 + **编译期**（看 createVNode
+  //    实际绑到哪个 prop）+ **组件级运行时**（SSR 真实渲染，数 checked 个数）+ 反例自检。
+  [path.join(UP, 'verify_naive_vmodel.js'), 'naive-ui 裸 v-model 误用', ''],
 ];
 
 const onlyArg = process.argv.find(a => a.startsWith('--only='));
