@@ -3,6 +3,9 @@ const router = express.Router();
 const db = require('../db');
 const config = require('../config');
 const rollup = require('../services/daily-rollup');
+// 时间归一入口：`contraction.start_time/end_time` 历史上混着 'HH:MM:SS'（自动计时）
+// 与 ISO（早期手动补记原样落库）两种写法，所有解析都必须过这里（详见该文件注释）。
+const { toHmsLocal, hmsDiffSeconds } = require('../services/hms-time');
 
 /**
  * 按明细重算会话汇总（`avg_duration` / `avg_interval` 都是**秒**）。
@@ -16,9 +19,15 @@ const rollup = require('../services/daily-rollup');
  * `end_time` 传了就连同结束时间一起落库（= 结束会话），不传只刷新汇总。
  */
 function refreshSessionAggregate(sessionId, endTime) {
+  // ⚠️ 排序放在 **JS 里按归一后的时间**做，不能交给 SQL：这一列历史上混着
+  //    'HH:MM:SS'（自动计时）与 ISO（早期手动补记）两种写法，字符串比较会把
+  //    '1' 开头的 'HH:MM:SS' 永远排在 '2' 开头的 ISO 前面 ⇒ 顺序与真实时间无关
+  //    （进而让「第一条没有间隔」的判断也落错位置）。
   const contractions = db.queryAll(
-    `SELECT * FROM contraction WHERE session_id = ? ORDER BY start_time ASC`,
+    `SELECT * FROM contraction WHERE session_id = ?`,
     [sessionId]
+  ).sort((a, b) =>
+    String(toHmsLocal(a.start_time) || '').localeCompare(String(toHmsLocal(b.start_time) || ''))
   );
   const total_count = contractions.length;
   let total_duration = 0;
@@ -26,11 +35,11 @@ function refreshSessionAggregate(sessionId, endTime) {
   let interval_count = 0;
   for (let i = 0; i < contractions.length; i++) {
     const c = contractions[i];
-    if (c.start_time && c.end_time) {
-      const start = new Date(`2000-01-01 ${c.start_time}`);
-      const end = new Date(`2000-01-01 ${c.end_time}`);
-      total_duration += (end - start) / 1000;
-    }
+    // 时长一律走归一入口：老库里手动补记的行是 ISO，直接拼 '2000-01-01 ' 会得到
+    // Invalid Date ⇒ NaN ⇒ 污染**整个会话**的平均时长（落库变 NULL），
+    // 连带当天记录的「宫缩持续时长」一起丢。算不出（缺 end_time）时返回 null，跳过。
+    const sec = hmsDiffSeconds(c.start_time, c.end_time);
+    if (sec !== null) total_duration += sec;
     // 第一条宫缩没有「距上一次的间隔」
     if (i > 0 && c.interval_from_prev != null) {
       total_interval += c.interval_from_prev;
@@ -126,34 +135,41 @@ router.post('/contractions/sessions/:id/contractions', async (req, res) => {
     if (!session) return res.json({ code: 1001, data: null, message: '会话不存在' });
     const now = new Date().toTimeString().slice(0, 8);
     if (action === 'start') {
+      // 本次这条宫缩的起点：调用方若显式传了时间（可能是 ISO），先归一成本地 'HH:MM:SS'
+      const startHms = toHmsLocal(start_time) || now;
       const activeContraction = await db.queryOne(
         `SELECT * FROM contraction WHERE session_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
         [req.params.id]
       );
       if (activeContraction) {
         await db.run('UPDATE contraction SET end_time = ? WHERE id = ?', [now, activeContraction.id]);
-        if (activeContraction.start_time) {
-          const s = new Date(`2000-01-01 ${activeContraction.start_time}`);
-          const e = new Date(`2000-01-01 ${now}`);
-          const duration = Math.round((e - s) / 1000);
-          await db.run('UPDATE contraction SET duration = ? WHERE id = ?', [duration, activeContraction.id]);
+        // 时长走归一入口（这一列可能是老库里的 ISO 写法）；算不出就不写，
+        // 宁可不给时长，也不要写个 NaN 进库（SQLite 会把 NaN 存成 NULL）
+        const autoDur = hmsDiffSeconds(activeContraction.start_time, now);
+        if (autoDur !== null) {
+          await db.run('UPDATE contraction SET duration = ? WHERE id = ?', [autoDur, activeContraction.id]);
         }
       }
-      const lastContraction = await db.queryOne(
-        `SELECT * FROM contraction WHERE session_id = ? AND end_time IS NOT NULL ORDER BY start_time DESC LIMIT 1`,
+      // 取「时间上最晚的一条已结束宫缩」做间隔基准。不能用 SQL 的 `ORDER BY start_time DESC`：
+      // 该列混着 'HH:MM:SS' 与 ISO 老写法，字符串排序的结果与真实时间无关。
+      const doneRows = await db.queryAll(
+        `SELECT * FROM contraction WHERE session_id = ? AND end_time IS NOT NULL`,
         [req.params.id]
       );
+      doneRows.sort((a, b) =>
+        String(toHmsLocal(a.start_time) || '').localeCompare(String(toHmsLocal(b.start_time) || ''))
+      );
+      const lastContraction = doneRows[doneRows.length - 1];
       let interval_from_prev = null;
       if (lastContraction && lastContraction.end_time) {
-        const prevEnd = new Date(`2000-01-01 ${lastContraction.end_time}`);
-        const currStart = new Date(`2000-01-01 ${now}`);
-        interval_from_prev = Math.round((currStart - prevEnd) / 1000);
+        const diff = hmsDiffSeconds(lastContraction.end_time, startHms);
+        if (diff !== null) interval_from_prev = diff;
       }
       const id = db.generateId();
       await db.run(
         `INSERT INTO contraction (id, session_id, start_time, end_time, duration, interval_from_prev, created_at)
          VALUES (?, ?, ?, NULL, NULL, ?, datetime('now'))`,
-        [id, req.params.id, start_time || now, interval_from_prev]
+        [id, req.params.id, startHms, interval_from_prev]
       );
       const row = await db.queryOne('SELECT * FROM contraction WHERE id = ?', [id]);
       // 每记一条宫缩就刷新会话汇总 + 同步当天记录（理由同胎动：不点「结束计时」也不能丢）
@@ -166,13 +182,12 @@ router.post('/contractions/sessions/:id/contractions', async (req, res) => {
         [req.params.id]
       );
       if (!activeContraction) return res.json({ code: 1001, data: null, message: '没有进行中的宫缩' });
-      const endTime = end_time || now;
-      await db.run('UPDATE contraction SET end_time = ? WHERE id = ?', [endTime, activeContraction.id]);
-      if (activeContraction.start_time) {
-        const s = new Date(`2000-01-01 ${activeContraction.start_time}`);
-        const e = new Date(`2000-01-01 ${endTime}`);
-        const duration = Math.round((e - s) / 1000);
-        await db.run('UPDATE contraction SET duration = ? WHERE id = ?', [duration, activeContraction.id]);
+      const endHms = toHmsLocal(end_time) || now;
+      await db.run('UPDATE contraction SET end_time = ? WHERE id = ?', [endHms, activeContraction.id]);
+      // 同上：时长走归一入口，算不出就不写（避免 NaN 落库变 NULL）
+      const endDur = hmsDiffSeconds(activeContraction.start_time, endHms);
+      if (endDur !== null) {
+        await db.run('UPDATE contraction SET duration = ? WHERE id = ?', [endDur, activeContraction.id]);
       }
       const row = await db.queryOne('SELECT * FROM contraction WHERE id = ?', [activeContraction.id]);
       refreshSessionAggregate(req.params.id);
@@ -180,23 +195,36 @@ router.post('/contractions/sessions/:id/contractions', async (req, res) => {
       res.json({ code: 0, data: row, message: 'success' });
     } else if (action === 'manual') {
       if (!start_time || !end_time) return res.json({ code: 1001, data: null, message: '手动模式需要start_time和end_time' });
-      const s = new Date(`2000-01-01 ${start_time}`);
-      const e = new Date(`2000-01-01 ${end_time}`);
-      const duration = Math.round((e - s) / 1000);
-      const lastContraction = await db.queryOne(
-        `SELECT * FROM contraction WHERE session_id = ? ORDER BY start_time DESC LIMIT 1`,
-        [req.params.id]
+      // 🔴 归一成本地 'HH:MM:SS' 再落库。前端 n-date-picker 给的是**本地**时间，
+      //    经 `dayjs(...).toISOString()` 变成 **UTC ISO** 才发过来；以前直接
+      //    `new Date('2000-01-01 ' + iso)` ⇒ Invalid Date ⇒ duration = NaN ⇒
+      //    存进 SQLite 变 NULL，且 refreshSessionAggregate 把**整个会话**的平均时长
+      //    一起污染成 NULL —— 用户看到的就是「手动补记一条宫缩，当天时长全没了」。
+      //    同时落库格式与自动计时统一，明细排序、5-1-1 分析也一起恢复正确。
+      const startHms = toHmsLocal(start_time);
+      const endHms = toHmsLocal(end_time);
+      if (startHms === null || endHms === null) {
+        return res.json({ code: 1001, data: null, message: '时间格式无法识别' });
+      }
+      const duration = hmsDiffSeconds(startHms, endHms);
+      // 取时间上最晚的那一条做「距上一次间隔」的基准；同样先归一（老行可能是 ISO），
+      // 否则排序会落在错误的位置上。
+      const allRows = await db.queryAll(`SELECT * FROM contraction WHERE session_id = ?`, [req.params.id]);
+      allRows.sort((a, b) =>
+        String(toHmsLocal(a.start_time) || '').localeCompare(String(toHmsLocal(b.start_time) || ''))
       );
+      const lastContraction = allRows[allRows.length - 1];
       let interval_from_prev = null;
       if (lastContraction && lastContraction.end_time) {
-        const prevEnd = new Date(`2000-01-01 ${lastContraction.end_time}`);
-        interval_from_prev = Math.round((s - prevEnd) / 1000);
+        const diff = hmsDiffSeconds(lastContraction.end_time, startHms);
+        // 负值（补记的时刻早于上一条）宁可不给间隔，也不要往库里写负数
+        if (diff !== null && diff >= 0) interval_from_prev = diff;
       }
       const id = db.generateId();
       await db.run(
         `INSERT INTO contraction (id, session_id, start_time, end_time, duration, interval_from_prev, created_at)
          VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
-        [id, req.params.id, start_time, end_time, duration, interval_from_prev]
+        [id, req.params.id, startHms, endHms, duration, interval_from_prev]
       );
       const row = await db.queryOne('SELECT * FROM contraction WHERE id = ?', [id]);
       refreshSessionAggregate(req.params.id);
@@ -213,8 +241,13 @@ router.post('/contractions/sessions/:id/contractions', async (req, res) => {
 router.get('/contractions/sessions/:id/contractions', async (req, res) => {
   try {
     const rows = await db.queryAll(
-      `SELECT * FROM contraction WHERE session_id = ? ORDER BY start_time ASC`,
+      `SELECT * FROM contraction WHERE session_id = ?`,
       [req.params.id]
+    );
+    // 老库里同一列混着 'HH:MM:SS'（自动计时）与 ISO（早期手动补记）⇒ SQL 字符串排序
+    // 会把 ISO 行整批甩到 'HH:MM:SS' 行前后、与真实先后无关；在 JS 里按归一后的时间排。
+    rows.sort((a, b) =>
+      String(toHmsLocal(a.start_time) || '').localeCompare(String(toHmsLocal(b.start_time) || ''))
     );
     res.json({ code: 0, data: rows, message: 'success' });
   } catch (e) {
@@ -248,12 +281,18 @@ router.get('/contractions/sessions/:id/analysis', async (req, res) => {
     // 结论永远掉到「暂无足够数据」——历史会话的分析等于没用。
     // 这里改用**该会话最后一次宫缩的时间**作为锚点。
     const sessionDate = session.session_date;
-    const sessionStartTs = session.start_time
-      ? new Date(sessionDate + 'T' + session.start_time).getTime()
+    // 会话表的时间一直是 'HH:MM:SS'，但同样过一遍归一入口（防脏数据），
+    // 且与下面逐条宫缩的解析口径保持一致。
+    const sessionStartHms = toHmsLocal(session.start_time);
+    const sessionStartTs = sessionStartHms
+      ? new Date(sessionDate + 'T' + sessionStartHms).getTime()
       : null;
     const tsOf = (c) => {
-      if (!c.start_time) return null;
-      let ts = new Date(sessionDate + 'T' + c.start_time).getTime();
+      // 🔴 必须归一：早期手动补记的行 start_time 是 ISO，`sessionDate + 'T' + iso`
+      //    拼出来解析失败 ⇒ 这条被判 null 整个忽略，窗口计数与跨度都算不准。
+      const hms = toHmsLocal(c.start_time);
+      if (!hms) return null;
+      let ts = new Date(sessionDate + 'T' + hms).getTime();
       if (!Number.isFinite(ts)) return null;
       // 处理跨午夜：若宫缩时间早于会话开始时间，说明已跨到次日
       if (sessionStartTs !== null && Number.isFinite(sessionStartTs) && ts < sessionStartTs) {

@@ -82,6 +82,13 @@ export function useContractionTimer() {
         isRunning.value = false
         currentStartTime.value = null
       }
+      // 恢复后同样重算 5-1-1：用户中途退出时若已经达标，回来必须还能看到告警
+      // （以前恢复不碰这个状态，一条已经满足「每5分钟1次、持续1分钟、满1小时」的会话
+      //   重新打开后告警条凭空消失，比不恢复更容易误导）。
+      try {
+        const a: any = await contractionApi.analyze(session.id)
+        if (a && a.code === 0 && a.data) alert511.value = !!a.data.is_511_met
+      } catch (e) { /* 分析失败不影响恢复 */ }
       return true
     } catch (e) {
       return false
@@ -105,35 +112,33 @@ export function useContractionTimer() {
   async function endContraction(): Promise<boolean> {
     if (!sessionId.value || !currentStartTime.value) return false
     try {
-      isRunning.value = false
-
-      const now = new Date()
-      lastDuration.value = (now.getTime() - currentStartTime.value.getTime()) / 1000
-
-      // 计算间隔
-      if (contractions.value.length > 0) {
-        const lastEnd = contractions.value[contractions.value.length - 1].endTime
-        if (lastEnd) {
-          lastInterval.value = (currentStartTime.value.getTime() - new Date(lastEnd).getTime()) / 1000
-        }
+      const res: any = await contractionApi.recordContraction(sessionId.value, 'end')
+      // ⚠️ **以后端返回的行为准**：它带着服务端算好的 duration / interval_from_prev（**秒**）。
+      //    以前前端自己 `new Date(lastEnd)` 再算一遍 —— 而 lastEnd 在「恢复的会话」与
+      //    「手动补记」里是 'HH:MM:SS'，`new Date('14:30:00')` = Invalid Date ⇒ 间隔算出 NaN
+      //    （界面「距上次间隔」静默消失）；而且后端**拒绝**时（如没有进行中的宫缩）
+      //    以前也会照常 push 一条本地记录，界面上会凭空多出一条不存在的宫缩。
+      if (!res || res.code !== 0 || !res.data) {
+        // 服务端没认：把状态退回「正在计时」，让用户可以再点一次结束（而不是静默半成功）
+        isRunning.value = true
+        return false
       }
-
-      await contractionApi.recordContraction(sessionId.value, 'end')
-
+      isRunning.value = false
+      const c = res.data
       contractions.value.push({
-        startTime: currentStartTime.value.toISOString(),
-        endTime: now.toISOString(),
-        duration: lastDuration.value,
-        interval: lastInterval.value,
+        startTime: c.start_time,
+        endTime: c.end_time,
+        duration: c.duration,
+        interval: c.interval_from_prev,
       })
+      lastDuration.value = c.duration || 0
+      lastInterval.value = c.interval_from_prev != null ? c.interval_from_prev : 0
       currentStartTime.value = null
 
       // 检查 5-1-1
-      if (sessionId.value) {
-        const analysis = await contractionApi.analyze(sessionId.value)
-        if (analysis.code === 0 && analysis.data) {
-          alert511.value = analysis.data.is_511_met
-        }
+      const analysis = await contractionApi.analyze(sessionId.value)
+      if (analysis.code === 0 && analysis.data) {
+        alert511.value = analysis.data.is_511_met
       }
       return true
     } catch (e) {
