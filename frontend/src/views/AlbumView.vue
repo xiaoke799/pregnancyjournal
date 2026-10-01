@@ -189,7 +189,7 @@
           <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">可能是文件已丢失，或该格式浏览器不支持（如 TIFF）</div>
           <a :href="previewImageUrl" download style="display: inline-block; margin-top: 12px; color: #7c3aed;">下载原文件</a>
         </div>
-        <div v-if="previewItemData" style="margin-top: 16px; text-align: left; padding: 12px; background: #f8fafc; border-radius: 8px;">
+        <div v-if="previewItemData" style="margin-top: 16px; text-align: left; padding: 12px; background: var(--bg-color-2, #f8fafc); border-radius: 8px;">
           <div style="font-weight: 600; margin-bottom: 8px;">{{ previewItemData.dateText }} · 孕{{ previewItemData.week || '?' }}周</div>
           <div v-if="previewItemData.note" style="color: #64748b; font-size: 14px; line-height: 1.6;">{{ previewItemData.note }}</div>
           <div style="color: #94a3b8; font-size: 12px; margin-top: 8px;">{{ previewItemData.typeLabel }}</div>
@@ -698,7 +698,7 @@ onMounted(async () => {
   height: 12px;
   border-radius: 50%;
   background: var(--primary-color, #c44680);
-  border: 2px solid white;
+  border: 2px solid var(--bg-card, white);
   box-shadow: 0 0 0 2px var(--primary-color, #c44680);
   margin-top: 24px;
   flex-shrink: 0;
@@ -786,7 +786,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: #333;
+  color: var(--text-color, #333);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -847,12 +847,12 @@ onMounted(async () => {
 .format-hint {
   margin-top: 8px;
   padding: 8px 10px;
-  background: #f8fafc;
-  border: 1px solid #eef2f7;
+  background: var(--bg-color-2, #f8fafc);
+  border: 1px solid var(--border-color, #eef2f7);
   border-radius: 8px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   /* 中英混排的长说明：允许在任意字符间断行，杜绝撑宽容器 */
   overflow-wrap: anywhere;
 }
@@ -860,7 +860,7 @@ onMounted(async () => {
   display: inline-block;
   min-width: 34px;
   margin-right: 6px;
-  color: #7c3aed;
+  color: var(--lilac-ink, #7c3aed);
   font-weight: 500;
 }
 .format-hint .fh-muted {
@@ -879,20 +879,20 @@ onMounted(async () => {
   font-size: 12px;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 16px;
-  background: white;
+  background: var(--bg-elev, #ffffff);
   cursor: pointer;
   transition: all 0.2s;
   color: var(--text-secondary, #64748b);
 }
 .card-action-btn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: var(--bg-color-2, #f8fafc);
+  border-color: var(--border-color-strong, #cbd5e1);
 }
 
 .card-action-del:hover {
-  background: #fef2f2;
+  background: var(--bg-tint-danger, #fef2f2);
   border-color: #fca5a5;
-  color: #dc2626;
+  color: var(--error-ink, #dc2626);
 }
 
 /* 日期选择器在弹窗中的 z-index 修复 */

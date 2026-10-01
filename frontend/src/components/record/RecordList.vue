@@ -655,7 +655,7 @@ function getSleepQualityWidth(): string {
 }
 
 .category-row:hover {
-  background: rgba(248, 250, 252, 0.6);
+  background: var(--bg-hover, rgba(248, 250, 252, 0.6));
 }
 
 .category-row:active {
@@ -761,7 +761,7 @@ function getSleepQualityWidth(): string {
 .toggle-group {
   display: flex;
   gap: 4px;
-  background: #f5f5f5;
+  background: var(--bg-color-2, #f5f5f5);
   border-radius: 6px;
   padding: 2px;
 }
@@ -809,7 +809,7 @@ function getSleepQualityWidth(): string {
 }
 
 .card-header:hover {
-  background: rgba(248, 250, 252, 0.5);
+  background: var(--bg-hover, rgba(248, 250, 252, 0.5));
 }
 
 .card-header:active {
@@ -966,8 +966,8 @@ function getSleepQualityWidth(): string {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 4px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--bg-tint-cream, #fef3c7);
+  color: var(--warning-ink, #92400e);
   font-size: 12px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1005,23 +1005,23 @@ function getSleepQualityWidth(): string {
 }
 
 .tag-normal {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--bg-tint-mint, #dcfce7);
+  color: var(--success-ink, #166534);
 }
 
 .tag-warning {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--bg-tint-cream, #fef3c7);
+  color: var(--warning-ink, #92400e);
 }
 
 .tag-alert {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--bg-tint-danger, #fee2e2);
+  color: var(--error-ink, #991b1b);
 }
 
 .tag-neutral {
   background: var(--bg-color, #f1f5f9);
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
 }
 
 .bp-row {
@@ -1373,16 +1373,16 @@ function getSleepQualityWidth(): string {
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--bg-tint-cream, #fef3c7);
+  color: var(--warning-ink, #92400e);
 }
 .intimacy-badge.protected {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--bg-tint-mint, #dcfce7);
+  color: var(--success-ink, #166534);
 }
 .intimacy-badge.unprotected {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--bg-tint-danger, #fee2e2);
+  color: var(--error-ink, #991b1b);
 }
 
 /* ====== 宫缩 ====== */

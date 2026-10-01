@@ -508,9 +508,9 @@ const growthChartOption = computed(() => {
   return {
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(255,255,255,0.96)',
-      borderColor: '#eee',
-      textStyle: { fontSize: 12 },
+      backgroundColor: p.tooltipBg,
+      borderColor: p.tooltipBorder,
+      textStyle: { fontSize: 12, color: p.tooltipText },
       formatter: (params: any) => {
         let tip = params[0]?.axisValue || ''
         params.forEach((p: any) => {
@@ -1219,15 +1219,15 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   color: var(--text-hint, #94a3b8);
   text-align: center;
 }
-.core-record { background: linear-gradient(135deg, #ffe8f0 0%, #ffc4d8 100%); }
-.core-diet { background: linear-gradient(135deg, #fff3e0 0%, #ffd9a6 100%); }
-.core-diary { background: linear-gradient(135deg, #ece7ff 0%, #c8c0f0 100%); }
-.core-checkup { background: linear-gradient(135deg, #e0f5f1 0%, #a8e0d0 100%); }
-.core-settings { background: linear-gradient(135deg, #f5e8ff 0%, #dcc0f0 100%); }
+.core-record { background: linear-gradient(135deg, var(--bg-tint-pink, #ffe8f0) 0%, #ffc4d8 100%); }
+.core-diet { background: linear-gradient(135deg, var(--bg-tint-cream, #fff3e0) 0%, #ffd9a6 100%); }
+.core-diary { background: linear-gradient(135deg, var(--bg-tint-pink, #ece7ff) 0%, #c8c0f0 100%); }
+.core-checkup { background: linear-gradient(135deg, var(--bg-tint-mint, #e0f5f1) 0%, #a8e0d0 100%); }
+.core-settings { background: linear-gradient(135deg, var(--bg-tint-pink, #f5e8ff) 0%, #dcc0f0 100%); }
 
 .dev-brief { display: flex; gap: 8px; margin-bottom: 10px; }
 .dev-chip {
-  padding: 4px 10px; border-radius: 8px; background: #f3e8ff; color: #7c3aed;
+  padding: 4px 10px; border-radius: 8px; background: var(--bg-tint-pink, #f3e8ff); color: var(--lilac-ink, #7c3aed);
   font-size: 12px; font-weight: 600;
 }
 
@@ -1236,11 +1236,11 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .checkup-list { display: flex; flex-direction: column; gap: 8px; }
 .checkup-item {
   display: flex; align-items: center; gap: 12px; padding: 10px 12px;
-  border-radius: 10px; background: #f0f9ff; border-left: 3px solid #3b82f6;
+  border-radius: 10px; background: var(--bg-tint-blue, #f0f9ff); border-left: 3px solid #3b82f6;
 }
 .ci-week {
   font-size: 12px; font-weight: 700; color: #3b82f6; white-space: nowrap;
-  min-width: 48px; text-align: center; background: #dbeafe; padding: 4px 6px;
+  min-width: 48px; text-align: center; background: var(--bg-tint-blue, #dbeafe); padding: 4px 6px;
   border-radius: 6px;
 }
 .ci-body { flex: 1; min-width: 0; }
@@ -1256,7 +1256,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   border-radius: 10px; background: var(--bg-color-2, #f8fafc); transition: background .15s;
 }
 .plan-item:hover { background: var(--border-color-soft, #f1f5f9); }
-.plan-item.is-today { background: #fef3c7; border-left: 3px solid #f59e0b; }
+.plan-item.is-today { background: var(--bg-tint-cream, #fef3c7); border-left: 3px solid #f59e0b; }
 .plan-item.is-past { opacity: 0.6; }
 .plan-item.is-completed { opacity: 0.55; background: var(--border-color-soft, #f1f5f9); }
 .plan-item.is-completed .plan-icon { filter: grayscale(0.5); }
@@ -1283,7 +1283,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #f0ebfb, #e8f2fb);
+  background: linear-gradient(135deg, var(--bg-tint-pink, #f0ebfb), var(--bg-tint-blue, #e8f2fb));
   border-radius: 12px;
   text-decoration: none;
   color: inherit;
@@ -1297,9 +1297,9 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   display: flex;
   flex-direction: column;
 }
-.eg-entry-body strong { font-size: 15px; color: #333; }
+.eg-entry-body strong { font-size: 15px; color: var(--text-color, #333); }
 .eg-entry-body span { font-size: 12px; color: #888; margin-top: 2px; }
-.eg-entry-arrow { font-size: 18px; color: #7c5cbf; font-weight: 700; }
+.eg-entry-arrow { font-size: 18px; color: var(--lilac-ink, #7c5cbf); font-weight: 700; }
 
 /* ===== 胎动 / 宫缩卡片：展示今日数据 + 快捷记录 =====
    ⚠️ 卡片整体可点用「拉伸链接」实现：卡片外包 router-link 会让「记一笔」变成嵌套可点区域，
@@ -1318,7 +1318,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   gap: 6px;
   padding: 12px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #fdf1f5, #f2f0fd);
+  background: linear-gradient(135deg, var(--bg-tint-pink, #fdf1f5), var(--bg-tint-pink, #f2f0fd));
   border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: var(--shadow-sm);
   min-width: 0;
@@ -1331,7 +1331,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .tool-card-title {
   font-size: 14px;
   font-weight: 700;
-  color: #333;
+  color: var(--text-color, #333);
   text-decoration: none;
   min-width: 0;
   overflow: hidden;
@@ -1345,7 +1345,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .tool-card-stat {
   font-size: 12px;
   line-height: 1.35;
-  color: #4b5563;
+  color: var(--text-secondary, #4b5563);
   /* 留最小高度：没数据时卡片不至于比有数据时矮一截、两卡高度不一致 */
   min-height: 32px;
 }
@@ -1367,7 +1367,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   align-items: center;
   padding: 12px 8px;
   border-radius: 10px;
-  background: #fdf4ff;
+  background: var(--bg-tint-pink, #fdf4ff);
   gap: 4px;
 }
 .hg-icon { font-size: 20px; }
@@ -1378,12 +1378,12 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 /* 有记录、但没填任何健康指标时的兜底：把「今天记了什么」列出来，不留空盒子 */
 .other-recorded {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-  padding: 12px; border-radius: 10px; background: #fdf4ff;
+  padding: 12px; border-radius: 10px; background: var(--bg-tint-pink, #fdf4ff);
 }
 .or-lead { font-size: 12px; color: var(--text-secondary, #64748b); font-weight: 600; }
 .or-chip {
   font-size: 12px; padding: 2px 9px; border-radius: 999px;
-  background: #fff; color: var(--primary-color, #c44680); border: 1px solid #f5d0e6;
+  background: var(--bg-elev, #ffffff); color: var(--primary-color, #c44680); border: 1px solid var(--border-color, #f5d0e6);
 }
 .or-hint { flex-basis: 100%; font-size: 11px; color: var(--text-hint, #94a3b8); margin-top: 2px; }
 
@@ -1392,11 +1392,11 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
   padding: 24px; color: var(--text-hint, #94a3b8); font-size: 13px;
   text-decoration: none; border-radius: 10px; transition: background .15s;
 }
-.empty-record:hover { background: #f8fafc; }
+.empty-record:hover { background: var(--bg-color-2, #f8fafc); }
 .empty-icon { font-size: 28px; }
 .empty-cta { color: var(--primary-color, #c44680); font-weight: 600; font-size: 13px; }
 
-.cl-bar-outer { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.cl-bar-outer { height: 8px; background: var(--border-color-soft, #e2e8f0); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
 .cl-bar-outer.mandatory { background: #fecaca; }
 .cl-bar-fill { height: 100%; background: linear-gradient(90deg, #66BB6A, #42A5F5); border-radius: 4px; transition: width .4s; }
 .cl-bar-outer.mandatory .cl-bar-fill { background: linear-gradient(90deg, #ef4444, #f97316); }
@@ -1404,7 +1404,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadDashboa
 .cl-summary strong { color: var(--primary-color, #c44680); font-size: 15px; margin-left: 4px; }
 .cl-sub { color: #94a3b8; font-size: 12px; margin-left: 4px; }
 
-.lc-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border-radius: 10px; }
+.lc-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg-color-2, #f8fafc); border-radius: 10px; }
 .lc-type { font-size: 14px; font-weight: 600; margin-right: 8px; }
 .lc-date { font-size: 12px; color: var(--text-hint); }
 .lc-week { font-size: 13px; font-weight: 600; color: var(--primary-color, #c44680); }

@@ -440,18 +440,18 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => {
 .stat-num { font-size: 26px; font-weight: 800; line-height: 1; }
 .stat-label { font-size: 11px; opacity: .95; margin-top: 2px; }
 .overview-bar { flex: 1; height: 10px; background: rgba(255,255,255,.35); border-radius: 5px; overflow: hidden; }
-.bar-fill { height: 100%; background: white; border-radius: 5px; transition: width .4s; }
+.bar-fill { height: 100%; background: var(--bg-card, white); border-radius: 5px; transition: width .4s; }
 .overview-pct { font-size: 20px; font-weight: 800; min-width: 48px; text-align: right; }
 .progress-sub {
-  text-align: right; font-size: 12px; color: #64748b;
+  text-align: right; font-size: 12px; color: var(--text-secondary, #64748b);
   padding: 0 4px 16px 4px;
 }
 
 /* 清单卡片 */
 .checklist-card {
-  background: white; border-radius: 14px; padding: 16px;
+  background: var(--bg-card, #ffffff); border-radius: 14px; padding: 16px;
   margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06);
-  border-left: 4px solid #e2e8f0;
+  border-left: 4px solid var(--border-color, #e2e8f0);
   transition: border-left-color 0.3s ease;
 }
 .checklist-card.card-expanded {
@@ -469,7 +469,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => {
 .card-desc { font-size: 12px; color: #94a3b8; margin-top: 4px; padding-left: 24px; }
 
 .card-progress { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.card-bar-wrap { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+.card-bar-wrap { flex: 1; height: 6px; background: var(--bg-color-2, #f1f5f9); border-radius: 3px; overflow: hidden; }
 .card-bar-fill { height: 100%; background: linear-gradient(90deg, #66BB6A, #42A5F5); border-radius: 3px; transition: width .4s; }
 .progress-text { font-size: 12px; font-weight: 600; color: #43A047; min-width: 36px; }
 
@@ -479,15 +479,15 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => {
 .item-group { margin-bottom: 12px; }
 .group-header {
   display: flex; align-items: center; gap: 6px; padding: 8px 10px;
-  font-size: 13px; font-weight: 700; color: #475569;
-  background: #f8fafc; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--text-secondary, #475569);
+  background: var(--bg-color-2, #f8fafc); border-radius: 8px; cursor: pointer;
   transition: background 0.2s;
 }
-.group-header:hover { background: #f1f5f9; }
+.group-header:hover { background: var(--bg-elev, #f1f5f9); }
 .group-expand { font-size: 10px; }
 .group-icon { font-size: 15px; }
 .group-name { flex: 1; }
-.group-count { font-size: 11px; font-weight: 400; color: #94a3b8; background: white; padding: 2px 8px; border-radius: 8px; }
+.group-count { font-size: 11px; font-weight: 400; color: var(--text-hint, #94a3b8); background: var(--bg-elev, #ffffff); padding: 2px 8px; border-radius: 8px; }
 .group-percentage { font-size: 11px; font-weight: 600; color: #43A047; min-width: 32px; text-align: right; }
 
 .group-items { padding: 4px 0; }
@@ -496,11 +496,11 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => {
   display: flex; align-items: center; gap: 10px; padding: 8px 10px;
   border-radius: 8px; cursor: pointer; transition: background .15s;
 }
-.item-row:hover { background: #f8fafc; }
-.item-row.checked { background: #f0fdf4; }
+.item-row:hover { background: var(--bg-color-2, #f8fafc); }
+.item-row.checked { background: var(--bg-tint-mint, #f0fdf4); }
 .item-row.checked .item-name { text-decoration: line-through; color: #94a3b8; }
 .item-checkbox { width: 18px; height: 18px; accent-color: #43A047; cursor: pointer; flex-shrink: 0; }
-.item-name { flex: 1; font-size: 14px; color: #334155; user-select: none; }
+.item-name { flex: 1; font-size: 14px; color: var(--text-color, #334155); user-select: none; }
 .mandatory-badge { font-size: 10px; color: #fff; background: #ef4444; padding: 1px 6px; border-radius: 6px; font-weight: 600; }
 .custom-badge { font-size: 10px; color: #fff; background: #94a3b8; padding: 1px 6px; border-radius: 6px; }
 .delete-custom-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 2px 4px; opacity: 0.6; }
@@ -511,21 +511,22 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => {
 /* 筛选按钮 */
 .filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 .filter-btn {
-  flex: 1; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+  flex: 1; padding: 8px 12px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
   font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-  background: white; color: #64748b;
+  background: var(--bg-elev, #ffffff); color: var(--text-secondary, #64748b);
 }
-.filter-btn:hover { border-color: #94a3b8; }
+.filter-btn:hover { border-color: var(--border-color-strong, #94a3b8); }
 .filter-btn.active { background: #43A047; color: white; border-color: #43A047; }
 .filter-btn.mandatory-filter.active { background: #ef4444; border-color: #ef4444; }
 
 /* 搜索 */
 .search-row { display: flex; gap: 6px; margin-bottom: 12px; position: relative; }
 .search-input {
-  flex: 1; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
-  font-size: 13px; outline: none; background: #f8fafc;
+  flex: 1; padding: 8px 12px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+  font-size: 13px; outline: none; background: var(--bg-elev, #f8fafc);
+  color: var(--text-color, inherit);
 }
-.search-input:focus { border-color: var(--primary-color); background: white; }
+.search-input:focus { border-color: var(--primary-color); background: var(--bg-elev, #ffffff); }
 .clear-search {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
   background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px;
@@ -534,19 +535,19 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => {
 /* 添加条目 */
 .add-item-row {
   display: flex; gap: 6px; margin-top: 12px; padding-top: 12px;
-  border-top: 1px dashed #e2e8f0;
+  border-top: 1px dashed var(--border-color, #e2e8f0);
   transition: all .25s ease;
 }
 .add-item-row.active {
   border: 1.5px solid var(--primary-color, #43A047);
-  background: #f0fdf4; padding: 10px; border-radius: 10px;
+  background: var(--bg-tint-mint, #f0fdf4); padding: 10px; border-radius: 10px;
   box-shadow: 0 2px 8px rgba(67,160,71,.15);
 }
-.add-input { flex: 1; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; }
+.add-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; font-size: 13px; outline: none; }
 .add-input:focus { border-color: var(--primary-color); }
 .add-input.active { border-color: var(--primary-color, #43A047); font-weight: 500; }
-.add-cat-select { padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; max-width: 140px; }
-.add-cat-input { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; max-width: 140px; }
+.add-cat-select { padding: 8px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; font-size: 13px; background: var(--bg-elev, #ffffff); max-width: 140px; }
+.add-cat-input { padding: 8px 12px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; font-size: 13px; outline: none; max-width: 140px; }
 .add-btn { width: 36px; height: 36px; border-radius: 8px; border: none; background: var(--primary-color); color: white; font-size: 18px; font-weight: 700; cursor: pointer; transition: transform .15s; }
 .add-btn:disabled { opacity: .4; cursor: not-allowed; }
 .add-btn:not(:disabled):hover { transform: scale(1.1); }
@@ -555,10 +556,10 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => {
 .card-quick-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
 .quick-add-btn {
   padding: 4px 14px; border: 1.5px dashed #94a3b8; border-radius: 20px;
-  background: transparent; color: #64748b; font-size: 12px; font-weight: 600;
+  background: transparent; color: var(--text-secondary, #64748b); font-size: 12px; font-weight: 600;
   cursor: pointer; transition: all .2s;
 }
-.quick-add-btn:hover { border-color: #43A047; color: #43A047; background: #f0fdf4; }
+.quick-add-btn:hover { border-color: #43A047; color: #43A047; background: var(--bg-tint-mint, #f0fdf4); }
 .card-header:hover .quick-add-btn { opacity: 1; }
 
 /* 空状态 */
@@ -569,11 +570,11 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => {
 /* 刷新按钮 */
 .refresh-section { margin-bottom: 16px; }
 .refresh-btn {
-  width: 100%; padding: 12px; border: 2px dashed #e2e8f0; border-radius: 10px;
-  background: #f8fafc; color: #64748b; font-size: 14px; font-weight: 600;
+  width: 100%; padding: 12px; border: 2px dashed var(--border-color, #e2e8f0); border-radius: 10px;
+  background: var(--bg-color-2, #f8fafc); color: var(--text-secondary, #64748b); font-size: 14px; font-weight: 600;
   cursor: pointer; transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
-.refresh-btn:hover { border-color: #43A047; color: #43A047; background: #f0fdf4; }
+.refresh-btn:hover { border-color: #43A047; color: #43A047; background: var(--bg-tint-mint, #f0fdf4); }
 .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* 移动端适配 */

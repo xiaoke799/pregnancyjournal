@@ -111,7 +111,7 @@ onUnmounted(() => { reset() })
 .count-label { font-size: 18px; color: var(--text-secondary); margin-bottom: 32px; }
 .kick-button {
   width: 160px; height: 160px; border-radius: 50%; border: 4px solid var(--primary-color);
-  background: white; font-size: 20px; font-weight: 600; color: var(--primary-color);
+  background: var(--bg-card, white); font-size: 20px; font-weight: 600; color: var(--primary-color);
   cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-lg);
 }
 .kick-button:active { transform: scale(0.95); }

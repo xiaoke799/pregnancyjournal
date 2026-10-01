@@ -494,7 +494,7 @@ onBeforeUnmount(() => {
 .diary-empty {
   text-align: center;
   padding: 80px 20px;
-  background: white;
+  background: var(--bg-card, #ffffff);
   border-radius: 16px;
   box-shadow: 0 1px 4px rgba(0,0,0,.06);
 }
@@ -523,7 +523,7 @@ onBeforeUnmount(() => {
 }
 
 .diary-card {
-  background: white;
+  background: var(--bg-card, #ffffff);
   border-radius: 14px;
   padding: 20px;
   box-shadow: 0 1px 4px rgba(0,0,0,.06);
@@ -555,7 +555,7 @@ onBeforeUnmount(() => {
   font-size: 12px;
   color: var(--primary-color, #c44680);
   font-weight: 600;
-  background: #fdf4ff;
+  background: var(--bg-tint-pink, #fdf4ff);
   padding: 2px 8px;
   border-radius: 8px;
 }

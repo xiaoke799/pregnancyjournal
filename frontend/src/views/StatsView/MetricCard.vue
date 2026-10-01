@@ -290,7 +290,7 @@ const chartOption = computed(() => {
         // 关掉缩放条里的"数据小预览"：多条曲线/大量空值时它会被画成锯齿状的一团，很噪，
         // 而卡片本身已经把这些信息画清楚了。
         showDataShadow: false,
-        backgroundColor: '#f1ebf2',
+        backgroundColor: palette.value.splitLine,
         fillerColor: 'rgba(196, 70, 128, 0.14)',
         textStyle: { fontSize: 10, color: p.axisLabel },
         brushSelect: false,
@@ -314,7 +314,7 @@ function adjustColor(hex: string, amount: number): string {
 
 <style scoped>
 .metric-card {
-  background: white;
+  background: var(--bg-card, #ffffff);
   border-radius: 14px;
   padding: 16px;
   box-shadow: 0 1px 4px rgba(0,0,0,.06);
@@ -354,8 +354,8 @@ function adjustColor(hex: string, amount: number): string {
 }
 .card-unit {
   font-size: 11px;
-  color: #94a3b8;
-  background: #f1f5f9;
+  color: var(--text-hint, #94a3b8);
+  background: var(--bg-color-2, #f1f5f9);
   padding: 2px 8px;
   border-radius: 8px;
 }
@@ -412,7 +412,7 @@ function adjustColor(hex: string, amount: number): string {
 }
 
 /* 表格 */
-.table-section { margin-top: 8px; border-top: 1px solid #f1f5f9; }
+.table-section { margin-top: 8px; border-top: 1px solid var(--bg-color-2, #f1f5f9); }
 .table-toggle {
   text-align: center;
   padding: 8px;
@@ -422,7 +422,7 @@ function adjustColor(hex: string, amount: number): string {
   cursor: pointer;
   user-select: none;
 }
-.table-toggle:hover { color: #c44680; }
+.table-toggle:hover { color: var(--primary-color, #c44680); }
 
 .table-body { overflow-x: auto; padding-top: 4px; }
 .data-table {
@@ -433,25 +433,25 @@ function adjustColor(hex: string, amount: number): string {
 .data-table th {
   position: sticky;
   top: 0;
-  background: #f8fafc;
+  background: var(--bg-color-2, #f8fafc);
   padding: 7px 10px;
   text-align: left;
   font-weight: 600;
-  color: #64748b;
-  border-bottom: 1px solid #e2e8f0;
+  color: var(--text-secondary, #64748b);
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
   white-space: nowrap;
 }
 .data-table td {
   padding: 6px 10px;
-  border-bottom: 1px solid #f8fafc;
+  border-bottom: 1px solid var(--border-color-soft, #f8fafc);
   white-space: nowrap;
-  color: #334155;
+  color: var(--text-color, #334155);
 }
-.col-date { font-weight: 500; color: #475569; }
+.col-date { font-weight: 500; color: var(--text-secondary, #475569); }
 .col-value { font-weight: 700; font-variant-numeric: tabular-nums; }
-.col-extra { color: #64748b; }
-.col-note { max-width: 120px; overflow: hidden; text-overflow: ellipsis; color: #94a3b8; font-size: 11px; }
-.data-table tr:hover td { background: #f8fafc; }
+.col-extra { color: var(--text-secondary, #64748b); }
+.col-note { max-width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--text-hint, #94a3b8); font-size: 11px; }
+.data-table tr:hover td { background: var(--bg-color-2, #f8fafc); }
 
 @media (max-width: 768px) {
   .metric-card { padding: 12px; border-radius: 12px; }

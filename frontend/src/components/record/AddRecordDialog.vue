@@ -1572,7 +1572,7 @@ onBeforeUnmount(() => {
   color: white;
   border-color: var(--primary-color, #c44680);
 }
-.form-hint { font-size: 12px; color: var(--text-hint, #94a3b8); margin-top: 6px; padding: 6px 10px; background: #f0f9ff; border-radius: 6px; }
+.form-hint { font-size: 12px; color: var(--text-hint, #94a3b8); margin-top: 6px; padding: 6px 10px; background: var(--bg-tint-blue, #f0f9ff); border-radius: 6px; }
 
 .mood-selector { display: flex; gap: 8px; flex-wrap: wrap; }
 .mood-btn {
@@ -1581,10 +1581,10 @@ onBeforeUnmount(() => {
   border-radius: 12px; background: var(--bg-card, #fff);
   cursor: pointer; font-size: 15px; transition: all 0.15s ease;
 }
-.mood-btn:hover { border-color: #a78bfa; background: #faf5ff; }
+.mood-btn:hover { border-color: #a78bfa; background: var(--bg-tint-pink, #faf5ff); }
 .mood-btn.active {
-  border-color: #a78bfa; background: #ede9fe;
-  color: #7c3aed; font-weight: 600;
+  border-color: #a78bfa; background: var(--bg-tint-pink, #ede9fe);
+  color: var(--lilac-ink, #7c3aed); font-weight: 600;
 }
 
 /* 睡眠质量按钮组 */
@@ -1605,12 +1605,12 @@ onBeforeUnmount(() => {
 }
 .sleep-quality-btn:hover {
   border-color: #818cf8;
-  background: #eef2ff;
+  background: var(--bg-tint-blue, #eef2ff);
 }
 .sleep-quality-btn.active {
   border-color: #818cf8;
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: var(--bg-tint-blue, #e0e7ff);
+  color: var(--indigo-ink, #4f46e5);
   font-weight: 600;
 }
 
@@ -1647,12 +1647,12 @@ onBeforeUnmount(() => {
 }
 .intimacy-btn:hover {
   border-color: #f43f5e;
-  background: #fef2f2;
+  background: var(--bg-tint-danger, #fef2f2);
 }
 .intimacy-btn.active {
   border-color: #f43f5e;
-  background: #ffe4e6;
-  color: #be123c;
+  background: var(--bg-tint-danger, #ffe4e6);
+  color: var(--rose-ink, #be123c);
   font-weight: 600;
 }
 

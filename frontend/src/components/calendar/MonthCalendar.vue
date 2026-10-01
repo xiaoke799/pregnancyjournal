@@ -124,8 +124,8 @@ const calendarDays = computed(() => {
 .day-cell.hasCheckup::after { content: ''; position: absolute; bottom: 1px; left: calc(50% - 5px); width: 5px; height: 5px; background: #FF4D4F; border-radius: 50%; }
 .day-cell.hasRecord::before { content: ''; position: absolute; bottom: 1px; left: calc(50% + 1px); width: 5px; height: 5px; background: #52C41A; border-radius: 50%; }
 .day-cell.stageEarly { background: rgba(255, 183, 77, 0.18); color: #E65100; }
-.day-cell.stageMid { background: rgba(79, 195, 247, 0.18); color: #0277BD; }
-.day-cell.stageLate { background: rgba(240, 98, 146, 0.18); color: #AD1457; }
+.day-cell.stageMid { background: rgba(79, 195, 247, 0.18); color: var(--info-ink, #0277BD); }
+.day-cell.stageLate { background: rgba(240, 98, 146, 0.18); color: var(--rose-ink, #AD1457); }
 .day-cell.stageDueDate {
   background: linear-gradient(135deg, #E8A0BF, #F06292);
   color: white;

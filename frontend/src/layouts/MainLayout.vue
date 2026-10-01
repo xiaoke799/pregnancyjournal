@@ -140,7 +140,7 @@ const tabbarItems = computed(() => navItems.filter(i =>
 /* ============ 侧边栏 ============ */
 .sidebar {
   width: var(--sidebar-width, 224px);
-  background: linear-gradient(180deg, #ffffff 0%, #fff8fb 100%);
+  background: linear-gradient(180deg, var(--bg-card, #ffffff) 0%, var(--bg-tint-pink, #fff8fb) 100%);
   border-right: 1px solid var(--border-color-soft);
   display: flex;
   flex-direction: column;
