@@ -144,6 +144,13 @@ const SUITES = [
   // 此前再进来一律**新建** ⇒ 未结束会话越攒越多、首页一直「计时中…」、原数据接不上。
   // 现在进页面先接回今天那条（utils/session-resume.ts）。场景 D 用错误实现跑反例自检。
   [path.join(UP, 'probe_session_resume.js'), '会话恢复(不再重复新建)', ''],
+  // 宫缩「手动补记」的时间格式与时长（40 项）：`contraction.start_time/end_time` 历史上
+  // 混着 'HH:MM:SS'（自动计时）与 ISO（早期手动补记原样落库）两种写法，下游全按
+  // 'HH:MM:SS' 解析 ⇒ 手动补记一条就把**整个会话**的时长算成 NaN（落库变 NULL），
+  // 连带当天记录的「宫缩持续时长」整体丢失、明细乱序、5-1-1 分析忽略该条。
+  // 修法：统一走 `services/hms-time.js` 归一（写侧落 'HH:MM:SS'、读侧兼容老 ISO 行）。
+  // ⚠️ 纯函数单测 + 真后端 + 静态断言 + 反例自检（内联旧算法，必须得出 NaN）。
+  [path.join(UP, 'probe_contraction_manual_time.js'), '宫缩手动补记时间格式与时长', ''],
   // ---- 模板 / 渲染 / 可读性 ----
   // ⚠️ 这三套此前**一直没进 runner**：记忆里写着「新增路由必须同步 verify_render.js」
   //    「改模板跑 verify_render.js」，但没人跑 ⇒ 约定形同虚设，脚本在旁边烂掉也不知道。

@@ -215,16 +215,34 @@ const ctJudge = computed(() =>
   })
 )
 
-function formatTime(isoStr?: string): string {
-  if (!isoStr) return '--'
-  return dayjs(isoStr).format('HH:mm:ss')
+/**
+ * 明细时间显示。
+ *
+ * ⚠️ 后端 `contraction.start_time/end_time` 有两种历史写法：
+ *    · 'HH:MM:SS'（自动计时；以及修复后的手动补记——两边现在统一落这个格式）
+ *    · ISO（**修复前**手动补记原样落库的老数据）
+ * 以前这里无条件 `dayjs(x)`：`dayjs('14:30:00')` 解析失败 ⇒ 恢复会话后整列
+ * 显示成「Invalid Date ~ Invalid Date」。两种都要能显示。
+ */
+function formatTime(t?: string): string {
+  if (!t) return '--'
+  const s = String(t)
+  // 「时:分[:秒]」写法直接取前 8 位（与后端写入格式一致）
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) return s.slice(0, 8)
+  const d = dayjs(s)
+  return d.isValid() ? d.format('HH:mm:ss') : s
 }
 
 async function handleSaveManual() {
   if (!canSaveManual.value) return
   if (!sessionId.value) { message.error('会话还没就绪，请返回后重新进入'); return }
-  const start = dayjs(manualStartTime.value).toISOString()
-  const end = dayjs(manualEndTime.value).toISOString()
+  // ⚠️ 发**本地墙钟** 'HH:mm:ss'，不是 UTC ISO：后端 `contraction.start_time` 全库统一存
+  //    本地 'HH:MM:SS'（自动计时也是这么写的）。以前这里发 `toISOString()`，
+  //    后端按 'HH:MM:SS' 解析 ⇒ 时长算成 NaN ⇒ 存 NULL，还会把**整个会话**的平均时长
+  //    一起拖成 NULL（当天记录里的宫缩持续时间整块丢失）。后端现已加归一兜底，
+  //    但契约本来就该是墙钟时间，前端不再依赖那层兜底。
+  const start = dayjs(manualStartTime.value).format('HH:mm:ss')
+  const end = dayjs(manualEndTime.value).format('HH:mm:ss')
   // ⚠️ 以前不看返回值，sessionId 为空时 recordManual 直接 return，
   //    这里却照样弹「已保存」—— 用户以为记下了，其实什么都没写。
   const ok = await recordManual(start, end)
