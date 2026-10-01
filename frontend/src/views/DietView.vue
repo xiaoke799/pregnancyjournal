@@ -452,7 +452,7 @@
             <!-- 催奶食谱 -->
             <n-collapse-item name="b-boost" title="催奶食谱大全">
               <div class="boost-cats">
-                <n-radio-group v-model="boostCat" size="small">
+                <n-radio-group v-model:value="boostCat" size="small">
                   <n-radio-button value="pig">猪蹄系列</n-radio-button>
                   <n-radio-button value="fish">鱼类系列</n-radio-button>
                   <n-radio-button value="chicken">禽肉类</n-radio-button>
