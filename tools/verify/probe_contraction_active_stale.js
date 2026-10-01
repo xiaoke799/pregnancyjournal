@@ -13,7 +13,8 @@
  *
  * 【修法】`contraction_active` 只认**今天**未结束的会话（加 `AND session_date = ?`）。
  *   「计时中」本来就是当天的事：隔天的会话不可能还在计时，也没有任何界面能恢复它
- *   （本应用没有 /active 恢复接口，计时器页 onMounted 一律新建）。
+ *   （计时器页现在**会接回今天未结束的会话**，见 `probe_session_resume.js`；
+ *     但隔天的会话没人会去接 —— 一次计数不会跨夜挂着 —— 所以按天过滤仍然是必须的）。
  *
  * 用法：node probe_contraction_active_stale.js
  */
