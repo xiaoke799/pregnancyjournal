@@ -42,12 +42,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { useFetalMovementCounter } from '@/composables/useFetalMovementCounter'
+import { fetalMovementApi } from '@/api/fetal-movement'
+import { pickResumableSession } from '@/utils/session-resume'
 import { judgeFetalMovement, FM_STANDARD, LEVEL_TOKEN } from '@/utils/clinical-standards'
+import dayjs from 'dayjs'
 
 const router = useRouter()
 const pregnancyStore = usePregnancyStore()
@@ -64,7 +67,7 @@ const message = useMessage()
  */
 const {
   kickCount, isRunning, startTime,
-  startSession, recordKick, endSession, reset,
+  startSession, resumeSession, recordKick, endSession, reset,
 } = useFetalMovementCounter()
 
 const starting = ref(false)
@@ -166,6 +169,37 @@ async function endCounting() {
   message.success(`已记录 ${kickCount.value} 次胎动`)
   router.push('/')
 }
+
+/**
+ * 进页面时先接回今天**还没结束**的那次计数（中途退出留下的）。
+ *
+ * 🔴 修的是「数到一半退出 = 那次计数永远挂着」：本页退出时不结束服务端会话，
+ *    以前再进来点「开始计数」会新建一条 ⇒ 未结束的会话越积越多，
+ *    首页「今日 N 次会话」把这些空壳算进去（已按 total_count>0 过滤，但会话本身还在），
+ *    原来数的那次在页面上再也接不上。
+ *    多条未结束时留最晚的那条，更早的顺手收尾。
+ */
+async function resumeTodayIfAny(pregnancyId: string): Promise<boolean> {
+  const today = dayjs().format('YYYY-MM-DD')
+  try {
+    const res: any = await fetalMovementApi.listSessions(pregnancyId, today)
+    const { keep, stale } = pickResumableSession(res && res.code === 0 ? res.data : [], today)
+    if (!keep) return false
+    for (const s of stale) {
+      try { await fetalMovementApi.endSession(s.id as string) } catch (e) { /* 收尾失败不影响恢复 */ }
+    }
+    const ok = await resumeSession(keep)
+    if (ok) message.info(`已恢复今天 ${String(keep.start_time || '').slice(0, 5)} 开始的计数，可以接着数`)
+    return ok
+  } catch (e) {
+    return false
+  }
+}
+
+onMounted(async () => {
+  if (!(await ensurePregnancy())) return
+  await resumeTodayIfAny(pregnancyStore.currentPregnancy!.id)
+})
 
 onUnmounted(() => { stopTicker(); reset() })
 </script>

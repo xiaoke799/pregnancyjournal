@@ -36,6 +36,58 @@ export function useContractionTimer() {
     }
   }
 
+  /**
+   * **恢复**一条已经存在、但还没结束的会话（今天中途退出页面留下的那条）。
+   *
+   * 【为什么必须要有】计时器页进页面就建会话、退出页面只做本地 reset（不结束服务端会话），
+   * 且此前**没有任何恢复入口** ⇒ 用户计到一半退出，那条会话的 end_time 永远是 NULL：
+   *   · 首页宫缩卡一直显示「计时中…」（现在按今天过滤，当天仍然如此）；
+   *   · 再进计时器页又**新建**一条 ⇒ 未结束的会话越积越多；
+   *   · 原来记下的那几条宫缩只能靠明细弹窗看到，页面上再也接不上。
+   * 现在进页面时先找它：找到就接着用，不再新建。
+   *
+   * `session.start_time` 是 'HH:MM:SS'（当天），要拼上今天的日期才能还原「本次已持续」的走字。
+   */
+  async function resumeSession(session: any): Promise<boolean> {
+    if (!session || !session.id) return false
+    try {
+      sessionId.value = session.id
+      const res: any = await contractionApi.listContractions(session.id)
+      const list = res && res.code === 0 && Array.isArray(res.data) ? res.data : []
+      contractions.value = list.map((c: any) => ({
+        startTime: c.start_time,
+        endTime: c.end_time,
+        duration: c.duration,
+        interval: c.interval_from_prev,
+      }))
+      const withEnd = contractions.value.filter((c) => c.endTime)
+      const lastDone = withEnd[withEnd.length - 1]
+      lastDuration.value = (lastDone && lastDone.duration) || 0
+      lastInterval.value = (lastDone && lastDone.interval) || 0
+
+      // 最后一条宫缩没有 end_time ⇒ 退出时正计到一半，接着走字
+      const last = list[list.length - 1]
+      if (last && !last.end_time) {
+        const day = session.session_date || new Date().toISOString().slice(0, 10)
+        const t = new Date(`${day} ${String(last.start_time).slice(0, 8)}`)
+        // 拼不出合法时间就退化成「会话开着但没在计时」，绝不把 Invalid Date 塞进走字逻辑
+        if (!isNaN(t.getTime())) {
+          isRunning.value = true
+          currentStartTime.value = t
+        } else {
+          isRunning.value = false
+          currentStartTime.value = null
+        }
+      } else {
+        isRunning.value = false
+        currentStartTime.value = null
+      }
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
   async function startContraction(): Promise<boolean> {
     if (!sessionId.value) return false
     try {
@@ -136,6 +188,6 @@ export function useContractionTimer() {
   return {
     sessionId, isRunning, contractions, currentStartTime,
     lastDuration, lastInterval, alert511, totalCount,
-    startSession, startContraction, endContraction, recordManual, endSession, reset,
+    startSession, resumeSession, startContraction, endContraction, recordManual, endSession, reset,
   }
 }
