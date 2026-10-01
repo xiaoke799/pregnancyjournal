@@ -140,6 +140,10 @@ const SUITES = [
   //    （utils/quick-log.ts、utils/clinical-standards.ts），本脚本用 esbuild 转译后直接单测。
   //    场景 G 用「修复前的旧实现」跑反例，证明断言不是恒真（铁律 #11）。
   [path.join(UP, 'probe_quicklog_semantics.js'), '胎动宫缩记一笔语义+临床判读', ''],
+  // 计数器/计时器「中途退出后能接着用」（22 项）：两页退出时都不结束服务端会话，
+  // 此前再进来一律**新建** ⇒ 未结束会话越攒越多、首页一直「计时中…」、原数据接不上。
+  // 现在进页面先接回今天那条（utils/session-resume.ts）。场景 D 用错误实现跑反例自检。
+  [path.join(UP, 'probe_session_resume.js'), '会话恢复(不再重复新建)', ''],
   // ---- 模板 / 渲染 / 可读性 ----
   // ⚠️ 这三套此前**一直没进 runner**：记忆里写着「新增路由必须同步 verify_render.js」
   //    「改模板跑 verify_render.js」，但没人跑 ⇒ 约定形同虚设，脚本在旁边烂掉也不知道。
