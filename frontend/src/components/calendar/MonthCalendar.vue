@@ -117,7 +117,7 @@ const calendarDays = computed(() => {
 .weekday { font-size: 11px; color: var(--text-hint); padding: 2px 0; }
 .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .day-cell { text-align: center; padding: 6px 2px; border-radius: var(--radius-sm); position: relative; cursor: pointer; transition: background-color 0.2s, color 0.2s, opacity 0.2s; }
-.day-cell:hover { background: rgba(232,160,191,0.1); }
+.day-cell:hover { background: var(--tint-hover, rgba(232,160,191,0.1)); }
 .day-cell.today { background: var(--primary-color); color: white; border-radius: var(--radius-md); }
 .day-cell.otherMonth { opacity: 0.3; }
 .day-cell.selected { outline: 2px solid var(--primary-color); }

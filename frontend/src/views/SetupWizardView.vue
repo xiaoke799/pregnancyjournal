@@ -343,7 +343,7 @@ async function submitSetup() {
 
 .stage-card.selected {
   border-width: 2px;
-  background: rgba(232, 160, 191, 0.04);
+  background: var(--tint-selected, rgba(232, 160, 191, 0.04));
 }
 
 .stage-icon {

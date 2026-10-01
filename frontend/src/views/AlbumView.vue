@@ -822,7 +822,7 @@ onMounted(async () => {
 .album-date-input:focus {
   border-color: var(--primary-color, #c44680);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(196, 70, 128, 0.12);
+  box-shadow: 0 0 0 3px var(--focus-ring-color, rgba(196, 70, 128, 0.12));
 }
 
 .file-name {
