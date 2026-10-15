@@ -25,6 +25,11 @@ const F = {
    *  ⚠️ 三围/胎心/宫缩这些统计卡现在断言这个文件，别再回 RecordView 里找（会假红）。 */
   panel: `${ROOT}/frontend/src/views/StatsView/StatsPanel.vue`,
   statsPage: `${ROOT}/frontend/src/views/StatsView.vue`,
+  /** 记录类别元数据（icon/label/color/addable）的唯一真源。
+   *  ⚠️ 2026-10-15 起类别清单从 RecordList.vue 抽到这里（统计页也要用同一个类目色，
+   *  "运动色两处硬写"就是这么来的）。**类别清单断言必须读这个文件**，
+   *  再回 RecordList.vue 里正则找会得到空集 ⇒ 一批假红。 */
+  catMeta: `${ROOT}/frontend/src/utils/record-types.ts`,
   types: `${ROOT}/frontend/src/types/index.ts`,
   db: `${ROOT}/app/server/node/db.js`,
   api: `${ROOT}/app/server/node/routes/daily-record.js`,
@@ -60,7 +65,7 @@ check('AddRecordDialog 回填含 bust/hip', has('dialog', 'formData.value.bust =
 check('AddRecordDialog 保存含 bust/hip', has('dialog', 'data.bust = formData.value.bust') && has('dialog', 'data.hip = formData.value.hip'));
 check('AddRecordDialog 保存校验「至少填一项」', has('dialog', '请至少填写胸围 / 腰围 / 臀围中的一项'));
 check('AddRecordDialog 重置含 bust/hip', has('dialog', 'hip: null,'));
-check('RecordList 类别清单里有「三围」', has('list', "{ type: 'waist', icon: '📏', label: '三围'"));
+check('类别清单（真源 record-types.ts）里有「三围」', has('catMeta', "{ type: 'waist', icon: '📏', label: '三围'"));
 check('RecordList hasDataForType 认 bust/hip', has('list', 'r.bust != null') && has('list', 'r.hip != null'));
 check('RecordList getPreview 显示三围', has('list', "parts.push('胸 ' + r.bust)") && has('list', "parts.push('臀 ' + r.hip)"));
 check('RecordView quickTypes 有「三围」', has('view', "{ value: 'waist', icon: '📏', label: '三围' }"));
@@ -174,7 +179,7 @@ for (const t of NEW_TYPES) {
   if (!has('dialog', `formData.${t.form}`)) errs.push('弹窗表单字段');
   if (!has('dialog', `case '${t.type}':`)) errs.push('弹窗回填/保存 case');
   if (!has('dialog', `data.${t.col} =`)) errs.push('保存到 DB 列 ' + t.col);
-  if (!has('list', `{ type: '${t.type}'`)) errs.push('记录列表类别');
+  if (!has('catMeta', `{ type: '${t.type}'`)) errs.push('类别清单');
   if (!has('list', `case '${t.type}':`)) errs.push('列表 hasData/preview');
   if (!has('view', `{ value: '${t.type}'`)) errs.push('快捷菜单');
   if (!has('view', `r.${t.col}`)) errs.push('预览卡读取 ' + t.col);
@@ -205,7 +210,8 @@ const saveCases = new Set([...src.dialog.matchAll(/case '([A-Za-z0-9_]+)':/g)].m
 const missingSave = dialogTypes.filter(t => !saveCases.has(t));
 check(`弹窗类型 ${dialogTypes.length} 个，全部有 case 分支`, missingSave.length === 0, '缺: ' + missingSave.join('、'));
 
-const listTypes = [...src.list.matchAll(/\{ type: '([A-Za-z0-9_]+)', icon:/g)].map(m => m[1]);
+// ⚠️ 类别清单的唯一真源 2026-10-15 起是 utils/record-types.ts（不再在 RecordList.vue 里）
+const listTypes = [...src.catMeta.matchAll(/\{ type: '([A-Za-z0-9_]+)', icon:/g)].map(m => m[1]);
 const listCases = new Set([...src.list.matchAll(/case '([A-Za-z0-9_]+)':/g)].map(m => m[1]));
 const missingList = listTypes.filter(t => !listCases.has(t));
 check(`记录列表类别 ${listTypes.length} 个，全部有 hasData/preview 分支`, missingList.length === 0, '缺: ' + missingList.join('、'));
@@ -255,7 +261,7 @@ check(`首页 ${DASH_TOOL_TYPES.length} 张「快捷记一笔」工具卡都在`
 
 // 记录页的 label 逐字出现在首页源码里 → 说明首页"报到"了
 const listLabelOf = {};
-for (const m of src.list.matchAll(/\{ type: '([A-Za-z0-9_]+)', icon: '[^']*', label: '([^']+)'/g)) listLabelOf[m[1]] = m[2];
+for (const m of src.catMeta.matchAll(/\{ type: '([A-Za-z0-9_]+)', icon: '[^']*', label: '([^']+)'/g)) listLabelOf[m[1]] = m[2];
 const dashMustMention = listTypes.filter(t => !DASH_ELSEWHERE.includes(t));
 const dashMissed = dashMustMention.filter(t => !src.dash.includes(`'${listLabelOf[t]}'`));
 check(`记录列表 ${dashMustMention.length} 个「非宫格」类别都在首页被提到（白名单 ${DASH_ELSEWHERE.length} 个）`,
@@ -532,7 +538,7 @@ check('RecordView 有用药小弹窗（表单/开关/保存）',
   has('view', 'const medForm = ref(') && has('view', 'const showMedicationModal = ref(false)') && has('view', 'async function saveMedication()'));
 check('RecordView 用药写入 medication 列（JSON 数组）', has('view', 'medication: JSON.stringify([{'));
 check('AddRecordDialog 类型清单有「用药」', has('dialog', "{ value: 'medication'"));
-check('RecordList 类别里有「用药」', has('list', "{ type: 'medication'"));
+check('类别清单（真源 record-types.ts）里有「用药」', has('catMeta', "{ type: 'medication'"));
 check('RecordList hasData/preview 都有 medication 分支',
   count('list', /case 'medication':/g) >= 2, '出现 ' + count('list', /case 'medication':/g) + ' 次');
 
@@ -604,7 +610,7 @@ function typeKeys(text, declRe, keyRe) {
   return [...text.slice(start, end).matchAll(keyRe)].map((x) => x[1]);
 }
 const KEY_Q = typeKeys(src.view, /const quickTypes = \[/, /value: '([a-z_]+)'/g);
-const KEY_C = typeKeys(src.list, /const allCategories[^=]*= \[/, /type: '([a-z_]+)'/g);
+const KEY_C = typeKeys(src.catMeta, /const allCategories[^=]*= \[/, /type: '([a-z_]+)'/g);
 const KEY_T = typeKeys(src.dialog, /const recordTypes = \[/, /value: '([a-z_]+)'/g);
 check(`能从三处解析出类型清单（菜单/列表/弹窗 = ${(KEY_Q || []).length}/${(KEY_C || []).length}/${(KEY_T || []).length}）`,
   (KEY_Q || []).length >= 20 && (KEY_C || []).length >= 20 && (KEY_T || []).length >= 20);
