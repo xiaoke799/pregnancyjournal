@@ -122,6 +122,9 @@ const probeFor = (page) => `
     try {
       const h2 = document.querySelector('h2');
       out.steps.push('页面标题=' + (h2 ? h2.textContent.trim() : '(无)'));
+      // 诊断：把页面上所有按钮打出来 —— 「没找到某按钮」时最需要知道实际渲染了什么
+      out.steps.push('页面按钮=[' + Array.from(document.querySelectorAll('button'))
+        .map((b) => (b.textContent || '').trim()).filter(Boolean).join(' | ') + ']');
       if (PAGE === 'fetal') {
         const start = btnByText('开始计数');
         out.startFound = !!start;
@@ -203,7 +206,35 @@ const probeFor = (page) => `
     pid = pa.json && pa.json.data && pa.json.data.id;
   }
   if (!pid) { console.log('建孕期失败:', JSON.stringify(p1.json)); cleanup(); process.exit(2); }
-  console.log('孕期 id: ' + pid);
+  console.log('孕期 id: ' + pid)
+
+  /**
+   * 前置清理：把**今天**还没结束的胎动/宫缩会话全部结束掉。
+   *
+   * ⚠️ 为什么必须加：两个页面在 2026-10-01 加了「进页面先接回今天未结束的会话」
+   *    （见 `probe_session_resume`）。本探针上一轮点过「开始计数」却不结束会话，
+   *    于是**下一轮一进页面就直接是「结束计数」状态**，「开始计数」按钮根本不渲染
+   *    ⇒ 断言"渲染出「开始计数」按钮"失败。这是探针自己污染自己，不是产品问题。
+   *    清理之后才回到"全新一天"的起点，点链路验证才有意义。
+   *    （恢复语义本身由 probe_session_resume 覆盖，这里不重复验。）
+   *
+   * 🔴 必须用 **active 孕期**的 id，不能用上面新建的那个：本探针每次都 POST 建新孕期，
+   *    而页面读的是 active 孕期 —— 拿新 id 去查 sessions 永远是 0 行，清了个寂寞
+   *    （实测就是这个坑：清理显示 0 行，页面却接回了旧孕期里未结束的会话）。
+   */
+  const activePid = ((await req('GET', `${GW}/api/v1/pregnancies/active`)).json || {}).data?.id || pid;
+  const today = dstr(0);
+  for (const [kind, base] of [['胎动', 'fetal-movements'], ['宫缩', 'contractions']]) {
+    try {
+      const list = await req('GET', `${GW}/api/v1/${base}/sessions?pregnancy_id=${activePid}&date=${today}`);
+      const rows = (list.json && list.json.data) || [];
+      const open = rows.filter((s) => s && s.id && !s.end_time);
+      for (const s of open) {
+        await req('PUT', `${GW}/api/v1/${base}/sessions/${s.id}`, { headers: H, body: JSON.stringify({}) });
+      }
+      if (open.length) console.log(`前置清理：结束了 active 孕期今天 ${open.length} 个未结束的${kind}会话`);
+    } catch (e) { /* 清理失败不阻塞：下面的断言会暴露问题 */ }
+  };
 
   const browser = findBrowser();
   if (!browser) { console.log('找不到 Edge/Chrome'); cleanup(); process.exit(2); }
