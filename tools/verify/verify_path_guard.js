@@ -253,10 +253,28 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     assert('PUT 改每周指定但不传 weekdays（旧值空）也被拒绝', bad3.json && bad3.json.code !== 0, JSON.stringify(bad3.json));
     const okW = await api('PUT', `/dose-plans/${dpId}`, { frequency: 'weekdays', weekdays: [1] });
     assert('PUT 每周指定周一（合法）code 0', okW.json && okW.json.code === 0, JSON.stringify(okW.json));
-    const m1 = await api('GET', `/dose-today?pregnancy_id=${PG}&date=2026-10-05`);
-    const m2 = await api('GET', `/dose-today?pregnancy_id=${PG}&date=2026-10-06`);
-    assert('周一 due', ((((m1.json || {}).data || {}).items) || []).some((i) => i.id === dpId));
-    assert('周二不 due', !((((m2.json || {}).data || {}).items) || []).some((i) => i.id === dpId));
+    // ⚠️ 这里原来**硬编码** 2026-10-05 / 2026-10-06（写测试时的"未来"）。日期一过，
+    //    方案的 start_date 锚点钉在"今天"，查过去的日期就不 due ⇒ 「周一 due」天天红，
+    //    而它跟被测功能毫无关系（纯粹是测试自己过期了），还会掩盖真问题。
+    //    现在动态找下一个周一 / 周二（含今天），任何一天跑都成立。
+    const nextWeekday = (target) => {
+      const d = new Date();
+      for (let i = 0; i < 8; i++) {
+        const day = d.getDay() === 0 ? 7 : d.getDay(); // JS 的周日是 0，统一成 7
+        if (day === target) {
+          const p = (n) => String(n).padStart(2, '0');
+          return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+        }
+        d.setDate(d.getDate() + 1);
+      }
+      return null;
+    };
+    const monDate = nextWeekday(1);
+    const tueDate = nextWeekday(2);
+    const m1 = await api('GET', `/dose-today?pregnancy_id=${PG}&date=${monDate}`);
+    const m2 = await api('GET', `/dose-today?pregnancy_id=${PG}&date=${tueDate}`);
+    assert(`周一 due（${monDate}）`, ((((m1.json || {}).data || {}).items) || []).some((i) => i.id === dpId));
+    assert(`周二不 due（${tueDate}）`, !((((m2.json || {}).data || {}).items) || []).some((i) => i.id === dpId));
   } finally {
     server.kill('SIGKILL');
   }
