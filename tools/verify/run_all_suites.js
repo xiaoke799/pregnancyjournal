@@ -148,6 +148,11 @@ const SUITES = [
   // 只能读**计算后**的 cursor/user-select —— 写了规则 ≠ 元素拿得到（要过继承、UA 样式、
   // Tailwind preflight、scoped 特异性）⇒ 必须真起页面读 getComputedStyle。
   [path.join(UP, 'probe_ui_cursor_select.js'), '光标与文本可选性(App 观感)', '约 40 秒·需无头浏览器'],
+  // 🔴 D1「业务写入不落盘」：写入后**立即硬杀**（SIGKILL）再重启，数据不许丢（18 项）。
+  //    这是本项目唯一的「真实数据丢失窗口」类缺陷 —— 写路由 commit 后不落盘，
+  //    只靠 30 秒定时器 ⇒ 硬杀 / OOM / 断电丢最多 30 秒，而接口照常报成功。
+  //    场景 C 用「撤掉 markDirty 接线」做反例自检（A5~A8/B1/B2 全红才算有区分度）。
+  [path.join(UP, 'probe_write_durability.js'), '写入硬杀持久化(D1)', '约 25 秒'],
   // 宫缩「手动补记」的时间格式与时长（40 项）：`contraction.start_time/end_time` 历史上
   // 混着 'HH:MM:SS'（自动计时）与 ISO（早期手动补记原样落库）两种写法，下游全按
   // 'HH:MM:SS' 解析 ⇒ 手动补记一条就把**整个会话**的时长算成 NaN（落库变 NULL），
