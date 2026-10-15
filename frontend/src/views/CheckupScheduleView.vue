@@ -1460,7 +1460,7 @@ watch(() => pregnancyStore.currentPregnancy?.id, (pid) => { if (pid) loadAll() }
 .nas-loading { text-align: center; padding: 40px; color: var(--ck-ink-3); }
 
 /* ⚠️ 这里原本有一条 `.native-date-input`：本文件模板用的是 `.date-input-small`，
-   SetupWizardView 里虽然也有同名类，但那是它自己的 scoped 规则、管不到这里 ——
+   其它页面里虽然也有同名类，但那是它们自己的 scoped 规则、管不到这里 ——
    即本文件这条是死规则。本次审查发现后删除。 */
 
 @media (max-width: 768px) {
