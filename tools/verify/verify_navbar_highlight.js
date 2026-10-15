@@ -68,9 +68,10 @@ const items = [...navBlock[1].matchAll(/\{ path: '([^']+)', label: '([^']+)'(?:,
   }));
 out.push('');
 out.push('【导航项解析】');
-check(`解析出 ${items.length} 个导航项（期望 8）`, items.length === 8, `实际 ${items.length}`);
+// ⚠️ 2026-10-15：新增「统计」（/stats 原来是孤儿路由，无任何导航入口）⇒ 8 → 9 项
+check(`解析出 ${items.length} 个导航项（期望 9）`, items.length === 9, `实际 ${items.length}`);
 check('解析出的路径与预期一致',
-  JSON.stringify(items.map((i) => i.path)) === JSON.stringify(['/', '/record', '/diary', '/album', '/checkup-schedule', '/diet', '/checklist', '/settings']),
+  JSON.stringify(items.map((i) => i.path)) === JSON.stringify(['/', '/record', '/stats', '/diary', '/album', '/checkup-schedule', '/diet', '/checklist', '/settings']),
   items.map((i) => i.path).join(','));
 
 // ---------- ④ 逐路由断言 ----------
@@ -94,7 +95,7 @@ const cases = [
   ['/exercise-guide', ['/']],        // 从首页点进去的子页面：首页保持高亮
   ['/weekly-detail', ['/']],
   ['/dose-plan', ['/']],
-  ['/stats', []],                    // 隐藏路由：不高亮任何一个
+  ['/stats', ['/stats']],            // 2026-10-15 起它自己就是导航项了（原先无入口、只能手输 URL）
   ['/contraction-timer', []],        // 全屏页
 ];
 for (const [p, expect] of cases) {

@@ -127,6 +127,40 @@
         hint="每天一个点：取当天条数最多的那一次会话（持续与间隔都来自同一次，不会前后不一致）"
         :dates="chartDates" :values="chartValues('contraction_duration')"
         :table-data="tableData('contraction', 'contraction_duration', { extra: 'contraction_interval', extraLabel: '间隔(分)', noteField: 'contraction_pain' })" />
+
+      <!-- ============ 文字 / 选项型记录的汇总卡 ============
+           此前统计页只有 13 张「数值 + 曲线」卡，水肿 / 症状 / 分泌物 / 皮肤 / 排尿 / 便便 /
+           饮食备注 / 营养补充 / 用药 / 好习惯 / 心情 / 计划 / 爱爱 这 13 类**在统计里完全不可见**
+           —— 记录页能录、列表能看、统计里一个数都没有。
+           这些类没有数值可画趋势，价值在「频次与分布」，所以用 SummaryCard：
+           统一口径 = 有记录的天数 +（能枚举的）取值频次 Top5。
+           颜色统一取 record-types 的类目色，与记录列表同一份真源。 -->
+      <SummaryCard v-if="hasSummary('edema')" title="水肿" :color="categoryColor('edema')"
+        :days="daysWith('edema')" :rows="rowsOf('edema_level')" />
+      <SummaryCard v-if="hasSummary('symptoms')" title="症状" :color="categoryColor('symptoms')"
+        :days="daysWith('symptoms')" :rows="rowsOfJson('symptoms')" />
+      <SummaryCard v-if="hasSummary('discharge')" title="分泌物" :color="categoryColor('discharge')"
+        :days="daysWith('discharge')" :rows="rowsOf('vaginal_discharge')" />
+      <SummaryCard v-if="hasSummary('skin')" title="皮肤状况" :color="categoryColor('skin')"
+        :days="daysWith('skin')" :rows="rowsOf('skin_condition')" />
+      <SummaryCard v-if="hasSummary('urination')" title="排尿情况" :color="categoryColor('urination')"
+        :days="daysWith('urination')" :rows="rowsOf('urination_frequency')" />
+      <SummaryCard v-if="hasSummary('stool')" title="便便" :color="categoryColor('stool')"
+        :days="daysWith('stool')" :rows="rowsOf('stool')" />
+      <SummaryCard v-if="hasSummary('diet')" title="饮食备注" :color="categoryColor('diet')"
+        :days="daysWith('diet')" :rows="[]" />
+      <SummaryCard v-if="hasSummary('supplement')" title="营养补充" :color="categoryColor('supplement')"
+        :days="daysWith('supplement')" :rows="rowsOfJson('supplement_record', 'name')" />
+      <SummaryCard v-if="hasSummary('medication')" title="用药" :color="categoryColor('medication')"
+        :days="daysWith('medication')" :rows="[]" />
+      <SummaryCard v-if="hasSummary('habit')" title="好习惯" :color="categoryColor('habit')"
+        :days="daysWith('habit')" :rows="[]" />
+      <SummaryCard v-if="hasSummary('mood')" title="心情" :color="categoryColor('mood')"
+        :days="daysWith('mood')" :rows="rowsOfMood()" />
+      <SummaryCard v-if="hasSummary('plan')" title="计划" :color="categoryColor('plan')"
+        :days="daysWith('plan')" :rows="[]" />
+      <SummaryCard v-if="hasSummary('intimacy')" title="爱爱" :color="categoryColor('intimacy')"
+        :days="daysWith('intimacy')" :rows="[]" />
     </div>
   </div>
 </template>
@@ -136,9 +170,10 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { usePregnancyStore } from '@/stores/pregnancy'
 import { dailyRecordApi } from '@/api/daily-record'
 import dayjs from 'dayjs'
-import { sleepQualityLabel } from '@/utils/format'
+import { sleepQualityLabel, MOOD_OPTIONS } from '@/utils/format'
 import { categoryColor } from '@/utils/record-types'
 import MetricCard from './MetricCard.vue'
+import SummaryCard from './SummaryCard.vue'
 
 /**
  * 记录页「统计」标签 与 独立「统计」页 共用的面板。
@@ -313,6 +348,102 @@ function chartValues(field: string): (number | null)[] {
     const n = Number(v)
     return isNaN(n) ? null : n
   })
+}
+
+/**
+ * 文字 / 选项型记录在所选时段内是否有记录。
+ *
+ * ⚠️ 判据与 hasData 同一套（都读 chartRecords），但**字段不同**：这些类没有数值列，
+ *    只有各自的那一列文本/JSON 列。plan 走 plan_text（历史数据）；
+ *    新计划实际写 reminder 表，不在 daily_record 里 —— 这里只统计能统计的部分，不造假数据。
+ */
+function hasSummary(kind: string): boolean {
+  return daysWith(kind) > 0
+}
+
+/** 某个类在所选时段里「有记录的天数」。chartRecords 本来就是一天一条 ⇒ 直接数条数。 */
+function daysWith(kind: string): number {
+  const has = (v: unknown) => v != null && v !== '' && v !== '[]' && v !== '{}'
+  return chartRecords.value.filter((r: any) => {
+    switch (kind) {
+      case 'edema': return has(r.edema_level)
+      case 'symptoms': return has(r.symptoms)
+      case 'discharge': return has(r.vaginal_discharge)
+      case 'skin': return has(r.skin_condition)
+      case 'urination': return has(r.urination_frequency)
+      case 'stool': return has(r.stool) || has(r.stool_record)
+      case 'diet': return has(r.diet_note)
+      case 'supplement': return has(r.supplement_record)
+      case 'medication': return has(r.medication)
+      case 'habit': return has(r.habit_text)
+      case 'mood': return has(r.mood)
+      case 'plan': return has(r.plan_text)
+      case 'intimacy': return has(r.intimacy_record) || has(r.intimacy_note)
+      default: return false
+    }
+  }).length
+}
+
+/** 把 [{列名: 计数}] 排序 + 算百分比 + 取 Top5；空的不显示。 */
+function toRows(counts: Record<string, number>) {
+  const entries = Object.entries(counts).filter(([, n]) => n > 0)
+  const total = entries.reduce((sum, [, n]) => sum + n, 0) || 1
+  return entries
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([label, count]) => ({ label, count, percent: Math.round((count / total) * 100) }))
+}
+
+/** 纯文本取值的分布（值本身就是中文，直接拿来当 label）。 */
+function rowsOf(field: string) {
+  const counts: Record<string, number> = {}
+  for (const r of chartRecords.value as any[]) {
+    const v = r[field]
+    if (v == null || v === '') continue
+    const key = String(v).trim()
+    if (!key) continue
+    counts[key] = (counts[key] || 0) + 1
+  }
+  return toRows(counts)
+}
+
+/**
+ * JSON 列的分布。这些列历史上混着三种形状，统一在此兼容：
+ *   · `["恶心","头痛"]`         —— 直接是字符串数组
+ *   · `[{name:"叶酸"}]`         —— 对象数组（补剂就是这种），取 opts.key 指定的字段
+ *   · `{count:2}`               —— 对象（便便），退化成「记了几天」不硬猜含义
+ * 解析失败就当没有（绝不因为一个脏值让整张卡算错）。
+ */
+function rowsOfJson(field: string, key?: string) {
+  const counts: Record<string, number> = {}
+  for (const r of chartRecords.value as any[]) {
+    const raw = r[field]
+    if (raw == null || raw === '') continue
+    let parsed: unknown
+    try { parsed = JSON.parse(String(raw)) } catch { continue }
+    const push = (v: unknown) => {
+      const label = key && v && typeof v === 'object' ? (v as any)[key] : v
+      if (typeof label !== 'string' || !label.trim()) return
+      const k = label.trim()
+      counts[k] = (counts[k] || 0) + 1
+    }
+    if (Array.isArray(parsed)) parsed.forEach(push)
+    // 对象形状（如 {count:2}）没有可展示的枚举值 ⇒ 不猜，交给「记录天数」表达
+  }
+  return toRows(counts)
+}
+
+/** 心情：库里存的是 1~5，展示必须走 MOOD_OPTIONS 的唯一真源（别在统计页再写一份中文）。 */
+function rowsOfMood() {
+  const counts: Record<string, number> = {}
+  for (const r of chartRecords.value as any[]) {
+    const v = Number(r.mood)
+    if (!v) continue
+    const opt = MOOD_OPTIONS.find((o) => o.value === v)
+    const label = opt ? opt.label : String(v)
+    counts[label] = (counts[label] || 0) + 1
+  }
+  return toRows(counts)
 }
 
 function hasData(metric: string): boolean {
