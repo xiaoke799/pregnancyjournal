@@ -93,6 +93,12 @@ const navItems = [
     'M10 2h4a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z',
     'M8 12.5h8M8 16.5h5',
   ] },
+  // 统计：2026-10-15 补入口。此前 /stats 是**孤儿路由** —— 页面写好了却没有任何
+  // 导航能到，只能手输 URL。记录页里那个「统计」标签是另一份入口（同一个 StatsPanel）。
+  { path: '/stats', label: '统计', paths: [
+    'M3 3v18h18',
+    'M7 15l4-4 3 3 5-6',
+  ] },
   { path: '/diary', label: '日记', paths: [
     'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z',
     'M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z',
@@ -123,7 +129,8 @@ const navItems = [
   ] },
 ]
 
-// 手机端 tabbar 显示所有功能入口（与电脑端侧边栏一致）
+// 手机端 tabbar 只放最常用的 8 个（宽度有限）；「统计」特意不放进来 ——
+// 手机上在「记录」页切「统计」标签就能看同样的内容，不必再挤一个图标。
 const tabbarItems = computed(() => navItems.filter(i =>
   ['/', '/record', '/diary', '/album', '/checkup-schedule', '/diet', '/checklist', '/settings'].includes(i.path)
 ))
