@@ -47,7 +47,7 @@ const ROUTES = [
   ['/settings', '设置'],
   ['/contraction-timer', '宫缩计时'],
   ['/fetal-movement-counter', '胎动计数'],
-  ['/setup', '初始设置'],
+  // ⚠️ /setup 已于 2026-10-15 删除（孤儿路由，功能由设置页承担），不再纳入渲染核查
 ];
 
 /**

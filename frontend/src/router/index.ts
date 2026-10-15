@@ -26,7 +26,10 @@ const routes: RouteRecordRaw[] = [
   },
   { path: '/contraction-timer', name: 'contraction-timer', component: () => import('@/views/ContractionTimerView.vue'), meta: { title: '宫缩计时', fullscreen: true } },
   { path: '/fetal-movement-counter', name: 'fetal-movement-counter', component: () => import('@/views/FetalMovementCounterView.vue'), meta: { title: '胎动计数', fullscreen: true } },
-  { path: '/setup', name: 'setup', component: () => import('@/views/SetupWizardView.vue'), meta: { title: '初始设置' } },
+  // ⚠️ 2026-10-15 删除 /setup（初始设置向导）：审计确认它已是**孤儿路由** ——
+  //    路由守卫改成「直接放行」之后，全项目没有任何入口能到它（包括首次安装），
+  //    而它承担的「填孕期信息」已由「设置页 → 孕期管理」完整覆盖。
+  //    页面组件与只服务它的 api/app-config.ts 一并删除。
 ]
 
 const router = createRouter({

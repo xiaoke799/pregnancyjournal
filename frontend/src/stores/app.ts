@@ -5,7 +5,6 @@ import { computed, ref, onScopeDispose } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
   const sidebarCollapsed = ref(false)
-  const initialized = ref(false)
 
   // ===== 深色模式 =====
   // themeMode：用户选择（浅色 / 深色 / 跟随系统）。实际是否深色由 App.vue 按
@@ -56,17 +55,11 @@ export const useAppStore = defineStore('app', () => {
     sidebarCollapsed.value = !sidebarCollapsed.value
   }
 
-  function setInitialized(value: boolean) {
-    initialized.value = value
-  }
-
   return {
     sidebarCollapsed,
-    initialized,
     themeMode,
     effectiveDark,
     setThemeMode,
     toggleSidebar,
-    setInitialized,
   }
 })

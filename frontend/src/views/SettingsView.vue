@@ -564,8 +564,6 @@ const importing = ref(false)
 const generatingPdf = ref(false)
 const exportingCsv = ref(false)
 const exportingDiary = ref(false)
-const backupDir = ref('')
-const restoreDir = ref('')
 const backupResult = ref<{ success: boolean; message: string } | null>(null)
 
 // ===== 导出备份到指定位置 =====
@@ -581,8 +579,6 @@ const diag = ref<any>(null)
 const manualDir = ref('')
 const checkingDir = ref(false)
 
-const showDirBrowser = ref(false)
-const browsingFor = ref<'backup' | 'restore'>('backup')
 const currentBrowsePath = ref('/')
 const dirRoots = ref<any[]>([])
 const dirItems = ref<any[]>([])
@@ -785,22 +781,6 @@ const canNavigateUp = computed(() => currentBrowsePath.value !== '/' && currentB
 // 不再单独排一行「根目录按钮」——集合与这里完全一致，两排只会显得重复。
 const quickDirs = computed(() => dirRoots.value)
 
-function toggleDirBrowser(forWhat: 'backup' | 'restore') {
-  if (showDirBrowser.value && browsingFor.value === forWhat) {
-    showDirBrowser.value = false
-    return
-  }
-  browsingFor.value = forWhat
-  selectedDirPath.value = forWhat === 'backup' ? backupDir.value : restoreDir.value
-  dirRoots.value = []
-  dirItems.value = []
-  dirLoading.value = false
-  currentCanRW.value = null
-  currentBrowsePath.value = '/'
-  showDirBrowser.value = true
-  loadDirRoots()
-}
-
 async function loadDirRoots() {
   dirLoading.value = true
   try {
@@ -847,12 +827,6 @@ function navigateUp() {
 
 function selectDir(path: string) { selectedDirPath.value = path }
 
-function confirmDirSelect() {
-  if (browsingFor.value === 'backup') backupDir.value = selectedDirPath.value
-  else restoreDir.value = selectedDirPath.value
-  showDirBrowser.value = false
-}
-
 // ========== 导出备份到指定位置 ==========
 /** 读取「默认备份落点 + 用户已授权目录」。用户授权目录由飞牛系统通过环境变量注入，
  *  只能由用户在「应用中心 → 应用设置 → 授权目录」里添加，应用自己无权代劳。 */
@@ -876,7 +850,6 @@ async function toggleExportBrowser() {
     return
   }
   showExportBrowser.value = true
-  browsingFor.value = 'backup'
   selectedDirPath.value = exportDir.value
   currentCanRW.value = null
   if (!dirRoots.value.length) {
@@ -1383,22 +1356,7 @@ function formatLogTime(t?: string): string {
   border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; overflow: hidden;
   background: var(--bg-color-2, #fafbfc); margin-top: 6px;
 }
-.db-roots {
-  display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 10px;
-  background: var(--bg-color-2, #f1f5f9); border-bottom: 1px solid var(--border-color, #e2e8f0);
-}
-.db-root-btn {
-  padding: 4px 12px; border: 1px solid var(--border-color-strong, #cbd5e1); border-radius: 6px;
-  background: var(--bg-elev, #ffffff); cursor: pointer; font-size: 13px; transition: all 0.15s;
-}
-.db-root-btn:hover { border-color: #3b82f6; color: #3b82f6; }
-.db-root-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
-.db-root-btn.readonly { opacity: 0.6; }
-.db-hint { font-size: 12px; color: #ef4444; padding: 4px 0; }
-.db-ro-tag {
-  font-size: 10px; padding: 1px 5px; background: var(--bg-tint-cream, #fef3c7); color: #d97706;
-  border-radius: 4px; margin-left: 4px;
-}
+/* 旧「备份/恢复目录选择器」的样式已随 2026-10-15 死代码清理一并移除（模板已无对应 class）。 */
 .db-path {
   display: flex; align-items: center; gap: 6px;
   padding: 7px 12px; font-size: 13px; color: var(--text-secondary, #475569);
