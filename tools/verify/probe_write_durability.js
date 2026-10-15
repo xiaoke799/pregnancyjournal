@@ -128,9 +128,14 @@ function hardKill(child) {
     const cEnd = await req('PUT', `${API}/contractions/sessions/${cid}`);
     check('A3c 结束宫缩会话成功', cEnd.json && cEnd.json.code === 0, JSON.stringify(cEnd.json).slice(0, 200));
 
-    // ④ 打卡路径：habit-checkin（最短的事务写路由）
-    const h = await req('POST', API + '/habit-checkins', { pregnancy_id: pid, date: today, items: [{ key: 'water', done: true }], note: '打卡' });
-    check('A4 写打卡成功', h.json && h.json.code === 0, JSON.stringify(h.json).slice(0, 200));
+    // ④ 事务写路径：用药/补充计划（dose-plan，内部 5 处 commitTransaction）
+    // ⚠️ 这里原来用 habit-checkin，但那张表与其路由已于 2026-10-15 作为死代码删除
+    //    （前端「好习惯打卡」实际写 daily_record.habit_text，独立表从未被写入）⇒ 换成 dose-plan。
+    const h = await req('POST', API + '/dose-plans', {
+      pregnancy_id: pid, kind: 'medication', name: '硬杀探针-叶酸',
+      reminder_times: ['08:00'], frequency: 'daily',
+    });
+    check('A4 写用药计划成功', h.json && h.json.code === 0, JSON.stringify(h.json).slice(0, 200));
 
     // 等 setImmediate 的合并落盘跑完（远小于 30 秒兜底）
     await sleep(SETTLE_MS);
@@ -138,7 +143,7 @@ function hardKill(child) {
     // 诊断：杀之前先读一次（HTTP 读内存），用来区分「没写进去」还是「没落盘」
     const preKill = {
       weight: ((await req('GET', `${API}/daily-records/by-date/${today}?pregnancy_id=${pid}`)).json?.data || {}).weight,
-      habits: ((await req('GET', `${API}/habit-checkins?pregnancy_id=${pid}&start_date=${today}&end_date=${today}`)).json?.data?.list || []).length,
+      plans: ((await req('GET', `${API}/dose-plans?pregnancy_id=${pid}`)).json?.data || []).length,
       cts: ((await req('GET', `${API}/contractions/sessions?pregnancy_id=${pid}&date=${today}`)).json?.data || []).length,
     };
     console.log('  杀前读回（内存）: ' + JSON.stringify(preKill));
@@ -172,11 +177,10 @@ function hardKill(child) {
       ctCount === 1 && ctList.every((x) => !!x.end_time),
       JSON.stringify(cts.json).slice(0, 300));
 
-    // 打卡查询用 start_date / end_date（没有 habit_date 这个参数）
-    const habits = await req('GET', `${API}/habit-checkins?pregnancy_id=${pid}&start_date=${today}&end_date=${today}`);
-    const hb = (habits.json && habits.json.data && habits.json.data.list) || habits.json?.data || [];
-    check('🔴 A8 硬杀后打卡仍在', (Array.isArray(hb) ? hb.length : 0) >= 1,
-      JSON.stringify(habits.json).slice(0, 300));
+    const plans = await req('GET', `${API}/dose-plans?pregnancy_id=${pid}`);
+    const pl = Array.isArray(plans.json && plans.json.data) ? plans.json.data : [];
+    check('🔴 A8 硬杀后用药计划仍在', pl.length >= 1,
+      JSON.stringify(pl.map((x) => [x.name, x.frequency])).slice(0, 300));
 
     hardKill(s2.child);
     await sleep(400);
