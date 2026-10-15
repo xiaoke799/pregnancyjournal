@@ -96,8 +96,10 @@
         :dates="chartDates" :values="chartValues('water_intake')"
         :table-data="tableData('water', 'water_intake')" />
 
-      <!-- 运动时长（记录页/快捷弹窗都能录入，此前统计里一直缺这一项；配色沿用记录列表的「运动」色） -->
-      <MetricCard v-if="hasData('exercise')" title="运动时长" unit="分钟" color="#22c55e"
+      <!-- 运动时长（记录页/快捷弹窗都能录入，此前统计里一直缺这一项） -->
+      <!-- ⚠️ 配色从 utils/record-types.ts 取（类目色唯一真源），不要再写字面量：
+           此前这里手写 #22c55e「沿用记录列表的运动色」，改一处忘一处两页就漂。 -->
+      <MetricCard v-if="hasData('exercise')" title="运动时长" unit="分钟" :color="categoryColor('exercise')"
         :dates="chartDates" :values="chartValues('exercise_duration')"
         :table-data="tableData('exercise', 'exercise_duration', {
           filter: (r: any) => r.exercise_duration != null || (r.exercise_type != null && r.exercise_type !== '') || (r.exercise_intensity != null && r.exercise_intensity !== ''),
@@ -135,6 +137,7 @@ import { usePregnancyStore } from '@/stores/pregnancy'
 import { dailyRecordApi } from '@/api/daily-record'
 import dayjs from 'dayjs'
 import { sleepQualityLabel } from '@/utils/format'
+import { categoryColor } from '@/utils/record-types'
 import MetricCard from './MetricCard.vue'
 
 /**
