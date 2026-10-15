@@ -22,6 +22,26 @@ let _dbLocked = false; // 数据库锁定标志：恢复/备份等批量操作�
 // 回滚**（之后 COMMIT 报 "no transaction is active"），而接口仍会回报成功。
 // 落盘必须避开事务区间，靠这个计数判断。
 let _txDepth = 0;
+// 脏标记 + 合并落盘（D1 修复，2026-10-15）：写操作（run）成功后登记 dirty，
+// 用 setImmediate 把落盘合并到「当前这批写」结束之后立即执行 —— 业务写入不再
+// 最多等 30 秒才落盘（此前硬杀进程 / OOM / 断电会丢掉那段时间的记录，
+// 而接口照常报成功；routes/ 下只有 export.js 显式调过 saveDb）。
+// 30 秒定时器保留为兜底：合并落盘被跳过时（事务中、恢复期、写盘进行中、
+// 上一轮写盘失败），靠它重试。两道闸共用 saveDbAsync 的互斥与 _writeSeq 机制。
+let _dirty = false;
+let _flushScheduled = false;
+/**
+ * 业务写入计数（run 成功后 +1）。
+ *
+ * 🔴 为什么必须有它：`_writeSeq` 只数**落盘次数**，数不了"取完快照之后又来了一次写"。
+ * saveDbAsync 的顺序是 `db.export()` 取快照 → `await writeFile` → 检查 _writeSeq → rename：
+ *   若在 await 期间有新写入，那份新数据**不在快照里**，而 _writeSeq 没变（没人落盘）
+ *   ⇒ 检查通过、rename 照做 ⇒ 把**旧快照**写进库文件，新写入静默丢失，
+ *     并且 `.then(wrote => _dirty = false)` 还把脏标记清掉 ⇒ 连 30 秒兜底都不会再救它。
+ *   这是负向对照实测出来的（宫缩「结束会话」与打卡就是这样丢的）。
+ * 用写入序号就能发现这种过期：快照之后只要又多了一次写，本轮就放弃、重排再取新快照。
+ */
+let _writeCount = 0;
 // 最近一次落盘失败。原来只 console.error —— 数据目录运行期消失后每次落盘都静默失败，
 // 接口照常报成功，排查只能靠翻控制台。现在记下来并经 /api/health 暴露。
 let _lastSaveError = null;
@@ -719,7 +739,13 @@ async function reloadFromFile() {
 
   db = fresh;
   _txDepth = 0; // 连接已被整体替换，之前若有未结束的事务也不复存在，计数必须归零
-  applySchemaAndMigrate();
+  // 同上：迁移/建表期间锁住，别让那几十次写各自触发一次合并落盘
+  lockDb();
+  try {
+    applySchemaAndMigrate();
+  } finally {
+    unlockDb();
+  }
   // 重载成功且 schema 全部执行成功 ⇒ 库已恢复正常，清掉「已回退到备份」之类的标记
   // （preserved_path 保留，方便用户回头找那份损坏文件）
   if (_dbHealth.ok) {
@@ -862,7 +888,15 @@ async function initDb() {
     _dbHealth = { ok: false, reason: broken, preserved_path: preservedPath, recovered_from: null };
   }
 
-  applySchemaAndMigrate();
+  // lock 包住：migrateDb 里有几十次写（ADD COLUMN / UPDATE / 重建表）。
+  // 不锁的话这些写会各自触发一次合并落盘，把启动时间拖长一倍以上。
+  // 解锁后由下面的 saveDb() 统一落一次盘。
+  lockDb();
+  try {
+    applySchemaAndMigrate();
+  } finally {
+    unlockDb();
+  }
   // 一次性存储迁移：把历史误写到安装目录的业务文件搬进持久化目录（幂等、非破坏）
   try { require('./storage-migrate').migrateStorage(module.exports); } catch (e) { log.warn('存储迁移', e.message); }
   // 历史媒体补齐：HEIC 转 JPEG（浏览器解不开 HEIC）+ 给老照片补缩略图（异步、幂等、失败不影响启动）
@@ -877,6 +911,8 @@ async function initDb() {
   }
 
   // 定时落盘用异步版本：writeFileSync 会同步阻塞事件循环，让应用周期性顿一下
+  // 兜底定时落盘：正常情况下写入已由 markDirty 的合并落盘即时写出（见 _flushOnce），
+  // 这里兜住被跳过的场景（事务中、恢复期、写盘进行中、上一轮写盘失败）。
   setInterval(() => { saveDbAsync().catch((e) => console.error('[db] 定时落盘失败:', e.message)); }, 30000);
 }
 
@@ -948,16 +984,17 @@ function saveDb() {
  * db.export() 仍在主线程（wasm 内存操作，纯内存拷贝，很快），不另开线程。
  */
 async function saveDbAsync() {
-  if (!db) return;
+  if (!db) return false;
   // 三个条件都要看：批量操作期间不写、业务正在同步写时不抢、自己上一轮还没写完
-  if (_savingDb || _savingDbAsync || _dbLocked) return;
+  if (_savingDb || _savingDbAsync || _dbLocked) return false;
   // 事务期间同样不能导出（export() 会回滚未提交事务），见 saveDb 的说明
   if (_txDepth > 0) {
     log.warn('数据库', '定时落盘已跳过：当前有未提交的事务');
-    return;
+    return false;
   }
   _savingDbAsync = true;
   const seqAtSnapshot = _writeSeq; // 记下取快照时的落盘序号
+  const writeAtSnapshot = _writeCount; // 记下取快照时的业务写入序号（见 _writeCount 注释）
   try {
     const data = db.export();
     _reapplyConnectionPragmas(); // export() 重建了连接，连接级 PRAGMA 必须重设
@@ -969,20 +1006,78 @@ async function saveDbAsync() {
     // ⚠️ 写盘期间业务可能已经同步落盘了更新的数据（备份/导出就是「先 saveDb() 再拷库文件」）。
     // 这时候再 rename 就会把旧快照盖回去，那次同步落盘等于白写 —— 数据静默回退，
     // 而接口照样报成功。发现序号变了就放弃本轮，等下一个 30 秒再写。
-    if (_writeSeq !== seqAtSnapshot) {
+    // 🔴 还要看 _writeCount：写盘期间**业务又写了一次**（没人落盘，_writeSeq 不变）时，
+    //    旧判据发现不了 —— 那份新写不在快照里，却会被这次 rename 覆盖掉
+    //    （负向对照实测：宫缩「结束会话」与打卡就是这样丢的）。
+    if (_writeSeq !== seqAtSnapshot || _writeCount !== writeAtSnapshot) {
       try { await fs.promises.unlink(tmpPath); } catch (e) { /* 清不掉也无所谓 */ }
-      return;
+      return false;
     }
     await fs.promises.rename(tmpPath, config.DATABASE_PATH);
     _writeSeq += 1;
     _lastSaveError = null;
+    return true;
   } catch (e) {
     _lastSaveError = { at: new Date().toISOString(), message: e.message };
     try { log.error('数据库', `定时落盘失败（数据可能丢失）: ${e.message}`, { path: config.DATABASE_PATH }); } catch (_) { /* ignore */ }
     console.error('Failed to save DB (async):', e.message);
+    return false;
   } finally {
     _savingDbAsync = false;
   }
+}
+
+/**
+ * 登记「有业务写入，需要落盘」（D1 修复本体）。
+ *
+ * 【修的是什么】写路由（daily-record / contraction / fetal_movement / dose-plan …）在
+ * `commitTransaction()` 之后**没有任何落盘动作**，只靠 30 秒定时器兜底 ⇒ 硬杀进程 /
+ * OOM / 断电会丢掉最多 30 秒的记录，而接口照常报"保存成功"。
+ *
+ * 【做法】写成功后打脏标记，用 setImmediate 把落盘**合并到当前这一批写结束之后**：
+ *   一次 HTTP 请求里连写几条、甚至连续几个请求落在同一个事件循环阶段，
+ *   都只会落一次盘（库约 300KB，代价可忽略），而不是每条都写一次盘。
+ *
+ * ⚠️ 故意不在这里同步 `saveDb()`：那会同步阻塞事件循环，把应用"卡一下"的毛病
+ *   又带回来（见 saveDbAsync 的注释）。异步路径已经够快，且真正保证了
+ *   "接口返回前数据已在盘上"（setImmediate 在响应写出之前就会执行）。
+ */
+function markDirty() {
+  // 批量操作期间（migrateDb / 备份 / 恢复）不登记 —— 那批写完会自己统一 saveDb()，
+  // 否则一次老库升级会触发 N 次落盘，把启动时间拖长。
+  if (_dbLocked) return;
+  _dirty = true;
+  if (_flushScheduled) return; // 已排过就不再排：同一批写只需要一次
+  _flushScheduled = true;
+  setImmediate(_flushOnce);
+}
+
+/** 合并落盘的实际执行体（由 setImmediate 调度，也由 30 秒定时器间接兜底） */
+function _flushOnce() {
+  _flushScheduled = false;
+  if (!_dirty) return;
+  // 跳过的场景一律**保留 _dirty**，交给 30 秒定时器重试：
+  //   · 事务中间 —— export() 会把未提交事务整段回滚，此时落盘等于写个半截状态；
+  //   · 同步/异步写盘进行中 —— 抢锁只会白跑一趟；
+  //   · 批量操作期间（_dbLocked）。
+  // ⚠️ 绝不能在这些分支里把 _dirty 清掉：那会让这批写入重新回到"最多等 30 秒"。
+  if (_txDepth > 0 || _savingDb || _savingDbAsync || _dbLocked) {
+    // 🔴 实验：写盘进行中时尽快再排一次（负向对照暴露的缺陷）
+    if (_savingDb || _savingDbAsync) {
+      _flushScheduled = true;
+      setTimeout(_flushOnce, 5);
+    }
+    return;
+  }
+  saveDbAsync()
+    .then((wrote) => {
+      if (wrote) { _dirty = false; return; }
+      if (_dirty && !_flushScheduled) {
+        _flushScheduled = true;
+        setTimeout(_flushOnce, 5);
+      }
+    })
+    .catch((e) => console.error('[db] 合并落盘失败:', e.message));
 }
 
 function queryOne(sql, params = []) {
@@ -1017,6 +1112,14 @@ function run(sql, params = []) {
     try {
       const result = d.exec("SELECT last_insert_rowid()");
       const rowid = result?.[0]?.values?.[0]?.[0];
+      // 🔴 D1 修复：写成功后立刻登记落盘（合并到本批写结束之后）。
+      //    放在**执行成功之后**：SQL 抛错时下面的 catch 会重新抛出，此时登记
+      //    只会白白多写一次盘。事务期间登记的会被 _flushOnce 跳过，
+      //    由 commitTransaction() 再触发一次（见下）。
+      //    _writeCount 也要跟着 +1：它是「取完快照之后又有人写」的唯一线索
+      //    （见该变量的注释 —— 少了它，落盘会把新写入覆盖掉）。
+      _writeCount += 1;
+      markDirty();
       return { lastInsertRowid: rowid != null ? rowid : -1 };
     } catch {
       return { lastInsertRowid: -1 };
@@ -1047,6 +1150,10 @@ function commitTransaction() {
   try {
     db.run('COMMIT');
     _txDepth = 0;
+    // 🔴 D1 修复：事务里的每一次 run() 都被 _flushOnce 跳过（事务中间导出会整段回滚），
+    //    所以脏标记是完整的，但落盘一直没发生 —— 必须在这里补一次触发，
+    //    否则「写路由 commit 后不落盘」这个老问题只修了一半。
+    markDirty();
   } catch (e) {
     // COMMIT 失败时事务是否仍然打开并不确定 —— 主动再回滚一次并归零。
     // 宁可回滚掉这一次写入，也不能留下一个模块「看不见」的悬挂事务：
@@ -1076,5 +1183,8 @@ module.exports = {
   getDb, initDb, saveDb, saveDbAsync, queryOne, queryAll, run, generateId,
   lockDb, unlockDb, reloadFromFile,
   beginTransaction, commitTransaction, rollbackTransaction, inTransaction,
+  // 暴露出来有两个用途：① 回归套件用来验证"标记后确实会落盘"的语义；
+  // ② 将来若有路由想显式声明"这批写很重要，立刻落盘"，不必再自己拼 saveDb。
+  markDirty,
   getDbHealth,
 };
