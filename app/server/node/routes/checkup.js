@@ -125,7 +125,8 @@ function _nasRoots() {
   return [...set];
 }
 const NAS_WHITELIST = _nasRoots();
-const schedule_dates_file = path.join(config.DATA_DIR, 'schedule_dates.json');
+// ⚠️ 原 JSON 文件版产检日期（schedule_dates.json）的路由与常量已于 2026-10-15 删除：
+//    前端只用 checkup-schedule.js 里操作 schedule_dates **表**的那套，两套实现并存必长歪。
 
 function _deleteReportFile(filePath) {
   // 路径锚定：只删应用自己目录里的文件（库里的路径可能被 import/restore 投毒）
@@ -146,20 +147,6 @@ function _ensureDir(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-}
-
-function _readScheduleDates() {
-  try {
-    if (fs.existsSync(schedule_dates_file)) {
-      return JSON.parse(fs.readFileSync(schedule_dates_file, 'utf-8'));
-    }
-  } catch (e) {}
-  return {};
-}
-
-function _writeScheduleDates(data) {
-  _ensureDir(path.dirname(schedule_dates_file));
-  fs.writeFileSync(schedule_dates_file, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 function _isNasPathSafe(p) {
@@ -666,113 +653,6 @@ router.post('/checkups/:id/reports/from-nas', async (req, res) => {
     );
     const row = await db.queryOne('SELECT * FROM checkup_report WHERE id = ?', [id]);
     res.json({ code: 0, data: row, message: 'success' });
-  } catch (e) {
-    res.json({ code: 1001, data: null, message: e.message });
-  }
-});
-
-router.get('/checkup-schedule/:pregnancy_id/dates', async (req, res) => {
-  try {
-    const safeKeys = ['__proto__', 'constructor', 'prototype'];
-    if (safeKeys.includes(req.params.pregnancy_id) || safeKeys.includes(req.params.schedule_id)) {
-      return res.json({ code: 1001, data: null, message: '无效的参数' });
-    }
-    const allDates = _readScheduleDates();
-    const userDates = allDates[req.params.pregnancy_id] || {};
-    res.json({ code: 0, data: userDates, message: 'success' });
-  } catch (e) {
-    res.json({ code: 1001, data: null, message: e.message });
-  }
-});
-
-router.put('/checkup-schedule/:pregnancy_id/dates/:schedule_id', async (req, res) => {
-  try {
-    const { date_str } = req.body;
-    if (!date_str) return res.json({ code: 1001, data: null, message: '缺少date_str字段' });
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date_str)) return res.json({ code: 1001, data: null, message: '日期格式应为YYYY-MM-DD' });
-    const safeKeys = ['__proto__', 'constructor', 'prototype'];
-    if (safeKeys.includes(req.params.pregnancy_id) || safeKeys.includes(req.params.schedule_id)) {
-      return res.json({ code: 1001, data: null, message: '无效的参数' });
-    }
-    const allDates = _readScheduleDates();
-    if (!allDates[req.params.pregnancy_id]) allDates[req.params.pregnancy_id] = {};
-    allDates[req.params.pregnancy_id][req.params.schedule_id] = date_str;
-    _writeScheduleDates(allDates);
-    res.json({ code: 0, data: { schedule_id: req.params.schedule_id, date_str }, message: 'success' });
-  } catch (e) {
-    res.json({ code: 1001, data: null, message: e.message });
-  }
-});
-
-// ========== 检验结果 (lab_result) 路由 ==========
-
-router.post('/checkups/:id/lab-results', async (req, res) => {
-  try {
-    const { category, item_name, value, unit, reference_min, reference_max, status } = req.body;
-    if (!category || !item_name || value === undefined || value === null) {
-      return res.json({ code: 1001, data: null, message: '缺少必填字段：category、item_name、value' });
-    }
-    const id = db.generateId();
-    await db.run(
-      `INSERT INTO lab_result (id, checkup_id, category, item_name, value, unit, reference_min, reference_max, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      [id, req.params.id, category, item_name, Number(value), unit || null,
-       reference_min !== undefined ? Number(reference_min) : null,
-       reference_max !== undefined ? Number(reference_max) : null,
-       status || 'normal']
-    );
-    const row = await db.queryOne('SELECT * FROM lab_result WHERE id = ?', [id]);
-    logger.info('checkup', `POST /lab-results - created (id=${id}, checkup_id=${req.params.id})`);
-    res.json({ code: 0, data: row, message: 'success' });
-  } catch (e) {
-    res.json({ code: 1001, data: null, message: e.message });
-  }
-});
-
-router.get('/checkups/:id/lab-results', async (req, res) => {
-  try {
-    const { category } = req.query;
-    let where = 'WHERE checkup_id = ?';
-    const params = [req.params.id];
-    if (category) { where += ' AND category = ?'; params.push(category); }
-    const rows = await db.queryAll(`SELECT * FROM lab_result ${where} ORDER BY created_at ASC`, params);
-    res.json({ code: 0, data: rows, message: 'success' });
-  } catch (e) {
-    res.json({ code: 1001, data: null, message: e.message });
-  }
-});
-
-router.put('/checkups/lab-results/:id', async (req, res) => {
-  try {
-    const existing = await db.queryOne('SELECT * FROM lab_result WHERE id = ?', [req.params.id]);
-    if (!existing) return res.json({ code: 1001, data: null, message: '记录不存在' });
-    const fields = ['category', 'item_name', 'value', 'unit', 'reference_min', 'reference_max', 'status'];
-    const sets = [];
-    const params = [];
-    for (const f of fields) {
-      if (req.body[f] !== undefined) {
-        sets.push(`${f} = ?`);
-        params.push(f === 'value' || f === 'reference_min' || f === 'reference_max' ? Number(req.body[f]) : req.body[f]);
-      }
-    }
-    if (sets.length === 0) return res.json({ code: 1001, data: null, message: '没有需要更新的字段' });
-    sets.push('updated_at = datetime(\'now\')');
-    params.push(req.params.id);
-    await db.run(`UPDATE lab_result SET ${sets.join(', ')} WHERE id = ?`, params);
-    const row = await db.queryOne('SELECT * FROM lab_result WHERE id = ?', [req.params.id]);
-    res.json({ code: 0, data: row, message: 'success' });
-  } catch (e) {
-    res.json({ code: 1001, data: null, message: e.message });
-  }
-});
-
-router.delete('/checkups/lab-results/:id', async (req, res) => {
-  try {
-    const existing = await db.queryOne('SELECT * FROM lab_result WHERE id = ?', [req.params.id]);
-    if (!existing) return res.json({ code: 1001, data: null, message: '记录不存在' });
-    await db.run('DELETE FROM lab_result WHERE id = ?', [req.params.id]);
-    res.json({ code: 0, data: null, message: '删除成功' });
   } catch (e) {
     res.json({ code: 1001, data: null, message: e.message });
   }

@@ -69,9 +69,14 @@ async function seed(dbPath) {
   const d = new SQL.Database();
   const src = fs.readFileSync(path.join(SERVER_DIR, 'db.js'), 'utf8');
   const block = (src.match(/const SCHEMA = `([\s\S]*?)`;/) || [])[1] || '';
+  // 🔴 顺序至关重要：**先把注释整块剥掉，再按分号切分语句**。
+  //    反过来的话（先 split 再逐段剥），注释里只要出现一个英文分号就会把紧随其后的
+  //    CREATE TABLE 切碎 —— 它既不被计数也不执行，而断言只看到「建表数量」变小，
+  //    查起来像表被删了。2026-10-15 实测：一句「按 ; 切分语句」的注释让 40 → 39。
+  const clean = block.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n]*/g, '');
   let n = 0;
-  for (const raw of block.split(';')) {
-    const stmt = raw.replace(/--[^\n]*/g, '').trim();
+  for (const raw of clean.split(';')) {
+    const stmt = raw.trim();
     if (!/^CREATE (TABLE|UNIQUE INDEX|INDEX)/i.test(stmt)) continue;
     try { d.run(stmt); n++; } catch {}
   }

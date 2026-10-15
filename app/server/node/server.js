@@ -233,7 +233,6 @@ async function start() {
   const routes = [
     './routes/pregnancy',
     './routes/checkup',
-    './routes/lab_result',
     './routes/daily-record',
     './routes/contraction',
     './routes/photo',
@@ -243,8 +242,6 @@ async function start() {
     './routes/fetal_movement',
     './routes/dashboard',
     './routes/export',
-    './routes/habit-checkin',
-    './routes/supplement-checkin',
     './routes/dose-plan',
     './routes/app-config',
     './routes/diet',

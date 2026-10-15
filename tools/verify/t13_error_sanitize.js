@@ -67,13 +67,16 @@ function startServer(mode, port, dir) {
 
 // 这组请求会产生「含内部细节」的错误
 const SENSITIVE_PROBES = [
-  { name: 'FK 约束失败（孤儿 pregnancy_id）', method: 'POST', path: '/api/v1/habit-checkins', body: { pregnancy_id: 'NOT-EXIST-PG', date: '2026-09-28', items: [] } },
+  // ⚠️ 2026-10-15：原来打 /habit-checkins，但那套路由已作为死代码删除
+  //    （前端「好习惯打卡」实际写 daily_record.habit_text，独立表从未被写入）。
+  //    换成 dose-plans —— dose_plan 表同样带 pregnancy_id 外键，照样能触发 FK 失败。
+  { name: 'FK 约束失败（孤儿 pregnancy_id）', method: 'POST', path: '/api/v1/dose-plans', body: { pregnancy_id: 'NOT-EXIST-PG', name: 'x', reminder_times: ['08:00'], frequency: 'daily' } },
 ];
 // 这组是正常业务文案，绝不能被脱敏
 const BUSINESS_PROBES = [
-  { name: '参数缺失提示', method: 'POST', path: '/api/v1/habit-checkins', body: { pregnancy_id: 'pg', /* 缺 date */ } },
-  { name: '缺 pregnancy_id 提示', method: 'GET', path: '/api/v1/habit-checkins/by-date/2026-09-28' },
-  { name: '记录不存在提示', method: 'GET', path: '/api/v1/habit-checkins/no-such-id-xyz' },
+  { name: '参数缺失提示', method: 'POST', path: '/api/v1/dose-plans', body: { pregnancy_id: 'pg', /* 缺 name */ } },
+  { name: '缺 pregnancy_id 提示', method: 'GET', path: '/api/v1/dose-plans' },
+  { name: '记录不存在提示', method: 'GET', path: '/api/v1/contractions/sessions/no-such-id-xyz' },
   { name: '上传校验提示（请上传文件）', method: 'POST', path: '/api/v1/photos', body: { pregnancy_id: 'NA', photo_type: null } },
 ];
 
@@ -180,7 +183,7 @@ const BUSINESS_PROBES = [
   ok(h.json && h.json.status === 'ok', '空库启动 → status=ok', h.json && h.json.status);
 
   console.log('=== N5：无鉴权 Header 打业务接口 → 401（生产模式）===');
-  const noauth = await req(PORT_PROD, 'GET', '/api/v1/habit-checkins?pregnancy_id=x', null, { 'X-Trim-Userid': '' });
+  const noauth = await req(PORT_PROD, 'GET', '/api/v1/dose-plans?pregnancy_id=x', null, { 'X-Trim-Userid': '' });
   ok(noauth.status === 401, '缺少网关 Header → 401', noauth.status);
 
   prod.child.kill();

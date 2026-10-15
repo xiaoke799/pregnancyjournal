@@ -328,6 +328,12 @@ CREATE TABLE IF NOT EXISTS fetal_movement (
   FOREIGN KEY (session_id) REFERENCES fetal_movement_session(id) ON DELETE CASCADE
 );
 
+-- ⚠️ habit_checkin：2026-10-15 审计确认「有表、有完整路由、前端零调用」。
+--   前端「好习惯打卡」弹窗实际写 daily_record.habit_text，独立表从未被写入过。
+--   路由文件（routes/habit-checkin.js）已随本次清理删除；**表定义保留** ——
+--   删表要写迁移、而这张表从来没有任何数据，风险大于收益。
+--   ⚠️ 注释请用 -- 行注释（且**别在注释里写英文分号**）：SCHEMA 是按分号切语句的，
+--   注释里一个英文分号就能把后面的 CREATE TABLE 切碎，让它既不被计数也不执行。
 CREATE TABLE IF NOT EXISTS habit_checkin (
   id TEXT PRIMARY KEY,
   pregnancy_id TEXT NOT NULL,
@@ -339,6 +345,8 @@ CREATE TABLE IF NOT EXISTS habit_checkin (
   FOREIGN KEY (pregnancy_id) REFERENCES pregnancy(id) ON DELETE CASCADE
 );
 
+-- ⚠️ supplement_checkin：同 habit_checkin —— 前端「营养补充」弹窗写的是
+--   daily_record.supplement_record，本表与其路由均未投入使用（路由已删）。
 CREATE TABLE IF NOT EXISTS supplement_checkin (
   id TEXT PRIMARY KEY,
   pregnancy_id TEXT NOT NULL,
