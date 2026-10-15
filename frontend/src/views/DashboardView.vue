@@ -980,16 +980,18 @@ async function quickAddReminder() {
   if (!title || !pregnancyStore.currentPregnancy) return
   adding.value = true
   try {
-    // 组合日期和时间
-    let triggerDate = newTodoDate.value || dayjs().format('YYYY-MM-DD')
-    if (newTodoTime.value) {
-      triggerDate = triggerDate + ' ' + newTodoTime.value
-    }
+    // 🔴 以前这里有两个 bug，都是"接口照常成功、数据却不对"：
+    //   ① priority 传 'normal' —— 后端白名单只有 high/medium/low，非法值被**静默降级**
+    //      成 medium。前端等于从来没真正决定过优先级。
+    //   ② 把 HH:mm 拼进 trigger_date（"2026-10-15 08:00"）⇒ 日期列里存脏数据，
+    //      任何按日期比较/筛选的地方都会行为怪异；后端本来就有独立的 trigger_time 列。
+    // 现在按表的语义分开传。
     await reminderApi.create({
       pregnancy_id: pregnancyStore.currentPregnancy.id,
       title,
-      trigger_date: triggerDate,
-      priority: 'normal',
+      trigger_date: newTodoDate.value || dayjs().format('YYYY-MM-DD'),
+      trigger_time: newTodoTime.value || null,
+      priority: 'medium',
       source_type: 'manual',
     })
     newTodoTitle.value = ''
