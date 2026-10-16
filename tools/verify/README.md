@@ -181,7 +181,7 @@ tools/verify/
 | 改前后端接口 | `verify_api_contracts.js`、`verify_upload_field_names.js` |
 | 动用药/补充方案、打卡、到点提醒 | `verify_dose_rules.js`（**纯函数 17 项**：7 天节奏串正反例，专防"静默错判该不该吃"；自带 `TZ=Asia/Shanghai`）+ `verify_dose_plan.js`（真后端：建/校验/孕周·日期·频率约束/打卡幂等/撤销/停用/删连带）+ `verify_dose_push.js`（到点只推该推的、**打卡后当天不再推**、开关生效、日志可机读） |
 | 动产检排期 json 的 id / 改 pregnancy·schedule_dates·custom_checkup·reminder 四表 | `probe_push_schedule_impact.js` |
-| 改 `saveDb` / 落盘逻辑 | `t9_verify_db_fixes.js`、`verify_db_persist.js`、`verify_write_persist.js`（**D1 写入即时落盘：真·SIGKILL 硬杀不丢 + 反例自检**）、`probe_async_save_race.js` |
+| 改 `saveDb` / 落盘逻辑 | `t9_verify_db_fixes.js`、`verify_db_persist.js`、`probe_write_durability.js`（**D1 端到端层**：真后端四类业务路径 → SIGKILL 硬杀 → 重启读库 + 叠加写入不盖回）、`verify_write_persist.js`（**D1 单元层**：事务时序语义 + 打桩删 markDirty 的源码级反例）、`probe_async_save_race.js` |
 | 改配色 / 主题令牌 | `audit_checkup_colors.py` 等 5 个配色审查脚本 + `_check_chart_ink.py` |
 | 改 `cmd/upgrade_init` | `test_upgrade_init.sh` |
 | **发版 / 改版本号 / 改 `manifest`** | `verify_pkg_versions.js`（manifest 之外的 3 处：frontend / server 的 `package.json` + `package-lock.json` 的两处自指版本）。**改完 `manifest` 必须 `cd frontend && npm run build`**（版本号被 `vite.config.ts` 的 define 烤进产物，不重建 ⇒ 包里还是旧号）；打包前 `build.ps1` Step1 会再跑一遍同一份判定（fail-closed） |
