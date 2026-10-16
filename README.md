@@ -190,7 +190,7 @@ fnpack build --directory <组装好的 stage 目录>
 
 ### 回归测试 / Regression Tests
 
-仓库自带一套端到端回归与核查脚本（**80 套 / 1678 项**），位于 `tools/verify/`：
+仓库自带一套端到端回归与核查脚本（**81 套 / 1696 项**），位于 `tools/verify/`：
 
 ```bash
 node tools/verify/run_all_suites.js              # 全套，约 6–10 分钟

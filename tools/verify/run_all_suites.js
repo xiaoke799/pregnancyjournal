@@ -177,6 +177,9 @@ const SUITES = [
   [path.join(UP, 'verify_path_traversal.js'), '路径穿越', ''],
   [path.join(UP, 'verify_path_guard.js'), '路径锚定与白名单', '上线前检查修复回归'],
   [path.join(UP, 'verify_db_persist.js'), '落盘验证', ''],
+  // D1 修复（2026-10-15）：run()/commitTransaction() 后 markDirty ⇒ setImmediate 合并落盘。
+  // 含真·SIGKILL 硬杀场景 + 删掉 markDirty 的反例自检（证明不是恒绿）。
+  [path.join(UP, 'verify_write_persist.js'), '写入即时落盘(D1/硬杀不丢)', ''],
   // ====================================================================
   // 2026-09-28 v0.0.31 十九项修复的专用探针（t9 / t11–t18）。
   // ⚠️ 这一段此前**漏收**过：探针写好了、人肉跑过，但没进 runner ⇒ 下轮改动时
