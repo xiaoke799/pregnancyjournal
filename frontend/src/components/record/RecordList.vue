@@ -952,16 +952,19 @@ function getSleepQualityWidth(): string {
   color: var(--text-color, #1e293b);
 }
 
+/* 状态文字：与 .tag-* 胶囊同口径走语义 ink（此前硬写 #22c55e/#f59e0b/#ef4444
+   三个亮填充色，直接写字对比度不达标，且深色模式下没有翻转版本）。
+   兜底 hex 保留原值（令牌生效时走令牌，防御兜底走原值）。 */
 .value-normal {
-  color: #22c55e;
+  color: var(--success-ink, #22c55e);
 }
 
 .value-warning {
-  color: #f59e0b;
+  color: var(--warning-ink, #f59e0b);
 }
 
 .value-alert {
-  color: #ef4444;
+  color: var(--error-ink, #ef4444);
 }
 
 .status-tag {
@@ -1149,16 +1152,19 @@ function getSleepQualityWidth(): string {
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 方块填充：走语义填充色令牌（--*-color 对比度 3:1 即够，本来就是画条不是写字）。
+   去掉原先的装饰性微渐变（green-500→400 两颗相邻色）—— 两端取同一令牌即可；
+   深色模式下这些填充色沿用亮值（3:1 对深底同样达标）。 */
 .sq-bar-fill.value-normal {
-  background: linear-gradient(90deg, #22c55e, #4ade80);
+  background: var(--success-color, #22c55e);
 }
 
 .sq-bar-fill.value-warning {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  background: var(--warning-color, #f59e0b);
 }
 
 .sq-bar-fill.value-alert {
-  background: linear-gradient(90deg, #ef4444, #f87171);
+  background: var(--error-color, #ef4444);
 }
 
 .sq-text {

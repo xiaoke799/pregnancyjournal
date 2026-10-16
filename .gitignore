@@ -131,7 +131,7 @@ vite.config.ts.timestamp-*
 /tools/verify/fkprobe/
 
 # ---- 本地留档的踩坑文档（暂不入库）----
-/DEPLOY_NOTES.md
+# DEPLOY_NOTES.md 已于 2026-10-16 改写成正式部署文档并入版本库（见该文件头）
 /WEBSOCKET_FIX.md
 
 # ---- 系统文件 / IDE ----

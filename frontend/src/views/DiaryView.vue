@@ -132,7 +132,7 @@ import client from '@/api/client'
 import { getApiBase } from '@/utils/api-base'
 import dayjs from 'dayjs'
 import { calculateGestationalAge } from '@/utils/gestational'
-import { getMoodEmoji as moodEmojiOf, MOOD_OPTIONS as moodOptions } from '@/utils/format'
+import { getMoodEmoji as moodEmojiOf, getMoodLabel as moodLabelOf, MOOD_OPTIONS as moodOptions } from '@/utils/format'
 
 const pregnancyStore = usePregnancyStore()
 const message = useMessage()
@@ -424,16 +424,14 @@ function getWeekInfo(dateStr: string): string {
   return String(age.weeks)
 }
 
-// 心情 emoji 不再在本页另抄一份映射（此前 6 个文件各抄一份，字符已出现漂移），
+// 心情 emoji 与文案都不在本页另抄映射（此前 6 个文件各抄一份，字符已出现漂移），
 // 统一取自 utils/format 的唯一真源；兜底沿用本页原有的 '😐'
-const moodLabels: Record<string | number, string> = { 1: '很差', 2: '不好', 3: '一般', 4: '不错', 5: '很好' }
-
 function getMoodEmoji(mood: string | number): string {
   return moodEmojiOf(mood, '😐')
 }
 
 function getMoodLabel(mood: string | number): string {
-  return moodLabels[mood] || ''
+  return moodLabelOf(mood)
 }
 
 onMounted(async () => {
