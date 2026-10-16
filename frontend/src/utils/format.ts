@@ -108,6 +108,20 @@ export const MOOD_OPTIONS: MoodOption[] = [
 ]
 
 /**
+ * 取心情对应的文案（与 getMoodEmoji 对称）。没填 / 非法值返回空字符串。
+ *
+ * 此前日记页在本地另抄了一份 `moodLabels`（文案与这里一字不差）—— 纯重复定义，
+ * 收口到这里。改心情文案只改 MOOD_OPTIONS 一处。
+ */
+export function getMoodLabel(
+  mood: number | string | null | undefined,
+): string {
+  const n = typeof mood === 'string' ? Number(mood) : mood
+  if (!n || Number.isNaN(n)) return ''
+  return MOOD_OPTIONS.find((o) => o.value === n)?.label || ''
+}
+
+/**
  * 睡眠质量：取值域 + 归一 + 文案的**唯一真源**。
  *
  * 【为什么必须收敛】`sleep_quality` 这个字段曾经有两套取值域：
