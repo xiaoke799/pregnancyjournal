@@ -1,10 +1,18 @@
 /**
- * D1「业务写入不落盘」修复的回归护栏（2026-10-15）
+ * D1「业务写入不落盘」修复的回归护栏 —— **DB 单元层**
+ * （2026-10-15；与 probe_write_durability.js 分工，别删任何一边）
  *
  * 守的是什么：写路由 commitTransaction() 后没有任何落盘动作的老问题不许回来。
  * 修复本体在 db.js：run()/commitTransaction() 成功后 markDirty() ⇒ setImmediate
  * 合并落盘；30 秒定时器退居兜底。曾因这条缺陷，硬杀进程 / OOM / 断电会丢掉最多
  * 30 秒的记录，而接口照常报"保存成功"。
+ *
+ * 【与 probe_write_durability.js 的分工】
+ *   · 那套走**真后端 HTTP 端到端**：体重/胎动/宫缩/用药四类业务路径 → SIGKILL →
+ *     重启读库 → 叠加写入不被旧快照盖回。证明"用户路径上修好了"。
+ *   · 本套走**DB API 单元层**：不起服务，直接调 run()/beginTransaction()。
+ *     独有两样那套没有的：① 事务中间不落盘、commit 后才落的**时序语义**；
+ *     ② 打桩删 markDirty 的**真·源码级反例**（不是内存函数模拟）。
  *
  * 六层证据：
  *   A. 静态断言：run() / commitTransaction() 里 markDirty 调用在位；
