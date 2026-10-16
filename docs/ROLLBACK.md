@@ -47,7 +47,7 @@ git push origin vX.Y.Z
 
 ⚠️ **改 tag 前先确认 GitHub Release 附件与 tag 内容一致**（Release 的 Source code 跟着 tag 走）；
 改完必须重新打包 + 开包逐字节验证（铁律：「改动进没进包」必须开包逐字节比对）。
-历史留档的旧 fpk 在工作区 `.trash/fpk-*/`，别当垃圾清（`.workbuddy/backups/` 同理）。
+历史留档的旧 fpk 在工作区 `.trash/fpk-*/`（gitignored 的隔离目录），别当垃圾清。
 
 ## 4. 应用完全起不来的应急
 
