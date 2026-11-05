@@ -27,6 +27,18 @@ let _flushTimer = null;
 let _writing = false;
 let _ready = false;
 
+/**
+ * 本地时间的 ISO 风格时间戳（不带时区标记）。
+ *
+ * ⚠️ 不能用 `new Date().toISOString()`：那是 **UTC**，东八区日志会比实际晚 8 小时
+ *    （9:11 的请求记成 1:11），排查问题时完全对不上用户口述的时间。
+ *    日志是给人看的，按服务器本地时间记录；需要精确时点再结合 date 命令判断时区。
+ */
+function localTimestamp(d = new Date()) {
+  const p = (n, w = 2) => String(n).padStart(w, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
+}
+
 // ============ 初始化 ============
 function init(logDirectory) {
   if (_ready) return;
@@ -162,7 +174,7 @@ function log(level, category, message, meta) {
   if (levelVal < CONFIG.level) return;
 
   const entry = {
-    ts: new Date().toISOString(),
+    ts: localTimestamp(),
     level,
     cat: category || 'app',
     msg: message,

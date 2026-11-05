@@ -496,6 +496,7 @@ import { exportApi } from '@/api/export'
 import client from '@/api/client'
 import { pushApi } from '@/api/push'
 import { getApiBase } from '@/utils/api-base'
+import { parseServerTime } from '@/utils/format'
 
 const logText = ref('')
 const logInfo = ref<any>(null)
@@ -1234,13 +1235,12 @@ function typeLabel(type: string): string {
 
 function formatLogTime(t?: string): string {
   if (!t) return ''
-  // 后端统一写「本地时间」字符串（2026-09-23 08:00:00，无时区标记）。
-  // 部分浏览器对这种格式解析有兼容问题，统一补成 ISO 本地时间形式再解析。
-  let s = String(t).trim()
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) s = s.replace(' ', 'T')
-  const d = new Date(s)
-  if (isNaN(d.getTime())) return String(t)
-  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  // ⚠️ 旧注释假设「后端统一写本地时间」是错的：SQLite datetime('now') 存的是 UTC，
+  //    无时区标记，直接 new Date(s) 会被当本地时间 → 显示晚 8 小时。
+  //    parseServerTime 统一按 UTC 解析，格式化时自动转回本地时区。
+  const d = parseServerTime(t)
+  if (!d.isValid()) return String(t)
+  return d.format('MM-DD HH:mm')
 }
 
 </script>
