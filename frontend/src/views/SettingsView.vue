@@ -399,7 +399,7 @@
               <span class="push-log-content">{{ log.push_content }}</span>
             </div>
             <div class="push-log-right">
-              <span class="push-log-time">{{ formatLogTime(log.pushed_at || log.created_at) }}</span>
+              <span class="push-log-time">{{ formatLogTime(log) }}</span>
               <n-button v-if="log.status === 'failed'" size="tiny" type="primary" text :loading="retryingId === log.id" @click="retryPush(log.id)">重试</n-button>
             </div>
             <div v-if="log.error_message" class="push-log-error">{{ log.error_message }}</div>
@@ -1233,13 +1233,14 @@ function typeLabel(type: string): string {
   return map[type] || type
 }
 
-function formatLogTime(t?: string): string {
-  if (!t) return ''
-  // ⚠️ 旧注释假设「后端统一写本地时间」是错的：SQLite datetime('now') 存的是 UTC，
-  //    无时区标记，直接 new Date(s) 会被当本地时间 → 显示晚 8 小时。
-  //    parseServerTime 统一按 UTC 解析，格式化时自动转回本地时区。
-  const d = parseServerTime(t)
-  if (!d.isValid()) return String(t)
+function formatLogTime(log: { pushed_at?: string; created_at?: string }): string {
+  if (!log) return ''
+  // ⚠️ push_log 表两个时间字段口径不同，必须分别解析：
+  //   pushed_at  —— 推送引擎 localStamp() 写【本地时间】（重启去重 LIKE '今天%' 依赖本地日期，
+  //                  见 push-engine.js，不能改存 UTC）
+  //   created_at —— DB 默认 datetime('now')，是【UTC】
+  const d = log.pushed_at ? dayjs(log.pushed_at) : parseServerTime(log.created_at)
+  if (!d.isValid()) return String(log.pushed_at || log.created_at || '')
   return d.format('MM-DD HH:mm')
 }
 
