@@ -202,7 +202,7 @@ node tools/verify/gate.js                        # 日常门禁：按本次改�
 覆盖上传/导出/备份恢复/推送/HEIC/迁移/权限/路径穿越等链路。
 前置条件：`app/server/node` 依赖已安装、`app/ui` 已构建、`frontend` 依赖已安装（类型体检要 `vue-tsc`）。详见 [`tools/verify/README.md`](tools/verify/README.md)。
 
-> This repo ships a 82-suite / 1826-check regression harness under `tools/verify/`.
+> This repo ships a 83-suite / 1861-check regression harness under `tools/verify/`.
 > Run `node tools/verify/run_all_suites.js` (or `gate.js` for change-scoped checks).
 > See `tools/verify/README.md` for details.
 
