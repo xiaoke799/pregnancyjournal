@@ -333,6 +333,26 @@ function hardChecks(ctx) {
       '只修一处的话，下次还会以同样的方式复现。要么一起改，要么在描述里写明为什么这次不碰（比如另开 PR）。');
   }
 
+  // 9) 密钥泄露：PR 把凭据/数据文件带进来了
+  //    为什么必须在这里查：本地 pre-commit 钩子只能防"自己提交"，
+  //    外部贡献者的仓库里没有我们的钩子 —— PR 审查是唯一能看到他们 diff 的地方。
+  try {
+    const { scanDiff } = require('../verify/scan_secrets');
+    const leaks = scanDiff(ctx.diff || '', 'pr');
+    for (const l of leaks.slice(0, 6)) {
+      const where = l.file + (l.line ? ':' + l.line : '（文件名）');
+      push(l.level === 'block' ? 'blocking' : 'warn', 'secret-leak',
+        `疑似敏感信息：${where}`,
+        `${l.why}　命中：${l.sample}`,
+        '凭据不要写进代码。**如果这个值曾经被提交过，先去服务端撤销它** —— 删文件没用，它还在历史里。' +
+        '确属示例/夹具就在该行加 `pj-secret-ok` 注释（写明理由）。');
+    }
+  } catch (e) {
+    // 扫描器不可用不该拖垮审查，但也不能假装查过 —— 在报告里说明
+    push('warn', 'secret-scan-skipped', '敏感信息扫描未运行', String(e.message || e).slice(0, 200),
+      '这条是"没查"，不是"没问题"。本地可手动跑 `node tools/verify/scan_secrets.js --all`。');
+  }
+
   return { issues, highRisk, picked, uncovered };
 }
 

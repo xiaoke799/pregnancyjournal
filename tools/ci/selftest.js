@@ -454,6 +454,20 @@ const AI_BLOCK = JSON.stringify({
         d && !(d.issues || []).some(i => i.code === 'sibling-leftover'),
         JSON.stringify((d && d.issues || []).map(i => i.code)));
     }
+
+    // E11 PR 把敏感文件带进来 ⇒ 阻断
+    //   为什么必须由 PR 审查兜：外部贡献者的仓库里没有我们的 pre-commit 钩子，
+    //   PR 的 diff 是唯一能看到"他们提交了什么"的地方。
+    //   用例用 `.env`（文件名规则），不构造任何密钥形态。
+    {
+      const p = writeFile('e11.diff', 'diff --git a/.env b/.env\nnew file mode 100644\n' +
+        '--- /dev/null\n+++ b/.env\n@@ -0,0 +1,2 @@\n+APP_ENV=prod\n+DEV=1\n');
+      const r = await runReview(['--diff=' + p, '--title=t', '--commits=chore: t', '--no-ai', '--json']);
+      const d = j(r);
+      ok('PR 带 .env ⇒ 判阻断', r.code === 1, `exit=${r.code}`);
+      ok('阻断理由指向敏感文件', d && (d.issues || []).some(i => i.code === 'secret-leak'),
+        JSON.stringify((d && d.issues || []).map(i => i.code)));
+    }
   }
 
   console.log('\n=== F. 触发链路（事件取号 + 事实可验证） ===');

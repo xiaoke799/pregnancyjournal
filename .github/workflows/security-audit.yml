@@ -1,0 +1,79 @@
+name: 安全审计
+
+# 为什么单独一个 workflow：
+#   `scan_secrets --history` 要遍历全部提交（本机约 20s，CI 上更久），
+#   塞进每次 PR 的 CI 会让反馈变慢，最后被人绕过。
+#   而"历史里有没有泄漏"这件事不需要实时 —— 每周看一次足够。
+#
+# 它和另外三道的关系：
+#   pre-commit / pre-push 防"未来"；CI static 扫"当前快照"；这一个查"过去"。
+
+on:
+  schedule:
+    # 每周一 02:00 UTC = 北京时间 10:00（工作日早上，出事当天能处理）
+    - cron: '0 2 * * 1'
+  workflow_dispatch:        # 也能手动跑
+
+permissions:
+  contents: read
+  issues: write             # 发现问题时开 issue
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 🔴 必须全历史：默认 fetch-depth: 1 只取一个提交，--history 会扫出"干净"
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 全历史密钥审计
+        run: node tools/verify/scan_secrets.js --history
+
+      # 只在失败时开 issue，且同一时间只留一个未关闭的 —— 否则每周都会多一条，没人看
+      - name: 发现问题时开 issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create security --color b60205 --description "安全审计" 2>/dev/null || true
+
+          existing=$(gh issue list --label security --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "已有未关闭的 security issue（#$existing），本次不重复开"
+            exit 0
+          fi
+
+          cat > /tmp/body.md <<'EOF'
+          每周一次的全历史密钥审计失败了：**历史提交里可能有凭据**。
+
+          ### 处置顺序（别搞反）
+
+          1. **先去对应服务撤销那个凭据**（GitHub / 阿里云 / 腾讯云 / 各 webhook）。
+             `git rebase` 删掉那个 commit 并不能让它失效 —— 它还在 fork、别人的 clone、PR 的 diff 缓存里。
+          2. 换新凭据，放环境变量或本地配置文件（不入库）。
+          3. 最后才考虑清理历史。
+
+          ### 本机复现
+
+          ```bash
+          node tools/verify/scan_secrets.js --history
+          ```
+
+          扫描输出已脱敏（只显示前 4 位 + 长度），完整定位见本次 workflow 运行日志。
+
+          ### 如果是误报
+
+          在该行加注释 `pj-secret-ok` 并写明理由，然后关掉这个 issue。
+          EOF
+
+          gh issue create \
+            --title "安全审计：历史提交中发现疑似凭据（$(date -u +%Y-%m-%d)）" \
+            --label security \
+            --body-file /tmp/body.md
