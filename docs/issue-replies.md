@@ -85,7 +85,30 @@ Issues 列表页勾选 → `Mark as completed`：
 
 关闭原因选择：修复完成 → `completed`；不打算做 → `not_planned`；重复 → `duplicate`（并填原 issue 号）。
 
-## 五、为什么这些事没让机器人做
+## 五、用脚本关闭（需要 PAT）
+
+连接器的 OAuth scope 可能只读（写会 403），所以关闭走 PAT 直连：
+
+```bash
+# 1. 建 fine-grained PAT：Issues = Read and write、Pull requests = Read and write、Contents = Read
+#    只勾 pregnancyjournal 这一个仓库
+# 2. 存到仓库外（别提交，也别贴聊天里）
+echo 'github_pat_xxx' > ~/.workbuddy/github-token
+
+# 3. 预演：只打印，不改任何东西
+GITHUB_TOKEN=$(cat ~/.workbuddy/github-token) node tools/ci/close-issue.js --issue=2 --dry-run
+
+# 4. 真的关（把话术一起贴上去）
+GITHUB_TOKEN=$(cat ~/.workbuddy/github-token) \
+  node tools/ci/close-issue.js --issue=2 --reason=completed --comment-file=/tmp/reply-2.md
+```
+
+- 批量：`--issues=1,2`
+- `--reason`：`completed`（修好了）/ `not_planned`（不做）/ `duplicate`（重复）
+- 幂等：已经关闭的会跳过，不报错
+- 传 PR 号会提示「这是 PR，不是 issue」并跳过
+
+## 六、为什么这些事没让机器人做
 
 自动化里的 `issue-triage.js` 只**分类和首回**，不关 issue。原因：
 
