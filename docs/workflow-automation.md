@@ -108,14 +108,14 @@ git push origin master
 
 | 轮次 | 方向 | 做了什么 | 结果 |
 |---|---|---|---|
-| 第 1 轮 | **逻辑与对抗** | `selftest.js` 110 项：判定方向、模型降级、合并条件、回复事实、边界输入、事件取号、workflow 红线 | 110/0 |
+| 第 1 轮 | **逻辑与对抗** | `selftest.js` 124 项：判定方向、模型降级、合并条件、回复事实、边界输入、事件取号、workflow 红线 | 124/0 |
 | 第 2 轮 | **真实数据回放** | 线上 3 个 issue 重跑分类 + PR#5 完整审查 + `git tag --contains` 核对版本声明 | 全部正确 |
-| 第 3 轮 | **稳定性与全链** | `selftest` 连跑 3 次（含 mock 服务与并发子进程，最易 flaky）+ `gate.js` 全链 + YAML 独立解析 | 3×110/0，闸门绿 |
+| 第 3 轮 | **稳定性与全链** | `selftest` 连跑 3 次（含 mock 服务与并发子进程，最易 flaky）+ `gate.js` 全链 + YAML 独立解析 | 3×124/0，闸门绿 |
 
 复跑：
 
 ```bash
-node tools/ci/selftest.js          # 110 项，约 3 秒
+node tools/ci/selftest.js          # 124 项，约 3 秒
 node tools/verify/gate.js          # 按改动选套件
 ```
 
@@ -164,7 +164,7 @@ node tools/verify/gate.js          # 按改动选套件
 | 评论贴不上 | 是不是 fork PR？日志里搜「发布失败」 |
 | 合并没发生 | 跑 `auto-merge.js --dry-run` 或看 job 日志里的 `✗ [code] 原因` |
 | 结论和预期不符 | 本地跑 `node tools/ci/pr-review.js --diff=<文件> --no-ai` 看硬检查怎么判的 |
-| 机器人自己坏了 | `node tools/ci/selftest.js`（110 项，约 3 秒） |
+| 机器人自己坏了 | `node tools/ci/selftest.js`（124 项，约 3 秒） |
 
 ## 十一、本地怎么测（不碰 GitHub）
 

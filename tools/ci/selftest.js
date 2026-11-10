@@ -549,6 +549,41 @@ const AI_BLOCK = JSON.stringify({
       '额外密钥：' + [...new Set(secrets)].filter(s => s !== 'GITHUB_TOKEN').join(', '));
   }
 
+  console.log('\n=== H. 敏感信息门禁（规则与豁免） ===');
+  {
+    const S = require('../verify/scan_secrets');
+    const blocks = S.RULES.filter(r => r.level === 'block');
+    ok('内容规则 >= 12 条（含国内云与 AI key）', blocks.length >= 12, String(blocks.length));
+    ok('文件名规则 >= 5 条', S.BAD_FILES.length >= 5, String(S.BAD_FILES.length));
+    ok('每条规则都有 id / why / 已编译正则',
+      S.RULES.every(r => r.id && r.why && r.re instanceof RegExp));
+
+    // 文件名判定：拦"本身就是密钥/数据"的文件，放行示例与静态数据
+    for (const [f, expect] of [
+      ['.env', true],
+      ['.env.example', false],
+      ['config/id_rsa', true],
+      ['certs/server.pem', false],                     // 证书是公开的，私钥由内容规则抓
+      ['data/pregnancy.db', true],                     // 用户真实数据，绝不该入库
+      ['app/server/node/data/recipes.json', false],    // 静态数据，必须入库
+    ]) {
+      ok(`文件名判定 ${f} → ${expect ? '拦' : '放行'}`, !!S.scanFileName(f) === expect);
+    }
+
+    // 占位符不该被拦（误报会把人逼成 --no-verify）
+    for (const [name, text] of [
+      ['空值', "password = ''"],
+      ['重复字符', 'password = "xxxxxxxxxxxx"'],
+      ['process.env', 'apiKey: process.env.API_KEY'],
+    ]) {
+      ok(`占位符放行：${name}`, S.scanText(text, { file: 'x.js' }).length === 0);
+    }
+
+    // 跳过规则
+    ok('node_modules 跳过', S.scanDiff(['+++ b/node_modules/a.js', '@@ -1 +1 @@', '+x'].join('\n')).length === 0);
+    ok('二进制扩展名跳过', S.scanDiff(['+++ b/a.png', '@@ -1 +1 @@', '+x'].join('\n')).length === 0);
+  }
+
   fs.rmSync(TMP, { recursive: true, force: true });
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
   process.exit(fail ? 1 : 0);

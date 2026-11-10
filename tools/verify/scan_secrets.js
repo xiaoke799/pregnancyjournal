@@ -80,6 +80,44 @@ const RULES = [
     re: /\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}/,
     why: 'JWT（可能含签名的访问令牌）',
   },
+
+  // ---- 国内云：这两个是踩坑率最高的（AccessKey 一旦泄露，挖矿账单当天就到）----
+  {
+    id: 'aliyun-accesskey', level: 'block',
+    re: /\bLTAI[0-9A-Za-z]{12,}/,
+    why: '阿里云 AccessKeyId（LTAI 开头）',
+  },
+  {
+    id: 'tencentcloud-secretid', level: 'block',
+    re: /\bAKID[0-9A-Za-z]{26,}/,
+    why: '腾讯云 SecretId（AKID 开头）',
+  },
+  // ---- AI 服务的 key：这个仓库正在接模型审查，key 写进代码的风险很实在 ----
+  {
+    id: 'ai-api-key', level: 'block',
+    re: /\bsk-(?:proj-|ant-)?[A-Za-z0-9_-]{24,}/,
+    why: 'AI 服务 API key（OpenAI / Anthropic / DeepSeek 等 sk- 前缀）',
+  },
+  {
+    id: 'google-api-key', level: 'block',
+    re: /\bAIza[0-9A-Za-z_-]{35}\b/,
+    why: 'Google API key（AIza 开头，长度固定 39）',
+  },
+  {
+    id: 'slack-token', level: 'block',
+    re: /\bxox[baprs]-[0-9A-Za-z-]{10,}/,
+    why: 'Slack token（xox* 开头）',
+  },
+  {
+    id: 'stripe-key', level: 'block',
+    re: /\bsk_live_[0-9A-Za-z]{20,}/,
+    why: 'Stripe 生产密钥',
+  },
+  {
+    id: 'npm-token', level: 'block',
+    re: /\bnpm_[A-Za-z0-9]{36}\b/,
+    why: 'npm 发布 token',
+  },
   {
     id: 'wecom-webhook', level: 'block',
     re: /qyapi\.weixin\.qq\.com\/cgi-bin\/webhook\/send\?key=[0-9a-fA-F-]{20,}/,
@@ -171,6 +209,34 @@ function scanText(text, { file = '', startLine = 1 } = {}) {
 // ---------------------------------------------------------------------------
 const SKIP_EXT = /\.(png|jpe?g|gif|webp|ico|heic|mp4|mov|zip|gz|tgz|fpk|db|woff2?|ttf|otf|pdf)$/i;
 const SKIP_PATH = /^(node_modules\/|frontend\/node_modules\/|\.git\/|app\/ui\/assets\/|tools\/verify\/(fixtures|regress-out|\.tmp)\/)/;
+const MAX_SCAN_BYTES = 2 * 1024 * 1024;   // 超过 2MB 只查文件名，不读内容（避免把打包产物拖进正则）
+
+// ---------------------------------------------------------------------------
+// 文件名规则：这些文件**不看内容**也不该进版本库
+//   内容扫描回答"里面有没有密钥"，文件名规则回答"这个文件本身就是密钥/数据"。
+//   后者更重要：一个 `data.db` 里是用户的孕期记录，它不需要"长得像密钥"才危险。
+// ---------------------------------------------------------------------------
+const BAD_FILES = [
+  {
+    re: /(^|\/)\.env(\.(?!example|sample|template)[^/]*)?$/i,
+    why: '环境变量文件（常含密钥）—— 提交 .env.example 就够了',
+  },
+  { re: /(^|\/)id_(rsa|dsa|ecdsa|ed25519)$/i, why: 'SSH 私钥' },
+  { re: /(^|\/)\.npmrc$/i, why: 'npm 配置（常含发布 token）' },
+  { re: /(^|\/)\.netrc$/i, why: 'netrc（含登录凭据）' },
+  { re: /(^|\/)credentials?\.(json|ya?ml)$/i, why: '凭据文件' },
+  { re: /\.(db|sqlite|sqlite3)$/i, why: '数据库文件 —— 里面是用户真实数据，绝不该入库' },
+  { re: /\.(kdbx|keychain)$/i, why: '密码库' },
+];
+
+function scanFileName(file) {
+  for (const r of BAD_FILES) {
+    if (r.re.test(file)) {
+      return { file, line: 0, rule: 'bad-file', level: 'block', why: r.why, sample: '(文件名)', snippet: file };
+    }
+  }
+  return null;
+}
 
 // 明确允许出现凭据形态的文件（例如专门放示例的文档、测试桩）——**必需写理由**
 const ALLOW_FILES = [
@@ -208,11 +274,18 @@ function scanDiff(diffText, label) {
   const hits = [];
   let file = '';
   let newLine = 0;
+  const seenFiles = new Set();
   for (const raw of diffText.split('\n')) {
     const line = raw.replace(/\r$/, '');
     if (line.startsWith('+++ ')) {
       const p = line.slice(4).trim();
       file = p === '/dev/null' ? '' : p.replace(/^b\//, '').replace(/^"|"$/g, '');
+      // 文件名规则：每个文件只查一次（不是每一行都报）
+      if (file && !seenFiles.has(file) && !SKIP_PATH.test(file) && !ALLOW_FILES.includes(file)) {
+        seenFiles.add(file);
+        const fh = scanFileName(file);
+        if (fh) hits.push(fh);
+      }
       continue;
     }
     const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
@@ -265,9 +338,15 @@ async function allHits() {
   const files = list.out.split('\0').filter(Boolean);
   const hits = [];
   for (const f of files) {
-    if (SKIP_EXT.test(f) || SKIP_PATH.test(f) || ALLOW_FILES.includes(f)) continue;
+    if (SKIP_PATH.test(f) || ALLOW_FILES.includes(f)) continue;
+    // 文件名规则先查 —— 数据库/私钥/`.env` 这类文件，内容都不必读
+    const fh = scanFileName(f);
+    if (fh) hits.push(fh);
+    // 二进制与超大文件不读内容（`.db` 已在上面报了，这里不再重复）
+    if (SKIP_EXT.test(f)) continue;
     let buf;
     try { buf = fs.readFileSync(path.join(REPO, f)); } catch (e) { continue; }
+    if (buf.length > MAX_SCAN_BYTES) continue;
     if (isBinary(buf)) continue;
     hits.push(...scanText(buf.toString('utf8'), { file: f }));
   }
@@ -320,13 +399,14 @@ async function main() {
   }
 
   console.log(C.bold(`\n敏感信息扫描（${label}）`));
+  const loc = h => (h.line ? `${h.file}:${h.line}` : `${h.file}（文件名）`);
   for (const h of blocks) {
-    console.log(C.red(`  🔴 [${h.rule}] ${h.file}:${h.line}`));
+    console.log(C.red(`  🔴 [${h.rule}] ${loc(h)}`));
     console.log(C.dim(`     ${h.why}　命中：${h.sample}`));
     console.log(C.dim(`     ${h.snippet}`));
   }
   for (const h of warns) {
-    console.log(C.yellow(`  🟡 [${h.rule}] ${h.file}:${h.line}`));
+    console.log(C.yellow(`  🟡 [${h.rule}] ${loc(h)}`));
     console.log(C.dim(`     ${h.why}　命中：${h.sample}`));
     console.log(C.dim(`     ${h.snippet}`));
   }
@@ -342,7 +422,7 @@ async function main() {
   console.log(C.yellow(`\n🟡 有 ${warns.length} 项可疑赋值（未拦下，加 --strict 可当错误处理）`));
 }
 
-module.exports = { scanText, scanDiff, RULES, looksLikePlaceholder };
+module.exports = { scanText, scanDiff, scanFileName, RULES, BAD_FILES, looksLikePlaceholder };
 
 if (require.main === module) {
   main().catch(e => { console.error(e.stack); process.exit(2); });
