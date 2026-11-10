@@ -38,11 +38,23 @@ function ensureSessionId() {
   return sessionId
 }
 
+/**
+ * 本地时间的 ISO 风格时间戳（**不带时区标记**）—— 与后端 `logger.js` 的 `localTimestamp` 同口径。
+ *
+ * 🔴 不能用 `new Date().toISOString()`：那是 UTC，东八区会早 8 小时，
+ *    而下面控制台只截 `substring(11, 19)` 显示时分秒 ⇒ 用户看到的日志时间对不上自己刚做的操作。
+ *    更要命的是与后端 `info.log` 不一致（后端已改本地），同一个故障两边对时间会更费劲。
+ */
+function localStamp(d = new Date()): string {
+  const p = (n: number, w = 2) => String(n).padStart(w, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`
+}
+
 function log(level: LogLevel, category: string, message: string, data?: unknown) {
   if (LEVEL_VALUE[level] < LEVEL_VALUE[CONFIG.level]) return
 
   const entry: LogEntry = {
-    ts: new Date().toISOString(),
+    ts: localStamp(),
     level,
     category,
     message,
