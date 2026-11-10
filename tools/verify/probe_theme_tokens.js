@@ -31,6 +31,10 @@ const path = require('path');
 
 const env = require('./_env');
 const ROOT = process.env.CK_ROOT || path.join(env.REPO, 'frontend', 'src');
+
+// 统一成正斜杠：Windows 下 path.relative 返回 `views\\x.vue`，Linux 下是 `views/x.vue`。
+// 不归一的话，白名单表在 CI 上会全部匹配不到（2026-11-10 CI 首跑就是这样红的）。
+const relOf = f => path.relative(ROOT, f).split(path.sep).join('/');
 const warnOnly = process.argv.includes('--warn-only');
 const onlyGhost = process.argv.includes('--list-ghosts');
 const onlyHard = process.argv.includes('--list-hard');
@@ -65,17 +69,17 @@ for (const f of FILES) {
   let m;
   DEF_RE.lastIndex = 0;
   while ((m = DEF_RE.exec(src))) {
-    if (!definedWhere.has(m[1])) definedWhere.set(m[1], path.relative(ROOT, f));
+    if (!definedWhere.has(m[1])) definedWhere.set(m[1], relOf(f));
   }
   INJECT_RE.lastIndex = 0;
   while ((m = INJECT_RE.exec(src))) {
-    if (!definedWhere.has(m[1])) definedWhere.set(m[1], path.relative(ROOT, f) + ' (动态注入)');
+    if (!definedWhere.has(m[1])) definedWhere.set(m[1], relOf(f) + ' (动态注入)');
   }
   USE_RE.lastIndex = 0;
   const per = new Map();
   while ((m = USE_RE.exec(src))) {
     const line = src.slice(0, m.index).split('\n').length;
-    if (!per.has(m[1])) per.set(m[1], { name: m[1], file: path.relative(ROOT, f), lines: [], n: 0 });
+    if (!per.has(m[1])) per.set(m[1], { name: m[1], file: relOf(f), lines: [], n: 0 });
     const rec = per.get(m[1]);
     rec.n++; rec.lines.push(line);
   }
@@ -141,7 +145,7 @@ function topBlocks(css) {
 const hard = [];
 const exempt = [];
 for (const f of FILES) {
-  const rel = path.relative(ROOT, f);
+  const rel = relOf(f);
   const src = fs.readFileSync(f, 'utf8');
   for (const blk of styleBlocks(src, rel)) {
     for (const tb of topBlocks(blk.css)) {
@@ -382,7 +386,7 @@ if (doFix) {
   let files = 0, decls = 0;
   const touched = [];
   for (const f of FILES) {
-    const rel = path.relative(ROOT, f);
+    const rel = relOf(f);
     const src = fs.readFileSync(f, 'utf8');
     let out, changed;
     if (/\.css$/.test(f)) {
@@ -421,12 +425,12 @@ if (doFix) {
    - ChecklistView(1)：进度条底槽，叠在渐变进度条之上，同 DashboardView 理由。
    - CheckupScheduleView(1)：激活 tab 的计数徽标，叠在激活态实色底之上。      */
 const ALLOW = {
-  'views\\DashboardView.vue': 8,
-  'styles\\global.css': 2,
-  'layouts\\MainLayout.vue': 1,
-  'views\\AlbumView.vue': 1,
-  'views\\ChecklistView.vue': 1,
-  'views\\CheckupScheduleView.vue': 1,
+  'views/DashboardView.vue': 8,
+  'styles/global.css': 2,
+  'layouts/MainLayout.vue': 1,
+  'views/AlbumView.vue': 1,
+  'views/ChecklistView.vue': 1,
+  'views/CheckupScheduleView.vue': 1,
 };
 
 /* ---------- 输出 ---------- */
@@ -543,4 +547,6 @@ if (!(onlyGhost || onlyHard)) {
 }
 
 console.log(`\n=== ${bad} 项不通过（共 ${ghosts.length + hard.length} 处待处理） ===`);
-process.exit(warnOnly ? 0 : bad > 0 ? 1 : 0);
+// 用 exitCode 而不是 process.exit()：后者会丢掉尚未 flush 的 stdout，
+// 让 CI 日志里只剩最后一行、看不到到底哪条失败（2026-11-10 踩过）。
+process.exitCode = warnOnly ? 0 : bad > 0 ? 1 : 0;
