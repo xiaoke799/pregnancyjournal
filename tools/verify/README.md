@@ -9,14 +9,28 @@
 ## 快速开始
 
 ```bash
-# 全套（81 套 / 约 1696 项，跑完约 9–14 分钟）
+# 全套（82 套 / 约 1801 项，跑完约 9–14 分钟）
 node tools/verify/run_all_suites.js
+
+# 日常：按本次改动自动选套件（闸门，红则非零退出）—— 改完代码就跑这个
+node tools/verify/gate.js
 
 # 只跑名字含关键字的套件（路径或中文名都能命中）
 node tools/verify/run_all_suites.js --only=推送
 node tools/verify/run_all_suites.js --only=HEIC
 node tools/verify/run_all_suites.js --only=DB修复
 ```
+
+`run_all_suites.js` 的两个额外开关（闸门与 CI 用）：
+
+| 开关 | 作用 |
+|---|---|
+| `--suite=名字` | **精确**指定套件，可重复。拼错会 fail-closed 判红（exit 2），不会静默跳过 |
+| `--ci` | 严格退出码：`FAIL` / `EXIT*` / `TIMEOUT` / `SPAWNERR` ⇒ exit 1；「汇总行全绿但进程退出码非 0」也判红 |
+| `--list` | 列出全部套件的准确名字（写 `--suite=` 前先看一眼） |
+
+> ⚠️ 不加 `--ci` 时，退出码只反映「README 声明数字是否一致」—— 有红灯也返回 0。
+> 这是历史行为（本机看汇总行即可），但**直接接 CI 会假绿**，所以 CI/闸门一律带 `--ci`。
 
 逐套日志落在 `tools/verify/regress-out/<套件名>.log`（不进版本库）。
 控制台最后会打印「套件：N/N 全绿」与「项数合计」。
@@ -38,7 +52,12 @@ node tools/verify/run_all_suites.js --only=DB修复
 ```
 tools/verify/
 ├── _env.js              ← 路径/运行环境**唯一出处**（重构后新增，见下方"注意"）
-├── run_all_suites.js    ← 全量运行器
+├── run_all_suites.js    ← 全量运行器（`--list` / `--suite=` / `--ci`）
+├── gate.js              ← **本地闸门**：读 git 改动 → 命中规则 → 只跑受影响套件 → 红则 exit 1
+│                           不改 `RULES` 就不会知道新模块该跑什么；规则表即"改什么必跑什么"的代码化
+├── lessons.js           ← **错题本检查器**：Seen ≥3 必须硬化、PROMOTED 锚点必须存在、缺字段判红
+│                           `--bump=L-003` 把 Seen +1；`--list` 看摘要
+├── install_hooks.js     ← 可选：把闸门装成 `.git/hooks/pre-commit`（默认不装，多会话并行会互相拦）
 ├── tcp_shim.js          ← 测试垫片：把 server.js 的 Unix Socket 监听改写成 TCP 环回
 ├── _vue_extract.js      ← 从 .vue 源码里抽取 <script> 内容的共用小工具
 ├── e2e_*.js             ← 端到端（真起 server.js + 真库 + 真 HTTP）
@@ -82,7 +101,8 @@ tools/verify/
 
 ## 三类脚本，别混用
 
-**① 收进运行器的 61 套**：判定口径是「能打出 `N 通过 / M 失败` 汇总行」。
+**① 收进运行器的套件**（数量看 `--list` 末尾或全量汇总，**别在这里抄数字** —— 这个数已经漂过三次）：
+判定口径是「能打出 `N 通过 / M 失败` 汇总行」。
 主题覆盖：推送、导出/备份/恢复、媒体（HEIC/缩略图/视频）、相册与日记、
 产检迁移与排序、记录类入口与全类型、路径安全（穿越 + 锚定白名单）、
 首屏/路由契约/导航、用药与补充（规则 + 计划 + 到点提醒）、前端类型体检、

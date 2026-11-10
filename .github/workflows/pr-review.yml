@@ -1,0 +1,61 @@
+name: PR 审查
+
+# 为什么用 pull_request_target 而不是 pull_request：
+#   fork 来的 PR，用 pull_request 事件拿到的 GITHUB_TOKEN 是**只读**的，贴不了评论、
+#   打不了标签 —— 而外部贡献者的 PR 恰恰最需要自动反馈。
+#   pull_request_target 能拿到可写 token，但代价是：**绝不能执行 PR 里的代码**
+#   （否则等于把仓库写权限交给任何一个提 PR 的人）。
+#
+# 所以这里的铁律只有一条，任何改动都不许破：
+#   checkout 只能取 base 分支（default branch），**永远不许 ref 成 pull_request.head.sha**。
+#   审查器只把 diff 当文本读，不 npm install、不跑测试、不执行 PR 里的任何脚本。
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read          # 只读 base 分支
+  pull-requests: write    # 贴评论
+  issues: write           # 打标签（标签挂在 issue 接口上）
+  models: read            # GitHub Models：用 GITHUB_TOKEN 直连，不需要另配 key
+
+# 同一个 PR 连续推送时，只审最新一次（旧的那次结论已经过期，没必要留着占额度）
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # draft 不审：作者还在写，审了只会制造噪音
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: 检出 base 分支（🔴 不是 PR 的 head）
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 审查
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          # 模型可换：openai/gpt-4o（默认，质量好）/ openai/gpt-4o-mini（省额度）
+          PJ_REVIEW_MODEL: ${{ vars.PJ_REVIEW_MODEL || 'openai/gpt-4o' }}
+        run: node tools/ci/pr-review.js
+
+      - name: 结论
+        if: always()
+        run: |
+          case "${{ job.status }}" in
+            success) echo "✅ 审查通过（无阻断项）" ;;
+            *) echo "本 job 失败 = 审查有阻断项或需要人工过一遍（不是 CI 挂了）" ;;
+          esac

@@ -1,0 +1,254 @@
+# LESSONS.md —— 错题本（L2）
+
+> **只记「返工过、验证流过形式、差点漏掉」的事。** 「最佳实践」不配占位置 ——
+> 没出过事故的规则写进来，只会把真正的坑挤到看不见的地方。
+>
+> 这不是文档，是**待硬化的队列**：条目在这里观察，重复到第 3 次就转正进
+> `docs/code-standards.md`，然后从这里标 `PROMOTED` 退场。检查机制：
+> `node tools/verify/lessons.js`。
+
+## 字段口径（改条目时别改格式，脚本要解析）
+
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `## L-NNN 一句话结论` | 是 | NNN 三位递增，**永不复用**（引用会悬空） |
+| `- **Seen**: N×` | 是 | 被捕获（夜审 / 回归 / 线上）的次数。**重复捕获才算**，自己写一遍不算 |
+| `- **状态**: OPEN / PROMOTED / RETIRED` | 是 | PROMOTED 必须写 `→ docs/code-standards.md#CS-NN`，脚本会核对锚点存在 |
+| `- **症状**` | 是 | 用户/开发者**看到什么**。要能一眼对上，不写内部分析 |
+| `- **根因**` | 是 | 为什么会发生（一层即可，别写成检讨） |
+| `- **判据**` | 是 | 下次怎么在一分钟内认出同类问题 |
+| `- **证据**` | 是 | commit / tag / 套件名 / 日期。**没有证据的条目等于没发生** |
+
+阈值：**Seen ≥ 3× ⇒ 必须 PROMOTED**（脚本会红）。升格时把规则搬进 code-standards，
+并在那里挂上护栏脚本；搬完这里只留一行索引，不保留全文。
+
+---
+
+## L-001 汇总行全绿 ≠ 这一套检查通过了
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-02`
+- **症状**: 回归打印「7 通过 / 1 失败」，最终却 `exit 0`；接进 CI 后一片红里报绿
+- **根因**: `run_all_suites.js` 只在「文档声明的套数对不上」时才设退出码，红灯不参与退出码
+- **判据**: 任何"总控脚本"只看它打印的文字是不够的 —— **必须看它的退出码**
+- **证据**: 2026-11-10 加 `--ci` 时实测：同一红灯场景，默认模式 exit 0、`--ci` 模式 exit 1
+
+## L-002 写检查脚本本身就会假绿（同一个坑踩了四次）
+
+- **Seen**: 4×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-01`
+- **症状**: 脚本报「全部一致 ✅」/「48 列」/「无孤儿」，而实际有 50 列、有 29 个孤儿
+- **根因**: ① 逻辑错（把后端本来就有的列名算作"有写入方"）② 路径分隔符不匹配
+  ③ 正则太窄（`[a-z_]+` 吃不到 `blood_glucose_1h`；`(\w+Color)` 吃不到 `textColor1`）
+  ④ 只扫扁平字面量，漏模板串拼的路由
+- **判据**: 新断言**上线前必须真红一次**；解析正则一律用 `[A-Za-z0-9_]+` / `\w*[Cc]olor\w*` 这种容错写法
+- **证据**: 2026-09-25 一天内连踩 4 次，逐条记录在旧铁律 #11；护栏：所有套件自带反例自检
+
+## L-003 「红了」不等于「反例有效」—— 必须看红在哪
+
+- **Seen**: 2×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-02`
+- **症状**: 反例"成功"变红，但其实红在 `MODULE_NOT_FOUND`，跟被测逻辑毫无关系
+- **根因**: 给了相对路径，子进程 cwd 在 `frontend/` 解析不到；而 fail-closed 照样会红，
+  于是"红过"被当成"有区分度"
+- **判据**: 反例必须红在**你预期的那条断言上**，日志要能指出是哪条
+- **证据**: `verify_frontend_types.js` 的 `PJ_VUE_TSC` 反例；修法是相对路径锚定仓库根
+
+## L-004 同一功能两个平行实现，改一处必漏另一处
+
+- **Seen**: 3×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-03`
+- **症状**: 用户报「功能没有」「统计里看不见」，代码里明明有
+- **根因**: 两份食谱数据（页内 vs `recipes.json`）、两份统计面（`RecordView` vs `StatsView.vue`）、
+  两份产检数据 —— 各自写死一份清单
+- **判据**: 改任何「列表型 / 枚举型」功能前，**先 grep 一遍有没有第二个清单**
+- **证据**: 三围只加在前者、`StatsView` 连腰围都没有；护栏 `verify_record_entrypoints.js`
+
+## L-005 内存 SQLite：读文件前 `saveDb()`，换文件后 `reloadFromFile()`
+
+- **Seen**: 3×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-04`
+- **症状**: 备份导出的是 30 秒前的旧数据；恢复成功提示之后数据自己变回去了
+- **根因**: 磁盘文件只是快照（每 30 秒整库落盘）。① 读文件前不落盘 ⇒ 拿旧状态
+  ② 换文件后不重载 ⇒ ≤30 秒后 `saveDb()` 把旧数据写回去，恢复被静默撤销
+- **判据**: 任何直接 copy / 读写 `config.DATABASE_PATH` 的代码，先问这两句
+- **证据**: `/export/backup-db`、`/export/restore-db`（还谎报"重启后生效"）；护栏 `verify_db_persist.js`、`t9_verify_db_fixes.js`
+
+## L-006 新字段没进恢复白名单 = 恢复后永久变 null
+
+- **Seen**: 2×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-05`
+- **症状**: 备份文件里明明有值，恢复完全没了；导出看着正常，所以极难发现
+- **根因**: `/restore-latest` 是 `DELETE FROM 表` 再按 `export.js` 的 `TABLE_COLUMNS` 白名单插入 ——
+  导出侧用 `SELECT *`，坑只在恢复侧；新表没进 `ALL_TABLES` 还会整张表不进备份
+- **判据**: 加字段/加表时，**同时**改 `TABLE_COLUMNS`（或 `ALL_TABLES`）
+- **证据**: 已修 `daily_record` 的 bust/waist/hip、`diary_entry.title`、`reminder.priority`、`schedule_dates`；
+  护栏 `verify_backup_schema_coverage.js`（不变量：白名单 ⊇ 建表字段）
+
+## L-007 加锁写在所有校验之前 ⇒ 写入永不落盘，接口照样成功
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-06`
+- **症状**: 之后所有写入只进内存，重启全丢；没有任何报错
+- **根因**: `saveDb()` 开头 `if (_savingDb || _dbLocked) return;` 是**唯一落盘点**；
+  `POST /restore-latest` 把 `lockDb()` 放在两个提前 return 之前、且那两分支漏解锁
+- **判据**: `lockDb()` 必须在**所有校验 / 提前 return 之后**；出问题别只补一行 unlock
+- **证据**: 修法是与 `/restore` 对齐、整体下移；护栏 `probe_async_save_race.js`
+
+## L-008 naive-ui 没有 `modelValue` 约定，裸 `v-model` 一律失效
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-07`
+- **症状**: 点分类/单选完全没反应，连选中态都不动；构建、类型检查、渲染探针全绿
+- **根因**: naive-ui 用**具名** prop（`n-radio-group`/`n-input`/`n-select` → `value`；
+  `n-modal`/`n-drawer` → `show`；`n-checkbox` → `checked`）。裸 `v-model` 编译成
+  `modelValue` + `onUpdate:modelValue`，组件不认 ⇒ 状态永远停在初值
+- **判据**: 全项目 128 处 `v-model:value` 都对，唯独一处写错 ⇒ 靠"大家都这么写"判断不可靠，
+  只能靠扫描；**原生元素**（`input`/`select`/`textarea`）的裸 `v-model` 是对的，别一起修
+- **证据**: 饮食页「催奶食谱大全」只有猪蹄系列能显示；护栏 `verify_naive_vmodel.js`（契约+扫描+编译期+真实渲染四层）
+
+## L-009 `formatted-value` 给空字符串 ⇒ 整页错误边界崩溃
+
+- **Seen**: 2×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-08`
+- **症状**: 只在「该字段为空 + 打开含该控件的弹窗」时白屏
+- **根因**: `n-time-picker` / `n-date-picker` 的 `formatted-value` 传 `''` 会崩
+- **判据**: 无值一律 `null`（初值和回填都是），**禁写 `|| ''`**
+- **证据**: 两次复发；新写这类表单优先用原生 `<input type="date|time">`
+
+## L-010 composable 不解构 ⇒ 拿到 Ref 对象，判断恒真
+
+- **Seen**: 2×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-09`
+- **症状**: `v-if` / `v-show` 行为全反（该藏的显示、该显示的藏）
+- **根因**: `const c = useXxx()` 之后模板里写 `c.flag`，取到的是 Ref 本身
+- **判据**: 一律 `const { a, b } = useXxx()`
+- **证据**: 两次复发；属类型系统查不出的运行时语义
+
+## L-011 抽共享组件后，静态断言会「集体假红」
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-10`
+- **症状**: 功能明明在，`verify_record_entrypoints.js` 一次红 4 条
+- **根因**: 断言按 `RecordView.vue` 里的**字面量**找目标，目标搬到了 `QuickLogDialog.vue`
+- **判据**: 两个动作都要做 —— ① 新文件并入被检查源码集合 ② **补一条"组件确实被接上"的断言**
+  （否则组件写得再全、没人引用也全绿）
+- **证据**: 胎动/宫缩抽 `QuickLogDialog` 实测；连带：`v-else` 兜底 = 静默空白，一律写 `v-else-if`
+
+## L-012 调试产物写进被测目录，会把检查脚本废掉
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-11`
+- **症状**: `app/ui` 堆着 29 个孤儿 chunk，检查却报 `50 通过 / 0 失败`
+- **根因**: 孤儿判定从"所有 `*.html`"出发，而调试探针往里写了临时 html，且引用了旧 hash
+- **判据**: 把调试产物写进被测目录前，先问「检查脚本会不会把它当正常输入」
+- **证据**: 修法：① 只从 `index.html` 出发 ② `app/ui` 出现别的 html 一律判红；护栏 `verify_ui_orphans.js`
+
+## L-013 容忍「常驻 N 个类型错误」= 这一栏事实上没人再看
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-12`
+- **症状**: `vue-tsc` 长期挂 15 个红，新增的真错误淹没在噪音里
+- **根因**: `api/client.ts` 声明成 `AxiosInstance`，但拦截器已把响应解包成 `ApiResponse`
+- **判据**: 类型错误必须保持 **0 处**；出现一片红先找根因，别按条数估工作量
+  （修一处后 13 个连锁消失）
+- **证据**: 护栏 `verify_frontend_types.js`；**fail-closed**：缺 `node_modules` / 起不来 / 超时都判失败
+
+## L-014 文档里写死的数字一定会漂
+
+- **Seen**: 3×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-13`
+- **症状**: README 说 56 套实际 57；说「推送 3 套」实际 5；某行写「第 58 套」早就不对
+- **根因**: 数字靠人记必漏；套件会随改动插入，序号整体位移
+- **判据**: 文档里**不写套数/序号**，或写成由脚本断言的单一数字（`run_all_suites.js` 末尾已有绊线）
+- **证据**: 数字漂移链 42/778 → 56/1220 → 57/1266；绊线不一致会计入退出码
+
+## L-015 深色模式曾是「死代码」：store 有值、CSS 有色，就是没接到 DOM
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-14`
+- **症状**: 页面恒亮色，开关看着能用其实没用；构建不报错、测试不红
+- **根因**: `currentTheme` 只声明从未应用到 DOM，全仓无 `classList.add('dark')`
+- **判据**: 「配置项存在」≠「功能接通」。这类退化只能靠静态钉死接线
+- **证据**: 护栏 `verify_dark_mode.js`（含反例自检）+ `probe_theme_tokens.js`（幽灵令牌/硬写亮色）
+
+## L-016 bash 用 `bin/bash.exe` 会让测试假红
+
+- **Seen**: 1×
+- **状态**: OPEN
+- **症状**: `t17` 直接掉成 7 通过 / 9 失败，子进程能起来且不报 spawn 错误
+- **根因**: `bin/bash.exe` 是启动器，PATH 挂载与 MSYS 路径转换行为不同 ⇒ prepend 的假 curl 目录找不到
+- **判据**: Windows 下一律 `usr/bin/bash.exe`；需要覆盖时用 `PJ_BASH`
+- **证据**: `tools/verify/README.md`「本机注意事项」第 3 条
+
+## L-017 本机 `spawnSync(<任意 exe>)` 恒 `EBUSY`，只有异步 `spawn` 可用
+
+- **Seen**: 2×
+- **状态**: OPEN
+- **症状**: 子进程压根没起来，日志表现成「(无汇总行)」，看着像断言无牙
+- **根因**: 沙箱下同步创建进程被拦
+- **判据**: 任何跑子进程的脚本（含**反例脚本**）一律异步 `spawn` + Promise 包装
+- **证据**: `run_all_suites.js` 顶部注释；`t17` 曾因此从未真正跑起来过
+
+## L-018 判定阈值必须与列表口径一致（`>` vs `>=`）
+
+- **Seen**: 1×
+- **状态**: OPEN
+- **症状**: 记录列表把 140/90 标红，首页时间轴一声不响
+- **根因**: `dashboard.js` 写 `>`，而列表与临床口径都是 `>=`（140/90、空腹 5.1、餐后 6.7）
+- **判据**: 改阈值先找"这个数在几处出现"，全部对齐；并加一条**压线必报**的断言
+- **证据**: 护栏 `probe_alert_threshold.js`（压线报 / 低一档不报 / 明显偏高仍报，三场景）
+
+## L-019 SQLite `CURRENT_TIMESTAMP` 是 UTC，与本地日期混用会差一天
+
+- **Seen**: 2×
+- **状态**: OPEN
+- **症状**: 隔天服药方案在 UTC+8 的 00:00–08:00 创建 ⇒ 第一天直接被跳过
+- **根因**: 用 `created_at`（UTC）当周期锚点；`toISOString().slice(0,10)` 同类问题
+- **判据**: 任何「按日期推算周期/间隔」的锚点必须用本地日期（`config.localToday()`）；
+  解析日期拆 `[y,m,d]` 走 `Date.UTC`
+- **证据**: 用药方案锚点修复；`verify_dose_rules.js` 自带 `TZ=Asia/Shanghai`
+
+## L-020 给"是否有内容"这类判断加开关，先想清楚它属不属于这个判断
+
+- **Seen**: 1×
+- **状态**: OPEN
+- **症状**: 每日看板三项全不勾却仍发空推送；只开用药提醒的渠道被判成"有内容"
+- **根因**: `hasAnyContent(cfg)` 用 `cfg.x !== false`（字段不存在即视为开启），
+  把"到点单独推"的 `push_dose` 并进了"每日看板内容开关"
+- **判据**: 新增推送类型前先回答「它进不进每日看板」，不进就别并进看板开关
+- **证据**: 打红 企业微信推送 / 企微调度器 两套；护栏 `wecom/test_wecom_push.js`
+
+---
+
+## L-021 只看 diff 的审查器，结构上发现不了「别处还有一样的写法」
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-03`
+- **症状**: 一个修「UTC 当本地日期」的 PR，审查结论是 pass；可仓库里还有两处同样的写法没动
+- **根因**: 审查器的输入只有 diff，没有「全仓」视角；而本项目的铁律恰恰是**同类 Bug 必须全量拔除**。
+  两条都对，合起来就是盲区
+- **判据**: 当 PR **删掉**某个已知坏模式（`-` 行命中）时，必须去扫全仓同模式，统计 PR 没碰过的文件里还剩多少
+- **证据**: 2026-11-10 用真实 PR#5 实测 —— 它修了 4 个文件，`useContractionTimer.ts` 里
+  `toISOString().slice(0,10)` 还在；修法是 `pr-review.js` 的 `SIBLING_SCANS`，护栏 `selftest` E9/E10
+
+## L-022 空输入被判「通过」—— 最危险的一种假绿
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-02`
+- **症状**: diff 为空（API 拉取失败 / 权限不足 / 只改了文件权限）时，审查输出 `pass`；
+  如果接了自动合并，等于放行一个**从没被看过**的 PR
+- **根因**: 硬检查是一条条问「这有没有问题」，空集合自然全部通过 ——
+  缺的不是某条规则，而是「我到底有没有拿到要审的东西」这个前置断言
+- **判据**: 任何审查/校验/导入，第一步先断言输入非空且可解析；判不了就判**不可判定**，不要判通过
+- **证据**: `selftest` E1/E2；修法是 `empty-diff` 直接阻断，且不再往下判
+
+---
+
+## 怎么加一条新条目
+
+1. 先确认它**值得记**：有没有导致返工、假绿、或差点漏掉？只是"我觉得应该这样" ⇒ 不记。
+2. 取下一个未使用的 `L-NNN`（**倒序看一眼，别复用**），按上面七个字段填。
+3. `Seen` 从 `1×` 起。同一个坑再次被捕获时**手动 +1**（`node tools/verify/lessons.js --bump=L-003`）。
+4. 到 `3×` 时脚本会提示升格：把规则搬进 `docs/code-standards.md` 并挂上护栏，
+   这里改成 `PROMOTED → docs/code-standards.md#CS-NN`。

@@ -1,6 +1,11 @@
 // 全量回归运行器：顺序跑所有套件，抽取「N 通过 / M 失败」，最后汇总。
-// 用法：node tools/verify/run_all_suites.js [--only=kw]
+// 用法：node tools/verify/run_all_suites.js [--only=kw] [--suite=name ...] [--ci]
 //   --only=关键字   只跑路径或中文名含该关键字的套件（例：--only=推送）
+//   --suite=名字    精确指定套件（文件名去 .js，或中文名），可重复。闸门/CI 用这一种，
+//                   避免 --only 子串误命中；**拼错名字会 fail-closed 判红**，不静默跳过。
+//   --ci            严格退出码模式：出现 FAIL / EXIT* / TIMEOUT / SPAWNERR ⇒ exit 1；
+//                   并且「汇总行全绿但进程退出码非 0」也判红（默认模式下这种会显示 PASS）。
+//                   没有它时退出码只反映文档数字是否一致 —— 直接接 CI 会假绿（2026-11-10 发现）。
 //   产物：tools/verify/regress-out/<套件名>.log，控制台打印逐套结论与总计。
 //
 // ⚠️ 本机必须用**异步 spawn**：沙箱下 spawnSync(任意 exe) 恒 EBUSY。
@@ -15,6 +20,7 @@ const REPO = ENV_ONLY.REPO;
 const V = ENV_ONLY.VERIFY_DIR;
 const UP = V;                                   // 两个来源目录已合并到 tools/verify/
 const WECOM = path.join(V, 'wecom');
+const CI_DIR = path.join(REPO, 'tools', 'ci');
 const OUT = path.join(V, 'regress-out');
 const NODE = ENV_ONLY.NODE;
 const SERVER_DIR = ENV_ONLY.SERVER_DIR;
@@ -214,10 +220,23 @@ const SUITES = [
   // ⚠️ 踩坑：naive-ui 的折叠头**不响应合成 click()**（点了 DOM 也不展开、内容区还是
   //    `<!---->`），必须派发冒泡的真实 MouseEvent（mousedown/mouseup/click）。
   [path.join(UP, 'probe_diet_categories.js'), '饮食页催奶食谱分类切换', '约 90 秒·需无头浏览器'],
+  // ---- 2026-11-10 新增：PR/issue 自动化机器人自身的回归 ----
+  // 为什么机器人也要护栏：它是"自动决定别人的代码能不能合"的东西。
+  // 判定写反了（高危路径忘了拦、模型挂了却当成通过、已知问题解析断半截）
+  // 不会报错，只会安静地放行/回复错话 —— 这类缺陷比业务 bug 危险得多。
+  // 纯 node + 本地 mock 服务，不依赖浏览器与产物，可进 CI 的 static 层。
+  [path.join(CI_DIR, 'selftest.js'), '审查机器人自身(判定/降级/回复)', ''],
 ];
 
 const onlyArg = process.argv.find(a => a.startsWith('--only='));
 const only = onlyArg ? onlyArg.slice('--only='.length) : null;
+// 严格退出码模式：给闸门（gate.js）与 CI 用。默认关闭，保持本机原有使用习惯。
+const CI_MODE = process.argv.includes('--ci');
+// --suite=xxx 精确指定（可重复）。`--only` 是子串匹配，闸门点名某个套件时容易误命中兄弟套件。
+const suiteFilters = process.argv
+  .filter(a => a.startsWith('--suite='))
+  .map(a => a.slice('--suite='.length).trim())
+  .filter(Boolean);
 
 const RE_SUM = /(?:合计|总计|结果)[:：]?\s*(\d+)\s*(?:通过)?\s*[/／]\s*(\d+)\s*(?:通过|失败)?/;
 const RE_SUM2 = /(\d+)\s*通过\s*[/／]\s*(\d+)\s*失败/;
@@ -279,7 +298,12 @@ async function runOne(script, name, note) {
   if (r.timedOut) verdict = 'TIMEOUT';
   else if (r.spawnError) verdict = 'SPAWNERR';
   else if (!sum) verdict = status === 0 ? 'NO-SUMMARY' : `EXIT${status}`;
-  else verdict = sum.fail === 0 ? 'PASS' : `FAIL(${sum.fail})`;
+  // 先按汇总行定性（红了几项一眼可见），再补一条 fail-closed：
+  // --ci 下「汇总行全绿但进程退出码非 0」也算红 —— 套件常在收尾/清理阶段崩，
+  // 只看汇总行会漏掉。
+  else if (sum.fail > 0) verdict = `FAIL(${sum.fail})`;
+  else if (CI_MODE && status !== 0) verdict = `EXIT${status}`;
+  else verdict = 'PASS';
   results.push({ name, base, verdict, sum, secs, status, outFile, note });
   console.log(`${verdict}  ${secs}s  ${sum ? sum.line : '(未识别到汇总行)'}`);
   if (r.spawnError) console.log('     spawn error: ' + r.spawnError);
@@ -296,10 +320,49 @@ async function runOne(script, name, note) {
   }
 }
 
+function selectSuites() {
+  if (!suiteFilters.length) {
+    return SUITES.filter(([script, name]) => !only || script.includes(only) || name.includes(only));
+  }
+  const picked = [];
+  const missed = [];
+  for (const f of suiteFilters) {
+    const hit = SUITES.filter(([script, name]) =>
+      path.basename(script, '.js') === f || name === f);
+    if (!hit.length) missed.push(f);
+    picked.push(...hit);
+  }
+  // fail-closed：点名了却一个都没匹配上，绝大多数是名字拼错/套件被改名。
+  // 若静默跳过，闸门会「跑了 0 套 ⇒ 无红灯 ⇒ 绿」，这正是最危险的假绿。
+  if (missed.length) {
+    console.error(`\n🔴 --suite 未匹配到任何套件：${missed.join(', ')}`);
+    console.error('   已存在的套件名请跑 `node tools/verify/run_all_suites.js --list` 查看。');
+    process.exit(2);
+  }
+  // 去重（同一套件被 --suite 与中文名各点一次时）
+  return [...new Map(picked.map(s => [s[0], s])).values()];
+}
+
 (async () => {
-  for (const [script, name, note] of SUITES) {
-    if (only && !script.includes(only) && !name.includes(only)) continue;
-    if (!fs.existsSync(script)) { console.log(`\n>>> 跳过（文件不存在）: ${script}`); continue; }
+  if (process.argv.includes('--list')) {
+    for (const [script, name, note] of SUITES) {
+      console.log(`${path.basename(script, '.js').padEnd(42)} ${name}${note ? '   # ' + note : ''}`);
+    }
+    console.log(`\n共 ${SUITES.length} 套`);
+    return;
+  }
+
+  const selected = selectSuites();
+  for (const [script, name, note] of selected) {
+    if (!fs.existsSync(script)) {
+      if (CI_MODE || suiteFilters.length) {
+        console.error(`\n🔴 套件文件不存在（fail-closed）：${path.relative(REPO, script)}`);
+        process.exitCode = 1;
+        continue;
+      }
+      console.log(`\n>>> 跳过（文件不存在）: ${script}`);
+      continue;
+    }
     await runOne(script, name, note);
   }
 
@@ -314,13 +377,28 @@ async function runOne(script, name, note) {
   const totalItems = results.reduce((a, r) => a + (r.sum ? r.sum.pass + r.sum.fail : 0), 0);
   console.log(`项数合计：${totalItems}`);
 
+  // ---- --ci 判定：只看「有没有红灯」与「有没有真的跑」----
+  // 这两件事必须计入退出码，否则 CI 会在一片红里报绿。
+  if (CI_MODE) {
+    if (!results.length) {
+      console.log('\n🔴 CI 判定：没有运行任何套件 —— 退出码 1（筛条件是否写错）');
+      process.exitCode = 1;
+    } else if (bad.length) {
+      console.log(`\n🔴 CI 判定：${bad.length} 套红灯（${bad.map(b => b.verdict).join(', ')}）—— 退出码 1`);
+      process.exitCode = 1;
+    } else {
+      console.log(`\n✅ CI 判定：${okc}/${results.length} 套全绿 —— 退出码 0`);
+    }
+  }
+
   // ---- 文档一致性绊线：README 声明的「N 套 / M 项」必须与实际相符 ----
   // 为什么设：这套数字已漂过两次（42/778 → 56/1220 → 57/1266），靠人记必漏，
   //   而 README 是外部读者判断"这套回归有多大"的唯一依据。
-  // ⚠️ 只在全量跑时检查：--only 的部分运行数字天然对不上。
+  // ⚠️ 只在全量跑时检查：--only / --suite 的部分运行数字天然对不上。
+  //    2026-11-10 加 --suite 时差点漏改这里 ⇒ 只跑 5 套会被「文档写 N 套」绊红（CI 假红）。
   // ⚠️ 套数不一致**计入退出码**；项数不一致只告警（环境缺浏览器时会有套件变 NO-SUMMARY，
   //    那种情况下项数会少，属于环境噪音，不该判死）。
-  if (!only) {
+  if (!only && !suiteFilters.length) {
     const docs = [path.join(REPO, 'README.md'), path.join(V, 'README.md')];
     const rx = /(\d+)\s*套\s*\/\s*约?\s*(\d+)\s*项/;
     let docBad = 0;

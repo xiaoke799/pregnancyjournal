@@ -1,0 +1,66 @@
+name: 自动合并
+
+# 触发点（都是"条件可能刚刚变了"的时刻）：
+#   · 打了/摘了标签     → automerge / review:pass 可能刚加上
+#   · 有新提交          → 之前绿的检查作废，要重新等
+#   · 检查跑完          → 最常见：verify 刚变绿
+#   · ready_for_review  → 从 draft 转正
+#
+# 判定逻辑全在 tools/ci/auto-merge.js 的 evaluate()（纯函数，有 16 项单测）。
+# 这个 yml 只负责"什么时候调用它"。
+#
+# 授予内容写权限是必须的（合并 + 删分支），所以沿用 pull_request_target 的安全口径：
+# checkout 只取 base 分支，执行的是**仓库自己**的脚本，不碰 PR 里的任何代码。
+
+on:
+  pull_request_target:
+    types: [labeled, unlabeled, synchronize, ready_for_review, reopened]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write         # 合并 + 删源分支
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || 'none' }}
+  cancel-in-progress: false   # 合并这种写操作不许被后一次触发半路掐断
+
+jobs:
+  merge:
+    # check_suite 事件可能是任意分支的，只处理确实关联了 PR 的
+    if: |
+      github.event_name == 'pull_request_target' ||
+      (github.event_name == 'check_suite' && github.event.check_suite.pull_requests[0].number != null)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 检出 base 分支（🔴 不是 PR 的 head）
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 退出码：0 = 已合并或按规则跳过；2 = 本该能合但有硬性阻断（人需要看一眼）
+      # 用 continue-on-error 收住，让 job 不因为"规则不允许"而变红 ——
+      # 那不是 CI 故障，是正常判定结果。
+      - name: 判定并合并
+        id: merge
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number }}
+          PJ_MERGE_LABEL: ${{ vars.PJ_MERGE_LABEL || 'automerge' }}
+          PJ_MERGE_METHOD: ${{ vars.PJ_MERGE_METHOD || 'squash' }}
+        run: node tools/ci/auto-merge.js
+
+      - name: 汇总
+        run: |
+          echo "合并脚本退出码：${{ steps.merge.outcome }}（success = 已合并/按规则跳过，failure = 有阻断项待人工）"

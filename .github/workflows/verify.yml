@@ -1,0 +1,110 @@
+name: verify
+
+# 分层口径（2026-11-10 建）：
+#   · static    —— 零外部依赖的静态契约层。秒级，任何一次 push/PR 必跑。
+#   · frontend  —— 需要 frontend/node_modules 才能跑（vue-tsc、@vue/compiler-sfc、naive-ui）。
+#   · release   —— 只在打 tag 时跑，校验 tag / manifest / CHANGELOG 三者一致。
+#
+# ⚠️ 全量 81 套**有意不进 CI**：其中大量套件需要真起后端、无头浏览器、`app/ui` 构建产物
+#    （该目录 gitignore，CI 里没有）。硬塞进来只会换来一屏常红，然后谁也不看。
+#    全量的位置是本机：`node tools/verify/run_all_suites.js`。
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+# 🔴 物理急刹：main 与 tag 上的运行**禁止被后续 push 取消**。
+#    反例（本项目引以为戒的外部事故）：默认的 cancel-in-progress 会让上一轮测试
+#    还没跑完就被下一次 push 掐断，于是一个只在 Linux 出现的错误连续 15 个版本飘红、
+#    无人察觉 —— 大家都以为"在跑"，其实从来没跑完过。
+#    PR 分支允许取消（同一分支连推只保留最新一轮），main / tag 不允许。
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: ${{ !(startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/v')) }}
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: 静态契约层
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 这几套只用 node 内置模块，不装依赖也能跑 —— 所以这一层几乎是瞬时的。
+      # selftest 是审查/合并/回复机器人自身的回归（判定方向、降级、注入、已知问题解析）。
+      - name: 静态套件（版本同步 / 路由契约 / 深色接线 / 主题令牌 / 机器人自身）
+        run: |
+          node tools/verify/run_all_suites.js --ci \
+            --suite=verify_pkg_versions \
+            --suite=verify_api_contracts \
+            --suite=verify_dark_mode \
+            --suite=probe_theme_tokens \
+            --suite=selftest
+
+      - name: 错题本一致性（Seen ≥ 3 必须硬化 / PROMOTED 锚点必须存在）
+        run: node tools/verify/lessons.js
+
+      - name: 仓库卫生（不应出现调试产物）
+        run: |
+          # app/ui 里的多余 html 会随 fpk 一起发出去，也会让孤儿检查静默失效。
+          extra=$(git ls-files 'app/ui/*.html' | grep -v '^app/ui/index.html$' || true)
+          if [ -n "$extra" ]; then
+            echo "🔴 app/ui 下除 index.html 外还有 html："
+            echo "$extra"
+            exit 1
+          fi
+          echo "✅ 无多余 html"
+
+  frontend:
+    name: 前端类型与组件契约
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装前端依赖
+        run: npm ci --prefix frontend
+
+      # verify_frontend_types 是 fail-closed 的：缺 vue-tsc / 起不来 / 超时都判失败。
+      # verify_naive_vmodel 需要 @vue/compiler-sfc + naive-ui + @vue/server-renderer。
+      - name: 类型体检 + naive-ui 绑定契约
+        run: |
+          node tools/verify/run_all_suites.js --ci \
+            --suite=verify_frontend_types \
+            --suite=verify_naive_vmodel
+
+  release:
+    name: 发版闸门
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [static, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 打 tag 之前 CI 必须全绿；这里再用 tag 本身做一次物理校验 ——
+      # 「tag 名 / manifest.version / CHANGELOG 小节 / manifest.changelog」四者对齐。
+      - name: tag 与版本真源一致性
+        run: node tools/verify/gate.js release --tag=${{ github.ref_name }}

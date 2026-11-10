@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-FnOS%20x86--64%20%2F%20ARM64-8c8c8c.svg)](https://www.fnos.com/)
-[![Version](https://img.shields.io/badge/version-0.0.34-green.svg)](manifest)
+[![Version](https://img.shields.io/badge/version-0.0.35-green.svg)](manifest)
 
 > 飞牛 OS 原生应用 · 数据 100% 本地存储 · 零上云
 >
@@ -35,9 +35,9 @@
 
 ### 安装方式 / Installation
 
-从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.34.fpk`（约 13.0MB，以 Releases 页最新版为准），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
+从 [Releases](https://github.com/xiaoke799/pregnancyjournal/releases) 页面下载 `pregnancyjournal_v0.0.35.fpk`（约 13.0MB，以 Releases 页最新版为准），然后在飞牛 OS 的「应用中心 → 手动安装」中上传即可。
 
-Download `pregnancyjournal_v0.0.34.fpk` (≈13.0MB; always grab the latest on the Releases page) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
+Download `pregnancyjournal_v0.0.35.fpk` (≈13.0MB; always grab the latest on the Releases page) from [Releases](https://github.com/xiaoke799/pregnancyjournal/releases), then upload it in FnOS App Center via Manual Install.
 
 > 应用依赖已完整内置在安装包中，安装后无需联网下载任何组件。
 > All dependencies are bundled in the package — no network download needed after install.
@@ -190,19 +190,21 @@ fnpack build --directory <组装好的 stage 目录>
 
 ### 回归测试 / Regression Tests
 
-仓库自带一套端到端回归与核查脚本（**81 套 / 1696 项**），位于 `tools/verify/`：
+仓库自带一套端到端回归与核查脚本（**82 套 / 1801 项**），位于 `tools/verify/`：
 
 ```bash
 node tools/verify/run_all_suites.js              # 全套，约 6–10 分钟
 node tools/verify/run_all_suites.js --only=HEIC  # 只跑名字含关键字的套件
+node tools/verify/gate.js                        # 日常门禁：按本次改动自动选套件（红则非零退出）
 ```
 
 它会真起后端服务（经 `tcp_shim.js` 把 Unix Socket 改写成 TCP 环回）、连真库、发真 HTTP，
 覆盖上传/导出/备份恢复/推送/HEIC/迁移/权限/路径穿越等链路。
 前置条件：`app/server/node` 依赖已安装、`app/ui` 已构建、`frontend` 依赖已安装（类型体检要 `vue-tsc`）。详见 [`tools/verify/README.md`](tools/verify/README.md)。
 
-> This repo ships a 80-suite / 1678-check regression harness under `tools/verify/`.
-> Run `node tools/verify/run_all_suites.js`. See `tools/verify/README.md` for details.
+> This repo ships a 82-suite / 1801-check regression harness under `tools/verify/`.
+> Run `node tools/verify/run_all_suites.js` (or `gate.js` for change-scoped checks).
+> See `tools/verify/README.md` for details.
 
 ---
 
@@ -210,6 +212,12 @@ node tools/verify/run_all_suites.js --only=HEIC  # 只跑名字含关键字的�
 
 - [系统设计](docs/system_design.md) / System design
 - [开发日志](docs/DEVLOG.md) / Dev log
+- [**仓库工作流**](docs/workflow.md) / Repo workflow —— 规则怎么长、闸门怎么跑、发版怎么卡
+- [**仓库自动化**](docs/workflow-automation.md) / Automation —— PR 自动审查、自动合并、issue 自动回复
+- [**协作入口**](AGENTS.md) / Agent & contributor entry —— 改代码前先看这个
+- [**代码规范**](docs/code-standards.md) / Code standards（每条挂可执行护栏）
+- [**错题本**](LESSONS.md) / Lessons learned（带 Seen 次数，到 3 次转正）
+- [审查协议](docs/review-protocol.md) / Review protocol（Red Check · Break Check · Not run）
 - [回归与核查脚本](tools/verify/README.md) / Regression & verification harness
 
 ---

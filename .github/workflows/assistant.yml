@@ -1,0 +1,70 @@
+name: issue 助手
+
+# 两件事：
+#   · 新 issue    → 分类 + 打标签 + 首回（事实只来自 docs/known-issues.md，不编造）
+#   · 斜杠命令    → /review /triage /merge /help（仅维护者可用）
+#
+# 普通评论**不回复**。机器人到处插嘴会把真正的讨论淹掉，也会让人直接屏蔽它。
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  models: read
+
+concurrency:
+  group: assistant-${{ github.event.issue.number }}
+  cancel-in-progress: false   # 回复类操作不要被半路取消，否则会出现"回了半句"
+
+jobs:
+  triage:
+    name: 新 issue 分类与首回
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 分类并回复
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: node tools/ci/issue-triage.js
+
+  command:
+    name: 斜杠命令
+    if: |
+      github.event_name == 'issue_comment' &&
+      startsWith(github.event.comment.body, '/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 执行命令
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PJ_REVIEW_MODEL: ${{ vars.PJ_REVIEW_MODEL || 'openai/gpt-4o' }}
+        run: node tools/ci/handle-command.js

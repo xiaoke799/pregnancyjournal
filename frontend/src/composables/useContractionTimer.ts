@@ -1,6 +1,7 @@
 /** 孕程记 - 宫缩计时 Hook。 */
 
 import { ref, computed } from 'vue'
+import dayjs from 'dayjs'
 import { contractionApi } from '@/api/contraction'
 import type { ContractionItem, ApiResponse } from '@/types'
 
@@ -68,7 +69,10 @@ export function useContractionTimer() {
       // 最后一条宫缩没有 end_time ⇒ 退出时正计到一半，接着走字
       const last = list[list.length - 1]
       if (last && !last.end_time) {
-        const day = session.session_date || new Date().toISOString().slice(0, 10)
+        // 🔴 「今天」必须用**本地**日期：`new Date().toISOString().slice(0,10)` 是 UTC，
+        //    东八区 00:00–08:00 会算成前一天 ⇒ 拼出来的时间落在昨天，恢复后的走字从错的起点算。
+        //    全项目统一口径是 `dayjs().format('YYYY-MM-DD')`（LESSONS L-019）。
+        const day = session.session_date || dayjs().format('YYYY-MM-DD')
         const t = new Date(`${day} ${String(last.start_time).slice(0, 8)}`)
         // 拼不出合法时间就退化成「会话开着但没在计时」，绝不把 Invalid Date 塞进走字逻辑
         if (!isNaN(t.getTime())) {
