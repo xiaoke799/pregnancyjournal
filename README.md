@@ -214,6 +214,7 @@ node tools/verify/gate.js                        # 日常门禁：按本次改�
 - [开发日志](docs/DEVLOG.md) / Dev log
 - [**仓库工作流**](docs/workflow.md) / Repo workflow —— 规则怎么长、闸门怎么跑、发版怎么卡
 - [**仓库自动化**](docs/workflow-automation.md) / Automation —— PR 自动审查、自动合并、issue 自动回复
+- [issue 关闭话术](docs/issue-replies.md) / Issue closing replies —— 关闭前该说什么、什么情况不该关
 - [**协作入口**](AGENTS.md) / Agent & contributor entry —— 改代码前先看这个
 - [**代码规范**](docs/code-standards.md) / Code standards（每条挂可执行护栏）
 - [**错题本**](LESSONS.md) / Lessons learned（带 Seen 次数，到 3 次转正）
