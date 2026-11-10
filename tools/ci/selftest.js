@@ -248,6 +248,7 @@ const AI_BLOCK = JSON.stringify({
     const run = (over) => evaluate({
       pr: { ...basePr, ...(over.pr || {}) },
       files: over.files || ['frontend/src/utils/format.ts'],
+      fileTotal: over.fileTotal,
       labels: over.labels || ['automerge', 'review:pass'],
       checks: over.checks === undefined ? okChecks : over.checks,
     });
@@ -266,6 +267,12 @@ const AI_BLOCK = JSON.stringify({
     const risky = run({ files: ['.github/workflows/x.yml'], labels: ['automerge', 'review:pass'] });
     ok('高危路径即使标签齐全也 block', risky.action === 'block', risky.reason);
     ok('block 理由点名高危路径', (risky.blockers || []).some(b => b.code === 'high-risk-path'));
+
+    // 文件列表被截断时同样不许合：GraphQL 只取前 100 个，第 101 个若是高危路径就扫不到
+    const trunc = run({ fileTotal: 150 });
+    ok('文件数超出查询上限 ⇒ block（防高危路径漏检）', trunc.action === 'block', trunc.reason);
+    ok('截断时给出可读理由', (trunc.blockers || []).some(b => b.code === 'files-truncated'));
+    ok('未截断时不受影响', run({ fileTotal: 1 }).action === 'merge');
 
     // 检查三态
     ok('检查失败 ⇒ block', run({ checks: [{ name: 'static', status: 'COMPLETED', conclusion: 'FAILURE' }] }).action === 'block');
@@ -330,6 +337,9 @@ const AI_BLOCK = JSON.stringify({
 
     ok('英文 issue 用英文回复', T.detectLang('Upload failed on the iOS app') === 'en');
     ok('中文 issue 用中文回复', T.detectLang('上传检查报告一直失败') === 'zh');
+    // 短标题：只有 4 个汉字，阈值若设 6 会被判成英文（审查时发现并修掉的真问题）
+    ok('短中文标题也判中文', T.detectLang('上传失败') === 'zh', T.detectLang('上传失败'));
+    ok('纯英文短句仍判英文', T.detectLang('crash on start') === 'en');
 
     // 状态字段写了不认识的值：不能假装知道结论
     const weird = T.renderReply({

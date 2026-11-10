@@ -243,6 +243,20 @@
 - **判据**: 任何审查/校验/导入，第一步先断言输入非空且可解析；判不了就判**不可判定**，不要判通过
 - **证据**: `selftest` E1/E2；修法是 `empty-diff` 直接阻断，且不再往下判
 
+## L-023 分页 / 上限截断，会让「没查到」变成「没问题」
+
+- **Seen**: 1×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-02`
+- **症状**: 自动合并前会检查 PR 是否触碰高危路径（`.github/` `cmd/` `manifest` …）。
+  GraphQL 查询写的是 `files(first:100)`，一个 120 文件的 PR 里，若 `.github/workflows/x.yml`
+  排在 101 位之后，`findHighRisk` 根本扫不到它 ⇒ **高危红线被"文件够多"这件事本身绕过**
+- **根因**: 把"这次查询返回的"当成了"全集"。接口有上限、代码没意识；
+  而下游的判定逻辑（`findHighRisk(files)`）只会说"没找到"，不会说"我没看全"
+- **判据**: 凡是带 `first:N` / `LIMIT` / `per_page` / `slice` 的取数，必须同时拿到总数并比较；
+  数量对不上就按**判不了**处理（fail-closed），不许当成"没问题"
+- **证据**: 2026-11-10 自查发现；修法是 GraphQL 加 `totalCount` + `files-truncated` 阻断，
+  `selftest` C 段 3 条断言（截断判 block / 理由可读 / 未截断不受影响）
+
 ---
 
 ## 怎么加一条新条目

@@ -9,7 +9,7 @@
 ## 快速开始
 
 ```bash
-# 全套（82 套 / 约 1801 项，跑完约 9–14 分钟）
+# 全套（82 套 / 约 1806 项，跑完约 9–14 分钟）
 node tools/verify/run_all_suites.js
 
 # 日常：按本次改动自动选套件（闸门，红则非零退出）—— 改完代码就跑这个
@@ -53,6 +53,9 @@ node tools/verify/run_all_suites.js --only=DB修复
 tools/verify/
 ├── _env.js              ← 路径/运行环境**唯一出处**（重构后新增，见下方"注意"）
 ├── run_all_suites.js    ← 全量运行器（`--list` / `--suite=` / `--ci`）
+├── rules.js             ← **规则表单一真源**：`RULES`（改什么→跑什么）/ `HIGH_RISK`（禁止自动合并）/
+│                           `parseDiffStats`（解析 diff）。闸门与 `tools/ci/` 三个机器人共用同一份，
+│                           复制第二份必然漂移（这个仓库最熟的那类事故）
 ├── gate.js              ← **本地闸门**：读 git 改动 → 命中规则 → 只跑受影响套件 → 红则 exit 1
 │                           不改 `RULES` 就不会知道新模块该跑什么；规则表即"改什么必跑什么"的代码化
 ├── lessons.js           ← **错题本检查器**：Seen ≥3 必须硬化、PROMOTED 锚点必须存在、缺字段判红

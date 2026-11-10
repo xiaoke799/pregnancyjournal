@@ -155,7 +155,6 @@ async function loadContext() {
 // ---------------------------------------------------------------------------
 const COMMIT_RE = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]{1,30}\))?!?: \S.{3,}/;
 const ARTIFACT_RE = /^(app\/ui\/|dist\/|.*\.fpk$|.*\.log$|tools\/verify\/(regress-out|\.tmp)\/)/i;
-const BIG_FILE_BYTES = 1_000_000;
 
 // ---------------------------------------------------------------------------
 // 同类残留扫描
@@ -558,9 +557,24 @@ const LABELS = {
   'needs-human': { add: 'review:needs-human', remove: ['review:pass', 'review:changes'] },
 };
 
+/**
+ * 找机器人自己发过的那条评论（靠 marker 识别）。
+ * 必须翻页：评论超过 100 条时，只看第一页会找不到旧评论 ⇒ 每次都新建一条 ⇒ 刷屏。
+ * （最多翻 3 页；再多的 PR 本来就不正常。）
+ */
+async function findBotComment(pr) {
+  for (let page = 1; page <= 3; page++) {
+    const list = await gh('GET', `/repos/${REPO}/issues/${pr}/comments?per_page=100&page=${page}`);
+    if (!Array.isArray(list) || !list.length) return null;
+    const mine = list.find(c => (c.body || '').includes(MARKER));
+    if (mine) return mine;
+    if (list.length < 100) return null;
+  }
+  return null;
+}
+
 async function upsertComment(pr, body) {
-  const comments = await gh('GET', `/repos/${REPO}/issues/${pr}/comments?per_page=100`);
-  const mine = (comments || []).find(c => (c.body || '').includes(MARKER));
+  const mine = await findBotComment(pr);
   if (mine) {
     await gh('PATCH', `/repos/${REPO}/issues/comments/${mine.id}`, { body });
     return 'updated';

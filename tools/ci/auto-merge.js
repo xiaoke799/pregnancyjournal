@@ -53,7 +53,7 @@ const C = {
 // ---------------------------------------------------------------------------
 // 纯函数：给定 PR 的全部事实，判定能不能合
 // ---------------------------------------------------------------------------
-function evaluate({ pr, files = [], labels = [], checks = [], requiredLabel = REQUIRED_LABEL }) {
+function evaluate({ pr, files = [], fileTotal = 0, labels = [], checks = [], requiredLabel = REQUIRED_LABEL }) {
   const blockers = [];
   const waits = [];
   const block = (code, msg) => blockers.push({ code, msg });
@@ -73,6 +73,15 @@ function evaluate({ pr, files = [], labels = [], checks = [], requiredLabel = RE
   }
   if (!has(PASS_LABEL)) {
     block('no-pass-label', `缺少 \`${PASS_LABEL}\` —— 审查器还没给出通过结论（评论里发 \`/review\` 触发）`);
+  }
+
+  // 🔴 文件列表被截断 ⇒ 无法确认是否含高危路径 ⇒ 一律不许自动合并（fail-closed）。
+  //    起因：GraphQL 的 `files(first:100)` 只返回前 100 个。若一个 120 文件的 PR 把
+  //    `.github/workflows/x.yml` 放在第 101 个，findHighRisk 就扫不到它 ——
+  //    高危红线会被"文件够多"这件事本身绕过去。这种洞不能靠"改天再说"。
+  if (fileTotal > files.length) {
+    block('files-truncated',
+      `PR 有 ${fileTotal} 个文件，这里只拿到 ${files.length} 个 —— 无法确认是否含高危路径`);
   }
 
   // 高危路径：这是硬红线，标签和检查都不能覆盖它
@@ -165,7 +174,7 @@ async function main() {
         headRefName baseRefName
         author{login}
         labels(first:20){nodes{name}}
-        files(first:100){nodes{path}}
+        files(first:100){ totalCount nodes{path} }
         commits(last:1){nodes{commit{statusCheckRollup{contexts(first:60){nodes{
           __typename
           ... on CheckRun{name status conclusion}
@@ -187,9 +196,10 @@ async function main() {
     user: { login: p.author?.login },
   };
   const files = (p.files?.nodes || []).map(f => f.path);
+  const fileTotal = p.files?.totalCount ?? files.length;
   const labels = (p.labels?.nodes || []).map(l => l.name);
 
-  const verdict = evaluate({ pr, files, labels, checks });
+  const verdict = evaluate({ pr, files, fileTotal, labels, checks });
 
   if (has('json')) {
     console.log(JSON.stringify({ pr: prNumber, ...verdict, checks, labels, files }, null, 2));

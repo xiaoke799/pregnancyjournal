@@ -131,7 +131,9 @@ function matchKnownIssues(issue, known) {
 
 function detectLang(text) {
   const cn = (String(text).match(/[\u4e00-\u9fa5]/g) || []).length;
-  return cn >= 6 ? 'zh' : 'en';
+  // 阈值 2 而不是 6：「上传失败」只有 4 个汉字，按 6 判会被当成英文、给中文用户回英文。
+  // 英文 issue 里几乎不会出现连续两个汉字，所以 2 足够安全。
+  return cn >= 2 ? 'zh' : 'en';
 }
 
 // ---------------------------------------------------------------------------

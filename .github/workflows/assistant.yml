@@ -46,9 +46,14 @@ jobs:
 
   command:
     name: 斜杠命令
+    # 三层过滤，一层比一层省：
+    #   ① 必须是评论事件 ② 必须以 / 开头 ③ 必须是维护者
+    # 第 ③ 条放在 workflow 层（而不是只靠脚本里判断）是为了**不让外部用户随便拉起来一个 job**
+    # —— 脚本里还会再校验一次并点踩，那是防御纵深，不是替代。
     if: |
       github.event_name == 'issue_comment' &&
-      startsWith(github.event.comment.body, '/')
+      startsWith(github.event.comment.body, '/') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

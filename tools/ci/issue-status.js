@@ -32,10 +32,14 @@ const C = {
   bold: s => `\x1b[1m${s}\x1b[0m`,
 };
 
-/** 版本比较：a <= b ? 支持 3 段 */
+/** 版本比较：a <= b ? 支持 3 段；容忍 "0.0.30 起" 这类带后缀的写法（否则会解析出 NaN、比较恒 false） */
 function versionLte(a, b) {
-  const pa = String(a).replace(/^v/, '').split('.').map(Number);
-  const pb = String(b).replace(/^v/, '').split('.').map(Number);
+  const nums = v => {
+    const m = String(v).replace(/^v/i, '').match(/\d+(?:\.\d+)*/);
+    return m ? m[0] : '0';
+  };
+  const pa = nums(a).split('.').map(Number);
+  const pb = nums(b).split('.').map(Number);
   for (let i = 0; i < 3; i++) {
     const x = pa[i] || 0, y = pb[i] || 0;
     if (x < y) return true;
