@@ -54,6 +54,12 @@ jobs:
       - name: 错题本一致性（Seen ≥ 3 必须硬化 / PROMOTED 锚点必须存在）
         run: node tools/verify/lessons.js
 
+      # 密钥门禁的第三道（前两道是本地 pre-commit / pre-push）。
+      # 本地可以用 --no-verify 跳过，CI 不能 —— 所以这里必须独立跑一次。
+      # 扫的是**当前快照**（--all）；历史审计（--history）太慢，手动跑。
+      - name: 敏感信息扫描（密钥不上云）
+        run: node tools/verify/scan_secrets.js --all
+
       - name: 仓库卫生（不应出现调试产物）
         run: |
           # app/ui 里的多余 html 会随 fpk 一起发出去，也会让孤儿检查静默失效。

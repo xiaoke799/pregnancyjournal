@@ -14,6 +14,7 @@
 | 看这个坑以前踩过没 | `LESSONS.md`（L2 错题本，带 Seen 次数） | `node tools/verify/lessons.js` |
 | 提交前自查 / 判断改动够不够格 | `docs/review-protocol.md`（Red Check · Break Check · Not run） | — |
 | 知道我这次改动**必须**跑哪几套 | `tools/verify/README.md` 的「相关铁律」表 | `node tools/verify/gate.js` |
+| 担心密钥被提交/推上去 | `docs/review-protocol.md` §八 | `node tools/verify/scan_secrets.js --all` |
 | 跑全量回归 | `tools/verify/README.md` | `node tools/verify/run_all_suites.js` |
 | 发版 / 打包 / 版本号 | `DEPLOY_NOTES.md`、`docs/ROLLBACK.md` | `node tools/verify/gate.js release --tag=vX.Y.Z` |
 | 调 PR 审查 / 自动合并 / issue 回复机器人 | `docs/workflow-automation.md` | `node tools/ci/selftest.js` |

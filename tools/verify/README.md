@@ -13,6 +13,7 @@
 node tools/verify/run_all_suites.js
 
 # 日常：按本次改动自动选套件（闸门，红则非零退出）—— 改完代码就跑这个
+node tools/verify/scan_secrets.js --all   # 密钥门禁：确认没有凭据被带进仓库
 node tools/verify/gate.js
 
 # 只跑名字含关键字的套件（路径或中文名都能命中）
@@ -60,7 +61,9 @@ tools/verify/
 │                           不改 `RULES` 就不会知道新模块该跑什么；规则表即"改什么必跑什么"的代码化
 ├── lessons.js           ← **错题本检查器**：Seen ≥3 必须硬化、PROMOTED 锚点必须存在、缺字段判红
 │                           `--bump=L-003` 把 Seen +1；`--list` 看摘要
-├── install_hooks.js     ← 可选：把闸门装成 `.git/hooks/pre-commit`（默认不装，多会话并行会互相拦）
+├── scan_secrets.js      ← **密钥门禁**：PAT/私钥/webhook/密钥赋值。`--staged`/`--push`/`--all`/`--history`
+│                           装钩子后 pre-commit 与 **pre-push** 都会调它（pre-push 才是防上云的关键）
+├── install_hooks.js     ← 可选：把门禁装成 `.git/hooks`（pre-commit + pre-push；默认不装，多会话并行会互相拦）
 ├── tcp_shim.js          ← 测试垫片：把 server.js 的 Unix Socket 监听改写成 TCP 环回
 ├── _vue_extract.js      ← 从 .vue 源码里抽取 <script> 内容的共用小工具
 ├── e2e_*.js             ← 端到端（真起 server.js + 真库 + 真 HTTP）

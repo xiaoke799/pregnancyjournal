@@ -542,7 +542,9 @@ const AI_BLOCK = JSON.stringify({
       '合并是写操作，半路取消会留下不一致状态');
 
     // 不要求用户额外配密钥（除了 GitHub 自带的）
-    const secrets = [...Object.values(text).join('\n').matchAll(/secrets\.(\w+)/g)].map(m => m[1]);
+    // ⚠️ 只匹配 `${{ secrets.X }}` 表达式：早先写的是裸 `secrets.(\w+)`，
+    //    结果把 `scan_secrets.js` 这个文件名当成了"引用了 secret js"（2026-11-10 实测）。
+    const secrets = [...Object.values(text).join('\n').matchAll(/\$\{\{\s*secrets\.(\w+)/g)].map(m => m[1]);
     ok('只依赖自带的 GITHUB_TOKEN', secrets.every(s => s === 'GITHUB_TOKEN'),
       '额外密钥：' + [...new Set(secrets)].filter(s => s !== 'GITHUB_TOKEN').join(', '));
   }

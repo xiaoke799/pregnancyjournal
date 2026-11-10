@@ -102,3 +102,40 @@ verify:
 - 只改 `tools/verify/` 下的脚本自身：跑 `node tools/verify/gate.js --self` 做脚本自检。
 
 其余一律跑。**"我怕跑很久"不是理由** —— `gate.js` 只跑受影响的那几套，通常 1~3 套。
+
+## 八、密钥门禁（三道，缺一不可）
+
+密钥一旦推到云端，**删文件是没用的** —— 它还在历史里、在 fork 里、在别人的 clone 里。
+所以这道门禁的意义全在"推之前拦住"。
+
+| 时机 | 谁在管 | 扫什么 |
+|---|---|---|
+| `git commit` | `pre-commit` 钩子 | 暂存区新增行 + 闸门 |
+| `git push` | `pre-push` 钩子 | **远端还没有的提交**（离开这台机器前最后一道） |
+| PR / push 到远端 | CI `static` job | 当前快照全量（本地 `--no-verify` 跳过时，这里兜底） |
+
+装钩子：`node tools/verify/install_hooks.js`（默认不装，见脚本头部说明）。
+手动跑：
+
+```bash
+node tools/verify/scan_secrets.js --staged    # 暂存区
+node tools/verify/scan_secrets.js --push      # 待推送
+node tools/verify/scan_secrets.js --all       # 已跟踪文件全量
+node tools/verify/scan_secrets.js --history   # 全部历史（一次性审计，约 20s）
+```
+
+**扫什么**：GitHub PAT / classic token、AWS Access Key、私钥块、JWT、
+企业微信 / 飞书 / 钉钉 / Bark 的 webhook（URL 里就带 key）、以及明确写着真实值的密钥赋值。
+
+**不拦什么**：占位符（`xxx` / `your-key` / `${VAR}` / `process.env.X`）、全 0 的示例 UUID、
+同字符重复的假值。误报在该行加 `pj-secret-ok` 注释（并写明理由）。
+
+### 真的泄露了怎么办
+
+1. **先去服务端撤销那个凭据**（GitHub → Settings → Tokens → Revoke）。这一步不做，后面都是自我安慰。
+2. 再换新的凭据，放进环境变量或本地配置文件（不入库）。
+3. 最后才考虑清理历史（`git filter-repo`）—— 而且要知道：force-push 之前别人 clone 的副本、fork、
+   PR 的 diff 缓存里，旧值都还在。**所以第 1 步不可替代。**
+
+> 这条写在这里是因为它反直觉：多数人的第一反应是 `git rebase -i` 删掉那个 commit，
+> 然后 force-push —— 做完觉得"干净了"，而密钥其实一直有效。
