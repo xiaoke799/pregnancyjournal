@@ -259,6 +259,23 @@
 
 ---
 
+## L-024 后端存 UTC、前端当本地显示 —— 同一列/同一表混两种时区口径
+
+- **Seen**: 3×
+- **状态**: PROMOTED → `docs/code-standards.md#CS-15`
+- **症状**: 东八区下，9:11 写的日记显示成 1:11；相册在凌晨跨月；推送记录「待推送」条目少 8 小时；
+  `info.log` 时间戳与系统时间对不上。功能都「正常」，唯独数字全错 8 小时
+- **根因**: SQLite `datetime('now')` / `CURRENT_TIMESTAMP` 落库的是**无时区标记的 UTC** 字符串，
+  前端 `dayjs(s)` 按浏览器本地时间解析。更麻烦的是**同一张表里两列口径不同**：
+  `push_log.pushed_at` 由 `localStamp()` 写本地、`created_at` 是 UTC，被 `pushed_at || created_at`
+  合并后统一处理 ⇒ 修了一列必然错另一列
+- **判据**: ① 前端出现 `dayjs(<x>_at)` / `new Date(<x>_at)` 就是嫌疑；② 后端出现
+  `DEFAULT (datetime('now'))` 却直接把该列显示给用户，就是嫌疑；③ 纯日期字段
+  （`entry_date` / `record_date`）被补 `Z` 同样是错的 —— 它们不该参与时区换算
+- **证据**: issue #3；社区 PR #4（关闭未合）/ PR #5（提交后长期未合并）；
+  2026-11-10 真机验证 v0.0.35 时确认只修了宫缩一处、显示层四处全未进包。
+  硬化护栏 `tools/verify/probe_timezone_display.js`（41 项，含反例自检）
+
 ## 怎么加一条新条目
 
 1. 先确认它**值得记**：有没有导致返工、假绿、或差点漏掉？只是"我觉得应该这样" ⇒ 不记。

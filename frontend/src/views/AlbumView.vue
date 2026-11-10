@@ -264,6 +264,7 @@ import { photoApi } from '@/api/photo'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { usePhotoUpload } from '@/composables/usePhotoUpload'
 import dayjs from 'dayjs'
+import { parseServerTime } from '@/utils/format'
 
 const pregnancyStore = usePregnancyStore()
 const { uploading } = usePhotoUpload()
@@ -358,17 +359,17 @@ function fileUrl(id: string): string {
   return photoApi.fileUrl(id)
 }
 
-/** 格式化日期 */
+/** 格式化日期（created_at 为后端 UTC 串，须按 UTC 解析） */
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
-  return dayjs(dateStr).format('MM/DD')
+  return parseServerTime(dateStr).format('MM/DD')
 }
 
 /** 按月份分组 */
 const groupedPhotos = computed<PhotoGroup[]>(() => {
   const groups: Map<string, PhotoGroup> = new Map()
   for (const photo of filteredPhotos.value) {
-    const date = dayjs(photo.created_at)
+    const date = parseServerTime(photo.created_at)
     const monthKey = date.format('YYYY-MM')
     const monthLabel = date.format('YYYY年M月')
     if (!groups.has(monthKey)) {
@@ -378,7 +379,7 @@ const groupedPhotos = computed<PhotoGroup[]>(() => {
   }
   // 每组内按时间倒序
   for (const group of groups.values()) {
-    group.items.sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf())
+    group.items.sort((a, b) => parseServerTime(b.created_at).valueOf() - parseServerTime(a.created_at).valueOf())
   }
   return Array.from(groups.values())
 })
@@ -397,7 +398,7 @@ function previewItem(item: PhotoItem) {
   // 同时填充预览信息面板
   const typeMap: Record<string, string> = { maternity: '🤰 孕妇照', belly: '🫄 孕肚照', baby: '👶 婴儿照' }
   previewItemData.value = {
-    dateText: dayjs(item.created_at).format('YYYY年MM月DD日'),
+    dateText: parseServerTime(item.created_at).format('YYYY年MM月DD日'),
     week: item.gestational_week,
     note: item.note || '',
     typeLabel: typeMap[item.photo_type] || item.photo_type
@@ -407,7 +408,7 @@ function previewItem(item: PhotoItem) {
 /** 编辑照片 */
 function editPhoto(item: PhotoItem) {
   editingPhoto.value = item
-  editDate.value = item.created_at.slice(0, 10)
+  editDate.value = parseServerTime(item.created_at).format('YYYY-MM-DD')
   editNote.value = item.note || ''
   editPhotoType.value = item.photo_type
   showEditDialog.value = true
@@ -529,7 +530,7 @@ async function loadPhotos() {
     const pid = pregnancyStore.currentPregnancy.id
     const res: any = await photoApi.list(pid)
     const photos: PhotoItem[] = res?.data || []
-    photos.sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf())
+    photos.sort((a, b) => parseServerTime(b.created_at).valueOf() - parseServerTime(a.created_at).valueOf())
     allPhotos.value = photos
   } catch {
     allPhotos.value = []

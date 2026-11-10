@@ -124,6 +124,24 @@
 
 ---
 
+## CS-15 后端存的是什么时区，必须先确认；日期字段不参与时区换算
+
+**规则**：SQLite 的 `datetime('now')` / `CURRENT_TIMESTAMP` 是**无时区标记的 UTC**。
+① 展示 `*_at` 列一律走唯一入口 `utils/format.ts` 的 `parseServerTime()`，
+禁裸 `dayjs(..._at)` / `new Date(..._at)`；
+② 纯日期字段（`entry_date` / `record_date` / `photo_date`）只表达"哪一天"：读时不补 `Z`，
+写时也别把 `toISOString()` 的结果塞进去；
+③ 同一张表两列口径可能不同（`push_log.pushed_at` 本地 / `created_at` UTC），
+**必须按字段分别解析**，禁止 `pushed_at || created_at` 合并后统一处理；
+④ 一列只允许一种写法 —— 日期列混进 UTC 时间戳后，`ORDER BY` 的字符串比较与月份分组都会中招。
+**判据**：前端搜 `dayjs(` 后面跟 `_at`；后端搜 `DEFAULT (datetime('now'))` 且该列会显示给用户；
+先问一句"这列存的是 UTC 还是本地"，答不上来就是嫌疑。
+**护栏**：`tools/verify/probe_timezone_display.js`（parseServerTime 三分支 + 三个视图**真实函数**运行时 +
+静态断言 + 反例自检）；`rules.js#datetime` 在改动 `format.ts` / `logger.js` / 日记·相册·设置三视图时自动拉它
+**来源**：L-024、L-019
+
+---
+
 ## 修改本文件的口径
 
 - 加一条 ⇒ 必须同时给出**护栏**（脚本名或 `[人审]` + 人要看哪一眼）与**来源**（`L-NNN`）。

@@ -9,7 +9,7 @@
 ## 快速开始
 
 ```bash
-# 全套（82 套 / 约 1820 项，跑完约 9–14 分钟）
+# 全套（83 套 / 约 1861 项，跑完约 9–14 分钟）
 node tools/verify/run_all_suites.js
 
 # 日常：按本次改动自动选套件（闸门，红则非零退出）—— 改完代码就跑这个
@@ -204,6 +204,7 @@ tools/verify/
 | 改前端模板 / 加页面功能 | `verify_template_vars.js`、`verify_render.js`、`verify_record_entrypoints.js`；**改记录页小弹窗**再加 `shot_record_quickmodals.js`（看风格是否与其它类型一致） |
 | 改记录页任何字段的「提交 / 读回 / 备注写入」 | `verify_record_page_functions.js`（真后端端到端：25 类别逐类跑「建/读/部分更新/改/删」+ 写入格式与 remark 语义），再跑 `verify_record_entrypoints.js`（静态：取值域唯一真源、入口齐全） |
 | 改睡眠质量 / 心情 / 其它「多处必须一致」的字面量 | 两套都跑：`verify_record_entrypoints.js`（会红在「全前端只有 format.ts 一处映射」）+ `verify_record_page_functions.js` |
+| 改时间 / 日期显示、`utils/format.ts`、`logger.js`、日记·相册·推送记录的 `_at` 展示 | `probe_timezone_display.js`（**41 项**：`parseServerTime` 三分支 + 三个视图**真实函数**运行时 + 静态断言 + 反例自检）。SQLite `datetime('now')` 存的是**无时区标记的 UTC**，裸 `dayjs()` 在东八区早 8 小时；`push_log.pushed_at` 是本地时间，**不能**用 `parseServerTime` |
 | 改前后端接口 | `verify_api_contracts.js`、`verify_upload_field_names.js` |
 | 动用药/补充方案、打卡、到点提醒 | `verify_dose_rules.js`（**纯函数 17 项**：7 天节奏串正反例，专防"静默错判该不该吃"；自带 `TZ=Asia/Shanghai`）+ `verify_dose_plan.js`（真后端：建/校验/孕周·日期·频率约束/打卡幂等/撤销/停用/删连带）+ `verify_dose_push.js`（到点只推该推的、**打卡后当天不再推**、开关生效、日志可机读） |
 | 动产检排期 json 的 id / 改 pregnancy·schedule_dates·custom_checkup·reminder 四表 | `probe_push_schedule_impact.js` |

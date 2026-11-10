@@ -227,11 +227,18 @@ router.put('/photos/:id', async (req, res) => {
       if (req.body[f] !== undefined) { sets.push(`${f} = ?`); params.push(req.body[f]); }
     }
     // 支持修改照片日期（映射到 created_at 列）
+    // ⚠️ 这里必须写「纯日期」YYYY-MM-DD，与上传路径（effectiveDate）保持一致。
+    //    此前用 `new Date(x).toISOString()` 落库，得到的是 **UTC 时间戳**
+    //    （'2026-11-05 00:00:00'），于是同一列混进了两种写法：
+    //      · 上传   ⇒ '2026-11-05'
+    //      · 改日期 ⇒ '2026-11-05 00:00:00'
+    //    `ORDER BY created_at` 是字符串比较，前端 parseServerTime 也要按两种格式分别判断。
+    //    日期字段本就该「只表达哪一天」，不参与时区换算 —— 直接取客户端声明的日期部分。
     if (req.body.photo_date) {
-      const d = new Date(req.body.photo_date);
-      if (!isNaN(d.getTime())) {
+      const pd = String(req.body.photo_date).trim().slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(pd)) {
         sets.push("created_at = ?");
-        params.push(d.toISOString().replace('T', ' ').slice(0, 19));
+        params.push(pd);
       }
     }
     sets.push("updated_at = datetime('now')");

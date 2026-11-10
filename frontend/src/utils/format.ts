@@ -2,6 +2,29 @@
 import dayjs from 'dayjs'
 
 /**
+ * 解析后端返回的时间字符串（全项目唯一入口）。
+ *
+ * 🔴 后端 SQLite 用 `datetime('now')` 落库，存的是 **UTC**（形如 `2026-11-05 01:14:10`，
+ *    无时区标记）。直接 `dayjs(s)` / `new Date(s)` 会被浏览器当作**本地时间**解析，
+ *    东八区显示比实际晚 8 小时（9:11 写的日记显示成 1:11）。
+ *
+ * 这里统一把无时区标记的日期时间按 **UTC** 解析（补 `Z`），
+ * dayjs 后续 format 时自动转成浏览器本地时区。
+ *
+ * 注意：纯日期串（`YYYY-MM-DD`，如 entry_date / record_date / expected_date）
+ * 不要走这里 —— 它们没有时分秒，直接 dayjs(s) 即可。
+ */
+export function parseServerTime(t: string | null | undefined): dayjs.Dayjs {
+  const s = String(t ?? '').trim()
+  // 已带时区标记（Z 或 ±HH:mm）→ 原样解析
+  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) return dayjs(s)
+  // 纯日期（无时间部分）→ 原样解析（不补 Z，避免纯日期被当时区零点）
+  if (!/[ T]\d{2}:\d{2}/.test(s)) return dayjs(s)
+  // 无时区标记的日期时间 → 按 UTC 解析
+  return dayjs(s.replace(' ', 'T') + 'Z')
+}
+
+/**
  * 判断一个值是不是**真实存在**的 `YYYY-MM-DD` 日期字符串 —— 全项目唯一真源。
  *
  * 🔴 为什么不能直接写 `dayjs(s, 'YYYY-MM-DD', true).isValid()`：

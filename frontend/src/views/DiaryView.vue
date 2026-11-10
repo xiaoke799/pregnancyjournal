@@ -132,7 +132,7 @@ import client from '@/api/client'
 import { getApiBase } from '@/utils/api-base'
 import dayjs from 'dayjs'
 import { calculateGestationalAge } from '@/utils/gestational'
-import { getMoodEmoji as moodEmojiOf, getMoodLabel as moodLabelOf, MOOD_OPTIONS as moodOptions } from '@/utils/format'
+import { getMoodEmoji as moodEmojiOf, getMoodLabel as moodLabelOf, MOOD_OPTIONS as moodOptions, parseServerTime } from '@/utils/format'
 
 const pregnancyStore = usePregnancyStore()
 const message = useMessage()
@@ -414,7 +414,8 @@ function formatFullDate(dateStr: string): string {
 
 function formatTime(dateStr: string): string {
   if (!dateStr) return ''
-  return dayjs(dateStr).format('HH:mm')
+  // created_at 是后端 SQLite datetime('now') 存的 UTC 串，无时区标记，必须按 UTC 解析
+  return parseServerTime(dateStr).format('HH:mm')
 }
 
 function getWeekInfo(dateStr: string): string {

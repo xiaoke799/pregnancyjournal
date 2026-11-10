@@ -81,10 +81,12 @@ const RULES = [
     id: 'datetime',
     // 起因（2026-11-10）：外部 PR#5 改的正是 logger 时间戳与 format.ts 日期格式化，
     // 而规则表里**一条都没有覆盖到** —— 而 L-019 明确记着「UTC 与本地日期混用会差一天」。
-    // verify_dose_rules 自带 TZ=Asia/Shanghai，是全项目唯一能抓时区错的那套。
-    match: /(^frontend\/src\/utils\/(format|date|time|day)[^/]*\.(ts|js)$)|(^app\/server\/node\/(logger|config)\.js$)|(^app\/server\/node\/utils\/(date|time)[^/]*\.js$)/i,
-    suites: ['verify_dose_rules', 'verify_frontend_types'],
-    why: '时间/日期口径：SQLite 的 CURRENT_TIMESTAMP 是 UTC，与本地日期混用会差一天（LESSONS L-019）',
+    // 2026-11-10 补：此前只有 `verify_dose_rules` 自带 TZ=Asia/Shanghai 算「沾边」，
+    // 它查的是用药提醒，**不检查显示层**；PR#5 长期未合入、v0.0.35 只修宫缩一处，
+    // 全程没被任何套件拦住。现由 `probe_timezone_display` 正式接管这块。
+    match: /(^frontend\/src\/utils\/(format|date|time|day)[^/]*\.(ts|js)$)|(^frontend\/src\/views\/(Diary|Album|Settings)View\.vue$)|(^app\/server\/node\/(logger|config)\.js$)|(^app\/server\/node\/utils\/(date|time)[^/]*\.js$)/i,
+    suites: ['probe_timezone_display', 'verify_dose_rules', 'verify_frontend_types'],
+    why: '时间/日期口径：SQLite 的 CURRENT_TIMESTAMP 是 UTC，前端直接 dayjs() 会早 8 小时（LESSONS L-019）',
   },
   {
     id: 'record-domain',

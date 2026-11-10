@@ -399,7 +399,7 @@
               <span class="push-log-content">{{ log.push_content }}</span>
             </div>
             <div class="push-log-right">
-              <span class="push-log-time">{{ formatLogTime(log.pushed_at || log.created_at) }}</span>
+              <span class="push-log-time">{{ formatLogTime(log) }}</span>
               <n-button v-if="log.status === 'failed'" size="tiny" type="primary" text :loading="retryingId === log.id" @click="retryPush(log.id)">重试</n-button>
             </div>
             <div v-if="log.error_message" class="push-log-error">{{ log.error_message }}</div>
@@ -496,6 +496,7 @@ import { exportApi } from '@/api/export'
 import client from '@/api/client'
 import { pushApi } from '@/api/push'
 import { getApiBase } from '@/utils/api-base'
+import { parseServerTime } from '@/utils/format'
 
 const logText = ref('')
 const logInfo = ref<any>(null)
@@ -1232,15 +1233,15 @@ function typeLabel(type: string): string {
   return map[type] || type
 }
 
-function formatLogTime(t?: string): string {
-  if (!t) return ''
-  // 后端统一写「本地时间」字符串（2026-09-23 08:00:00，无时区标记）。
-  // 部分浏览器对这种格式解析有兼容问题，统一补成 ISO 本地时间形式再解析。
-  let s = String(t).trim()
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) s = s.replace(' ', 'T')
-  const d = new Date(s)
-  if (isNaN(d.getTime())) return String(t)
-  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+function formatLogTime(log: { pushed_at?: string; created_at?: string }): string {
+  if (!log) return ''
+  // ⚠️ push_log 表两个时间字段口径不同，必须分别解析：
+  //   pushed_at  —— 推送引擎 localStamp() 写【本地时间】（重启去重 LIKE '今天%' 依赖本地日期，
+  //                  见 push-engine.js，不能改存 UTC）
+  //   created_at —— DB 默认 datetime('now')，是【UTC】
+  const d = log.pushed_at ? dayjs(log.pushed_at) : parseServerTime(log.created_at)
+  if (!d.isValid()) return String(log.pushed_at || log.created_at || '')
+  return d.format('MM-DD HH:mm')
 }
 
 </script>
