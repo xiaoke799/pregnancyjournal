@@ -340,6 +340,33 @@
   ⇒ **判据 ④ 的权重最高**：离线 mock 只能证明"发出的东西对"，
   真跑一次才能发现"读回来的东西和自己以为的不一样"。
 
+## L-028 「配置声明」和「代码行为」各说各的 —— 没被调用过的分支永远是绿的
+
+- **Seen**: 1×
+- **状态**: PROMOTED → docs/code-standards.md#CS-17
+  （结构性规则已完全硬化。**但** `/merge` 这条命令本身仍未在 Actions 上真跑过 ——
+  权限对了不等于链路通了，那部分算 L-027 判据 ④ 的未结项）
+- **症状**: `assistant.yml` 的 `command` job 当时吃顶层默认值 `contents: read`，
+  而它的 `/merge` 分支直接 spawn `auto-merge.js` 去 `PUT /pulls/{n}/merge` ⇒ 必然 403。
+  命令写在 `/help` 里、脚本体写完了、workflow 也接了 —— 看上去全套齐活，
+  实际上**这条命令从第一天起就不可能成功**，而它不会留下任何痕迹
+- **根因**: 权限声明（YAML，另一个文件）和代码行为（JS）谁也不知道对方要什么，
+  中间没有任何一层校验。更要命的是**只有被调用才会暴露** —— `/merge` 从没人发过，
+  所以从来没有出现过一次 403。与 L-027 是同一个母题（"从没真跑过"），
+  但载体不同：那次是参数形状，这次是权限
+- **判据**:
+  - 权限一律 `permissions: {}` 顶层全无 + **逐 job 声明**，禁止靠顶层默认值传播
+    （顶层只要有一条 write，以后任何人新加 job 都会白拿 —— 而他只是在"加个测试"）
+  - 每个拿到 write 的 job，必须能回答「谁在写、为什么必须写」；答不上来就是多给的
+  - 凡是文档/界面里**承诺过的能力**，都要能追溯到它所在 job 的权限来源（耦合断言，别靠人记）
+  - 授权路径的危险面不许随权限一起扩大（本项靠 `author_association` 三重过滤兜住）
+- **证据**: 2026-11-12 做权限下沉体检时发现。`grep 'contents:' .github/workflows/assistant.yml`
+  只有 `read`，而 `tools/ci/handle-command.js:123` 是 `runNode('auto-merge.js')`。
+  修法：command job 显式为 `contents: write`；`selftest` 增加「handle-command 会 spawn
+  auto-merge.js ⇒ 该 job 必须有 contents: write」的耦合断言。
+  **反例验证**：手动把 `write` 改回 `read`，selftest 变为 `213 通过 / 1 失败`，
+  红的正是那一条（不是别处连带失败）
+
 ## 怎么加一条新条目
 
 1. 先确认它**值得记**：有没有导致返工、假绿、或差点漏掉？只是"我觉得应该这样" ⇒ 不记。

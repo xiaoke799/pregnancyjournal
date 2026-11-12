@@ -5,6 +5,11 @@ name: issue 助手
 #   · 斜杠命令    → /review /triage /merge /help（仅维护者可用）
 #
 # 普通评论**不回复**。机器人到处插嘴会把真正的讨论淹掉，也会让人直接屏蔽它。
+#
+# 事故锚点（L-028）：`command` job 原先吃顶层默认值 `contents: read`，
+#   而 `/merge` 分支 spawn 的 auto-merge.js 要 `PUT /pulls/{n}/merge` ⇒ 恒 403。
+#   命令、脚本、workflow 三样都齐，唯独权限没对齐，而这条命令从没人发过 ——
+#   于是它安静地坏了很久。现在权限逐 job 显式声明，selftest 里有耦合断言盯着。
 
 on:
   issues:
@@ -12,11 +17,10 @@ on:
   issue_comment:
     types: [created]
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
-  models: read
+# 🔴 顶层全无，两个 job 各要各的 —— 它们需要的权限**不一样**，这正是不能用顶层一刀切的原因：
+#    · triage 只碰 issue（分类 + 打标签 + 首回），不需要碰 PR，也不该需要；
+#    · command 要代替人跑 /review /triage /merge，所以必须覆盖这三条链路的总和。
+permissions: {}
 
 concurrency:
   group: assistant-${{ github.event.issue.number }}
@@ -28,6 +32,12 @@ jobs:
     if: github.event_name == 'issues'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # 只发评论 + 打标签，全在 issues 接口上。
+    # ⚠️ 故意**不给** pull-requests: write —— triage 不碰 PR，多给一份就是白多一份。
+    permissions:
+      contents: read
+      issues: write
+      models: read        # 分类走 GitHub Models
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,6 +66,18 @@ jobs:
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # 权限 = /review + /triage + /merge 三条链路需要的并集，一个不多。
+    #
+    # 🔴 `contents: write` 是 `/merge` 要的，不是多给的：handle-command.js 在 `/merge` 分支里
+    #    直接 spawn `auto-merge.js`，而它要 `PUT /pulls/{n}/merge` —— 没有 contents: write 就是 403。
+    #    （2026-11-12 体检发现：此前这里继承顶层 `contents: read`，`/merge` 从来就合不动，
+    #     只是没人真发过这条命令，所以一直显示"配置完成"。selftest 里有一条耦合断言盯着这个。）
+    # 危险面没有变大：本 job 有 workflow 层的 author_association 三重过滤，只有维护者能拉起。
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      models: read
     steps:
       - uses: actions/checkout@v4
         with:

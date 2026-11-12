@@ -7,6 +7,9 @@ name: 安全审计
 #
 # 它和另外三道的关系：
 #   pre-commit / pre-push 防"未来"；CI static 扫"当前快照"；这一个查"过去"。
+#
+# 事故锚点（2026-11-10）：三道门禁装好后第一件事是扫自己的历史 —— 因为写脚本时
+#   已经两次把「长得像密钥的字面量」写进测试里。历史审计是唯一会看已经提交过的东西的一道。
 
 on:
   schedule:
@@ -14,14 +17,16 @@ on:
     - cron: '0 2 * * 1'
   workflow_dispatch:        # 也能手动跑
 
-permissions:
-  contents: read
-  issues: write             # 发现问题时开 issue
+# 🔴 顶层全无：这个 workflow 平时什么都不写，只有审计失败时才需要 issues: write。
+permissions: {}
 
 jobs:
   history:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write         # 发现问题时开 issue
     steps:
       - uses: actions/checkout@v4
         with:

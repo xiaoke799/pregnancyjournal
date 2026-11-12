@@ -21,18 +21,25 @@ on:
 #    还没跑完就被下一次 push 掐断，于是一个只在 Linux 出现的错误连续 15 个版本飘红、
 #    无人察觉 —— 大家都以为"在跑"，其实从来没跑完过。
 #    PR 分支允许取消（同一分支连推只保留最新一轮），main / tag 不允许。
+#
+# 事故锚点（L-026）：本 workflow 第一次真跑就红了，而日志停在半句话 ——
+#   ① 白名单表用了 Windows 反斜杠，Linux 上 path.relative() 出的是正斜杠，6 条白名单全部失效；
+#   ② 末尾 process.exit(1) 丢掉了还没 flush 的 stdout，于是"哪条断言失败"完全看不见。
+#   修法见 tools/verify/probe_theme_tokens.js 的 relOf() + process.exitCode。
 concurrency:
   group: verify-${{ github.ref }}
   cancel-in-progress: ${{ !(startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/v')) }}
 
-permissions:
-  contents: read
+# 🔴 顶层全无：CI 只读代码，一个写权限都不需要。每个 job 自己声明 `contents: read`。
+permissions: {}
 
 jobs:
   static:
     name: 静态契约层
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -43,6 +50,7 @@ jobs:
       # 这几套只用 node 内置模块，不装依赖也能跑 —— 所以这一层几乎是瞬时的。
       # selftest 是审查/合并/回复机器人自身的回归（判定方向、降级、注入、已知问题解析）。
       - name: 静态套件（版本同步 / 路由契约 / 深色接线 / 主题令牌 / 机器人自身）
+        timeout-minutes: 5      # 正常 <1min；卡住说明有子进程没退出，别让它吃满 job 预算
         run: |
           node tools/verify/run_all_suites.js --ci \
             --suite=verify_pkg_versions \
@@ -75,6 +83,8 @@ jobs:
     name: 前端类型与组件契约
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -85,11 +95,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: 安装前端依赖
+        timeout-minutes: 8       # 网络卡住时早点红，而不是耗光 20min 的 job 预算
         run: npm ci --prefix frontend
 
       # verify_frontend_types 是 fail-closed 的：缺 vue-tsc / 起不来 / 超时都判失败。
       # verify_naive_vmodel 需要 @vue/compiler-sfc + naive-ui + @vue/server-renderer。
       - name: 类型体检 + naive-ui 绑定契约
+        timeout-minutes: 10
         run: |
           node tools/verify/run_all_suites.js --ci \
             --suite=verify_frontend_types \
@@ -101,6 +113,8 @@ jobs:
     needs: [static, frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:

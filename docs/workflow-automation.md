@@ -347,15 +347,15 @@ node tools/ci/pr-review.js --diff=x.diff --no-ai \
 
 | magpie 的做法 | 我们现状 | 判断 |
 |---|---|---|
-| **CI 注释绑定事故编号/次数/commit hash**（`test.yml` 里「apt 镜像卡了 2.5 小时 (b0d456c3)」「默认 10m 超时在 8 次里红了 3 次 (#2108)」） | 注释写了「为什么」，但很少带具体锚点 | 值得补：规则会随人忘，锚点不会 |
+| **CI 注释绑定事故编号/次数/commit hash**（`test.yml` 里「apt 镜像卡了 2.5 小时 (b0d456c3)」「默认 10m 超时在 8 次里红了 3 次 (#2108)」） | 注释写了「为什么」，但很少带具体锚点 | ✅ **本次落地**（5 个 workflow 都挂了 L-0xx 锚点） |
 | **harm-first**：社区 PR 先查外发/执行面再谈审查（`docs/contributors.md`） | 只有高危路径 + 密钥扫描 | ✅ **本次落地** |
-| 顶层 `permissions: {}` + 每个 job 单独最小权限；「能写的不跑 PR 代码，跑 PR 代码的不给写」（`ui-preview.yml`） | 顶层统一声明，单 job | 值得改，但要逐个 job 复核 |
-| **8/8 workflow 都有 `workflow_dispatch`** | 3/5（verify / assistant 没有） | verify 可加；assistant 依赖评论 payload，不适用 |
+| 顶层 `permissions: {}` + 每个 job 单独最小权限；「能写的不跑 PR 代码，跑 PR 代码的不给写」（`ui-preview.yml`） | 顶层统一声明，单 job | ✅ **本次落地**（并因此查出 `/merge` 恒 403，见 L-028） |
+| **8/8 workflow 都有 `workflow_dispatch`** | 4/5（只有 assistant 没有 —— 它依赖 issue/评论 payload，手动触发没有 payload，不适用） | 已齐 |
 | 每个易卡 step 都有 `timeout-minutes` | 部分 job 有 | 低风险，值得补齐 |
 | 验收要求「反例必须是真 `FAIL` 且点名行为，**编译错误/跳过不算**」「说清每个检查打印了什么」 | 有 Red Check，但没这么严格 | 值得写进 `review-protocol.md` |
 | 「跑 `./...` 而不是自以为相关的包」——**护栏住在没被改的包里** | `gate.js` 按 diff 选套件 | ⚠️ 有张力：CI static 层每跑 selftest 兜住了，但值得显式写明 |
 | 产物 sha256 写进代码、运行时自检（`internal/pii` pin `pf-serve` 的校验和） | 打包时人工开包 md5 比对 + 新鲜度机检 | 更进一步，暂不照搬（我们是单包 fpk） |
-| LESSONS 有 `<!-- reviewed-through: <commit> -->` 游标、**按主题分节**、Seen 按**天**计、3 天转正、有归档节 | 按 `L-NNN` 平铺、Seen 按次数 | 27 条还能用；到 100+ 条要改组织方式 |
+| LESSONS 有 `<!-- reviewed-through: <commit> -->` 游标、**按主题分节**、Seen 按**天**计、3 天转正、有归档节 | 按 `L-NNN` 平铺、Seen 按次数 | 28 条还能用；到 50+ 条要改组织方式 |
 | 定时补偿任务靠**内容标记**幂等（`notes-mirror.yml` 用 `<!-- lang:zh -->` 判断是否已镜像） | `security-audit` 靠"已有未关 issue"幂等 | 思路一致，可互换 |
 
 ### 本次落地：harm-first
@@ -371,12 +371,60 @@ node tools/ci/pr-review.js --diff=x.diff --no-ai \
 报告有「🚨 先确认伤害面」专节给出文件行号与命中片段。
 理由和 magpie 一致：**误报只多点一次确认，漏报是凭据外发或执行未审代码**。
 
-`selftest` O 段 13 条断言 → 200/0（可疑 PR 判人审、干净 PR 不误报）。
+`selftest` O 段 13 条断言（可疑 PR 判人审、干净 PR 不误报）。
+
+### 本次落地：权限下沉 + 事故锚点
+
+**权限**。5 个 workflow 全部改成顶层 `permissions: {}`，每个 job 自己声明。
+
+为什么值得改，而不是"反正只有一个 job"：
+顶层 `permissions` 是**所有 job 的默认值**。只要顶层留着一条 `write`，以后任何人新加一个
+job 都会白拿它 —— 而他只是在想"加个测试"，不会去想"我这个 job 有写权限意味着什么"。
+改成 `{}` 之后，"这个 job 能写什么"必须被显式回答一次；写漏了会立刻 403 暴露，
+而不是悄悄多给一份权限。
+
+| workflow | job | 权限 |
+|---|---|---|
+| verify | static / frontend / release | `contents: read`（**一个写权限都没有**） |
+| pr-review | review | `contents: read` + `pull-requests: write` + `issues: write` + `models: read` |
+| auto-merge | merge | `contents: write` + `pull-requests: write` + `issues: write` |
+| assistant | triage | `contents: read` + `issues: write` + `models: read`（**故意不给 PR 写**） |
+| assistant | command | 上面三条链路的并集，含 `contents: write` |
+| security-audit | history | `contents: read` + `issues: write`（**没有** `contents: write`） |
+
+工具：`node tools/ci/workflow-perms.js`（审计，有问题 exit 1）/ `--matrix`（打印上面这张表）。
+解析器是手写的（CI static 层不装依赖），**用 PyYAML 独立交叉验证过结果一致** ——
+不能只信自己的解析器，否则它算错了也没人发现。
+
+> 🔴 做这件事时查出一个真实缺陷：`assistant` 的 `command` job 原先继承顶层 `contents: read`，
+> 而 `/merge` 分支 spawn 的 `auto-merge.js` 要 `PUT /pulls/{n}/merge` ⇒ **恒 403**。
+> 命令写在 `/help`、脚本体写完了、workflow 也接了，唯独权限没对齐 ——
+> 而这条命令从没人发过，所以它安静地坏了很久。已修为 `contents: write`，并加了耦合断言。详见 L-028。
+
+**锚点**。5 个 workflow 的头部注释都补了「事故锚点」段，指向 `LESSONS.md` 的编号：
+pr-review ← L-021/L-022/L-023/L-027；auto-merge ← L-027；verify ← L-026；
+assistant ← L-028；security-audit ← 三道门禁装好当天就自查历史。
+
+理由和 magpie 一样：**规则会随人忘，锚点不会**。半年后有人想"这行注释真啰嗦，删了吧"，
+只要旁边写着「这是 L-026，删了下次跨平台路径又静默失效」，他会先去看一眼那条。
+
+**Red Check 口径**。`docs/review-protocol.md` 补了最容易被忽略的一类「无效红」：**被跳过**。
+条件不满足就提前 `return` / `skip` 的断言，报告的仍然是「通过」，而实际什么都没验证。
+判据只有一句：**汇总行能不能回答"这次到底验了几条"** —— 答不上来就是安慰剂。
+
+顺带修了 `selftest` 自己的两处同类问题：
+① 成功分支把 detail 整个丢掉，于是「浅克隆跳过」和「真验证过」在日志里一模一样
+  → 现在成功也打印，并在汇总行单列「其中 N 条因环境条件跳过：…」；
+② 结尾用的是 `process.exit()` —— 那正是 L-026 说会丢输出的写法，自己的脚本却没照做
+  → 改成 `process.exitCode`。
+
+**step 级超时**。`verify.yml` 里三个易卡 step 补了 `timeout-minutes`
+（静态套件 5min / `npm ci` 8min / 类型体检 10min）。job 级本来有，step 级只是为了
+**更早失败**：npm registry 挂住时别耗光 20min 的 job 预算才给一句看不出原因的 timeout。
 
 ### 暂未落地（按优先级，别当成已完成）
 
-1. 5 个 workflow 改顶层 `permissions: {}` + job 级最小权限
-2. `verify.yml` 加 `workflow_dispatch`；给关键 step 补 `timeout-minutes`
-3. 把事故锚点（commit hash / CI run 号）写进现有 workflow 注释
-4. 在 `docs/review-protocol.md` 收紧 Red Check 口径（编译错误/跳过不算反例）
-5. LESSONS 到 50 条时改按主题分节 + 加 `reviewed-through` 游标
+1. LESSONS 到 50 条时改按主题分节 + 加 `reviewed-through` 游标（现在 28 条，平铺还够用）
+2. 分离式 preflight workflow：不起模型、不贴评论，只验证 workflow 接线本身
+   （目前只能靠真触发，而 PAT 没有 `Actions: write`，点不动 `Run workflow`）
+3. 产物 sha256 运行时自检（magpie 是单二进制，我们是单包 fpk，先不照搬）

@@ -25,10 +25,19 @@ const REVIEW = path.join(__dirname, 'pr-review.js');
 const NODE = process.execPath;
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'pj-pr-'));
 
-let pass = 0, fail = 0;
+let pass = 0, fail = 0, skipped = 0, skipNotes = [];
+/**
+ * @param detail 失败时是「红在哪」，成功时是注记（如 `skipped`）。
+ *   ⚠️ 成功时也必须打印 detail：早先的写法是 `if (cond) { pass++; ... }` 完全丢掉 detail，
+ *   于是浅克隆跳过的那条和真验证过的那条在输出里长得一模一样 ——
+ *   「通过」里混着"什么都没验证"，正是 CS-01 说的安慰剂。
+ */
 function ok(name, cond, detail) {
-  if (cond) { pass++; console.log(`  ✔ ${name}`); }
-  else { fail++; console.log(`  ✘ ${name}${detail ? '  ← ' + detail : ''}`); }
+  if (cond) {
+    pass++;
+    if (detail === 'skipped') { skipped++; skipNotes.push(name); }
+    console.log(`  ✔ ${name}${detail ? '  ← ' + detail : ''}`);
+  } else { fail++; console.log(`  ✘ ${name}${detail ? '  ← ' + detail : ''}`); }
 }
 
 // ---------------------------------------------------------------------------
@@ -527,7 +536,6 @@ const AI_BLOCK = JSON.stringify({
     for (const f of files) {
       const t = text[f];
       ok(`${f} 有 name`, /^name:\s*\S/m.test(t));
-      ok(`${f} 显式声明 permissions`, /^permissions:/m.test(t));
 
       // 🔴 安全红线：pull_request_target 有写权限，一旦 checkout PR head 就是提权漏洞
       const dangerRef = /ref:\s*\$\{\{\s*github\.event\.pull_request\.head\.(sha|ref)/;
@@ -541,11 +549,91 @@ const AI_BLOCK = JSON.stringify({
         uses.join(', '));
     }
 
-    ok('auto-merge 申请了 contents: write（要合并+删分支）', /contents:\s*write/.test(text['auto-merge.yml'] || ''));
-    ok('pr-review 申请了 models: read（要走 GitHub Models）', /models:\s*read/.test(text['pr-review.yml'] || ''));
-    ok('pr-review 的 contents 是只读', /contents:\s*read/.test(text['pr-review.yml'] || '')
-      && !/contents:\s*write/.test(text['pr-review.yml'] || ''));
+    // ---- 权限：顶层全无，逐 job 授予（借鉴 magpie：能写的不跑 PR 代码，跑 PR 代码的不给写）----
+    // 为什么必须机器查：顶层 permissions 是所有 job 的默认值，只要这里有一条 write，
+    // 以后**任何人**新加的 job 都会白拿它 —— 而他只是在想"加个测试"。这种权限
+    // 扩散在 review 里几乎看不出来（diff 只有一行 `+  new-job:`），只能靠断言守。
+    const W = require('./workflow-perms');
+    const parsed = Object.fromEntries(files.map(f => [f, W.parseWorkflow(text[f])]));
+    const jobPerms = (f, id) => {
+      const j = (parsed[f]?.jobs || []).find(x => x.id === id);
+      return j ? j.permissions : null;
+    };
+    const hasWrite = perms => Object.keys(perms || {}).some(k => perms[k] === 'write');
+
+    ok('每个 workflow 的顶层都是 permissions: {}（deny-all）',
+      files.every(f => parsed[f].top !== null && Object.keys(parsed[f].top).length === 0),
+      files.filter(f => !parsed[f].top || Object.keys(parsed[f].top).length)
+        .map(f => `${f}:${JSON.stringify(parsed[f].top)}`).join(' '));
+
+    ok('每个 job 都自己声明了 permissions（没有吃顶层默认值的）',
+      files.every(f => parsed[f].jobs.length > 0 && parsed[f].jobs.every(j => j.permissions !== null)),
+      files.flatMap(f => parsed[f].jobs.filter(j => j.permissions === null).map(j => `${f}::${j.id}`)).join(' '));
+
+    ok('workflow 权限审计无告警（含 scope 拼写）',
+      W.audit(files.map(f => ({ file: f, text: text[f] }))).length === 0,
+      JSON.stringify(W.audit(files.map(f => ({ file: f, text: text[f] }))).slice(0, 3)));
+
+    // 具体红线（每条对应一次真实风险，不是"看着对"）
+    ok('verify 的三个 job 一个写权限都没有（CI 只该读代码）',
+      parsed['verify.yml'].jobs.every(j => !hasWrite(j.permissions)),
+      JSON.stringify(parsed['verify.yml'].jobs.map(j => j.id + ':' + JSON.stringify(j.permissions))));
+
+    ok('pr-review 的 review 只读 contents（pull_request_target 能写 = 能把代码推上去）',
+      jobPerms('pr-review.yml', 'review')?.contents === 'read',
+      JSON.stringify(jobPerms('pr-review.yml', 'review')));
+
+    ok('pr-review 有 models: read（要走 GitHub Models）',
+      jobPerms('pr-review.yml', 'review')?.models === 'read');
+
+    ok('auto-merge 的 merge 有 contents: write（要合并 + 删分支）',
+      jobPerms('auto-merge.yml', 'merge')?.contents === 'write');
+
+    ok('security-audit 没有 contents: write（它只读历史）',
+      jobPerms('security-audit.yml', 'history')?.contents !== 'write');
+
+    // 🔴 耦合断言：权限必须和脚本行为对得上。
+    // 反例（真实存在过）：assistant 的 command job 继承顶层 `contents: read`，
+    // 而 /merge 分支直接 spawn auto-merge.js 去 `PUT /pulls/{n}/merge` ——
+    // 那条命令**从来就合不动**（403），只因为没人真发过，界面上一片"已配置"。
+    const cmdSrc = fs.readFileSync(path.join(REPO, 'tools/ci/handle-command.js'), 'utf8');
+    const spawnsMerge = /runNode\(\s*['"]auto-merge\.js['"]/.test(cmdSrc);
+    ok('handle-command 的 /merge 确实会跑 auto-merge.js', spawnsMerge,
+      '改了这个分支就要同步改下面的权限断言');
+    if (spawnsMerge) {
+      ok('/merge 所在的 job 有 contents: write（否则合并恒 403）',
+        jobPerms('assistant.yml', 'command')?.contents === 'write',
+        JSON.stringify(jobPerms('assistant.yml', 'command')));
+    }
+
+    ok('assistant 的 triage 不给 pull-requests: write（它只碰 issue）',
+      jobPerms('assistant.yml', 'triage')?.['pull-requests'] !== 'write',
+      JSON.stringify(jobPerms('assistant.yml', 'triage')));
+
     ok('assistant 申请了 models: read', /models:\s*read/.test(text['assistant.yml'] || ''));
+
+    // ---- 反例验证：审计器自己必须能红（CS-01：从不失败的检查 = 安慰剂）----
+    {
+      const good = [
+        'name: x', 'on: {}', 'permissions: {}', 'jobs:',
+        '  a:', '    runs-on: ubuntu-latest', '    permissions:',
+        '      contents: read', '',
+      ].join('\n');
+      ok('权限审计对合规样例放行（不是恒红）', W.audit([{ file: 'g.yml', text: good }]).length === 0);
+
+      const cases = [
+        ['缺顶层 permissions', good.replace('permissions: {}\n', ''), 'top-permissions-missing'],
+        ['顶层写了权限', good.replace('permissions: {}', 'permissions:\n  contents: write'),
+          'top-permissions-not-deny-all'],
+        ['job 没声明权限', good.replace('    permissions:\n      contents: read\n', ''),
+          'job-permissions-missing'],
+        ['scope 拼错', good.replace('contents: read', 'content: read'), 'unknown-scope'],
+      ];
+      for (const [name, src, code] of cases) {
+        const got = W.audit([{ file: 'b.yml', text: src }]).map(p => p.code);
+        ok(`权限审计能抓住「${name}」`, got.includes(code), got.join(',') || '（什么都没报）');
+      }
+    }
 
     // 物理急刹：main/tag 上的并发取消必须是有条件的，不能恒 true
     ok('verify 的 cancel-in-progress 有表达式条件',
@@ -883,10 +971,15 @@ const AI_BLOCK = JSON.stringify({
   }
 
   fs.rmSync(TMP, { recursive: true, force: true });
-  console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
-  process.exit(fail ? 1 : 0);
+  const skipTail = skipped
+    ? `（其中 ${skipped} 条因环境条件跳过：${skipNotes.join('；')}）`
+    : '';
+  console.log(`\n结果：${pass} 通过 / ${fail} 失败${skipTail}`);
+  // 用 exitCode 而不是 process.exit()：后者会丢掉还没 flush 的 stdout（L-026），
+  // 在 CI 管道里表现为"日志停在半句话、看不到哪条失败"。
+  process.exitCode = fail ? 1 : 0;
 })().catch(e => {
   console.error('selftest 自身出错：' + e.stack);
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (_) { }
-  process.exit(1);
+  process.exitCode = 1;
 });

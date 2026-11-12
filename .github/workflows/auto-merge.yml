@@ -9,6 +9,12 @@ name: 自动合并
 # 判定逻辑全在 tools/ci/auto-merge.js 的 evaluate()（纯函数，有 16 项单测）。
 # 这个 yml 只负责"什么时候调用它"。
 #
+# 事故锚点（L-027）：这套东西第一次真跑的当天，就冒出三个"离线单测全绿、真跑必错"的坑 ——
+#   `state` 回来是大写枚举 `OPEN` 而判定比的是小写 `'open'`（⇒ 任何 PR 都 skip）、
+#   `mergeableState` 字段在 PullRequest 上根本不存在（那是 REST 才有的）、
+#   `mergeable` 是枚举字符串而判定期望 true/false/null（⇒ 冲突检测永不触发）。
+#   ⇒ 现在 GraphQL 结果先过一层纯函数 toPr() 做语义映射，selftest M 段 7 条断言盯着。
+#
 # 授予内容写权限是必须的（合并 + 删分支），所以沿用 pull_request_target 的安全口径：
 # checkout 只取 base 分支，执行的是**仓库自己**的脚本，不碰 PR 里的任何代码。
 
@@ -32,10 +38,8 @@ on:
         type: boolean
         default: true
 
-permissions:
-  contents: write         # 合并 + 删源分支
-  pull-requests: write
-  issues: write
+# 🔴 顶层全无，写权限只给真正执行合并的那个 job（见 jobs.merge.permissions）。
+permissions: {}
 
 concurrency:
   group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || inputs.pr_number || 'none' }}
@@ -50,6 +54,10 @@ jobs:
       (github.event_name == 'check_suite' && github.event.check_suite.pull_requests[0].number != null)
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write         # 合并 + 删源分支
+      pull-requests: write
+      issues: write
     steps:
       - name: 检出 base 分支（🔴 不是 PR 的 head）
         uses: actions/checkout@v4

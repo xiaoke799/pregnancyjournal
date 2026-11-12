@@ -149,7 +149,10 @@ const RULES = [
   {
     id: 'ci-config',
     match: /^\.github\//i,
-    suites: [],
+    // selftest 的 G 段就是 workflow 的语义红线（权限下沉、不 checkout PR head、
+    // concurrency 表达式、uses 钉版本）。改 workflow 而不跑它 = 闸门自己没人看。
+    suites: ['selftest'],
+    scripts: ['tools/ci/workflow-perms.js'],
     manual: [
       'python -c "import yaml;yaml.safe_load(open(\'.github/workflows/verify.yml\'))"  # 语法',
       '人工确认：触发条件 / concurrency 表达式 / 是否又把全量塞进 CI',

@@ -162,6 +162,34 @@
 
 ---
 
+## CS-17 workflow 权限：顶层全无、逐 job 授予、必须和行为对齐
+
+**规则**：`.github/workflows/*.yml` 的顶层一律写 `permissions: {}`（deny-all），
+每个 job 在 `jobs.<id>.permissions` 里声明**它自己**需要的那几条；不使用顶层默认值传播。
+
+三条理由，缺一条都不够：
+① 顶层是**所有 job 的默认值** —— 顶层留一条 `write`，以后任何人新加 job 都会白拿，
+   而他只是在"加个测试"，不会去想"我这个 job 有写权限意味着什么"；
+② 写到 job 上，漏了会**立刻 403 暴露**；留在顶层，漏了是悄悄多给一份权限；
+③ 只有逐 job 写，才逼着回答"这个 job 到底在写什么"。
+
+**权限必须和代码行为对齐**：job 里 spawn 的每个脚本，要的写权限都得在该 job 里出现。
+界面/文档承诺过的能力（如 `/merge`），必须能追溯到它所在 job 的权限来源 ——
+这条用**耦合断言**守，不靠人记（`selftest` 会去读 `handle-command.js` 判断它是否 spawn
+`auto-merge.js`，然后要求 `command` job 有 `contents: write`）。
+
+**判据**：顶层非 `{}` ⇒ 红；某 job 没声明 permissions ⇒ 红；scope 名拼错 ⇒ 红
+（拼错 GitHub 不报错，等于没申请）；`verify` 出现任何 `write` ⇒ 红（CI 只该读代码）；
+`pr-review` 的 `contents` 是 `write` ⇒ 红（`pull_request_target` 加上 contents 写 ≈ 能推代码）。
+
+**护栏**：`tools/ci/workflow-perms.js`（解析 + 审计，`--matrix` 看权限矩阵）、
+`selftest` G 段（含 4 条反例：缺顶层 / 顶层非空 / job 未声明 / scope 拼错）、
+`gate.js` 的 `ci-config` 规则（改 `.github/` 自动跑 selftest + 权限审计）
+
+**来源**：L-028（`/merge` 恒 403 —— 权限没对齐，而这条命令从没人发过）
+
+---
+
 ## 修改本文件的口径
 
 - 加一条 ⇒ 必须同时给出**护栏**（脚本名或 `[人审]` + 人要看哪一眼）与**来源**（`L-NNN`）。

@@ -9,6 +9,12 @@ name: PR 审查
 # 所以这里的铁律只有一条，任何改动都不许破：
 #   checkout 只能取 base 分支（default branch），**永远不许 ref 成 pull_request.head.sha**。
 #   审查器只把 diff 当文本读，不 npm install、不跑测试、不执行 PR 里的任何脚本。
+#
+# 事故锚点（改这个文件前先读一眼这几条，都是它长成现在这样的原因）：
+#   · L-021 只看 diff 的审查器，结构上发现不了「别处还有一样的写法」→ 所以有 sibling-leftover 检查
+#   · L-022 空输入被判「通过」→ 所以 empty-diff 是阻断项，不是提示
+#   · L-023 分页/上限截断把「没查到」变成「没问题」→ 所以 files 被截断就不判 pass
+#   · L-027 第三参数当请求体，8 处写调用从没真跑过 → 所以有 gh.js 防呆 + selftest I 段
 
 on:
   pull_request_target:
@@ -22,11 +28,12 @@ on:
         required: true
         type: number
 
-permissions:
-  contents: read          # 只读 base 分支
-  pull-requests: write    # 贴评论
-  issues: write           # 打标签（标签挂在 issue 接口上）
-  models: read            # GitHub Models：用 GITHUB_TOKEN 直连，不需要另配 key
+# 🔴 顶层一律全无，权限必须显式下沉到 job。
+#    理由：顶层 permissions 是**所有 job 的默认值**。只要这里写了一条 write，
+#    以后任何人新加一个 job 都会白拿写权限 —— 而他只是在想"加个测试"。
+#    把它写成 `{}` 之后，"这个 job 能写什么"必须被显式回答一次，写漏了会立刻 403 暴露，
+#    而不是悄悄多给一份权限。（借鉴 magpie：能写的不跑 PR 代码，跑 PR 代码的不给写）
+permissions: {}
 
 # 同一个 PR 连续推送时，只审最新一次（旧的那次结论已经过期，没必要留着占额度）
 concurrency:
@@ -40,6 +47,11 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    permissions:
+      contents: read          # 只读 base 分支
+      pull-requests: write    # 贴评论
+      issues: write           # 打标签（标签挂在 issue 接口上）
+      models: read            # GitHub Models：用 GITHUB_TOKEN 直连，不需要另配 key
     steps:
       - name: 检出 base 分支（🔴 不是 PR 的 head）
         uses: actions/checkout@v4
