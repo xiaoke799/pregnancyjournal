@@ -816,6 +816,52 @@ const AI_BLOCK = JSON.stringify({
     ok('模型缺席时明说未运行而不是"通过"', /未运行/.test(t) && /不等于全面通过/.test(t));
   }
 
+  console.log('\n=== O. harm-first：先查伤害面（借鉴 magpie contributors.md） ===');
+  {
+    const { scanHarm, isAllowedHost } = require('./harm-scan');
+    const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
+    const d = body => 'diff --git a/frontend/src/a.ts b/frontend/src/a.ts\n' +
+      '--- a/frontend/src/a.ts\n+++ b/frontend/src/a.ts\n@@ -1 +1,1 @@\n' + body;
+
+    const ext = scanHarm(d('+const u = "https://collector.somewhere.io/ingest"\n'));
+    ok('新增外部地址 ⇒ external-endpoint', ext.some(h => h.code === 'external-endpoint'));
+    ok('内网/本地/代码托管白名单不误报',
+      isAllowedHost('localhost') && isAllowedHost('127.0.0.1') &&
+      isAllowedHost('192.168.1.5') && isAllowedHost('api.github.com'));
+    ok('黑名单域名确实不豁免', !isAllowedHost('collector.somewhere.io'));
+    ok('动态执行被抓', scanHarm(d('+const f = new Function("return 1")\n')).some(h => h.code === 'dynamic-exec'));
+    ok('大段编码 blob 被抓', scanHarm(d('+' + 'A'.repeat(260) + '\n')).some(h => h.code === 'encoded-blob'));
+    ok('纯注释里的链接不刷屏',
+      !scanHarm(d('+// 参考 https://collector.somewhere.io/docs\n')).some(h => h.code === 'external-endpoint'));
+    ok('删除行不报（那是在移除风险）',
+      !scanHarm('--- a/x\n+++ b/x\n@@ -1 +1 @@\n-https://collector.somewhere.io\n+const x = 1\n')
+        .some(h => h.code === 'external-endpoint'));
+    ok('同文件同类去重', scanHarm(d('+const a="https://x.io/1"\n+const b="https://y.io/2"\n'))
+      .filter(h => h.code === 'external-endpoint').length === 1);
+    const dep = 'diff --git a/package.json b/package.json\n--- a/package.json\n' +
+      '+++ b/package.json\n@@ -1 +1,2 @@\n+"some-lib": "^1.2.3"\n';
+    ok('新增依赖被抓', scanHarm(dep).some(h => h.code === 'new-dependency'));
+
+    // 端到端
+    const hp = path.join(TMP, 'o-harm.diff');
+    const cp = path.join(TMP, 'o-clean.diff');
+    fs.writeFileSync(hp, 'diff --git a/frontend/src/a.ts b/frontend/src/a.ts\n' +
+      '--- a/frontend/src/a.ts\n+++ b/frontend/src/a.ts\n@@ -1 +1,2 @@\n' +
+      '+const u="https://collector.somewhere.io/x"\n+const f=new Function("1")\n');
+    fs.writeFileSync(cp, 'diff --git a/frontend/src/a.ts b/frontend/src/a.ts\n' +
+      '--- a/frontend/src/a.ts\n+++ b/frontend/src/a.ts\n@@ -1 +1 @@\n+export const n = 1\n');
+    const args = x => ['--diff=' + x, '--title=t', '--commits=fix: t', '--no-ai'];
+    const hj = await runReview([...args(hp), '--json']);
+    const hd = parse(hj.out);
+    ok('可疑 PR 判 needs-human（不交给模型评价好坏）', hd && hd.verdict === 'needs-human');
+    ok('JSON 里带 harm 明细', hd && hd.harm.length >= 2);
+    const ht = await runReview(args(hp));
+    ok('报告有 harm-first 专节', /先确认伤害面/.test(ht.out));
+    const cj = await runReview([...args(cp), '--json']);
+    const cd = parse(cj.out);
+    ok('干净 PR 不误报', cd && cd.harm.length === 0 && cd.verdict !== 'needs-human');
+  }
+
   fs.rmSync(TMP, { recursive: true, force: true });
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
   process.exit(fail ? 1 : 0);

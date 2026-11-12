@@ -336,3 +336,47 @@ node tools/ci/pr-review.js --diff=x.diff --no-ai \
   `rounds.first=true`、六个角度统计齐全
 - **未验证**：GitHub Models 的真实多角度输出（本机无 `models: read`；
   用 `--no-ai` 跑的是硬检查层）。按项目铁律记为 `Not run`。
+
+## 十五、借鉴 magpie 的自动化经验（2026-11-12）
+
+来源：本地 `C:/Users/X/Downloads/magpie-main/magpie-main`（**只读研究，未改动该仓库**）。
+它同样有 `AGENTS.md` / `LESSONS.md` / `docs/code-standards.md`，方法论与我们同源，
+但规模更大（LESSONS 68KB、8 个 workflow、每晚自动复盘当天提交）。
+
+### 对照：哪些值得学
+
+| magpie 的做法 | 我们现状 | 判断 |
+|---|---|---|
+| **CI 注释绑定事故编号/次数/commit hash**（`test.yml` 里「apt 镜像卡了 2.5 小时 (b0d456c3)」「默认 10m 超时在 8 次里红了 3 次 (#2108)」） | 注释写了「为什么」，但很少带具体锚点 | 值得补：规则会随人忘，锚点不会 |
+| **harm-first**：社区 PR 先查外发/执行面再谈审查（`docs/contributors.md`） | 只有高危路径 + 密钥扫描 | ✅ **本次落地** |
+| 顶层 `permissions: {}` + 每个 job 单独最小权限；「能写的不跑 PR 代码，跑 PR 代码的不给写」（`ui-preview.yml`） | 顶层统一声明，单 job | 值得改，但要逐个 job 复核 |
+| **8/8 workflow 都有 `workflow_dispatch`** | 3/5（verify / assistant 没有） | verify 可加；assistant 依赖评论 payload，不适用 |
+| 每个易卡 step 都有 `timeout-minutes` | 部分 job 有 | 低风险，值得补齐 |
+| 验收要求「反例必须是真 `FAIL` 且点名行为，**编译错误/跳过不算**」「说清每个检查打印了什么」 | 有 Red Check，但没这么严格 | 值得写进 `review-protocol.md` |
+| 「跑 `./...` 而不是自以为相关的包」——**护栏住在没被改的包里** | `gate.js` 按 diff 选套件 | ⚠️ 有张力：CI static 层每跑 selftest 兜住了，但值得显式写明 |
+| 产物 sha256 写进代码、运行时自检（`internal/pii` pin `pf-serve` 的校验和） | 打包时人工开包 md5 比对 + 新鲜度机检 | 更进一步，暂不照搬（我们是单包 fpk） |
+| LESSONS 有 `<!-- reviewed-through: <commit> -->` 游标、**按主题分节**、Seen 按**天**计、3 天转正、有归档节 | 按 `L-NNN` 平铺、Seen 按次数 | 27 条还能用；到 100+ 条要改组织方式 |
+| 定时补偿任务靠**内容标记**幂等（`notes-mirror.yml` 用 `<!-- lang:zh -->` 判断是否已镜像） | `security-audit` 靠"已有未关 issue"幂等 | 思路一致，可互换 |
+
+### 本次落地：harm-first
+
+新增 `tools/ci/harm-scan.js`（纯函数，只扫 diff 新增行）：
+
+- 新外部网络地址（内网 / localhost / GitHub / example 白名单豁免）
+- 运行时从字符串构造/执行代码（`eval` / `new Function` / `vm.runIn*`）
+- 大段 base64 / hex blob、新增依赖、疑似凭据外发
+- 纯注释行不报、删除行不报（那是在**移除**风险）、同文件同类去重、总量封顶
+
+命中 ⇒ `decide()` 直接判 **needs-human**（优先级仅次于高危路径），
+报告有「🚨 先确认伤害面」专节给出文件行号与命中片段。
+理由和 magpie 一致：**误报只多点一次确认，漏报是凭据外发或执行未审代码**。
+
+`selftest` O 段 13 条断言 → 200/0（可疑 PR 判人审、干净 PR 不误报）。
+
+### 暂未落地（按优先级，别当成已完成）
+
+1. 5 个 workflow 改顶层 `permissions: {}` + job 级最小权限
+2. `verify.yml` 加 `workflow_dispatch`；给关键 step 补 `timeout-minutes`
+3. 把事故锚点（commit hash / CI run 号）写进现有 workflow 注释
+4. 在 `docs/review-protocol.md` 收紧 Red Check 口径（编译错误/跳过不算反例）
+5. LESSONS 到 50 条时改按主题分节 + 加 `reviewed-through` 游标

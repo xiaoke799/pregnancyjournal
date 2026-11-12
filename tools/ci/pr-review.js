@@ -30,6 +30,7 @@ const fs = require('fs');
 const path = require('path');
 const RULES = require('../verify/rules');
 const { ANGLES, angleOf, groupByAngle, compareRounds, normalizeAiIssues } = require('./review-angles');
+const { scanHarm } = require('./harm-scan');
 
 // ---------------------------------------------------------------------------
 // 配置
@@ -306,7 +307,7 @@ function hardChecks(ctx) {
     push('blocking', 'empty-diff', '没有解析到任何文件改动',
       `diff 长度 ${String(ctx.diff || '').length} 字符，识别出 0 个文件。可能是拉取失败，也可能只有权限/时间戳变更。`,
       '重新触发审查（评论发 `/review`）；若确实没有实质改动，关闭这个 PR。');
-    return { issues, highRisk: [], picked: { hits: [], suites: [], scripts: [], manual: [] }, uncovered: [] };
+    return { issues, highRisk: [], harm: [], picked: { hits: [], suites: [], scripts: [], manual: [] }, uncovered: [] };
   }
 
   // 1) 高危路径
@@ -400,7 +401,7 @@ function hardChecks(ctx) {
       '这条是"没查"，不是"没问题"。本地可手动跑 `node tools/verify/scan_secrets.js --all`。');
   }
 
-  return { issues, highRisk, picked, uncovered };
+  return { issues, highRisk, harm: scanHarm(ctx.diff || ''), picked, uncovered };
 }
 
 // ---------------------------------------------------------------------------
@@ -530,6 +531,12 @@ function decide(hard, ai) {
   if (hard.highRisk.length) {
     return { verdict: 'needs-human', reason: `触碰 ${hard.highRisk.length} 处高危路径` };
   }
+  // harm-first（借鉴 magpie docs/contributors.md「Look for harm first」）：
+  // 在评价"这段代码写得好不好"之前，先让维护者确认它有没有越过声明的目标。
+  // 误报的代价只是多点一次确认；漏报的代价是凭据外发或运行时执行未审代码。
+  if (hard.harm && hard.harm.length) {
+    return { verdict: 'needs-human', reason: `发现 ${hard.harm.length} 处需人工确认的伤害面（新外发地址 / 动态执行 / 编码 blob / 新依赖）` };
+  }
   if (blocking.length) {
     return { verdict: 'changes', reason: `${blocking.length} 项硬检查未通过` };
   }
@@ -586,6 +593,20 @@ function renderReport(ctx, hard, ai, decision) {
       L.push(`${sev[i.severity] || '⚪'} **${i.title}**${i.detail ? ` — ${i.detail}` : ''}` +
         ` <sub>${i.source === 'ai' ? '模型' : '硬检查'} · ${i.angle}</sub>`);
       if (i.hint) L.push(`  <sub>${i.hint}</sub>`);
+    }
+    L.push('');
+  }
+
+  // ②b harm-first：命中即人审，逐条给出文件行号与片段
+  const harm = hard.harm || [];
+  if (harm.length) {
+    L.push('### 🚨 先确认伤害面（harm-first）');
+    L.push('<sub>每一项都要维护者确认「这确实属于本 PR 的目标」；确认前不评价代码好坏，' +
+      '也不在带真实账号的机器上运行 PR 代码。口径见 `docs/workflow-automation.md`。</sub>');
+    L.push('');
+    for (const h of harm) {
+      L.push(`- **${h.why}** — \`${h.file}:${h.line}\``);
+      L.push(`  <sub>命中：\`${String(h.sample).replace(/`/g, "'").slice(0, 120)}\`</sub>`);
     }
     L.push('');
   }
@@ -761,6 +782,7 @@ async function applyLabels(pr, verdict) {
       additions: ctx.additions,
       deletions: ctx.deletions,
       highRisk: hard.highRisk,
+      harm: hard.harm || [],
       issues: hard.issues,
       suites: hard.picked.suites,
       manual: hard.picked.manual,
