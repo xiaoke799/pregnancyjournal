@@ -214,8 +214,11 @@ async function main() {
   if (verdict.action !== 'merge') {
     process.exit(verdict.action === 'block' ? 2 : 0);
   }
-  if (has('dry-run')) {
-    console.log(C.dim('\n--dry-run：未执行合并'));
+  // workflow_dispatch 手动触发时默认只判定不合并（PJ_DRY_RUN=1），
+  // 免得有人填个 PR 号就把带 automerge 标签的 PR 合了。真正要合得显式关掉 dry_run。
+  const dryRun = has('dry-run') || !!process.env.PJ_DRY_RUN;
+  if (dryRun) {
+    console.log(C.dim('\n--dry-run：未执行合并（只判定）'));
     return;
   }
 

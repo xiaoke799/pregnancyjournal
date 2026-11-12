@@ -13,6 +13,14 @@ name: PR 审查
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
+  # 手动入口：不新开 PR 也能验证整条审查链路，或重跑某次审查。
+  # 🔴 只有有 write 权限的人能触发；checkout 仍固定 base 分支，diff 仍只当文本读。
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: '要审查的 PR 号'
+        required: true
+        type: number
 
 permissions:
   contents: read          # 只读 base 分支
@@ -22,13 +30,14 @@ permissions:
 
 # 同一个 PR 连续推送时，只审最新一次（旧的那次结论已经过期，没必要留着占额度）
 concurrency:
-  group: pr-review-${{ github.event.pull_request.number }}
+  group: pr-review-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: true
 
 jobs:
   review:
-    # draft 不审：作者还在写，审了只会制造噪音
-    if: github.event.pull_request.draft == false
+    # draft 不审：作者还在写，审了只会制造噪音。
+    # dispatch 时没有 pull_request payload，PR 的 draft 状态由脚本从 API 读真实元数据判断。
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -47,7 +56,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
           # 模型可换：openai/gpt-4o（默认，质量好）/ openai/gpt-4o-mini（省额度）
           PJ_REVIEW_MODEL: ${{ vars.PJ_REVIEW_MODEL || 'openai/gpt-4o' }}
         run: node tools/ci/pr-review.js

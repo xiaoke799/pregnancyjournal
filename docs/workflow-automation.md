@@ -221,3 +221,42 @@ POST 发评论发出 JSON 字符串（422）。**这些脚本从没真跑过，�
 
 **教训**：`node --check` 通过 ≠ 能跑；新增写调用必须至少真跑一次，
 或者用 mock 证明它发出的东西是对的。
+
+## 十三、手动验证入口（2026-11-12）
+
+体检发现 `pr-review` / `auto-merge` / `security-audit` 从未运行过 —— 不是坏了，是触发条件
+（新 PR、每周定时）还没到。为了能**在没有新 PR 的情况下验证整条链路**，三个都开了手动入口：
+
+| workflow | 入口 | 输入 |
+|---|---|---|
+| `pr-review.yml` | `workflow_dispatch` | `pr_number`（必填） |
+| `auto-merge.yml` | `workflow_dispatch` | `pr_number`（必填）、`dry_run`（**默认 true**） |
+| `security-audit.yml` | `workflow_dispatch` | 无 |
+
+用法：Actions 页 → 选 workflow → `Run workflow` → 填 PR 号。
+只有**有 write 权限的人**能触发 `workflow_dispatch`。
+
+### 四条不许破的边界
+
+1. `pull_request_target` 的 checkout **仍固定 `default_branch`**，绝不 `ref` 成 `pull_request.head.sha`。
+   审查器只把 diff 当文本读，合并器执行的是仓库自己的脚本 —— 加了手动入口也一样。
+2. `auto-merge` 手动触发**默认只判定不合并**（`PJ_DRY_RUN=1`）。
+   关掉 `dry_run` 才会真的调 merge API，而且 `evaluate()` 的四条硬条件一个不少：
+   `automerge`（人打的）+ `review:pass` + 检查全绿 + 不含高危路径。
+3. `cancel-in-progress: false` 保持 —— 合并这种写操作不许被后一次触发半路掐断。
+4. `PR_NUMBER` 表达式必须带 `inputs.pr_number` 兜底，否则 dispatch 时脚本拿不到号。
+
+`selftest` L 段有 10 条断言盯着这些边界。其中「checkout 仍固定 base 分支」
+和「dry_run 默认 true」是最容易被"为了方便"拆掉的两条。
+
+### 用 API 触发（权限说明）
+
+```bash
+curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+  https://api.github.com/repos/OWNER/REPO/actions/workflows/pr-review.yml/dispatches \
+  -d '{"ref":"master","inputs":{"pr_number":"5"}}'
+```
+
+⚠️ 这需要 PAT 勾了 **Actions: write**。当前 PAT 只勾了 Contents / Issues /
+Pull requests，调用会 403 —— 这种情况下**去 Actions 页面点 `Run workflow`** 即可，
+效果完全一样，不需要为验证去放宽 token 权限。

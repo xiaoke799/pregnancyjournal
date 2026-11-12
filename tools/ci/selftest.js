@@ -708,6 +708,35 @@ const AI_BLOCK = JSON.stringify({
       run({ commitTime: 5000, srcNewestMtime: 900 }).ok);
   }
 
+  console.log('\n=== L. 手动触发入口（workflow_dispatch）的安全边界 ===');
+  {
+    const wf = f => fs.readFileSync(path.join(REPO, '.github', 'workflows', f), 'utf8');
+    const pr = wf('pr-review.yml');
+    const am = wf('auto-merge.yml');
+    const sa = wf('security-audit.yml');
+
+    ok('三个需要验证的 workflow 都有手动入口',
+      /workflow_dispatch:/.test(pr) && /workflow_dispatch:/.test(am) && /workflow_dispatch:/.test(sa));
+    ok('dispatch 都要求填 pr_number（审查看）', /pr_number:/.test(pr) && /pr_number:/.test(am));
+    ok('审查器 PR_NUMBER 有 inputs 兜底', /PR_NUMBER:.*inputs\.pr_number/.test(pr));
+    ok('合并器 PR_NUMBER 有 inputs 兜底', /PR_NUMBER:.*inputs\.pr_number/.test(am));
+
+    // 🔴 最容易被人"为了方便"拆掉的一条
+    ok('加 dispatch 后 checkout 仍固定 base 分支',
+      (pr.match(/ref:\s*\$\{\{ github\.event\.repository\.default_branch \}\}/g) || []).length === 1 &&
+      (am.match(/ref:\s*\$\{\{ github\.event\.repository\.default_branch \}\}/g) || []).length === 1);
+    ok('没有任何 workflow checkout PR 的 head sha',
+      !/ref:.*pull_request\.head\.sha/.test(pr) && !/ref:.*pull_request\.head\.sha/.test(am));
+
+    // 合并这种写操作不能被后一次触发掐断
+    ok('auto-merge 仍然 cancel-in-progress: false', /cancel-in-progress:\s*false/.test(am));
+    // 手动触发默认只判定，不真的合并
+    ok('dispatch 的 dry_run 默认 true', /dry_run:[\s\S]{0,200}?default:\s*true/.test(am));
+    ok('合并器 env 传了 PJ_DRY_RUN', /PJ_DRY_RUN:/.test(am));
+    ok('脚本认 PJ_DRY_RUN 环境变量',
+      /PJ_DRY_RUN/.test(fs.readFileSync(path.join(REPO, 'tools/ci/auto-merge.js'), 'utf8')));
+  }
+
   fs.rmSync(TMP, { recursive: true, force: true });
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
   process.exit(fail ? 1 : 0);

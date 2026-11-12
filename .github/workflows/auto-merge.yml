@@ -17,6 +17,20 @@ on:
     types: [labeled, unlabeled, synchronize, ready_for_review, reopened]
   check_suite:
     types: [completed]
+  # 手动入口：默认**只判定不合并**，用来验证 evaluate() 的真实链路。
+  # 🔴 即使手动触发也绝不 fall through：automerge 标签、review:pass、检查全绿、
+  #    不含高危路径，四条硬条件一个都不能少（evaluate() 是唯一判定入口）。
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: '要判定的 PR 号'
+        required: true
+        type: number
+      dry_run:
+        description: '只判定不合并（默认开）。关掉才会真合并，且仍需人打过 automerge 标签'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write         # 合并 + 删源分支
@@ -24,7 +38,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || 'none' }}
+  group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || inputs.pr_number || 'none' }}
   cancel-in-progress: false   # 合并这种写操作不许被后一次触发半路掐断
 
 jobs:
@@ -32,6 +46,7 @@ jobs:
     # check_suite 事件可能是任意分支的，只处理确实关联了 PR 的
     if: |
       github.event_name == 'pull_request_target' ||
+      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'check_suite' && github.event.check_suite.pull_requests[0].number != null)
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -56,7 +71,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || inputs.pr_number }}
+          PJ_DRY_RUN: ${{ inputs.dry_run == true && '1' || '' }}
           PJ_MERGE_LABEL: ${{ vars.PJ_MERGE_LABEL || 'automerge' }}
           PJ_MERGE_METHOD: ${{ vars.PJ_MERGE_METHOD || 'squash' }}
         run: node tools/ci/auto-merge.js
