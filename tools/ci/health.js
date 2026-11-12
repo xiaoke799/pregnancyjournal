@@ -16,11 +16,10 @@
  *   node tools/ci/health.js                 # 报告（不判红）
  *   node tools/ci/health.js --strict       # 标签缺失 / workflow 未注册 ⇒ exit 1
  *   node tools/ci/health.js --json
- *   GITHUB_TOKEN=… 或用 ~/.workbuddy/github-token；没有 token 则只做离线部分
+ *   GITHUB_TOKEN=…；没有 token 则只做离线部分（工件、标签定义、本地 workflow 文件）
  */
 'use strict';
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { LABELS, HUMAN_ONLY } = require('./labels');
 
@@ -41,9 +40,9 @@ const C = {
 };
 
 function token() {
-  if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
-  const p = path.join(os.homedir(), '.workbuddy/github-token');
-  return fs.existsSync(p) ? fs.readFileSync(p, 'utf8').trim() : '';
+  // 只认环境变量：不在代码里写死"某个本机目录能拿到 token"——
+  // 那种路径只有作者那台机器有，clone 的人照着做只会得到"文件不存在"。
+  return process.env.GITHUB_TOKEN || '';
 }
 
 const localWorkflows = () => fs.existsSync(WF_DIR)

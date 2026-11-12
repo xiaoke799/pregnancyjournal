@@ -55,7 +55,7 @@ function targets() {
     console.error(C.red('缺少 GITHUB_TOKEN。'));
     console.error('  连接器只读时请用 PAT：GitHub → Settings → Developer settings → Fine-grained tokens');
     console.error('  权限：Issues = Read and write、Pull requests = Read and write、Contents = Read');
-    console.error(C.dim('  例：GITHUB_TOKEN=$(cat ~/.workbuddy/github-token) node tools/ci/close-issue.js --issue=3'));
+    console.error(C.dim('  例：GITHUB_TOKEN=<你的 PAT> node tools/ci/close-issue.js --issue=3'));
     process.exit(2);
   }
   if (!VALID_REASONS.includes(REASON)) {

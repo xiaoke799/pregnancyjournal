@@ -92,15 +92,14 @@ Issues 列表页勾选 → `Mark as completed`：
 ```bash
 # 1. 建 fine-grained PAT：Issues = Read and write、Pull requests = Read and write、Contents = Read
 #    只勾 pregnancyjournal 这一个仓库
-# 2. 存到仓库外（别提交，也别贴聊天里）
-echo 'github_pat_xxx' > ~/.workbuddy/github-token
+# 2. 存到仓库外的地方（别提交、别贴聊天里），用环境变量传进来
+export GITHUB_TOKEN='github_pat_xxx'
 
 # 3. 预演：只打印，不改任何东西
-GITHUB_TOKEN=$(cat ~/.workbuddy/github-token) node tools/ci/close-issue.js --issue=2 --dry-run
+node tools/ci/close-issue.js --issue=2 --dry-run
 
 # 4. 真的关（把话术一起贴上去）
-GITHUB_TOKEN=$(cat ~/.workbuddy/github-token) \
-  node tools/ci/close-issue.js --issue=2 --reason=completed --comment-file=/tmp/reply-2.md
+node tools/ci/close-issue.js --issue=2 --reason=completed --comment-file=/tmp/reply-2.md
 ```
 
 - 批量：`--issues=1,2`

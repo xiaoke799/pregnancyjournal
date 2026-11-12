@@ -146,6 +146,52 @@ const RULES = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// 第二类：本机路径。**不是密钥**，但同样不该进仓库。
+//
+// 一条只有某台机器上才成立的路径，对 clone 的人等于一段死代码 ——
+// 照着做会得到"文件不存在"，而作者看不出来，因为他本机确实有。
+// 它还会顺带泄漏作者的用户名、目录结构、以及用什么工具。
+//
+// 起因（2026-11-12）：工具脚本里写死了"从某个私有目录读 token"，
+// 于是「怎么拿到 token」这件事被绑死在一台机器上。凭据规则一条都没报警 ——
+// 因为它确实不含任何密钥，只是把路径当成了配置。
+// ---------------------------------------------------------------------------
+const PATH_RULES = [
+  {
+    id: 'win-userdir', level: 'block',
+    // 分隔符用 `+` 而不是 `{1,2}`：路径可能被转义多次（JSON 里写 JS 字符串等），
+    // 实测 3 个及以上反斜杠时 `{1,2}` 会漏 —— 而漏掉的正是"最像真实配置"的那种写法。
+    // 结尾用「分隔符 / 引号 / 空白 / 行尾」收口：`C:\Users` 这种不带尾分隔符的写法也要拦，
+    // 但 `C:\UsersX` 不该误中。
+    re: /[A-Za-z]:[\\/]+(?:Users|Documents and Settings)(?:[\\/]|["'\s]|$)/,
+    why: '本机用户目录绝对路径（Windows）—— 换台机器就不存在',
+  },
+  {
+    id: 'unix-userdir', level: 'block',
+    // 前置边界必须有：否则 `https://example.com/Users/x/` 里的 `/Users/` 也会命中
+    re: /(?:^|[\s"'`(=])\/(?:Users|home)\/[A-Za-z0-9._-]+(?:[\\/]|["'\s]|$)/,
+    why: '本机用户目录绝对路径（macOS / Linux）',
+  },
+  {
+    id: 'private-dotdir', level: 'block',
+    re: /(?:^|[\s"'`(=])(?:~|\$HOME)\/\.[A-Za-z0-9._-]+\//,
+    why: '私有配置目录（`~/.xxx/`）—— 只有作者的机器上有；凭据请走环境变量',
+  },
+];
+
+const ALL_RULES = [...RULES, ...PATH_RULES];
+const isPathRule = id => PATH_RULES.some(r => r.id === id);
+
+/**
+ * 「作为例子被引用」的路径不算违规。
+ * 否则规范文档没法写 —— 它必须举出坏例子，而坏例子长得跟真用法一样
+ * （实测：CS-18 和 L-030 一写就被自己的规则拦下）。
+ * 判据：带省略号 / `xxx` / `<占位符>` / `${VAR}` 的行是在讲格式，不是让人照着跑。
+ * 只作用于路径规则 —— 凭据没有"示例形态"这回事（示例密钥由 obviouslyFake 处理）。
+ */
+const PATH_EXAMPLE_RE = /(?:…|\.\.\.|\bxxx\b|\bXXXX\b|<[A-Za-z_][\w-]*>|\$\{)/;
+
 /** 明显是占位符 / 环境变量的值，不算泄露 */
 function looksLikePlaceholder(v) {
   if (!v) return true;
@@ -180,23 +226,31 @@ function mask(s) {
 }
 
 /** 扫描一段文本，返回命中列表 */
-function scanText(text, { file = '', startLine = 1 } = {}) {
+function scanText(text, { file = '', startLine = 1, includePaths = true } = {}) {
   const hits = [];
+  const rules = includePaths ? ALL_RULES : RULES;
   const lines = String(text).split('\n');
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (/pj-secret-ok/.test(line)) continue;             // 人工豁免
+    if (/pj-secret-ok/.test(line)) continue;             // 人工豁免（凭据与路径共用）
     if (line.length > 4000) continue;                    // 超长行（打包产物）跳过，避免正则回溯
-    for (const rule of RULES) {
+    for (const rule of rules) {
       const m = rule.re.exec(line);
       if (!m) continue;
+      const pathRule = isPathRule(rule.id);
+      // 路径规则：这一行在"讲格式"（带省略号 / xxx / <占位> / ${VAR}）就放过
+      if (pathRule && PATH_EXAMPLE_RE.test(line)) continue;
       // 赋值类规则：值像占位符就放过
       if (rule.id === 'secret-assignment' && looksLikePlaceholder(m[1])) continue;
-      // 通用：整段匹配长成"一眼假"的样子（全 0 UUID / 连续同字符）也放过
-      if (obviouslyFake(m[0])) continue;
+      // 通用：整段匹配长成"一眼假"的样子（全 0 UUID / 连续同字符）也放过。
+      // 只对凭据用 —— 路径没有"熵"这回事。
+      if (!pathRule && obviouslyFake(m[0])) continue;
       hits.push({
-        file, line: startLine + i, rule: rule.id, level: rule.level,
-        why: rule.why, sample: mask(m[0]), snippet: line.trim().slice(0, 120),
+        file, line: startLine + i, rule: rule.id, level: rule.level, kind: pathRule ? 'path' : 'secret',
+        why: rule.why,
+        // 路径不是秘密，原样给出才方便定位；凭据必须打码
+        sample: pathRule ? String(m[0]).trim() : mask(m[0]),
+        snippet: line.trim().slice(0, 120),
       });
       break;                                             // 一行只报一次，避免重复刷屏
     }
@@ -270,7 +324,7 @@ function git(args, { input } = {}) {
  * 解析 unified diff，只取新增行（`+` 且不是 `+++`），带新文件行号。
  * 为什么只扫新增行：扫全文会把历史里已经存在的东西反复报一遍，噪音大到没人看。
  */
-function scanDiff(diffText, label) {
+function scanDiff(diffText, label, opts = {}) {
   const hits = [];
   let file = '';
   let newLine = 0;
@@ -293,7 +347,7 @@ function scanDiff(diffText, label) {
     if (line.startsWith('--- ') || line.startsWith('diff --git ')) continue;
     if (line.startsWith('+')) {
       if (file && !SKIP_EXT.test(file) && !SKIP_PATH.test(file) && !ALLOW_FILES.includes(file)) {
-        hits.push(...scanText(line.slice(1), { file, startLine: newLine }));
+        hits.push(...scanText(line.slice(1), { file, startLine: newLine, ...opts }));
       }
       newLine++;
     } else if (!line.startsWith('-')) {
@@ -355,6 +409,12 @@ async function allHits() {
 
 async function historyHits() {
   // 全历史：逐个提交扫 patch。慢，只用于一次性审计。
+  //
+  // ⚠️ 历史审计**不查本机路径**（includePaths: false），只查凭据。理由：
+  //   凭据泄漏是有时效的 —— 可以（也必须）去服务端撤销，所以历史里存在就值得报警；
+  //   而一条历史里的本机路径改不掉（重写历史的代价远大于收益），
+  //   报出来只能每周红一次、然后被无视 —— 那等于把这道门禁变成噪音。
+  //   新引入的路径由 pre-commit / pre-push / CI 拦，历史不追。
   const revs = await git(['rev-list', '--all']);
   if (revs.code !== 0) throw new Error('git rev-list 失败');
   const list = revs.out.split('\n').filter(Boolean);
@@ -362,7 +422,7 @@ async function historyHits() {
   for (const sha of list) {
     const d = await git(['show', sha, '--format=', '-U0', '--no-color']);
     if (d.code !== 0) continue;
-    for (const h of scanDiff(d.out, sha)) hits.push({ ...h, commit: sha.slice(0, 7) });
+    for (const h of scanDiff(d.out, sha, { includePaths: false })) hits.push({ ...h, commit: sha.slice(0, 7) });
   }
   return hits;
 }
@@ -401,7 +461,8 @@ async function main() {
   console.log(C.bold(`\n敏感信息扫描（${label}）`));
   const loc = h => (h.line ? `${h.file}:${h.line}` : `${h.file}（文件名）`);
   for (const h of blocks) {
-    console.log(C.red(`  🔴 [${h.rule}] ${loc(h)}`));
+    const tag = h.kind === 'path' ? '本机路径' : '凭据';
+    console.log(C.red(`  🔴 [${h.rule}] ${loc(h)}　${tag}`));
     console.log(C.dim(`     ${h.why}　命中：${h.sample}`));
     console.log(C.dim(`     ${h.snippet}`));
   }
@@ -412,9 +473,17 @@ async function main() {
   }
 
   if (failing) {
-    console.log(C.red(`\n🔴 拦下：${blocks.length} 项确定凭据${strict ? `、${warns.length} 项可疑赋值` : ''}`));
-    console.log(C.dim('   处置：把密钥移到环境变量 / 本地配置文件（不入库），然后从暂存区移除。'));
-    console.log(C.dim('   如果这个凭据曾经提交过：**去服务端撤销它**，再考虑清理历史 —— 光删文件没用。'));
+    const pathN = blocks.filter(h => h.kind === 'path').length;
+    const secretN = blocks.length - pathN;
+    console.log(C.red(`\n🔴 拦下：${secretN} 项确定凭据、${pathN} 项本机路径${strict ? `、${warns.length} 项可疑赋值` : ''}`));
+    if (secretN) {
+      console.log(C.dim('   凭据处置：移到环境变量 / 本地配置文件（不入库），然后从暂存区移除。'));
+      console.log(C.dim('   如果这个凭据曾经提交过：**去服务端撤销它**，再考虑清理历史 —— 光删文件没用。'));
+    }
+    if (pathN) {
+      console.log(C.dim('   路径处置：改成环境变量或相对路径。仓库里不该出现"只有作者机器上才有"的路径 ——'));
+      console.log(C.dim('   clone 的人照着做只会得到"文件不存在"，而他没法判断是自己配错了还是文档错了。'));
+    }
     console.log(C.dim('   确属误报（示例/夹具）：在该行加 `pj-secret-ok` 注释并写明理由。'));
     process.exit(1);
   }
@@ -422,7 +491,10 @@ async function main() {
   console.log(C.yellow(`\n🟡 有 ${warns.length} 项可疑赋值（未拦下，加 --strict 可当错误处理）`));
 }
 
-module.exports = { scanText, scanDiff, scanFileName, RULES, BAD_FILES, looksLikePlaceholder, obviouslyFake };
+module.exports = {
+  scanText, scanDiff, scanFileName,
+  RULES, PATH_RULES, BAD_FILES, looksLikePlaceholder, obviouslyFake,
+};
 
 if (require.main === module) {
   main().catch(e => { console.error(e.stack); process.exit(2); });

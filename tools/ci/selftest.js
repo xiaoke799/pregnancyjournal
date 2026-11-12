@@ -767,6 +767,51 @@ const AI_BLOCK = JSON.stringify({
     ok('连续同字符判为假', S.obviouslyFake('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee') === true);
     ok('高熵随机串不会被误豁免', S.obviouslyFake(rnd) === false, rnd.slice(0, 8) + '…');
     ok('正常 UUID 不被误豁免', S.obviouslyFake('3f2a9c1d-5b6e-4a7f-9c8d-1e2f3a4b5c6d') === false);
+
+    // ---- 第二类：本机路径 ----
+    // 不是密钥，但同样不该进仓库：只有作者机器上存在的路径，对 clone 的人是一段死代码，
+    // 还会泄漏用户名与目录结构。起因：工具脚本里写死了"从某个私有目录读 token"，
+    // 凭据规则一条都没报 —— 因为它确实不含密钥，只是把一条本机路径当成了配置。
+    ok('本机路径规则 >= 3 条且全部是 block',
+      S.PATH_RULES.length >= 3 && S.PATH_RULES.every(r => r.level === 'block'),
+      `${S.PATH_RULES.length} 条`);
+    ok('每条路径规则都有 id / why / 已编译正则',
+      S.PATH_RULES.every(r => r.id && r.why && r.re instanceof RegExp));
+
+    const BS = '\\';
+    for (const [name, text, expect] of [
+      // 反斜杠可能被转义多次（JSON 里写 JS 字符串），1/2/3 个都要拦 ——
+      // 用 {1,2} 量化时 3 个就会漏，而漏掉的正是"最像真实配置"的那种写法
+      ['Windows 用户目录 ×1', `p = "C:${BS}Users${BS}X"`, true],
+      ['Windows 用户目录 ×2', `p = "C:${BS}${BS}Users${BS}${BS}X"`, true],
+      ['Windows 用户目录 ×3', `p = "C:${BS}${BS}${BS}Users"`, true],
+      ['Windows 正斜杠', 'p = "C:/Users/X"', true],  // pj-secret-ok 反例夹具：这一行必须"长得像真路径"，否则测不出拦截
+      ['旧版用户目录', `p = "C:${BS}Documents and Settings${BS}X"`, true],
+      ['macOS 家目录', 'open /Users/alice/x.txt', true],  // pj-secret-ok 反例夹具：这一行必须"长得像真路径"，否则测不出拦截
+      ['Linux 家目录', 'cat /home/bob/.token', true],  // pj-secret-ok 反例夹具：这一行必须"长得像真路径"，否则测不出拦截
+      ['私有配置目录', 'cat ~/.private-tool/token', true],  // pj-secret-ok 反例夹具：这一行必须"长得像真路径"，否则测不出拦截
+      ['$HOME 形式', 'cat $HOME/.secret/token', true],  // pj-secret-ok 反例夹具：这一行必须"长得像真路径"，否则测不出拦截
+      // 误报会把人逼成 --no-verify，这些必须放行
+      ['URL 里的 /Users/', 'see https://example.com/Users/x/page', false],
+      ['仓库内相对路径', 'node tools/ci/health.js', false],
+      ['环境变量', 'export GITHUB_TOKEN=abc', false],
+      ['非用户目录的绝对路径', 'D:/projects/app/src', false],
+      // 规范文档必须能举出坏例子，而坏例子长得跟真用法一样 —— 所以"示例形态"要放行，
+      // 但**真实用法**（没有省略号/占位符的）必须照样拦。这两条是配对的，缺一条就是开洞。
+      ['示例形态（省略号）', '不要写 C:////Users////… 这种路径', false],
+      ['示例形态（xxx 占位）', '例如 ~/.xxx/token', false],
+      ['真实用法不豁免', 'GITHUB_TOKEN=$(cat ~/.private-tool/github-token)', true],  // pj-secret-ok 反例夹具
+    ]) {
+      const hits = S.scanText(text, { file: 'x.js' });
+      ok(`本机路径 ${name} → ${expect ? '拦' : '放行'}`, (hits.length > 0) === expect,
+        hits.map(h => h.rule).join(',') || '（未命中）');
+    }
+
+    // 历史审计刻意不查路径（历史里的路径改不掉，报出来只会变成每周噪音）
+    ok('历史模式不查本机路径（includePaths:false）',
+      S.scanText('cat ~/.private-tool/token', { file: 'x.js', includePaths: false }).length === 0);  // pj-secret-ok 反例夹具：这一行必须"长得像真路径"，否则测不出拦截
+    ok('历史模式仍然查凭据',
+      S.scanText('x = "AKIA' + 'ABCDEFGHIJKLMNOP' + '"', { file: 'x.js', includePaths: false }).length > 0);
   }
 
   console.log('\n=== I. GitHub API 写调用契约（离线 mock，不联网） ===');

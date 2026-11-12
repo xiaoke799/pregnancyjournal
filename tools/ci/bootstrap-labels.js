@@ -11,7 +11,7 @@
  * "授权"这个动作永远由人完成。
  *
  * 用法：
- *   GITHUB_TOKEN=$(cat ~/.workbuddy/github-token) node tools/ci/bootstrap-labels.js
+ *   GITHUB_TOKEN=<你的 PAT> node tools/ci/bootstrap-labels.js
  *   … --dry-run     只列将要做的事，不写
  *   … --list        纯离线：只打印标签清单（不需要 token）
  *   … --json        机器可读输出
@@ -19,9 +19,6 @@
  * 幂等：已存在的标签默认不改（避免覆盖人工设置的颜色/描述）；加 --sync 才对齐真源。
  */
 'use strict';
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
 const { makeClient } = require('./gh');
 const { LABELS, HUMAN_ONLY } = require('./labels');
 
@@ -42,10 +39,9 @@ const C = {
 };
 
 function token() {
-  if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
-  const p = path.join(os.homedir(), '.workbuddy/github-token');
-  if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim();
-  return '';
+  // 只认环境变量。不要从某个固定的本机目录去"猜" token ——
+  // 那个目录只有我这台机器上才有，写进仓库等于给 clone 的人一条走不通的路。
+  return process.env.GITHUB_TOKEN || '';
 }
 
 function printList(rows) {
@@ -69,7 +65,7 @@ if (LIST_ONLY) {
   const tok = token();
   if (!tok && !DRY) {
     console.error(C.red('缺少 GITHUB_TOKEN。'));
-    console.error(C.dim('  GITHUB_TOKEN=$(cat ~/.workbuddy/github-token) node tools/ci/bootstrap-labels.js'));
+    console.error(C.dim('  GITHUB_TOKEN=<你的 PAT> node tools/ci/bootstrap-labels.js'));
     console.error(C.dim('  或加 --list 纯离线查看清单'));
     process.exit(2);
   }

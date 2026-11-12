@@ -13,7 +13,7 @@
 node tools/verify/run_all_suites.js
 
 # 日常：按本次改动自动选套件（闸门，红则非零退出）—— 改完代码就跑这个
-node tools/verify/scan_secrets.js --all   # 密钥门禁：确认没有凭据被带进仓库
+node tools/verify/scan_secrets.js --all   # 门禁：确认没有凭据、也没有本机路径被带进仓库
 node tools/verify/gate.js
 
 # 只跑名字含关键字的套件（路径或中文名都能命中）
@@ -61,7 +61,8 @@ tools/verify/
 │                           不改 `RULES` 就不会知道新模块该跑什么；规则表即"改什么必跑什么"的代码化
 ├── lessons.js           ← **错题本检查器**：Seen ≥3 必须硬化、PROMOTED 锚点必须存在、缺字段判红
 │                           `--bump=L-003` 把 Seen +1；`--list` 看摘要
-├── scan_secrets.js      ← **密钥门禁**：PAT/私钥/webhook/密钥赋值。`--staged`/`--push`/`--all`/`--history`
+├── scan_secrets.js      ← **门禁**：凭据（PAT/私钥/webhook/密钥赋值）+ 本机路径（CS-18）
+│                           `--staged`/`--push`/`--all`/`--history`（历史只查凭据）
 │                           装钩子后 pre-commit 与 **pre-push** 都会调它（pre-push 才是防上云的关键）
 ├── check_artifact_freshness.js ← **产物新鲜度**（CS-16）：版本注入 + 产物/源码时间比对；
 │                           `build.ps1` Step1 用 `--require` 调，旧产物一律拦下
