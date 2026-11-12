@@ -510,6 +510,37 @@ const AI_BLOCK = JSON.stringify({
       known.every(k => ['fixed', 'investigating', 'need-info', 'wontfix', ''].includes(k.status)),
       known.map(k => k.id + ':' + k.status).join(','));
 
+    // 🔴 不许宣布「还没发布的版本」。
+    //    这张表是机器人**唯一**的事实来源，"升级到 0.0.35 或更高版本"这句话会被它
+    //    原样贴进 issue。而 0.0.35 当时只是打好了包、还没上架 —— 用户根本升不了。
+    //    判据：fixed 条目声明的版本必须在 git tag 里存在（「0.0.30 起」取前面的版本号）。
+    //    反例：2026-11-12 发现 KI-002 写着 `fixed / 0.0.35`，而 manifest 才是 0.0.35、
+    //    tag 最新只到 v0.0.34 ⇒ 机器人已经在教用户升一个不存在的版本。
+    {
+      const shallow = (await runCmd('git', ['rev-parse', '--is-shallow-repository'])).out.trim() === 'true';
+      const released = shallow
+        ? []
+        : (await runCmd('git', ['tag', '-l'])).out.split('\n').map(s => s.trim()).filter(Boolean);
+
+      if (!released.length) {
+        // CI 的 checkout 是浅克隆，没有 tag —— 跳过而不是判红（否则常红没人看）。
+        // ⚠️ 跳过会被 selftest 的汇总行单独点名，不会混进"通过"里。
+        ok('声明版本是否为已发布版本（浅克隆/无 tag，跳过）', true, 'skipped');
+      } else {
+        const fixed = known.filter(k => k.status === 'fixed');
+        ok('fixed 条目都声明了版本（否则机器人无法给出升级指引）',
+          fixed.every(k => String(k.version || '').trim()),
+          fixed.filter(k => !String(k.version || '').trim()).map(k => k.id).join(',') || '无');
+
+        for (const k of fixed) {
+          // 「0.0.30 起」这种区间写法取前面的版本号；否则原样
+          const v = 'v' + String(k.version || '').trim().replace(/^v/, '').replace(/[^\d.].*$/, '');
+          ok(`${k.id} 声明的 ${k.version} 是**已发布**版本`, released.includes(v),
+            `找不到 ${v}；已发布的最新几个：[${released.slice(-3).join(', ')}]`);
+        }
+      }
+    }
+
     const withSha = known.filter(k => k.fixCommit);
     ok('至少一条 fixed 给出了修复提交', withSha.length >= 1, `${withSha.length} 条`);
 
@@ -527,6 +558,29 @@ const AI_BLOCK = JSON.stringify({
       const declared = 'v' + String(k.version).replace(/^v/, '');
       ok(`${k.id} 声明的 ${k.version} 确实包含该修复`, tags.includes(declared),
         `实际包含于 [${tags.join(', ') || '无 tag'}]`);
+    }
+
+    // 🔴 内部备注不许泄漏给用户。
+    //    事故形态：字段后面跟了一段 `> ⚠️ …` 的维护备注，解析器把它当成"跨行续写"
+    //    吞进正文 ⇒ 机器人把「这条以前写的是 …」原样贴进 issue 回复。
+    //    判据：行首 `>` 一律视为注释，遇到即在字段值处截断。
+    {
+      const synth = T.parseKnownIssues([
+        '## KI-900 合成用例',
+        '- **状态**: fixed',
+        '- **版本**: 0.0.33',
+        '- **说明**: 一句话说明。',
+        '- **处理建议**: 升级即可。',
+        '',
+        '  > ⚠️ 内部备注：这段绝不能出现在用户回复里。',
+        '',
+        '## KI-901 下一条',
+        '- **状态**: wontfix',
+      ].join('\n'));
+      ok('解析出两条（引用块不会被当成新条目或吃掉下一条）', synth.length === 2, `实际 ${synth.length} 条`);
+      ok('字段后的引用块不会被当成正文（内部备注不许泄漏）',
+        !/>|内部备注/.test(synth[0].advice), synth[0].advice);
+      ok('引用块之后的字段仍然完整', synth[0].advice.includes('升级即可'), synth[0].advice);
     }
   }
 
