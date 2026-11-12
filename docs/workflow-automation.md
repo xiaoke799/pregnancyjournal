@@ -115,7 +115,7 @@ git push origin master
 复跑：
 
 ```bash
-node tools/ci/selftest.js          # 130 项，约 3 秒
+node tools/ci/selftest.js          # 约 3 秒，项数看运行输出
 node tools/verify/gate.js          # 按改动选套件
 ```
 
@@ -164,7 +164,7 @@ node tools/verify/gate.js          # 按改动选套件
 | 评论贴不上 | 是不是 fork PR？日志里搜「发布失败」 |
 | 合并没发生 | 跑 `auto-merge.js --dry-run` 或看 job 日志里的 `✗ [code] 原因` |
 | 结论和预期不符 | 本地跑 `node tools/ci/pr-review.js --diff=<文件> --no-ai` 看硬检查怎么判的 |
-| 机器人自己坏了 | `node tools/ci/selftest.js`（130 项，约 3 秒） |
+| 机器人自己坏了 | `node tools/ci/selftest.js`（约 3 秒，项数看运行输出） |
 
 ## 十一、本地怎么测（不碰 GitHub）
 

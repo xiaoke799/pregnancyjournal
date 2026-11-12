@@ -397,29 +397,31 @@ function selectSuites() {
     }
   }
 
-  // ---- 文档一致性绊线：README 声明的「N 套 / M 项」必须与实际相符 ----
-  // 为什么设：这套数字已漂过两次（42/778 → 56/1220 → 57/1266），靠人记必漏，
-  //   而 README 是外部读者判断"这套回归有多大"的唯一依据。
+  // ---- 文档一致性绊线：README 声明的套数必须与实际相符 ----
+  // 为什么设：这套数字已漂过多次（42/778 → 56/1220 → 57/1266 → 83/1861 …），靠人记必漏。
+  // ⚠️ 2026-11-12 改口径：**项数不再写死**。
+  //    每加一条断言项数就变，本会话已经手工追了四次；而项数本来也只是"跑一次才知道"的值。
+  //    ⇒ 文档只声明套数（`83 套`），绊线只校验套数；项数如果还写着就只告警、不判死。
+  //    这既保留了"加/删套件必须同步文档"的约束，又去掉了反复漂移的根源（CS-13）。
   // ⚠️ 只在全量跑时检查：--only / --suite 的部分运行数字天然对不上。
-  //    2026-11-10 加 --suite 时差点漏改这里 ⇒ 只跑 5 套会被「文档写 N 套」绊红（CI 假红）。
-  // ⚠️ 套数不一致**计入退出码**；项数不一致只告警（环境缺浏览器时会有套件变 NO-SUMMARY，
-  //    那种情况下项数会少，属于环境噪音，不该判死）。
   if (!only && !suiteFilters.length) {
     const docs = [path.join(REPO, 'README.md'), path.join(V, 'README.md')];
-    const rx = /(\d+)\s*套\s*\/\s*约?\s*(\d+)\s*项/;
+    const rxSuite = /(\d+)\s*套/;
+    const rxPair = /(\d+)\s*套\s*\/\s*约?\s*(\d+)\s*项/;
     let docBad = 0;
     for (const f of docs) {
       if (!fs.existsSync(f)) continue;
-      const m = rx.exec(fs.readFileSync(f, 'utf-8'));
-      if (!m) { console.log(`⚠️ 文档声明：${path.relative(REPO, f)} 里找不到「N 套 / M 项」声明行（已跳过）`); continue; }
-      const [, suites, items] = m;
+      const txt = fs.readFileSync(f, 'utf-8');
+      const m = rxSuite.exec(txt);
+      if (!m) { console.log(`⚠️ 文档声明：${path.relative(REPO, f)} 里找不到「N 套」声明行（已跳过）`); continue; }
       const rel = path.relative(REPO, f);
-      if (Number(suites) !== SUITES.length) {
+      if (Number(m[1]) !== SUITES.length) {
         docBad++;
-        console.log(`🔴 文档声明不符：${rel} 写「${suites} 套」，实际 ${SUITES.length} 套 —— 请同步`);
+        console.log(`🔴 文档声明不符：${rel} 写「${m[1]} 套」，实际 ${SUITES.length} 套 —— 请同步`);
       }
-      if (Number(items) !== totalItems) {
-        console.log(`⚠️ 文档项数：${rel} 写「${items} 项」，本次实际 ${totalItems} 项（环境差异时可忽略，改过套件请同步）`);
+      const p = rxPair.exec(txt);
+      if (p && Number(p[2]) !== totalItems) {
+        console.log(`⚠️ 文档项数：${rel} 写「${p[2]} 项」，本次实际 ${totalItems} 项（项数会随断言增加，建议删掉）`);
       }
     }
     if (docBad) process.exitCode = 1;
