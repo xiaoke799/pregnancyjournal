@@ -279,18 +279,17 @@
 ## L-025 构建产物比源码旧，包就是旧的 —— 而打包脚本不会告诉你
 
 - **Seen**: 1×
-- **状态**: open（待硬化：需要一个"产物新鲜度"机检）
+- **状态**: PROMOTED → `docs/code-standards.md#CS-16`
 - **症状**: 21:41 构建前端 → 21:43 合入一个改前端的 commit → 21:45 打包。
   包里是 21:41 的产物，**新合入的前端修复完全没进去**；但 `build.ps1` 六步全绿、
   打印「打包并验证完成」、开包比对也能过 —— 因为比的是「包内 == 本地」，而两边都是旧的
 - **根因**: `build.ps1` 只**组装** stage，不重新构建前端；Step1 校验的是"源码完整性"
   （文件在不在、路由全不全），**不比对"产物是不是由当前源码构建的"**
-- **判据**: 打包前比两个时间，产物必须更新：
-  ```bash
-  stat -c %Y app/ui/index.html              # 产物构建时间
-  git log -1 --format=%ct -- frontend/src   # 最后一次前端改动的提交时间
-  ```
-  前者小于后者 ⇒ 先 `cd frontend && npm run build` 再打包。
+- **判据**: 两条同时满足 —— ① 产物里注入的版本号 == `manifest.version`；
+  ② 产物 mtime >= `frontend/src` 所有源码文件 mtime 的最大值。
+  **不要用 `git log --format=%ct`**：那是提交动作的时间，源码内容可能在 build 之前就改好了
+  （2026-11-12 实测：最后提交比产物 mtime 晚 17s，用它会稳定假红）。
+  护栏 `tools/verify/check_artifact_freshness.js --require` 已接进 `build.ps1` Step1。
   「包内 md5 == 本地 md5」**不能**证明产物新鲜 —— 它只证明打包过程没出错
 - **证据**: 2026-11-10 实测；开包 grep `pushed_at` 才发现包内 `SettingsView` 是旧的。
   重构建 + 重打包后，51 个产物 md5 仍未变（说明"md5 相等"这个判据本身也有盲区）

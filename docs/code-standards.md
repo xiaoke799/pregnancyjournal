@@ -142,6 +142,26 @@
 
 ---
 
+## CS-16 打包前必须证明「产物是由当前源码构建的」
+
+**规则**：`build.ps1` Step1 调 `check_artifact_freshness.js --require`，两条判据同时过才许打包：
+① 产物里注入的版本号 == `manifest.version`；② 产物 mtime >= `frontend/src` 所有源码文件 mtime 的最大值。
+脚本缺失 / node 缺失 / 判红 ⇒ **fail-closed 拦下**，不许静默跳过。
+时间判据用**源码文件 mtime**，不用 `git log --format=%ct`：后者是「提交动作」的时间，
+源码内容可能早在 build 之前就改好了（提交晚于构建会假红）。本地打包环境不会 checkout 刷新
+源码 mtime；CI 里没有 `app/ui`，脚本直接跳过（`--require` 只由 build.ps1 传）。
+
+**判据**：改完前端不 build 直接打包 ⇒ 必须红；build 之后 ⇒ 绿；产物带旧版本号 ⇒ 必须红；
+产物里找不到版本字符串 ⇒ 红（判不了就别放行）。
+**「包内 md5 == 本地 md5」不能当新鲜度证据** —— 两边都是旧的照样相等。
+
+**护栏**：`tools/verify/check_artifact_freshness.js`、`build.ps1` Step1 的调用、
+`selftest` K 段纯函数反例（旧版本 / 新旧混着 / 无版本 / 产物旧 / 无产物 / 提交时间干扰）
+
+**来源**：L-025
+
+---
+
 ## 修改本文件的口径
 
 - 加一条 ⇒ 必须同时给出**护栏**（脚本名或 `[人审]` + 人要看哪一眼）与**来源**（`L-NNN`）。

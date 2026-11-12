@@ -686,6 +686,28 @@ const AI_BLOCK = JSON.stringify({
     ok('分类器不再硬编码色号', !/d73a4a|a2eeef|d876e3/.test(tri));
   }
 
+  console.log('\n=== K. 产物新鲜度机检（L-025 硬化，纯函数反例） ===');
+  {
+    const { evaluate } = require('../verify/check_artifact_freshness');
+    const base = {
+      hasArtifact: true, require: true, manifestVersion: '0.0.35',
+      artifactVersions: ['0.0.35'], artifactMtime: 1000,
+      srcNewestMtime: 900, commitTime: 800, dirtyCount: 0,
+    };
+    const run = over => evaluate({ ...base, ...over });
+
+    ok('正常场景判通过', run().ok);
+    ok('产物仍是旧版本 ⇒ 红', !run({ artifactVersions: ['0.0.34'] }).ok);
+    ok('产物里新旧版本混着 ⇒ 红', !run({ artifactVersions: ['0.0.34', '0.0.35'] }).ok);
+    ok('产物里找不到版本 ⇒ 红（fail-closed）', !run({ artifactVersions: [] }).ok);
+    ok('产物比源码旧 ⇒ 红', !run({ artifactMtime: 899 }).ok);
+    ok('同一秒构建 ⇒ 绿（不假红）', run({ artifactMtime: 900 }).ok);
+    ok('无产物且非 --require ⇒ 跳过', run({ hasArtifact: false, require: false }).skipped);
+    ok('无产物但 --require ⇒ 红', !run({ hasArtifact: false, require: true }).ok);
+    ok('提交时间晚于产物但源码没变 ⇒ 绿（不受提交动作干扰）',
+      run({ commitTime: 5000, srcNewestMtime: 900 }).ok);
+  }
+
   fs.rmSync(TMP, { recursive: true, force: true });
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
   process.exit(fail ? 1 : 0);

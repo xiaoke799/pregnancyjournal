@@ -158,6 +158,23 @@ if (-not $AllowDirty -and (Test-Path (Join-Path $PkgDir ".git"))) {
         }
     } finally { Pop-Location }
 }
+# 🔴 前端产物新鲜度（L-025 硬化，2026-11-12）
+#    build.ps1 只**组装** stage，不重新构建前端。2026-11-10 出过真事故：
+#    21:41 build → 21:43 合入改前端的 commit → 21:45 打包，包里是旧产物，
+#    而六步全绿、开包 md5 比对也过（「包内 == 本地」两边都是旧的照样相等）。
+#    这里必须在打包前拦住，且脚本缺失时 fail-closed，不能静默跳过。
+$freshScript = Join-Path $PkgDir "tools\verify\check_artifact_freshness.js"
+if (-not (Test-Path $freshScript)) {
+    $errors += "缺少产物新鲜度护栏: tools/verify/check_artifact_freshness.js"
+} elseif (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    $errors += "找不到 node，无法做产物新鲜度检查"
+} else {
+    & node $freshScript --require
+    if ($LASTEXITCODE -ne 0) {
+        $errors += "前端产物不是由当前源码构建的 —— 先 cd frontend && npm run build（详见上方检查）"
+    }
+}
+
 if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Host "  [X] $_" -ForegroundColor Red }; throw "源码完整性校验失败" }
 Write-Host "  路由文件 $($routeFiles.Count) 个、静态数据、前端入口、网关配置 全部在位" -ForegroundColor Green
 
