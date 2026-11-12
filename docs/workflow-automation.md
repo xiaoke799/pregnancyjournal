@@ -371,26 +371,23 @@ node tools/ci/pr-review.js --diff=x.diff --no-ai \
 - **未验证**：GitHub Models 的真实多角度输出（本机无 `models: read`；
   用 `--no-ai` 跑的是硬检查层）。按项目铁律记为 `Not run`。
 
-## 十五、借鉴 magpie 的自动化经验（2026-11-12）
+## 十五、自动化的一次集中加固（2026-11-12）
 
-来源：本地 `C:/Users/X/Downloads/magpie-main/magpie-main`（**只读研究，未改动该仓库**）。
-它同样有 `AGENTS.md` / `LESSONS.md` / `docs/code-standards.md`，方法论与我们同源，
-但规模更大（LESSONS 68KB、8 个 workflow、每晚自动复盘当天提交）。
+这轮把几件"看起来配好了、其实从没被验证过"的东西做实了。下面按
+「做法 → 之前的状态 → 现在」记，别当成完成度清单 —— 本节最后一小节是明确没做的。
 
-### 对照：哪些值得学
-
-| magpie 的做法 | 我们现状 | 判断 |
+| 做法 | 之前的状态 | 现在 |
 |---|---|---|
-| **CI 注释绑定事故编号/次数/commit hash**（`test.yml` 里「apt 镜像卡了 2.5 小时 (b0d456c3)」「默认 10m 超时在 8 次里红了 3 次 (#2108)」） | 注释写了「为什么」，但很少带具体锚点 | ✅ **本次落地**（5 个 workflow 都挂了 L-0xx 锚点） |
-| **harm-first**：社区 PR 先查外发/执行面再谈审查（`docs/contributors.md`） | 只有高危路径 + 密钥扫描 | ✅ **本次落地** |
-| 顶层 `permissions: {}` + 每个 job 单独最小权限；「能写的不跑 PR 代码，跑 PR 代码的不给写」（`ui-preview.yml`） | 顶层统一声明，单 job | ✅ **本次落地**（并因此查出 `/merge` 恒 403，见 L-028） |
-| **8/8 workflow 都有 `workflow_dispatch`** | 4/5（只有 assistant 没有 —— 它依赖 issue/评论 payload，手动触发没有 payload，不适用） | 已齐 |
-| 每个易卡 step 都有 `timeout-minutes` | 部分 job 有 | 低风险，值得补齐 |
-| 验收要求「反例必须是真 `FAIL` 且点名行为，**编译错误/跳过不算**」「说清每个检查打印了什么」 | 有 Red Check，但没这么严格 | 值得写进 `review-protocol.md` |
-| 「跑 `./...` 而不是自以为相关的包」——**护栏住在没被改的包里** | `gate.js` 按 diff 选套件 | ⚠️ 有张力：CI static 层每跑 selftest 兜住了，但值得显式写明 |
-| 产物 sha256 写进代码、运行时自检（`internal/pii` pin `pf-serve` 的校验和） | 打包时人工开包 md5 比对 + 新鲜度机检 | 更进一步，暂不照搬（我们是单包 fpk） |
-| LESSONS 有 `<!-- reviewed-through: <commit> -->` 游标、**按主题分节**、Seen 按**天**计、3 天转正、有归档节 | 按 `L-NNN` 平铺、Seen 按次数 | 28 条还能用；到 50+ 条要改组织方式 |
-| 定时补偿任务靠**内容标记**幂等（`notes-mirror.yml` 用 `<!-- lang:zh -->` 判断是否已镜像） | `security-audit` 靠"已有未关 issue"幂等 | 思路一致，可互换 |
+| **CI 注释里带上事故锚点**（提交号 / 运行号 / 踩坑次数） | 注释写了「为什么」，但很少带具体锚点 | ✅ 已落地（5 个 workflow 都挂了 L-0xx 锚点） |
+| **harm-first**：先查外发/执行面，再谈代码质量 | 只有高危路径 + 密钥扫描 | ✅ 已落地 |
+| 顶层 `permissions: {}` + 逐 job 最小权限；「能写的不跑 PR 代码，跑 PR 代码的不给写」 | 顶层统一声明，单 job | ✅ 已落地（并因此查出 `/merge` 恒 403，见 L-028） |
+| 每个 workflow 都能手动触发（`workflow_dispatch`） | 4/5（assistant 依赖 issue/评论 payload，手动触发没有 payload，不适用） | 已齐 |
+| 每个易卡 step 都有 `timeout-minutes` | 部分 job 有 | ✅ 已补三个易卡 step |
+| 验收要求「反例必须是真 `FAIL` 且点名行为，编译错误/跳过不算」 | 有 Red Check，但没这么严格 | ✅ 已写进 `review-protocol.md` |
+| 「跑全量而不是自以为相关的包」——**护栏住在没被改的包里** | `gate.js` 按 diff 选套件 | ⚠️ 有张力：CI static 层每跑 selftest 兜住了 |
+| 产物 sha256 写进代码、运行时自检 | 打包时人工开包 md5 比对 + 新鲜度机检 | 暂不照搬（我们是单包 fpk） |
+| LESSONS 带 `reviewed-through` 游标、按主题分节、Seen 按天计 | 按 `L-NNN` 平铺、Seen 按次数 | 29 条还能用；到 50+ 条再改组织方式 |
+| 定时任务靠**内容标记**幂等（而不是靠状态猜测是否已处理） | `security-audit` 靠"已有未关 issue"幂等 | 思路一致，可互换 |
 
 ### 本次落地：harm-first
 
@@ -403,7 +400,7 @@ node tools/ci/pr-review.js --diff=x.diff --no-ai \
 
 命中 ⇒ `decide()` 直接判 **needs-human**（优先级仅次于高危路径），
 报告有「🚨 先确认伤害面」专节给出文件行号与命中片段。
-理由和 magpie 一致：**误报只多点一次确认，漏报是凭据外发或执行未审代码**。
+理由很简单：**误报只多点一次确认，漏报是凭据外发或执行未审代码**。
 
 `selftest` O 段 13 条断言（可疑 PR 判人审、干净 PR 不误报）。
 
@@ -439,7 +436,7 @@ job 都会白拿它 —— 而他只是在想"加个测试"，不会去想"我�
 pr-review ← L-021/L-022/L-023/L-027；auto-merge ← L-027；verify ← L-026；
 assistant ← L-028；security-audit ← 三道门禁装好当天就自查历史。
 
-理由和 magpie 一样：**规则会随人忘，锚点不会**。半年后有人想"这行注释真啰嗦，删了吧"，
+理由很简单：**规则会随人忘，锚点不会**。半年后有人想"这行注释真啰嗦，删了吧"，
 只要旁边写着「这是 L-026，删了下次跨平台路径又静默失效」，他会先去看一眼那条。
 
 **Red Check 口径**。`docs/review-protocol.md` 补了最容易被忽略的一类「无效红」：**被跳过**。
@@ -464,7 +461,7 @@ assistant ← L-028；security-audit ← 三道门禁装好当天就自查历史
 
 ### 暂未落地（按优先级，别当成已完成）
 
-1. LESSONS 到 50 条时改按主题分节 + 加 `reviewed-through` 游标（现在 28 条，平铺还够用）
+1. LESSONS 到 50 条时改按主题分节 + 加 `reviewed-through` 游标（现在 29 条，平铺还够用）
 2. 分离式 preflight workflow：不起模型、不贴评论，只验证 workflow 接线本身
    （目前只能靠真触发，而 PAT 没有 `Actions: write`，点不动 `Run workflow`）
-3. 产物 sha256 运行时自检（magpie 是单二进制，我们是单包 fpk，先不照搬）
+3. 产物 sha256 运行时自检（我们是单包 fpk，收益不如多一道新鲜度校验，先不做）

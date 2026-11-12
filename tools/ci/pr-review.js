@@ -531,8 +531,7 @@ function decide(hard, ai) {
   if (hard.highRisk.length) {
     return { verdict: 'needs-human', reason: `触碰 ${hard.highRisk.length} 处高危路径` };
   }
-  // harm-first（借鉴 magpie docs/contributors.md「Look for harm first」）：
-  // 在评价"这段代码写得好不好"之前，先让维护者确认它有没有越过声明的目标。
+  // harm-first：在评价"这段代码写得好不好"之前，先让维护者确认它有没有越过声明的目标。
   // 误报的代价只是多点一次确认；漏报的代价是凭据外发或运行时执行未审代码。
   if (hard.harm && hard.harm.length) {
     return { verdict: 'needs-human', reason: `发现 ${hard.harm.length} 处需人工确认的伤害面（新外发地址 / 动态执行 / 编码 blob / 新依赖）` };

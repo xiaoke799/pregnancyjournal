@@ -1,4 +1,4 @@
-# 借鉴 magpie 的 config.yml：空白 issue 仍允许（有些反馈不适合塞进表单），
+# 空白 issue 仍允许（有些反馈不适合塞进表单），
 # 但把「先查已知问题」和「怎么读日志」放在最显眼的位置。
 blank_issues_enabled: true
 contact_links:

@@ -1,5 +1,5 @@
 # 问题报告 / Bug report
-# 借鉴 magpie 的 .github/ISSUE_TEMPLATE：把「我们不得不追问的字段」变成必填。
+# 把「我们不得不追问的字段」变成必填。
 # 起因：issue #1/#3 都因为缺版本号与复现步骤，来回问了两轮才定位。
 name: 问题报告
 description: 应用打不开、功能不对、数据异常等

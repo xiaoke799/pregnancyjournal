@@ -610,7 +610,7 @@ const AI_BLOCK = JSON.stringify({
         uses.join(', '));
     }
 
-    // ---- 权限：顶层全无，逐 job 授予（借鉴 magpie：能写的不跑 PR 代码，跑 PR 代码的不给写）----
+    // ---- 权限：顶层全无，逐 job 授予（能写的不跑 PR 代码，跑 PR 代码的不给写）----
     // 为什么必须机器查：顶层 permissions 是所有 job 的默认值，只要这里有一条 write，
     // 以后**任何人**新加的 job 都会白拿它 —— 而他只是在想"加个测试"。这种权限
     // 扩散在 review 里几乎看不出来（diff 只有一行 `+  new-job:`），只能靠断言守。
@@ -758,9 +758,9 @@ const AI_BLOCK = JSON.stringify({
     ok('node_modules 跳过', S.scanDiff(['+++ b/node_modules/a.js', '@@ -1 +1 @@', '+x'].join('\n')).length === 0);
     ok('二进制扩展名跳过', S.scanDiff(['+++ b/a.png', '@@ -1 +1 @@', '+x'].join('\n')).length === 0);
 
-    // 按形状豁免的规则，必须用「最像被放行物的真值」来测（借鉴 magpie LESSONS
-    // 「An exemption by shape is tested with the real secret that looks most like
-    //   what it lets through」）。我们的豁免是「连续 8 个相同字符 / 全 0」——
+    // 按形状豁免的规则，必须用「最像被放行物的真值」来测：
+    // 如果豁免条件是"看起来像假的"，那唯一能证明它安全的方式，就是拿一个
+    // 长得很像真密钥、但确实是假的值去撞。我们的豁免是「连续 8 个相同字符 / 全 0」——
     // 真密钥的熵不可能长这样，但要用高熵随机串反向证明它没被误豁免。
     const rnd = require('crypto').randomBytes(24).toString('hex');   // 48 位 hex，非密钥格式
     ok('全 0 UUID 判为假', S.obviouslyFake('00000000-0000-0000-0000-000000000000') === true);
@@ -907,7 +907,7 @@ const AI_BLOCK = JSON.stringify({
     ok('脚本认 PJ_DRY_RUN 环境变量',
       /PJ_DRY_RUN/.test(fs.readFileSync(path.join(REPO, 'tools/ci/auto-merge.js'), 'utf8')));
 
-    // issue 模板：把「我们不得不追问的字段」变成必填（借鉴 magpie）
+    // issue 模板：把「我们不得不追问的字段」变成必填
     const tplPath = path.join(REPO, '.github/ISSUE_TEMPLATE/bug_report.yml');
     ok('issue 模板存在', fs.existsSync(tplPath));
     if (fs.existsSync(tplPath)) {
@@ -997,7 +997,7 @@ const AI_BLOCK = JSON.stringify({
     ok('模型缺席时明说未运行而不是"通过"', /未运行/.test(t) && /不等于全面通过/.test(t));
   }
 
-  console.log('\n=== O. harm-first：先查伤害面（借鉴 magpie contributors.md） ===');
+  console.log('\n=== O. harm-first：先查伤害面 ===');
   {
     const { scanHarm, isAllowedHost } = require('./harm-scan');
     const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
