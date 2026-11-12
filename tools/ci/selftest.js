@@ -765,6 +765,57 @@ const AI_BLOCK = JSON.stringify({
     ok('isDraft 原样传递', toPr({ ...raw, isDraft: true }).draft === true);
   }
 
+  console.log('\n=== N. 多角度 + 多评论审查 ===');
+  {
+    const A = require('./review-angles');
+    const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
+
+    ok('6 个审查角度且 id 唯一',
+      A.ANGLES.length === 6 && new Set(A.ANGLES.map(a => a.id)).size === 6);
+    ok('高危路径/密钥归「安全」',
+      A.angleOf('high-risk-path') === 'security' && A.angleOf('secret-leak') === 'security');
+    ok('提交信息归「文档与一致性」', A.angleOf('commit-message') === 'consistency');
+    ok('未知 code 回退「正确性」，不静默丢项', A.angleOf('brand-new') === 'correctness');
+
+    const g = A.groupByAngle([{ angle: 'security', n: 1 }, { angle: '不存在', n: 2 }]);
+    ok('分组时未知角度的项落到正确性而非丢弃',
+      g.get('security').length === 1 && g.get('correctness').length === 1);
+
+    const r1 = A.compareRounds([], ['a', 'b']);
+    ok('首轮标记 first=true（不把正常审查说成新增）', r1.first === true);
+    const r2 = A.compareRounds(['a', 'b'], ['b', 'c']);
+    ok('多轮对比能分出已解决/仍存在/新增',
+      r2.first === false && r2.resolved.join() === 'a' && r2.persistent.join() === 'b' && r2.added.join() === 'c');
+
+    const norm = A.normalizeAiIssues([
+      { angle: 'security', severity: 'warn', file: 'a.js', why: 'x', evidence: 'e', fix: 'f' },
+    ]);
+    ok('模型 issue 保留角度并统一形状', norm[0].angle === 'security' && norm[0].source === 'ai' && !!norm[0].hint);
+    ok('模型 issue 角度非法时回退', A.normalizeAiIssues([{ angle: '乱写' }])[0].angle === 'correctness');
+
+    // 端到端：本地 diff 模式，模拟"上一轮已经提过 a,b"
+    const dp = path.join(TMP, 'n1.diff');
+    fs.writeFileSync(dp, 'diff --git a/.github/workflows/x.yml b/.github/workflows/x.yml\n' +
+      '--- a/.github/workflows/x.yml\n+++ b/.github/workflows/x.yml\n@@ -1 +1 @@\n+name: x\n');
+    const baseArgs = ['--diff=' + dp, '--title=t', '--commits=随便写的提交信息',
+      '--prev-codes=high-risk-path,old-issue', '--prev-verdict=changes', '--no-ai'];
+
+    const jr = await runReview([...baseArgs, '--json']);
+    const d = parse(jr.out);
+    ok('JSON 里每条硬检查都有 angle', d && d.issues.every(i => i.angle));
+    ok('JSON 里给出 6 个角度的统计', d && d.angles.length === 6);
+    ok('JSON 里带多轮对比', d && d.rounds && d.rounds.first === false);
+
+    const tr = await runReview(baseArgs);
+    const t = tr.out;
+    ok('报告有角度覆盖表', /审查角度覆盖/.test(t));
+    ok('报告按角度分节', /### 🔒 安全/.test(t) && /### 📋 文档与一致性/.test(t));
+    ok('报告有多轮对比', /与上轮对比/.test(t) && /已解决/.test(t));
+    ok('报告写出隐藏 codes/verdict 标记',
+      /<!-- pj-bot:codes:/.test(t) && /<!-- pj-bot:verdict:/.test(t));
+    ok('模型缺席时明说未运行而不是"通过"', /未运行/.test(t) && /不等于全面通过/.test(t));
+  }
+
   fs.rmSync(TMP, { recursive: true, force: true });
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
   process.exit(fail ? 1 : 0);
