@@ -180,3 +180,44 @@ node tools/ci/issue-triage.js --title="催奶食谱只有猪蹄系列能显示"
 # 机器人自身的回归
 node tools/ci/selftest.js
 ```
+
+## 十二、运维工具（2026-11-12）
+
+这套东西"配好了"和"真的能跑"之间有差距，所以用两个工具把差距变成可查询的清单。
+
+```bash
+node tools/ci/bootstrap-labels.js --list    # 纯离线：看标签真源，不需要 token
+node tools/ci/bootstrap-labels.js --dry-run # 列将创建什么，不写
+node tools/ci/bootstrap-labels.js           # 幂等创建缺失标签
+node tools/ci/health.js                     # 巡检：workflow 运行 / 标签 / 开放项
+node tools/ci/health.js --strict            # 标签缺失 ⇒ exit 1
+```
+
+**标签唯一真源是 `tools/ci/labels.js`**（CS-03）。原先色号散在 `pr-review.js`、
+`issue-triage.js`、`security-audit.yml` 三处，改一处忘两处是必然的。
+现在机器人、分类器、定时审计都从它读；`automerge` 标着 `owner: human`，
+**机器人任何路径都不会给 issue/PR 添加它**，bootstrap 只创建标签定义。
+
+### 一次真实体检的结果（2026-11-12）
+
+体检前：5 个 workflow 已注册，但 `pr-review` / `auto-merge` / `security-audit`
+**从未运行**；仓库里 **10 个标签一个都没有**。跑完 `bootstrap-labels.js` 后 10/10 齐全。
+
+"从未运行"不一定是故障 —— 那三个的触发条件（新 PR / 定时）本来就还没到。
+但**标签缺失是真缺口**：审查结论靠 `review:*` 落地、自动合并靠 `automerge` 授权，
+标签不存在时机器人每次都要临时创建，fork PR 的只读 token 还创建不了。
+
+### 🔴 顺带挖出的重大缺陷（L-027）
+
+核对全部 11 处 GitHub 写调用时发现 **8 处传错了请求体**：
+`makeClient.request()` 第三参数是**配置对象** `{ body: {...} }`，
+调用者却当成请求体直接传。结果 PATCH 关 issue 发出空 body（返回 200 但什么都没改）、
+POST 发评论发出 JSON 字符串（422）。**这些脚本从没真跑过，所以一直没暴露。**
+
+现在有三层挡着：
+1. `gh.js` 对未知 config 字段 / 非对象 body **当场抛 `TypeError`**，不再静默发空请求
+2. `selftest` I 段用 **离线 mock fetch** 断言每种写调用真正发出的 body（不依赖 token）
+3. 静态护栏扫 `tools/ci/*.js`，禁止历史误用写法
+
+**教训**：`node --check` 通过 ≠ 能跑；新增写调用必须至少真跑一次，
+或者用 mock 证明它发出的东西是对的。

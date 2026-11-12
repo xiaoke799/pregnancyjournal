@@ -7,6 +7,15 @@
 const DEFAULT_API = 'https://api.github.com';
 
 /**
+ * request 第三参数只允许这些配置键。
+ * 🔴 这个断言是 2026-11-12 加的：当时 8 处写调用把「请求体」直接当第三参数传
+ *    （`{ state: 'closed' }`、`{ body: comment }`），结果 POST/PATCH **发出空 body**，
+ *    GitHub 要么 422、要么 200 但什么都没改 —— 而脚本从没真跑过，一直没暴露。
+ *    有了这道防呆，写错会当场抛异常，而不是"看起来成功了"。
+ */
+const CONFIG_KEYS = new Set(['body', 'accept', 'raw', 'timeoutMs']);
+
+/**
  * @param {object} o
  * @param {string} o.token   GITHUB_TOKEN 或 PAT
  * @param {string} o.repo    owner/repo
@@ -16,7 +25,23 @@ function makeClient({ token, repo, api = DEFAULT_API }) {
   if (!token) throw new Error('缺少 token');
   if (!repo || !/^[^/]+\/[^/]+$/.test(repo)) throw new Error(`repo 格式应为 owner/repo，收到：${repo}`);
 
-  async function request(method, p, { body, accept = 'application/vnd.github+json', raw = false, timeoutMs = 30_000 } = {}) {
+  async function request(method, p, opts = {}) {
+    // 防呆 ①：第三参数是配置对象，不是请求体
+    const stray = Object.keys(opts).filter(k => !CONFIG_KEYS.has(k));
+    if (stray.length) {
+      throw new TypeError(
+        `gh.request 第三参数是配置对象，不支持字段 [${stray.join(', ')}]；` +
+        `请求体请写成 { body: { ... } }（${method} ${p}）`
+      );
+    }
+    // 防呆 ②：body 必须是对象，不能是裸字符串（会被 JSON.stringify 成一个 JSON 字符串）
+    if (opts.body !== undefined && (typeof opts.body !== 'object' || opts.body === null)) {
+      throw new TypeError(
+        `gh.request 的 body 必须是对象，收到 ${typeof opts.body}；` +
+        `发评论要写 { body: { body: text } }，不是 { body: text }（${method} ${p}）`
+      );
+    }
+    const { body, accept = 'application/vnd.github+json', raw = false, timeoutMs = 30_000 } = opts;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {

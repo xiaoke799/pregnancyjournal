@@ -571,11 +571,9 @@ function renderReport(ctx, hard, ai, decision) {
 // ---------------------------------------------------------------------------
 // 四、发布：贴/更新评论、打标签
 // ---------------------------------------------------------------------------
-const LABELS = {
-  pass: { add: 'review:pass', remove: ['review:changes', 'review:needs-human'] },
-  changes: { add: 'review:changes', remove: ['review:pass', 'review:needs-human'] },
-  'needs-human': { add: 'review:needs-human', remove: ['review:pass', 'review:changes'] },
-};
+// 标签定义统一从 tools/ci/labels.js 取（唯一真源，CS-03）
+const { VERDICT_LABELS, COLORS: LABEL_COLORS, HUMAN_ONLY } = require('./labels');
+const LABELS = VERDICT_LABELS;
 
 /**
  * 找机器人自己发过的那条评论（靠 marker 识别）。
@@ -609,24 +607,33 @@ async function applyLabels(pr, verdict) {
   const have = new Set((current || []).map(l => l.name));
 
   // 缺的标签先建（403 时忽略：可能是 fork PR 的只读 token）
+  // ⚠️ 但不能"静默"：创建失败必须留下痕迹，否则报告里那句"标签已同步"就是假的。
+  //    `automerge` 是人工授权载体，机器人任何路径都不能碰（HUMAN_ONLY）。
+  const labelWarnings = [];
   for (const name of [spec.add, ...spec.remove]) {
+    if (HUMAN_ONLY.includes(name)) continue;
     if (!have.has(name)) {
       try {
         await gh('POST', `/repos/${REPO}/labels`, {
-          name, color: name === 'review:pass' ? '0e8a16' : name === 'review:changes' ? 'd93f0b' : 'fbca04',
+          name,
+          color: LABEL_COLORS[name] || 'ededed',
           description: 'pj-bot 审查结论',
         });
-      } catch (e) { /* 已存在或无权限 */ }
+      } catch (e) {
+        labelWarnings.push(`创建标签 \`${name}\` 失败：${String(e.message || e).slice(0, 120)}`);
+      }
     }
   }
   for (const name of spec.remove) {
     if (have.has(name)) {
-      try { await gh('DELETE', `/repos/${REPO}/issues/${pr}/labels/${encodeURIComponent(name)}`); } catch (e) { }
+      try { await gh('DELETE', `/repos/${REPO}/issues/${pr}/labels/${encodeURIComponent(name)}`); }
+      catch (e) { labelWarnings.push(`移除标签 \`${name}\` 失败：${String(e.message || e).slice(0, 120)}`); }
     }
   }
   if (!have.has(spec.add)) {
     await gh('POST', `/repos/${REPO}/issues/${pr}/labels`, { labels: [spec.add] });
   }
+  return labelWarnings;
 }
 
 // ---------------------------------------------------------------------------
@@ -660,8 +667,12 @@ async function applyLabels(pr, verdict) {
   if (ctx.source === 'github' && !DRY) {
     try {
       const action = await upsertComment(ctx.number, report);
-      await applyLabels(ctx.number, decision.verdict);
-      console.error(C.dim(`  评论已${action === 'created' ? '发布' : '更新'}，标签已同步`));
+      const labelWarnings = (await applyLabels(ctx.number, decision.verdict)) || [];
+      console.error(C.dim(`  评论已${action === 'created' ? '发布' : '更新'}`));
+      for (const w of labelWarnings) console.error(C.yellow(`  ⚠ ${w}`));
+      console.error(labelWarnings.length
+        ? C.yellow(`  标签同步有 ${labelWarnings.length} 项异常 —— 结论以评论为准，别只看标签`)
+        : C.dim('  标签已同步'));
     } catch (e) {
       // fork PR 的 GITHUB_TOKEN 是只读的：贴不上评论不算审查失败，但不能假装成功
       console.error(C.yellow(`  ⚠️ 发布失败（${e.message}）—— 审查结论仍然有效，只是没能贴到 PR 上`));

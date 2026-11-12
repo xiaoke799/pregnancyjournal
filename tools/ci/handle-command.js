@@ -85,13 +85,13 @@ function runNode(script, args, env = {}) {
   if (!ALLOWED.has(assoc)) {
     console.log(C.yellow(`拒绝：${p.comment.user?.login} 的 association=${assoc}`));
     try {
-      await gh.request('POST', `/repos/${REPO}/issues/comments/${p.comment.id}/reactions`, { content: '-1' });
+      await gh.request('POST', `/repos/${REPO}/issues/comments/${p.comment.id}/reactions`, { body: { content: '-1' } });
     } catch (e) { /* 反应失败无所谓 */ }
     return;
   }
 
   const reply = async text => {
-    await gh.request('POST', `/repos/${REPO}/issues/${num}/comments`, { body: text });
+    await gh.request('POST', `/repos/${REPO}/issues/${num}/comments`, { body: { body: text } });
   };
 
   switch (cmd) {

@@ -102,7 +102,7 @@ function targets() {
       if (comment) {
         if (DRY) console.log(C.dim(`    将发布 ${comment.length} 字符的说明`));
         else {
-          await gh.request('POST', `/repos/${REPO}/issues/${n}/comments`, { body: comment });
+          await gh.request('POST', `/repos/${REPO}/issues/${n}/comments`, { body: { body: comment } });
           console.log(C.green('    ✓ 已发布说明'));
         }
       }
@@ -110,7 +110,7 @@ function targets() {
       if (DRY) {
         console.log(C.dim(`    将置为 closed（${REASON}）`));
       } else {
-        await gh.request('PATCH', `/repos/${REPO}/issues/${n}`, { state: 'closed', state_reason: REASON });
+        await gh.request('PATCH', `/repos/${REPO}/issues/${n}`, { body: { state: 'closed', state_reason: REASON } });
         console.log(C.green(`    ✓ 已关闭（${REASON}）`));
       }
       ok++;

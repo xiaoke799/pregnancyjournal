@@ -598,6 +598,94 @@ const AI_BLOCK = JSON.stringify({
     ok('二进制扩展名跳过', S.scanDiff(['+++ b/a.png', '@@ -1 +1 @@', '+x'].join('\n')).length === 0);
   }
 
+  console.log('\n=== I. GitHub API 写调用契约（离线 mock，不联网） ===');
+  {
+    const { makeClient } = require('./gh');
+    const realFetch = global.fetch;
+    const calls = [];
+    let status = 200;
+    global.fetch = async (url, opts) => {
+      calls.push({ url, opts });
+      return { ok: status < 400, status, text: async () => JSON.stringify({ ok: true }) };
+    };
+    const gh = makeClient({ token: 'dummy', repo: 'o/r' });
+
+    const expectThrow = async (fn, why) => {
+      const before = calls.length;
+      let threw = false;
+      try { await fn(); } catch (e) { threw = e instanceof TypeError || /请求体|body/.test(String(e.message)); }
+      ok(why, threw && calls.length === before, `threw=${threw} 新增请求=${calls.length - before}`);
+    };
+
+    try {
+      // ① 正确形态：body 是对象，原样 JSON 序列化
+      await gh.request('POST', '/repos/o/r/issues/1/comments', { body: { body: 'hi' } });
+      const sent = JSON.parse(calls[0].opts.body);
+      ok('正确请求体原样发出', sent.body === 'hi', JSON.stringify(sent));
+      ok('带 Bearer 认证头', /Bearer dummy/.test(calls[0].opts.headers.Authorization));
+
+      // ② 两种历史误用必须当场拒绝，且不能发出请求
+      await expectThrow(
+        () => gh.request('POST', '/repos/o/r/issues/1/comments', { body: '裸字符串' }),
+        'body 为字符串 ⇒ 防呆拒绝且不发请求');
+      await expectThrow(
+        () => gh.request('PATCH', '/repos/o/r/issues/1', { state: 'closed' }),
+        '请求体字段当配置 ⇒ 防呆拒绝且不发请求');
+
+      // ③ 无 body 的 DELETE 仍可用
+      await gh.request('DELETE', '/repos/o/r/git/refs/heads/x', {});
+      ok('无 body 的 DELETE 正常', calls.length === 2 && calls[1].opts.body === undefined);
+
+      // ④ 错误响应抛出带 status 的 Error
+      status = 422;
+      let err = null;
+      try { await gh.request('POST', '/repos/o/r/labels', { body: { name: 'x' } }); } catch (e) { err = e; }
+      ok('422 抛出带 status 的 Error', !!err && err.status === 422, String(err && err.message));
+      status = 200;
+    } finally {
+      global.fetch = realFetch;
+    }
+
+    // ⑤ 静态护栏：源码里不许再出现那两种历史写法
+    const ciDir = path.join(REPO, 'tools', 'ci');
+    const BAD = [
+      { re: /request\('(?:POST|PATCH|PUT)',\s*[^,]+,\s*\{\s*(?:state|labels|content|name|color)\s*:/,
+        why: '请求体字段直接当配置传' },
+      { re: /request\('(?:POST|PATCH|PUT)',\s*[^,]+,\s*\{\s*body:\s*(?:`|'|")/,
+        why: 'body 传了字符串字面量' },
+      { re: /request\('(?:POST|PATCH|PUT)',\s*[^,]+,\s*\{\s*body:\s*(?:comment|text|r\.body)\s*\}/,
+        why: 'body 传了字符串变量' },
+    ];
+    const offenders = [];
+    // 排除 selftest.js 自己：它上面就故意写着两种错误形态当反例，扫它会自己告自己
+    for (const f of fs.readdirSync(ciDir).filter(x => x.endsWith('.js') && x !== 'selftest.js')) {
+      const src = fs.readFileSync(path.join(ciDir, f), 'utf8');
+      for (const b of BAD) if (b.re.test(src)) offenders.push(`${f}: ${b.why}`);
+    }
+    ok('源码里没有历史误用写法', offenders.length === 0, offenders.join(' / '));
+  }
+
+  console.log('\n=== J. 标签单一真源 ===');
+  {
+    const L = require('./labels');
+    const names = Object.keys(L.LABELS);
+    ok('标签清单 >= 10 条', names.length >= 10, String(names.length));
+    ok('颜色都是 6 位 hex',
+      names.every(n => /^[0-9a-f]{6}$/i.test(L.LABELS[n].color)));
+    ok('automerge 是唯一的人工标签',
+      L.HUMAN_ONLY.length === 1 && L.HUMAN_ONLY[0] === 'automerge', L.HUMAN_ONLY.join(','));
+    ok('三种审查结论都能映射到真实标签',
+      Object.values(L.VERDICT_LABELS).every(v => names.includes(v.add) && v.remove.every(r => names.includes(r))));
+    ok('COLORS 与 LABELS 一一对应',
+      names.every(n => L.COLORS[n] === L.LABELS[n].color));
+
+    // 机器人源码里不许再写死色号（CS-03）
+    const pr = fs.readFileSync(path.join(REPO, 'tools/ci/pr-review.js'), 'utf8');
+    const tri = fs.readFileSync(path.join(REPO, 'tools/ci/issue-triage.js'), 'utf8');
+    ok('审查器不再硬编码色号', !/0e8a16|d93f0b|fbca04/.test(pr));
+    ok('分类器不再硬编码色号', !/d73a4a|a2eeef|d876e3/.test(tri));
+  }
+
   fs.rmSync(TMP, { recursive: true, force: true });
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
   process.exit(fail ? 1 : 0);

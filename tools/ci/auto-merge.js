@@ -246,9 +246,9 @@ async function main() {
 
   try {
     await gh.request('POST', `/repos/${repo}/issues/${prNumber}/comments`, {
-      body: `已自动合并（${MERGE_METHOD}）为 \`${res.sha?.slice(0, 7)}\`。\n\n` +
+      body: { body: `已自动合并（${MERGE_METHOD}）为 \`${res.sha?.slice(0, 7)}\`。\n\n` +
         `判定依据：\`${REQUIRED_LABEL}\` + \`${PASS_LABEL}\` + 检查全绿 + 不含高危路径。\n` +
-        `<sub>由 tools/ci/auto-merge.js 执行</sub>`,
+        `<sub>由 tools/ci/auto-merge.js 执行</sub>` },
     });
   } catch (e) { /* 评论失败不影响合并结果 */ }
 }

@@ -228,10 +228,8 @@ function renderReply({ issue, kind, matches, lang = 'zh' }) {
 // ---------------------------------------------------------------------------
 // 四、发布
 // ---------------------------------------------------------------------------
-const LABEL_COLORS = {
-  'kind/bug': 'd73a4a', 'kind/enhancement': 'a2eeef', 'kind/question': 'd876e3',
-  'triage/auto': 'ededed', 'known-issue': 'fbca04',
-};
+// 标签颜色来自唯一真源 tools/ci/labels.js（CS-03：列表型功能不许有第二份清单）
+const { COLORS: LABEL_COLORS } = require('./labels');
 
 async function main() {
   const known = parseKnownIssues(fs.readFileSync(KI_FILE, 'utf8'));
@@ -280,18 +278,18 @@ async function main() {
   const lang = detectLang(text);
   const r = renderReply({ issue, kind, matches, lang });
 
-  await gh.request('POST', `/repos/${REPO}/issues/${num}/comments`, { body: r.body });
+  await gh.request('POST', `/repos/${REPO}/issues/${num}/comments`, { body: { body: r.body } });
 
   // 打标签：先确保存在
   for (const name of r.labels) {
     try {
       await gh.request('POST', `/repos/${REPO}/labels`, {
-        name, color: LABEL_COLORS[name] || 'ededed', description: 'pj-bot 自动分类',
+        body: { name, color: LABEL_COLORS[name] || 'ededed', description: 'pj-bot 自动分类' },
       });
     } catch (e) { /* 已存在 */ }
   }
   try {
-    await gh.request('POST', `/repos/${REPO}/issues/${num}/labels`, { labels: r.labels });
+    await gh.request('POST', `/repos/${REPO}/issues/${num}/labels`, { body: { labels: r.labels } });
   } catch (e) {
     console.log(C.yellow(`  标签未加上（${e.message}）`));
   }

@@ -42,7 +42,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh label create security --color b60205 --description "安全审计" 2>/dev/null || true
+          # 色号/说明从唯一真源读，避免和 tools/ci/labels.js 各写一份（CS-03）
+          color=$(node -e "console.log(require('./tools/ci/labels').COLORS.security)")
+          gh label create security --color "$color" --description "每周全历史密钥审计发现" 2>/dev/null || true
 
           existing=$(gh issue list --label security --state open --limit 1 --json number --jq '.[0].number // empty')
           if [ -n "$existing" ]; then
