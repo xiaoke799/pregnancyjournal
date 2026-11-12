@@ -177,9 +177,43 @@ node tools/ci/pr-review.js --diff=/tmp/pr.diff --title="fix: 时区" --no-ai
 # 试回复（看机器人会说什么，不会发出去）
 node tools/ci/issue-triage.js --title="催奶食谱只有猪蹄系列能显示"
 
-# 机器人自身的回归
+# 机器人自身的回归（纯函数层）
 node tools/ci/selftest.js
+
+# 斜杠命令的离线端到端（起假 GitHub API，跑真实子进程）
+node tools/ci/e2e-command.js
 ```
+
+### 离线端到端：为什么必须单独有一套
+
+`selftest` 测的是**纯函数**：判定方向、降级路径、请求体形状。它证明不了
+「`/merge` 这条命令真跑起来会不会合并」—— 而这条链路做的是**写操作**（合并 + 删分支），
+并且它在真实仓库上从未被触发过（PAT 没有 `Actions: write`，点不动 `Run workflow`）。
+
+`tools/ci/e2e-command.js` 补的就是这一层：起一个本地假 GitHub API，
+用**真实子进程**跑 `handle-command.js`（它会去 spawn `auto-merge.js`），
+然后断言"发出去的每一个 HTTP 请求"：
+
+| 场景 | 断言的重点 |
+|---|---|
+| `/merge`（维护者 + 条件全满足） | 确实 `PUT /pulls/7/merge`、`merge_method=squash`、合完删分支、回帖说"已自动合并" |
+| `/merge`（陌生人） | 只点踩（`content: -1`），**不发**合并请求、**不回帖** |
+| 普通评论 | **一个请求都不发**（机器人到处插嘴会淹掉真讨论） |
+| `/help`、未知命令 | 只回帖，不碰写接口 |
+| `/merge`（有 `review:changes`） | 不合并 + 回帖说明条件不满足 |
+| `/merge`（含 `.github/` 高危路径） | 不合并（标签和绿检查都不能覆盖它） |
+| `/merge`（文件列表被截断 120>100） | 不合并（无法确认高危路径 ⇒ fail-closed） |
+| `/merge` + `PJ_DRY_RUN=1` | 照常判定，但绝不合并 |
+| `/merge`（服务端 403） | 不谎报成功，把失败回帖告诉人 |
+
+⚠️ **它不能替代真跑一次**：假 API 接受的东西，真 GitHub 未必接受（权限、保护分支、
+合并策略都在服务端）。它只把"从没跑过"降级成"逻辑至少跑通过一遍"。
+但有一条经验值得记：**只断言"请求发出去了"是不够的** —— 403 也是发出去了。
+所以上面那条"回帖说已自动合并"的断言才是真正证明合并成功的那个。
+
+启用条件：`gh.js` 的 `makeClient` 默认读 `GITHUB_API_URL`（GitHub Actions 自带的标准变量），
+所以只要把 `GITHUB_API_URL` 指向本地假服务，整条链路就自动改道，脚本里一行都不用改。
+顺带的好处：企业版 GitHub 不用改任何代码也能用。
 
 ## 十二、运维工具（2026-11-12）
 

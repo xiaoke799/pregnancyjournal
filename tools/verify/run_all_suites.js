@@ -232,6 +232,11 @@ const SUITES = [
   // 不会报错，只会安静地放行/回复错话 —— 这类缺陷比业务 bug 危险得多。
   // 纯 node + 本地 mock 服务，不依赖浏览器与产物，可进 CI 的 static 层。
   [path.join(CI_DIR, 'selftest.js'), '审查机器人自身(判定/降级/回复)', ''],
+  // 斜杠命令的离线端到端：起假 GitHub API + 真实子进程，验证 `/merge` 这条写链路。
+  // 它补的是 selftest 覆盖不到的那一层：selftest 测的是纯函数，这里测的是"整条命令真跑起来"。
+  // 起因是 L-028 —— `/merge` 因为权限没对齐从上线起就合不动，而没人发现，
+  // 因为这条命令在真实仓库上从来没有被触发过。
+  [path.join(CI_DIR, 'e2e-command.js'), '斜杠命令离线端到端(/merge 写链路)', '起本地假 API'],
 ];
 
 const onlyArg = process.argv.find(a => a.startsWith('--only='));
@@ -405,7 +410,12 @@ function selectSuites() {
   //    这既保留了"加/删套件必须同步文档"的约束，又去掉了反复漂移的根源（CS-13）。
   // ⚠️ 只在全量跑时检查：--only / --suite 的部分运行数字天然对不上。
   if (!only && !suiteFilters.length) {
-    const docs = [path.join(REPO, 'README.md'), path.join(V, 'README.md')];
+    // docs/workflow.md 也一起查：它此前写「81 套」写了两批都没人发现（不在绊线里 = 不会漂红）。
+    const docs = [
+      path.join(REPO, 'README.md'),
+      path.join(V, 'README.md'),
+      path.join(REPO, 'docs/workflow.md'),
+    ];
     const rxSuite = /(\d+)\s*套/;
     const rxPair = /(\d+)\s*套\s*\/\s*约?\s*(\d+)\s*项/;
     let docBad = 0;

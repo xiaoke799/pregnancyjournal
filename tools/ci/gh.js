@@ -19,9 +19,16 @@ const CONFIG_KEYS = new Set(['body', 'accept', 'raw', 'timeoutMs']);
  * @param {object} o
  * @param {string} o.token   GITHUB_TOKEN 或 PAT
  * @param {string} o.repo    owner/repo
- * @param {string} [o.api]   企业版可换 base url
+ * @param {string} [o.api]   覆盖 base url
+ *
+ * ⚠️ 默认值读 `GITHUB_API_URL` —— 这是 GitHub Actions 自己就会注入的标准变量
+ *    （企业版指向自己的 API 域名）。好处有两个：
+ *    ① 企业版不用改任何脚本就能用；
+ *    ② 本地可以把整条链路指向一个假 API 做端到端验证（见 tools/ci/e2e-command.js）。
+ *    在此之前只有 pr-review.js 自己读了它，其余脚本写死 api.github.com ——
+ *    于是"离线跑一遍"对它们根本不可能，只能等真触发。
  */
-function makeClient({ token, repo, api = DEFAULT_API }) {
+function makeClient({ token, repo, api = process.env.GITHUB_API_URL || DEFAULT_API }) {
   if (!token) throw new Error('缺少 token');
   if (!repo || !/^[^/]+\/[^/]+$/.test(repo)) throw new Error(`repo 格式应为 owner/repo，收到：${repo}`);
 

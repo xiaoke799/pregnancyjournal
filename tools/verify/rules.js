@@ -143,7 +143,9 @@ const RULES = [
   {
     id: 'bot-self',
     match: /^tools\/ci\//i,
-    suites: ['selftest'],
+    // selftest 测纯函数（判定/降级/契约），e2e-command 测"整条命令真跑起来"。
+    // 两层缺一不可：判定函数对，不代表命令链路通（L-028 就是判定全对、链路全断）。
+    suites: ['selftest', 'e2e-command'],
     why: '审查/合并/回复机器人自身 —— 判定写反不会报错只会安静放行，必须每次自证',
   },
   {

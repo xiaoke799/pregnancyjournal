@@ -240,7 +240,12 @@ async function checkRuleNames() {
     return 1;
   }
   const listed = new Set(
-    r.out.split('\n').map(l => (l.trim().match(/^([A-Za-z0-9_]+)/) || [])[1]).filter(Boolean)
+    // ⚠️ 字符类必须含 `-`：2026-11-12 加入 `e2e-command` 时，原来的 `[A-Za-z0-9_]+`
+    // 把它截成了 `e2e`，于是自检报「规则表引用了不存在的套件 e2e-command」——
+    // 一个**假红**，但方向危险：这类"截断"如果发生在别的解析里，就会把
+    // "存在"读成"不存在"（或反过来，把不存在的读成存在）。见 L-023 的同族问题。
+    // 用 `\s{2,}` 收口：--list 的列之间是补空格对齐的，名字本身不会带连续空格。
+    r.out.split('\n').map(l => (l.trim().match(/^([A-Za-z0-9_-]+)\s{2,}/) || [])[1]).filter(Boolean)
   );
   const bad = new Set();
   for (const m of src.matchAll(/suites:\s*\[([^\]]*)\]/g)) {

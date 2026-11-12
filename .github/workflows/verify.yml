@@ -49,7 +49,9 @@ jobs:
 
       # 这几套只用 node 内置模块，不装依赖也能跑 —— 所以这一层几乎是瞬时的。
       # selftest 是审查/合并/回复机器人自身的回归（判定方向、降级、注入、已知问题解析）。
-      - name: 静态套件（版本同步 / 路由契约 / 深色接线 / 主题令牌 / 机器人自身）
+      # e2e-command 起一个假 GitHub API，跑真实的 handle-command → auto-merge，
+      # 验证 `/merge` 这条**写**链路（selftest 只测纯函数，测不到"命令真跑起来"）。
+      - name: 静态套件（版本同步 / 路由契约 / 深色接线 / 主题令牌 / 机器人自身 / 命令端到端）
         timeout-minutes: 5      # 正常 <1min；卡住说明有子进程没退出，别让它吃满 job 预算
         run: |
           node tools/verify/run_all_suites.js --ci \
@@ -57,7 +59,8 @@ jobs:
             --suite=verify_api_contracts \
             --suite=verify_dark_mode \
             --suite=probe_theme_tokens \
-            --suite=selftest
+            --suite=selftest \
+            --suite=e2e-command
 
       - name: 错题本一致性（Seen ≥ 3 必须硬化 / PROMOTED 锚点必须存在）
         run: node tools/verify/lessons.js
