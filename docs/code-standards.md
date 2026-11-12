@@ -178,9 +178,15 @@
 这条用**耦合断言**守，不靠人记（`selftest` 会去读 `handle-command.js` 判断它是否 spawn
 `auto-merge.js`，然后要求 `command` job 有 `contents: write`）。
 
+**读权限同样适用**：不调模型的 job 不给 `models: read`，不碰 PR 的 job 不给
+`pull-requests: write`。多给一份不会报错，只会白开一个面 —— 而"不报错"正是它会被
+一直留着的原因。（实例：`issue-triage.js` 是关键词匹配、没有 `fetch`，
+所以 `triage` job 不需要 `models: read`；将来它真去调模型，断言会红着提醒你加回来。）
+
 **判据**：顶层非 `{}` ⇒ 红；某 job 没声明 permissions ⇒ 红；scope 名拼错 ⇒ 红
 （拼错 GitHub 不报错，等于没申请）；`verify` 出现任何 `write` ⇒ 红（CI 只该读代码）；
-`pr-review` 的 `contents` 是 `write` ⇒ 红（`pull_request_target` 加上 contents 写 ≈ 能推代码）。
+`pr-review` 的 `contents` 是 `write` ⇒ 红（`pull_request_target` 加上 contents 写 ≈ 能推代码）；
+某 job 申请了它代码里用不到的 scope ⇒ 红。
 
 **护栏**：`tools/ci/workflow-perms.js`（解析 + 审计，`--matrix` 看权限矩阵）、
 `selftest` G 段（含 4 条反例：缺顶层 / 顶层非空 / job 未声明 / scope 拼错）、

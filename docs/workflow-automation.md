@@ -388,7 +388,7 @@ job 都会白拿它 —— 而他只是在想"加个测试"，不会去想"我�
 | verify | static / frontend / release | `contents: read`（**一个写权限都没有**） |
 | pr-review | review | `contents: read` + `pull-requests: write` + `issues: write` + `models: read` |
 | auto-merge | merge | `contents: write` + `pull-requests: write` + `issues: write` |
-| assistant | triage | `contents: read` + `issues: write` + `models: read`（**故意不给 PR 写**） |
+| assistant | triage | `contents: read` + `issues: write`（**故意不给 PR 写、也不给 models**） |
 | assistant | command | 上面三条链路的并集，含 `contents: write` |
 | security-audit | history | `contents: read` + `issues: write`（**没有** `contents: write`） |
 
@@ -414,9 +414,15 @@ assistant ← L-028；security-audit ← 三道门禁装好当天就自查历史
 
 顺带修了 `selftest` 自己的两处同类问题：
 ① 成功分支把 detail 整个丢掉，于是「浅克隆跳过」和「真验证过」在日志里一模一样
-  → 现在成功也打印，并在汇总行单列「其中 N 条因环境条件跳过：…」；
+  → 跳过现在单独计数 + 单独打印 `← skipped`，汇总行点名「其中 N 条因环境条件跳过：…」；
 ② 结尾用的是 `process.exit()` —— 那正是 L-026 说会丢输出的写法，自己的脚本却没照做
   → 改成 `process.exitCode`。
+
+**顺带收窄的一条**：`assistant` 的 `triage` 原本也申请了 `models: read`，但
+`issue-triage.js` 里没有任何 `fetch` —— 分类是关键词匹配。多给一份 `models: read`
+不会报错，只会白开一个"用 token 读模型"的面。已去掉，并加了两条断言：
+「`issue-triage.js` 不调模型」+「`triage` 没有 `models: read`」（将来它真去调模型了会红，
+提醒你把权限加回来 —— 这正是耦合断言该干的事）。
 
 **step 级超时**。`verify.yml` 里三个易卡 step 补了 `timeout-minutes`
 （静态套件 5min / `npm ci` 8min / 类型体检 10min）。job 级本来有，step 级只是为了

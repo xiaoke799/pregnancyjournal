@@ -34,10 +34,11 @@ jobs:
     timeout-minutes: 5
     # 只发评论 + 打标签，全在 issues 接口上。
     # ⚠️ 故意**不给** pull-requests: write —— triage 不碰 PR，多给一份就是白多一份。
+    # ⚠️ 也**不给** models: read —— 分类是关键词匹配（issue-triage.js 里没有 fetch），
+    #    不调模型就没有额度可烧，也没有"用 token 读模型"这个面。
     permissions:
       contents: read
       issues: write
-      models: read        # 分类走 GitHub Models
     steps:
       - uses: actions/checkout@v4
         with:

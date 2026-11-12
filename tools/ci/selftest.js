@@ -27,16 +27,23 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'pj-pr-'));
 
 let pass = 0, fail = 0, skipped = 0, skipNotes = [];
 /**
- * @param detail 失败时是「红在哪」，成功时是注记（如 `skipped`）。
- *   ⚠️ 成功时也必须打印 detail：早先的写法是 `if (cond) { pass++; ... }` 完全丢掉 detail，
- *   于是浅克隆跳过的那条和真验证过的那条在输出里长得一模一样 ——
- *   「通过」里混着"什么都没验证"，正是 CS-01 说的安慰剂。
+ * @param detail 失败时是「红在哪」；成功时**只在值是 `'skipped'` 时**打印。
+ *
+ *   ⚠️ 早先的写法是 `if (cond) { pass++; ... }` 完全丢掉 detail，于是「浅克隆跳过」
+ *   和「真验证过」在输出里长得一模一样 —— 跳过混进了通过数，正是 CS-01 的安慰剂。
+ *   现在跳过会被单独计数、单独打印、在汇总行点名；其余 detail 是诊断信息，
+ *   通过了就没有意义，不打印（否则一条断言的成功行会带一坨 JSON）。
  */
 function ok(name, cond, detail) {
   if (cond) {
     pass++;
-    if (detail === 'skipped') { skipped++; skipNotes.push(name); }
-    console.log(`  ✔ ${name}${detail ? '  ← ' + detail : ''}`);
+    if (detail === 'skipped') {
+      skipped++;
+      skipNotes.push(name);
+      console.log(`  ✔ ${name}  ← skipped`);
+    } else {
+      console.log(`  ✔ ${name}`);
+    }
   } else { fail++; console.log(`  ✘ ${name}${detail ? '  ← ' + detail : ''}`); }
 }
 
@@ -610,7 +617,19 @@ const AI_BLOCK = JSON.stringify({
       jobPerms('assistant.yml', 'triage')?.['pull-requests'] !== 'write',
       JSON.stringify(jobPerms('assistant.yml', 'triage')));
 
-    ok('assistant 申请了 models: read', /models:\s*read/.test(text['assistant.yml'] || ''));
+    // 权限要和"到底调不调模型"对得上：只有 pr-review.js 会打 models.github.ai。
+    // 多给一份 models: read 不会报错，只会白开一个"用 token 读模型"的面。
+    const callsModel = src => /models\.github\.ai|chat\/completions/.test(src);
+    const triageSrc = fs.readFileSync(path.join(REPO, 'tools/ci/issue-triage.js'), 'utf8');
+    const reviewSrc = fs.readFileSync(path.join(REPO, 'tools/ci/pr-review.js'), 'utf8');
+    ok('pr-review.js 会调模型（所以它那个 job 才需要 models: read）', callsModel(reviewSrc));
+    ok('issue-triage.js 不调模型', !callsModel(triageSrc), '它改成调模型了就得给 triage 加 models: read');
+    ok('assistant 的 command 有 models: read（/review 会 spawn pr-review.js）',
+      jobPerms('assistant.yml', 'command')?.models === 'read',
+      JSON.stringify(jobPerms('assistant.yml', 'command')));
+    ok('assistant 的 triage 没有 models: read（它跑的是关键词分类）',
+      jobPerms('assistant.yml', 'triage')?.models !== 'read',
+      JSON.stringify(jobPerms('assistant.yml', 'triage')));
 
     // ---- 反例验证：审计器自己必须能红（CS-01：从不失败的检查 = 安慰剂）----
     {
