@@ -1,0 +1,10 @@
+# 借鉴 magpie 的 config.yml：空白 issue 仍允许（有些反馈不适合塞进表单），
+# 但把「先查已知问题」和「怎么读日志」放在最显眼的位置。
+blank_issues_enabled: true
+contact_links:
+  - name: 已知问题（先看这里）
+    url: https://github.com/xiaoke799/pregnancyjournal/blob/master/docs/known-issues.md
+    about: 升级后数据不见、时间差 8 小时、推送不生效等，多数已在表里写明状态与修复版本。
+  - name: 安装与升级说明
+    url: https://github.com/xiaoke799/pregnancyjournal/blob/master/README.md
+    about: 安装包下载、升级步骤、数据目录位置。

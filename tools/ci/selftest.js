@@ -596,6 +596,16 @@ const AI_BLOCK = JSON.stringify({
     // 跳过规则
     ok('node_modules 跳过', S.scanDiff(['+++ b/node_modules/a.js', '@@ -1 +1 @@', '+x'].join('\n')).length === 0);
     ok('二进制扩展名跳过', S.scanDiff(['+++ b/a.png', '@@ -1 +1 @@', '+x'].join('\n')).length === 0);
+
+    // 按形状豁免的规则，必须用「最像被放行物的真值」来测（借鉴 magpie LESSONS
+    // 「An exemption by shape is tested with the real secret that looks most like
+    //   what it lets through」）。我们的豁免是「连续 8 个相同字符 / 全 0」——
+    // 真密钥的熵不可能长这样，但要用高熵随机串反向证明它没被误豁免。
+    const rnd = require('crypto').randomBytes(24).toString('hex');   // 48 位 hex，非密钥格式
+    ok('全 0 UUID 判为假', S.obviouslyFake('00000000-0000-0000-0000-000000000000') === true);
+    ok('连续同字符判为假', S.obviouslyFake('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee') === true);
+    ok('高熵随机串不会被误豁免', S.obviouslyFake(rnd) === false, rnd.slice(0, 8) + '…');
+    ok('正常 UUID 不被误豁免', S.obviouslyFake('3f2a9c1d-5b6e-4a7f-9c8d-1e2f3a4b5c6d') === false);
   }
 
   console.log('\n=== I. GitHub API 写调用契约（离线 mock，不联网） ===');
@@ -735,6 +745,16 @@ const AI_BLOCK = JSON.stringify({
     ok('合并器 env 传了 PJ_DRY_RUN', /PJ_DRY_RUN:/.test(am));
     ok('脚本认 PJ_DRY_RUN 环境变量',
       /PJ_DRY_RUN/.test(fs.readFileSync(path.join(REPO, 'tools/ci/auto-merge.js'), 'utf8')));
+
+    // issue 模板：把「我们不得不追问的字段」变成必填（借鉴 magpie）
+    const tplPath = path.join(REPO, '.github/ISSUE_TEMPLATE/bug_report.yml');
+    ok('issue 模板存在', fs.existsSync(tplPath));
+    if (fs.existsSync(tplPath)) {
+      const tpl = fs.readFileSync(tplPath, 'utf8');
+      ok('模板强制必填版本 / 复现步骤 / 期望行为',
+        /id: app_version/.test(tpl) && /id: steps/.test(tpl) && /id: expected/.test(tpl) &&
+        (tpl.match(/required:\s*true/g) || []).length >= 4);
+    }
   }
 
   console.log('\n=== M. GraphQL → evaluate 的语义映射（真跑后补的护栏） ===');

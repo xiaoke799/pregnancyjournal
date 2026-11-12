@@ -1,0 +1,77 @@
+# 问题报告 / Bug report
+# 借鉴 magpie 的 .github/ISSUE_TEMPLATE：把「我们不得不追问的字段」变成必填。
+# 起因：issue #1/#3 都因为缺版本号与复现步骤，来回问了两轮才定位。
+name: 问题报告
+description: 应用打不开、功能不对、数据异常等
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        填得越具体，定位越快。**贴日志前请先删掉推送 key / 密码 / 姓名等隐私。**
+
+  - type: input
+    id: app_version
+    attributes:
+      label: 应用版本
+      description: 应用内「设置」页底部，或应用中心里显示的版本号
+      placeholder: 0.0.35
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: 设备与 fnOS 版本
+      description: NAS 型号 + fnOS 版本；浏览器/手机型号也写上（同一问题可能只在某个浏览器出现）
+      placeholder: 群晖/自建 NAS + fnOS 0.9.x；iPhone Safari
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: 出问题的位置
+      options:
+        - 首页 / 今日看板
+        - 记录页（日记、胎动、宫缩、体重等）
+        - 统计与趋势
+        - 相册
+        - 产检计划
+        - 用药 / 补充提醒
+        - 备份与恢复
+        - 设置 / 推送
+        - 打不开 / 白屏
+        - 其它
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从打开应用开始，一步步写。能稳定复现最好，偶发也请说明发生频率。
+      placeholder: |
+        1. 打开记录页
+        2. 点「宫缩计时」开始
+        3. 不点结束，直接切到别的页面
+        4. 再回来 —— 计时被重置了
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 实际发生了什么，你期望什么
+      description: 有截图更好（可直接拖进这个框）
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志（可选但很有用）
+      description: |
+        位置：应用数据目录下的 `info.log`（安装目录旁的持久化数据目录），取报错前后几十行即可。
+        **贴之前请删掉推送 webhook、密码、姓名等隐私。**
+      render: text

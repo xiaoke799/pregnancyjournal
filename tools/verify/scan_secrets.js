@@ -422,7 +422,7 @@ async function main() {
   console.log(C.yellow(`\n🟡 有 ${warns.length} 项可疑赋值（未拦下，加 --strict 可当错误处理）`));
 }
 
-module.exports = { scanText, scanDiff, scanFileName, RULES, BAD_FILES, looksLikePlaceholder };
+module.exports = { scanText, scanDiff, scanFileName, RULES, BAD_FILES, looksLikePlaceholder, obviouslyFake };
 
 if (require.main === module) {
   main().catch(e => { console.error(e.stack); process.exit(2); });
