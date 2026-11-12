@@ -260,3 +260,32 @@ curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
 ⚠️ 这需要 PAT 勾了 **Actions: write**。当前 PAT 只勾了 Contents / Issues /
 Pull requests，调用会 403 —— 这种情况下**去 Actions 页面点 `Run workflow`** 即可，
 效果完全一样，不需要为验证去放宽 token 权限。
+
+### 第一次真跑，又挖出三个潜伏 bug（同日）
+
+API 触发 `security-audit` 返回 403（PAT 没勾 Actions: write）。**没有为此去放宽 token
+权限** —— 验证不该成为扩权的理由；改成本地用 PAT 把脚本侧链路真跑一遍：
+
+```bash
+GITHUB_TOKEN=… GITHUB_REPOSITORY=xiaoke799/pregnancyjournal \
+  PR_NUMBER=5 PJ_DRY_RUN=1 node tools/ci/auto-merge.js
+```
+
+第一次就报 `Field 'mergeableState' doesn't exist on type 'PullRequest'` ——
+那是 REST 的字段名，GraphQL 里没有。修完再跑，又发现两个同样只在真跑时才暴露的语义错：
+
+| 字段 | GraphQL 实际 | 判定代码原以为 | 后果 |
+|---|---|---|---|
+| `state` | 枚举 `OPEN/CLOSED/MERGED` | 小写 `'open'` | **任何 PR 都判 skip** |
+| `mergeable` | `MERGEABLE/CONFLICTING/UNKNOWN` | `true/false/null` | 冲突检测永不触发，UNKNOWN 也不等待 |
+
+修法：抽出纯函数 `toPr()` 统一做语义映射，`selftest` M 段 7 条断言盯着
+（OPEN→open、CLOSED→skip、CONFLICTING→block、UNKNOWN→wait、未知枚举→undefined）。
+修完后真跑结果：`PR #5 → 判定跳过（state=closed）`，**未执行合并**；
+`pr-review.js --dry-run --no-ai` 也跑通（verdict=pass）。
+
+这三条和 L-027 是同一类：**离线 mock 只能证明"发出去的东西对"，
+真跑一次才能发现"读回来的东西和自己以为的不一样"**。L-027 的 Seen 因此 +1。
+
+> 目前 `workflow_dispatch` 本身仍需到 Actions 页面点 `Run workflow` 才会跑
+> （PAT 无 Actions: write）。脚本侧链路已用上面的本地方式验证过。

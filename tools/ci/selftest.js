@@ -737,6 +737,34 @@ const AI_BLOCK = JSON.stringify({
       /PJ_DRY_RUN/.test(fs.readFileSync(path.join(REPO, 'tools/ci/auto-merge.js'), 'utf8')));
   }
 
+  console.log('\n=== M. GraphQL → evaluate 的语义映射（真跑后补的护栏） ===');
+  {
+    const { toPr, evaluate } = require('./auto-merge');
+    const raw = {
+      number: 5, title: 't', isDraft: false, state: 'OPEN',
+      mergeable: 'MERGEABLE', headRefName: 'f', baseRefName: 'master',
+      author: { login: 'u' },
+    };
+    const ev = p => evaluate({
+      pr: p, files: ['frontend/src/a.ts'], fileTotal: 1,
+      labels: ['automerge', 'review:pass'],
+      checks: [{ name: 'verify', status: 'COMPLETED', conclusion: 'SUCCESS' }],
+    });
+
+    ok('GraphQL OPEN ⇒ evaluate 认识的 open', toPr(raw).state === 'open');
+    ok('GraphQL CLOSED ⇒ 判 skip（不是恒 merge）', ev(toPr({ ...raw, state: 'CLOSED' })).action === 'skip');
+    ok('MERGEABLE ⇒ true', toPr(raw).mergeable === true);
+    ok('CONFLICTING ⇒ false 且触发冲突阻断',
+      (() => { const p = toPr({ ...raw, mergeable: 'CONFLICTING' }); const r = ev(p);
+        return p.mergeable === false && r.action === 'block' && (r.blockers || []).some(b => b.code === 'conflict'); })());
+    ok('UNKNOWN ⇒ null 且触发等待',
+      (() => { const p = toPr({ ...raw, mergeable: 'UNKNOWN' }); const r = ev(p);
+        return p.mergeable === null && r.action === 'wait' && (r.waits || []).some(w => w.code === 'mergeable-unknown'); })());
+    ok('未知枚举 ⇒ undefined（判不了，不假装可合并）',
+      toPr({ ...raw, mergeable: 'SOMETHING_NEW' }).mergeable === undefined);
+    ok('isDraft 原样传递', toPr({ ...raw, isDraft: true }).draft === true);
+  }
+
   fs.rmSync(TMP, { recursive: true, force: true });
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
   process.exit(fail ? 1 : 0);

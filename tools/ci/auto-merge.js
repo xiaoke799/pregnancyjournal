@@ -170,7 +170,7 @@ async function main() {
   const q = `query($owner:String!,$name:String!,$num:Int!){
     repository(owner:$owner,name:$name){
       pullRequest(number:$num){
-        number title isDraft state mergeable mergeableState
+        number title isDraft state mergeable
         headRefName baseRefName
         author{login}
         labels(first:20){nodes{name}}
@@ -189,12 +189,7 @@ async function main() {
   if (!p) throw new Error('GraphQL 没拿到 PR：' + JSON.stringify(gql).slice(0, 300));
 
   const checks = normalizeChecks(p.commits?.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes);
-  const pr = {
-    number: p.number, title: p.title, draft: p.isDraft, state: p.state,
-    mergeable: p.mergeable, mergeable_state: p.mergeableState,
-    head: { ref: p.headRefName }, base: { ref: p.baseRefName },
-    user: { login: p.author?.login },
-  };
+  const pr = toPr(p);
   const files = (p.files?.nodes || []).map(f => f.path);
   const fileTotal = p.files?.totalCount ?? files.length;
   const labels = (p.labels?.nodes || []).map(l => l.name);
@@ -256,7 +251,34 @@ async function main() {
   } catch (e) { /* 评论失败不影响合并结果 */ }
 }
 
-module.exports = { evaluate, normalizeChecks, resolvePrNumber, REQUIRED_LABEL, PASS_LABEL, BLOCK_LABELS };
+/**
+ * GraphQL → evaluate() 期望的形状。
+ *
+ * 🔴 2026-11-12 第一次真跑 GraphQL 才发现的三个语义坑（此前脚本从没跑过）：
+ *   ① `state` 是枚举 `OPEN/CLOSED/MERGED`，而 evaluate 比的是小写 `'open'`
+ *      ⇒ 不转换的话**任何 PR 都会被判 skip**；
+ *   ② `mergeableState` 字段在 PullRequest 上不存在（那是 REST 的 `mergeable_state`）
+ *      ⇒ 整个查询报 undefinedField；
+ *   ③ `mergeable` 是枚举 `MERGEABLE/CONFLICTING/UNKNOWN`，而 evaluate 期望
+ *      true/false/null ⇒ 不映射的话冲突检测永远不触发，UNKNOWN 也不会 wait。
+ */
+const MERGEABLE_MAP = { MERGEABLE: true, CONFLICTING: false, UNKNOWN: null };
+function toPr(p) {
+  return {
+    number: p.number,
+    title: p.title,
+    draft: p.isDraft,
+    state: String(p.state || '').toLowerCase(),
+    mergeable: MERGEABLE_MAP[p.mergeable],
+    mergeable_state: p.mergeable,
+    head: { ref: p.headRefName },
+    base: { ref: p.baseRefName },
+    user: { login: p.author?.login },
+  };
+}
+
+module.exports = { evaluate, normalizeChecks, resolvePrNumber, toPr,
+  REQUIRED_LABEL, PASS_LABEL, BLOCK_LABELS };
 
 if (require.main === module) {
   main().catch(e => {
