@@ -137,14 +137,28 @@ verify:
 | PR / push 到远端 | CI `static` job | 当前快照全量（本地 `--no-verify` 跳过时，这里兜底） |
 
 装钩子：`node tools/verify/install_hooks.js`（默认不装，见脚本头部说明）。
+三个钩子，各管一层：
+
+| 钩子 | 管什么 | 为什么是这一层 |
+|---|---|---|
+| `pre-commit` | 暂存区文件内容 + **提交身份**（`user.email`） | 提交还没生成，身份已经定了 —— 现在改只是一条 `git config` |
+| `commit-msg` | **提交信息**（本机路径 / 私人邮箱） | 唯一能在提交发生**之前**看到完整 message 的时机 |
+| `pre-push` | 远端还没有的提交：diff + **message + 身份** | 离开这台机器之前的最后一刻 |
+
 手动跑：
 
 ```bash
-node tools/verify/scan_secrets.js --staged    # 暂存区
-node tools/verify/scan_secrets.js --push      # 待推送
-node tools/verify/scan_secrets.js --all       # 已跟踪文件全量
-node tools/verify/scan_secrets.js --history   # 全部历史（一次性审计，约 20s）
+node tools/verify/scan_secrets.js --staged           # 暂存区（含提交身份）
+node tools/verify/scan_secrets.js --message=<文件>   # 一条提交信息（commit-msg 用）
+node tools/verify/scan_secrets.js --push             # 待推送（diff + message + 身份）
+node tools/verify/scan_secrets.js --all              # 已跟踪文件全量
+node tools/verify/scan_secrets.js --history          # 全部历史（一次性审计，约 20s）
 ```
+
+> 🔴 **`commit-msg` 这一层是 2026-11-13 补的，起因是它一直缺着。**
+> 文件内容一直有人盯，提交信息从来没人看 —— 而 message 一样跟着 clone 走、
+> 一样能从 `commit/<sha>.patch` 里读到。为了清掉写进 message 的本机路径和私人邮箱，
+> 三轮重写历史，全是为这层漏检付的账。详见 L-031。
 
 **扫什么**：GitHub PAT / classic token、AWS Access Key、私钥块、JWT、
 企业微信 / 飞书 / 钉钉 / Bark 的 webhook（URL 里就带 key）、以及明确写着真实值的密钥赋值。
@@ -154,6 +168,12 @@ node tools/verify/scan_secrets.js --history   # 全部历史（一次性审计�
 对 clone 的人等于一段死代码 —— 照着做只会得到"文件不存在"，而他分不清是自己配错了还是文档错了。
 这类东西还顺带泄漏作者的用户名、目录结构、以及用什么工具。
 **凭据一律走环境变量**，不要在脚本里写"从某个私有目录读 token"。
+
+**提交信息层扫两样**：本机盘符路径、私人邮箱。
+它们没有功能作用，只说明"作者本机是怎么跑通的"，却会永久留在历史里 ——
+`commit/<sha>.patch` 上能直接读到 `From: 姓名 <邮箱>`。
+盘符路径**只在 message 里禁**：文件内容里的盘符路径常常是功能必需（定位浏览器、处理导出路径），
+全仓已有近百处，一律禁掉属于教条。这个区分写在了规则注释里。
 
 > 历史审计（`--history`）只查凭据，不查路径：凭据可以撤销，所以历史里存在就值得报警；
 > 而历史里的一条路径改不掉，报出来只会每周红一次然后被无视 —— 那等于把门禁变成噪音。

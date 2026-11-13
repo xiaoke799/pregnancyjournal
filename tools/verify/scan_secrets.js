@@ -192,6 +192,80 @@ const isPathRule = id => PATH_RULES.some(r => r.id === id);
  */
 const PATH_EXAMPLE_RE = /(?:…|\.\.\.|\bxxx\b|\bXXXX\b|<[A-Za-z_][\w-]*>|\$\{)/;
 
+// ---------------------------------------------------------------------------
+// 第三类：**提交信息与提交身份**。
+//
+// 这一层此前完全没有门禁 —— 文件内容有人盯，message 没人盯。
+// 但 message 一样会跟着 clone 走、一样能从 `commit/<sha>.patch` 里读到。
+//
+// 起因（2026-11-12~13）：用户连着两次指出「commit 里不该有这些东西」——
+// 外部项目名、本机盘符路径、私人邮箱；为此重写了三轮历史才清干净。
+// 当时只要有一道门禁看着 message，这三轮都能省掉。
+// ---------------------------------------------------------------------------
+const PRIVATE_EMAIL_RE = /\b[A-Za-z0-9._%+-]+@(?:qq|foxmail|163|126|yeah|sina|sohu|gmail|outlook|hotmail|live|icloud)\.(?:com|cn|net)\b/i;
+const NOREPLY_OK = /@users\.noreply\.github\.com\b/i;
+
+const MSG_RULES = [
+  ...PATH_RULES,
+  {
+    id: 'win-drive-msg', level: 'block',
+    // 只用于**提交信息**，不进 PATH_RULES。理由：
+    //   文件内容里的盘符路径常常是功能必需 —— 截图脚本要定位 Edge、导出逻辑要处理盘符、
+    //   测试夹具要造路径样本；全仓已有近百处，一律禁掉属于教条。
+    //   而提交信息里的盘符路径没有任何功能作用，只说明"我这台机器上是怎么跑通的"。
+    //   2026-11-13 实测：`D:/<项目名>` 从 win-userdir 底下漏过去，正是泄漏的那种。
+    // 左边界必须有且排除字母数字：否则 `https://qyapi...` 里的 `s://` 会被当成
+    //   "盘符 s + 路径 qyapi.weixin.qq.com" —— 实测这一条就误报 772 次。
+    re: /(?:^|[^A-Za-z0-9])[A-Za-z]:[\\/]{1,4}[A-Za-z0-9_.-]+(?:[\\/]|["'\s]|$)/,
+    why: '提交信息里的盘符路径 —— 只说明作者本机怎么跑的，对读的人没有意义',
+    pathLike: true,   // 让"示例形态"豁免对它也生效（规范里要能举坏例子）
+  },
+  {
+    id: 'private-email', level: 'block',
+    re: PRIVATE_EMAIL_RE,
+    why: '私人邮箱 —— 会随提交永久公开（`.patch` 与 API 里都能读到）',
+  },
+];
+
+/** 扫一段提交信息（commit message / COMMIT_EDITMSG） */
+function scanMessage(text, { file = '（提交信息）', commit = '' } = {}) {
+  const hits = [];
+  const lines = String(text).split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/pj-secret-ok/.test(line)) continue;
+    for (const rule of MSG_RULES) {
+      const m = rule.re.exec(line);
+      if (!m) continue;
+      if ((isPathRule(rule.id) || rule.pathLike) && PATH_EXAMPLE_RE.test(line)) continue;
+      if (rule.id === 'private-email' && NOREPLY_OK.test(m[0])) continue;
+      hits.push({
+        file, line: i + 1, rule: rule.id, level: rule.level,
+        kind: rule.id === 'private-email' ? 'identity' : 'path',
+        why: rule.why, sample: String(m[0]).trim(),
+        snippet: line.trim().slice(0, 120), commit,
+      });
+      break;
+    }
+  }
+  return hits;
+}
+
+/**
+ * 提交身份检查：`user.email` 会被写进**每一个**新提交。
+ * 用私人邮箱提交 ⇒ 每个 commit 的 `.patch` 里都能读到，且无法事后局部修改。
+ */
+function identityHits(email, { where = 'git config user.email' } = {}) {
+  const v = String(email || '').trim();
+  if (!v || NOREPLY_OK.test(v)) return [];
+  if (!PRIVATE_EMAIL_RE.test(v)) return [];
+  return [{
+    file: where, line: 0, rule: 'private-email', level: 'block', kind: 'identity',
+    why: '这个邮箱会写进每一个新提交，并随 `.patch` 公开',
+    sample: v, snippet: `当前身份：${v}`,
+  }];
+}
+
 /** 明显是占位符 / 环境变量的值，不算泄露 */
 function looksLikePlaceholder(v) {
   if (!v) return true;
@@ -360,7 +434,12 @@ function scanDiff(diffText, label, opts = {}) {
 async function stagedHits() {
   const d = await git(['diff', '--cached', '-U0']);
   if (d.code !== 0) throw new Error('git diff --cached 失败：' + d.err);
-  return scanDiff(d.out, 'staged');
+  const hits = scanDiff(d.out, 'staged');
+  // 这一步还没有 message，但**提交身份**已经定了 —— 它会被写进这个新提交，
+  // 然后永久挂在每个 commit 的 .patch 上。现在改只是一条 git config 命令。
+  const email = await git(['config', 'user.email']);
+  if (email.code === 0) hits.push(...identityHits(email.out, { where: 'git config user.email' }));
+  return hits;
 }
 
 async function rangeHits(range) {
@@ -379,9 +458,22 @@ async function pushHits() {
   if (!list.length) return [];
   const hits = [];
   for (const sha of list) {
+    const short = sha.slice(0, 7);
     const d = await git(['show', sha, '--format=', '-U0', '--no-color']);
-    if (d.code !== 0) continue;
-    for (const h of scanDiff(d.out, sha)) hits.push({ ...h, commit: sha.slice(0, 7) });
+    if (d.code === 0) for (const h of scanDiff(d.out, sha)) hits.push({ ...h, commit: short });
+
+    // 提交信息与提交身份：此前门禁完全没有看这一层。
+    // 文件内容有人盯，message 没人盯 —— 而它一样跟着 clone 走、一样能从 .patch 读到。
+    const msg = await git(['log', '-1', '--format=%B', sha]);
+    if (msg.code === 0) hits.push(...scanMessage(msg.out, { file: '提交信息', commit: short }));
+
+    const id = await git(['log', '-1', '--format=%ae%n%ce', sha]);
+    if (id.code === 0) {
+      const addrs = [...new Set(id.out.trim().split('\n').map(s => s.trim()).filter(Boolean))];
+      for (const addr of addrs) {
+        hits.push(...identityHits(addr, { where: '提交身份' }).map(h => ({ ...h, commit: short })));
+      }
+    }
   }
   return hits;
 }
@@ -437,6 +529,14 @@ async function main() {
     else if (has('all')) { label = '工作区全量'; hits = await allHits(); }
     else if (has('push')) { label = '待推送'; hits = await pushHits(); }
     else if (argOf('range')) { label = argOf('range'); hits = await rangeHits(argOf('range')); }
+    else if (argOf('message')) {
+      // commit-msg 钩子用：git 把待提交的信息写进一个临时文件，路径作为 $1 传进来。
+      // 这是**唯一能在提交发生之前**看到完整 message 的时机。
+      const f = argOf('message');
+      label = '提交信息';
+      if (!f || !fs.existsSync(f)) throw new Error('读不到提交信息文件：' + f);
+      hits = scanMessage(fs.readFileSync(f, 'utf8'), { file: '待提交信息' });
+    }
     else { label = '暂存区'; hits = await stagedHits(); }
   } catch (e) {
     console.error(C.red('扫描失败：' + e.message));
@@ -459,10 +559,10 @@ async function main() {
   }
 
   console.log(C.bold(`\n敏感信息扫描（${label}）`));
-  const loc = h => (h.line ? `${h.file}:${h.line}` : `${h.file}（文件名）`);
+  const loc = h => (h.line ? `${h.file}:${h.line}` : h.file);
+  const KIND = { path: '本机路径', identity: '身份/邮箱', secret: '凭据' };
   for (const h of blocks) {
-    const tag = h.kind === 'path' ? '本机路径' : '凭据';
-    console.log(C.red(`  🔴 [${h.rule}] ${loc(h)}　${tag}`));
+    console.log(C.red(`  🔴 [${h.rule}] ${loc(h)}${h.commit ? `（提交 ${h.commit}）` : ''}　${KIND[h.kind] || '凭据'}`));
     console.log(C.dim(`     ${h.why}　命中：${h.sample}`));
     console.log(C.dim(`     ${h.snippet}`));
   }
@@ -473,9 +573,15 @@ async function main() {
   }
 
   if (failing) {
-    const pathN = blocks.filter(h => h.kind === 'path').length;
-    const secretN = blocks.length - pathN;
-    console.log(C.red(`\n🔴 拦下：${secretN} 项确定凭据、${pathN} 项本机路径${strict ? `、${warns.length} 项可疑赋值` : ''}`));
+    const n = k => blocks.filter(h => h.kind === k).length;
+    const secretN = n('secret'), pathN = n('path'), identN = n('identity');
+    const parts = [];
+    if (secretN) parts.push(`${secretN} 项确定凭据`);
+    if (pathN) parts.push(`${pathN} 项本机路径`);
+    if (identN) parts.push(`${identN} 项身份/邮箱`);
+    if (strict) parts.push(`${warns.length} 项可疑赋值`);
+    console.log(C.red(`\n🔴 拦下：${parts.join('、') || blocks.length + ' 项'}`));
+
     if (secretN) {
       console.log(C.dim('   凭据处置：移到环境变量 / 本地配置文件（不入库），然后从暂存区移除。'));
       console.log(C.dim('   如果这个凭据曾经提交过：**去服务端撤销它**，再考虑清理历史 —— 光删文件没用。'));
@@ -483,6 +589,10 @@ async function main() {
     if (pathN) {
       console.log(C.dim('   路径处置：改成环境变量或相对路径。仓库里不该出现"只有作者机器上才有"的路径 ——'));
       console.log(C.dim('   clone 的人照着做只会得到"文件不存在"，而他没法判断是自己配错了还是文档错了。'));
+    }
+    if (identN) {
+      console.log(C.dim('   身份处置：git config user.email <ID>+<用户名>@users.noreply.github.com'));
+      console.log(C.dim('   私人邮箱会写进每一个提交并随 .patch 永久公开，托管平台一般不允许事后局部修改。'));
     }
     console.log(C.dim('   确属误报（示例/夹具）：在该行加 `pj-secret-ok` 注释并写明理由。'));
     process.exit(1);
@@ -492,8 +602,8 @@ async function main() {
 }
 
 module.exports = {
-  scanText, scanDiff, scanFileName,
-  RULES, PATH_RULES, BAD_FILES, looksLikePlaceholder, obviouslyFake,
+  scanText, scanDiff, scanFileName, scanMessage, identityHits,
+  RULES, PATH_RULES, MSG_RULES, BAD_FILES, looksLikePlaceholder, obviouslyFake,
 };
 
 if (require.main === module) {

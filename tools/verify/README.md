@@ -63,10 +63,10 @@ tools/verify/
 │                           `--bump=L-003` 把 Seen +1；`--list` 看摘要
 ├── scan_secrets.js      ← **门禁**：凭据（PAT/私钥/webhook/密钥赋值）+ 本机路径（CS-18）
 │                           `--staged`/`--push`/`--all`/`--history`（历史只查凭据）
-│                           装钩子后 pre-commit 与 **pre-push** 都会调它（pre-push 才是防上云的关键）
+│                           三类规则：凭据 / 本机路径 / 提交信息与身份。--message= 供 commit-msg 钩子用
 ├── check_artifact_freshness.js ← **产物新鲜度**（CS-16）：版本注入 + 产物/源码时间比对；
 │                           `build.ps1` Step1 用 `--require` 调，旧产物一律拦下
-├── install_hooks.js     ← 可选：把门禁装成 `.git/hooks`（pre-commit + pre-push；默认不装，多会话并行会互相拦）
+├── install_hooks.js     ← 可选：把门禁装成 `.git/hooks`（pre-commit + commit-msg + pre-push；默认不装）
 ├── tcp_shim.js          ← 测试垫片：把 server.js 的 Unix Socket 监听改写成 TCP 环回
 ├── _vue_extract.js      ← 从 .vue 源码里抽取 <script> 内容的共用小工具
 ├── e2e_*.js             ← 端到端（真起 server.js + 真库 + 真 HTTP）

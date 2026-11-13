@@ -812,6 +812,48 @@ const AI_BLOCK = JSON.stringify({
       S.scanText('cat ~/.private-tool/token', { file: 'x.js', includePaths: false }).length === 0);  // pj-secret-ok 反例夹具：这一行必须"长得像真路径"，否则测不出拦截
     ok('历史模式仍然查凭据',
       S.scanText('x = "AKIA' + 'ABCDEFGHIJKLMNOP' + '"', { file: 'x.js', includePaths: false }).length > 0);
+
+    // ---- 第三类：提交信息 / 提交身份 ----
+    // 起因：清洗历史时才发现**门禁从来没看过 commit message**。文件内容有人盯，
+    // message 没人盯 —— 而它一样跟着 clone 走、一样能从 commit/<sha>.patch 读到。
+    // 为此重写了三轮历史，全是这一层漏检的账。
+    ok('消息规则 >= 3 条且全部是 block',
+      S.MSG_RULES.length >= 3 && S.MSG_RULES.every(r => r.level === 'block'),
+      `${S.MSG_RULES.length} 条`);
+    ok('每条消息规则都有 id / why / 已编译正则',
+      S.MSG_RULES.every(r => r.id && r.why && r.re instanceof RegExp));
+
+    for (const [name, text, expect] of [
+      ['盘符 + 项目名', 'test: 从 D:/some-project 里跑起来的', true],
+      ['反斜杠盘符', 'fix: C:\\work\\app 下的改动', true],
+      ['私人邮箱', 'test: 有问题联系 someone@qq.com', true],
+      // 必须放行的（误报会把人逼成习惯性 --no-verify）
+      ['noreply 邮箱', 'test: 178059584+xiaoke799@users.noreply.github.com', false],
+      ['URL 里的 s://', '参考 https://qyapi.weixin.qq.com/cgi-bin/webhook', false],
+      ['示例形态（xxx）', 'docs: 不要写 D:/xxx/ 这种', false],
+      ['示例形态（省略号）', 'docs: 不要写 D:/… 这种', false],
+      ['普通中文', 'fix: 修复时间显示差 8 小时', false],
+      ['行内豁免', 'test: D:/some-project  // pj-secret-ok 夹具', false],
+    ]) {
+      const hits = S.scanMessage(text);
+      ok(`提交信息 ${name} → ${expect ? '拦' : '放行'}`, (hits.length > 0) === expect,
+        hits.map(h => h.rule).join(',') || '（未命中）');
+    }
+
+    // 身份：user.email 会被写进每一个新提交，且随 .patch 永久公开
+    ok('私人邮箱身份被拦', S.identityHits('100974160@qq.com').length === 1);
+    ok('GitHub noreply 身份放行', S.identityHits('178059584+xiaoke799@users.noreply.github.com').length === 0);
+    ok('公司邮箱不算私人邮箱', S.identityHits('dev@example.com').length === 0);
+    ok('空身份不报错', S.identityHits('').length === 0);
+
+    // 门禁要真挂在钩子上，否则等于没有 —— 三个钩子缺一个就少一层
+    const hooksSrc = fs.readFileSync(path.join(REPO, 'tools/verify/install_hooks.js'), 'utf8');
+    for (const h of ['pre-commit', 'commit-msg', 'pre-push']) {
+      ok(`install_hooks 覆盖 ${h} 钩子`, hooksSrc.includes(`'${h}':`), '缺了就等于那一层没装');
+    }
+    ok('commit-msg 钩子用的是 --message= 入口', /scan_secrets\.js --message=/.test(hooksSrc));
+    ok('pre-push 入口会扫提交信息（不只是 diff）',
+      /scanMessage/.test(fs.readFileSync(path.join(REPO, 'tools/verify/scan_secrets.js'), 'utf8')));
   }
 
   console.log('\n=== I. GitHub API 写调用契约（离线 mock，不联网） ===');

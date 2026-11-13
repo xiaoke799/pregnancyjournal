@@ -65,7 +65,33 @@ ${NODE_GUARD}
 exec node tools/verify/scan_secrets.js --push
 `;
 
-const HOOKS = { 'pre-commit': PRE_COMMIT, 'pre-push': PRE_PUSH };
+// 2026-11-13 新增。起因：清洗历史时才发现，**门禁从来没看过提交信息** ——
+// 文件内容有人盯，message 没人盯；而 message 一样跟着 clone 走、一样能从 .patch 读到。
+// 三轮重写历史，全是为这一层漏掉的检查付的账。
+//
+// 为什么用 commit-msg 而不是塞进 pre-commit：
+//   pre-commit 跑的时候 message 还没定稿（`-m` 与编辑器两条路径时机不同），拿不到可靠内容；
+//   commit-msg 是 git 明确把 message 文件路径作为 `$1` 传进来的唯一钩子。
+const COMMIT_MSG = `#!/bin/sh
+${MARK}（2026-11-13）
+# 提交信息门禁：本机路径 / 私人邮箱。
+# 跳过：git commit --no-verify
+cd "$(git rev-parse --show-toplevel)" || exit 1
+${NODE_GUARD}
+node tools/verify/scan_secrets.js --message="$1" || {
+  echo "" >&2
+  echo "  [commit-msg] 提交信息里有不该出现的内容，已拦下。" >&2
+  echo "  本机路径与私人邮箱会跟着 clone 走，也能从 commit/<sha>.patch 里读到。" >&2
+  echo "  确属示例（规范里必须举坏例子）就写成带省略号的形态，或加 pj-secret-ok 并写明理由。" >&2
+  exit 1
+}
+`;
+
+const HOOKS = {
+  'pre-commit': PRE_COMMIT,
+  'commit-msg': COMMIT_MSG,
+  'pre-push': PRE_PUSH,
+};
 
 function show() {
   let any = false;
@@ -124,8 +150,9 @@ for (const name of targets) {
 
 console.log(`
 装的钩子：
-  pre-commit → 敏感信息扫描（暂存区）+ 闸门
-  pre-push   → 敏感信息扫描（远端还没有的提交）← 防上云的关键
+  pre-commit → 敏感信息扫描（暂存区 + 提交身份）+ 闸门
+  commit-msg → 提交信息扫描（本机路径 / 私人邮箱）
+  pre-push   → 敏感信息扫描（远端还没有的提交，含 message 与身份）← 防上云的关键
 
 跳过用 --no-verify，但跳过时请写明理由（docs/review-protocol.md §五）。
 卸载：node tools/verify/install_hooks.js --uninstall
