@@ -144,15 +144,21 @@ verify:
 | `pre-commit` | 暂存区文件内容 + **提交身份**（`user.email`） | 提交还没生成，身份已经定了 —— 现在改只是一条 `git config` |
 | `commit-msg` | **提交信息**（本机路径 / 私人邮箱） | 唯一能在提交发生**之前**看到完整 message 的时机 |
 | `pre-push` | 远端还没有的提交：diff + **message + 身份** | 离开这台机器之前的最后一刻 |
+| CI（`verify.yml`） | push 事件里的 message + **推送者**身份 | 本地可以被 `--no-verify` 绕过，也可能根本没装；这层绕不过去 |
+
+> ⚠️ CI 那层读的是 `github.event.commits`，而 GitHub 的 push 事件**最多带 20 个提交**。
+> 超出的部分不会被审计 —— 所以提交数被截断时脚本会 **fail-closed** 报错，
+> 而不是"扫了 20 个就宣布干净"。同族问题见 L-023（列表截断让高危路径躲过自动合并）。
 
 手动跑：
 
 ```bash
-node tools/verify/scan_secrets.js --staged           # 暂存区（含提交身份）
-node tools/verify/scan_secrets.js --message=<文件>   # 一条提交信息（commit-msg 用）
-node tools/verify/scan_secrets.js --push             # 待推送（diff + message + 身份）
-node tools/verify/scan_secrets.js --all              # 已跟踪文件全量
-node tools/verify/scan_secrets.js --history          # 全部历史（一次性审计，约 20s）
+node tools/verify/scan_secrets.js --staged              # 暂存区（含提交身份）
+node tools/verify/scan_secrets.js --message=<文件>      # 一条提交信息（commit-msg 用）
+node tools/verify/scan_secrets.js --push                # 待推送（diff + message + 身份）
+node tools/verify/scan_secrets.js --push-event=<JSON>   # CI 兜底：读 Actions 事件（无需 git 历史）
+node tools/verify/scan_secrets.js --all                 # 已跟踪文件全量
+node tools/verify/scan_secrets.js --history             # 全部历史（一次性审计，约 20s）
 ```
 
 > 🔴 **`commit-msg` 这一层是 2026-11-13 补的，起因是它一直缺着。**

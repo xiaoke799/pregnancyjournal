@@ -231,6 +231,10 @@ URL 里形如 `/Users/` 的片段**不拦**（那是正常链接）。
 | 文件内容、文件名 | `scan_secrets` 内容规则 + `BAD_FILES` |
 | 提交信息 | `scan_secrets --message=`（`commit-msg` 钩子）+ `--push` 扫历史提交的 message |
 | 提交身份 | `pre-commit` / `--push` 读 `user.email` 与每个待推提交的 author/committer |
+| 推送事件（CI 兜底） | `verify.yml` 里 `--push-event` 读 `github.event.commits` —— 钩子能被 `--no-verify` 绕过，这层不能 |
+
+**本地钩子必须配一个"绕不过去"的兜底**。`--no-verify` 只要存在一次，本地那一层就等于可选；
+只有 CI 是强制的。所以每加一层本地检查，问一遍：**它被跳过时谁来兜？**
 
 **判据**：新增一类"不许进仓库"的东西时，必须同时回答两个问题 ——
 ① 它还能从哪个通道进来？② 那个通道上挂了什么？

@@ -846,6 +846,84 @@ const AI_BLOCK = JSON.stringify({
     ok('公司邮箱不算私人邮箱', S.identityHits('dev@example.com').length === 0);
     ok('空身份不报错', S.identityHits('').length === 0);
 
+    // CI 兜底：读 Actions 的推送事件 JSON（不需要 git 历史）。
+    // 本地钩子能被 --no-verify 绕过、也可能没装；这一层绕不过去。
+    {
+      const osm = require('os');
+      const tmp = path.join(osm.tmpdir(), `pj-ev-${process.pid}.json`);
+      const write = ev => { fs.writeFileSync(tmp, JSON.stringify(ev)); return ev; };
+
+      write({
+        commits: [
+          { id: 'a'.repeat(12), message: 'fix: 从 D:/some-project 跑起来', committer: { email: 'x@users.noreply.github.com' } },
+          { id: 'b'.repeat(12), message: 'feat: 正常提交', committer: { email: 'someone@qq.com' } },
+        ],
+      });
+      const h1 = S.pushEventHits(tmp);
+      ok('推送事件：message 里的盘符路径被拦', h1.some(h => h.rule === 'win-drive-msg'));
+      ok('推送事件：推送者私人邮箱被拦', h1.some(h => h.rule === 'private-email' && h.commit === 'b'.repeat(7)));
+
+      write({
+        commits: [{
+          id: 'c'.repeat(12), message: 'feat: 贡献者的 PR',
+          author: { email: 'contributor@gmail.com' },      // 别人的邮箱，不归我们管
+          committer: { email: 'GitHub <noreply@github.com>' },
+        }],
+      });
+      ok('推送事件：不查 author 邮箱（合并他人 PR 会误伤）',
+        S.pushEventHits(tmp).length === 0, JSON.stringify(S.pushEventHits(tmp)));
+
+      write({ head_commit: { id: 'd'.repeat(12), message: 'fix: D:/leak', committer: { email: 'noreply@github.com' } } });
+      ok('推送事件：只有 head_commit 时也能扫', S.pushEventHits(tmp).some(h => h.rule === 'win-drive-msg'));
+
+      write({ commits: [{ id: 'e'.repeat(12), message: 'feat: 干净', committer: { email: '178059584+xiaoke799@users.noreply.github.com' } }] });
+      ok('推送事件：干净提交不误报', S.pushEventHits(tmp).length === 0);
+
+      // GitHub 的 push 事件最多带 20 个提交。截断时必须 fail-closed ——
+      // 否则"扫了 20 个、跳过 10 个"会被报成干净（同族问题见 L-023）。
+      write({ size: 30, distinct_size: 30, commits: [{ id: 'f'.repeat(12), message: 'feat: 干净', committer: { email: 'noreply@github.com' } }] });
+      ok('推送事件：提交数被截断时 fail-closed',
+        S.pushEventHits(tmp).some(h => h.rule === 'event-truncated'));
+      write({ size: 1, distinct_size: 1, commits: [{ id: 'f'.repeat(12), message: 'feat: 干净', committer: { email: 'noreply@github.com' } }] });
+      ok('推送事件：提交数完整时不误报截断', S.pushEventHits(tmp).length === 0);
+
+      try { fs.unlinkSync(tmp); } catch (e) { /* 临时文件删不掉不影响结论 */ }
+    }
+
+    // ---- tag 必须挂在主干上 ----
+    // 起因（2026-11-13）：重写历史时把 master 的提交全换了新 SHA，tag 却还指着旧提交 ——
+    // 于是仓库变成**两条线**。GitHub 上 tag 页面照常能打开、下载照常能下，
+    // 没有任何地方会报错；直到 KI-001 的「tag 应包含该修复」断言变红才被发现。
+    // 判据：每个 tag 指向的提交都必须是 HEAD 的祖先。
+    {
+      const shallow = (await runCmd('git', ['rev-parse', '--is-shallow-repository'])).out.trim() === 'true';
+      const tagOut = shallow ? '' : (await runCmd('git', ['tag', '-l'])).out;
+      const tags = tagOut.split('\n').map(s => s.trim()).filter(Boolean);
+      // 允许名单：这三个在 2026-11-13 重写**之前**就已经不在主干上（更早一次历史重写的遗留）。
+      // 证据：v0.0.32 的提交里含 c06d86df，而该提交在本次重写前就不是 master 的祖先。
+      // 🔴 名单只减不增：新出现的脱离说明"重写了 master 却没搬 tag"，必须修，不要往这里加。
+      const KNOWN_OFF_LINE = new Set(['v0.0.26', 'v0.0.27', 'v0.0.32']);
+      if (!tags.length) {
+        ok('tag 全部挂在主干上（浅克隆/无 tag，跳过）', true, 'skipped');
+      } else {
+        const off = [];
+        for (const t of tags) {
+          const sha = (await runCmd('git', ['rev-list', '-n', '1', t])).out.trim();
+          if (!sha) { off.push(`${t}(取不到)`); continue; }
+          const r = await runCmd('git', ['merge-base', '--is-ancestor', sha, 'HEAD']);
+          if (r.code !== 0) off.push(t);
+        }
+        const unexpected = off.filter(t => !KNOWN_OFF_LINE.has(t));
+        ok(`tag 全部挂在主干上（${tags.length} 个，已知遗留 ${KNOWN_OFF_LINE.size} 个除外）`,
+          unexpected.length === 0,
+          unexpected.length ? `脱离主干：${unexpected.join(', ')} —— master 被重写过而 tag 没跟着走？` : '');
+        // 名单不能变成免死金牌：里面的 tag 一旦回到主干上，就该删掉这一行
+        const healed = [...KNOWN_OFF_LINE].filter(t => !off.includes(t));
+        ok('允许名单里的 tag 仍确实脱离主干（回到主干就把它从名单删掉）',
+          healed.length === 0, healed.length ? `已经不在脱离列表里：${healed.join(', ')}` : '');
+      }
+    }
+
     // 门禁要真挂在钩子上，否则等于没有 —— 三个钩子缺一个就少一层
     const hooksSrc = fs.readFileSync(path.join(REPO, 'tools/verify/install_hooks.js'), 'utf8');
     for (const h of ['pre-commit', 'commit-msg', 'pre-push']) {

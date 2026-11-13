@@ -252,6 +252,46 @@ function scanMessage(text, { file = '（提交信息）', commit = '' } = {}) {
 }
 
 /**
+ * 推送事件审计（CI 兜底用）：直接读 GitHub Actions 的事件 JSON，不需要全量 checkout。
+ *
+ * 为什么必须有这一条：
+ *   本地钩子可以被 `--no-verify` 绕过，也可能根本没装（换机器/换人）。
+ *   CI 是唯一"绕不过去"的一层 —— 但它默认只看得到工作区文件，
+ *   看不到"这次推送带了哪些提交信息"。而 `github.event.commits` 里就有。
+ *
+ * 只查两样，避免误伤：
+ *   · 提交信息里的路径 / 邮箱（block）—— 这是我们自己的叙述，与作者无关
+ *   · **推送者**（committer）身份（block）—— 谁推的就该谁负责
+ *   · 不看 author 邮箱：合并别人的 PR 时 author 是贡献者，用私人邮箱不归我们管
+ */
+function pushEventHits(evPath) {
+  const ev = JSON.parse(fs.readFileSync(evPath, 'utf8'));
+  const commits = Array.isArray(ev.commits) && ev.commits.length
+    ? ev.commits
+    : (ev.head_commit ? [ev.head_commit] : []);
+  const hits = [];
+  // 🔴 截断必须 fail-closed。GitHub 的 push 事件最多带 20 个提交（`commits` 数组），
+  //    超出的只体现在 size/distinct_size 里。若照单全收，一次 30 个提交的推送
+  //    会有 10 个**从没被审计过**，而输出仍然写着"干净" —— 这比不检查更糟。
+  //    同族问题：L-023（GraphQL files(first:100) 截断，让高危路径躲过自动合并）。
+  const total = Number(ev.size || ev.distinct_size || 0);
+  if (total > commits.length) {
+    hits.push({
+      file: '推送事件', line: 0, rule: 'event-truncated', level: 'block', kind: 'other',
+      why: `这次推送有 ${total} 个提交，事件里只带了 ${commits.length} 个 —— 无法完整审计`,
+      sample: '', snippet: '本地跑 `scan_secrets --push`；或让 checkout 带完整历史后改用 `--range=<before>..<after>`',
+    });
+  }
+  for (const c of commits) {
+    const id = String(c.id || '').slice(0, 7) || '?';
+    hits.push(...scanMessage(c.message || '', { file: '提交信息', commit: id }));
+    const ce = c.committer && c.committer.email;
+    if (ce) hits.push(...identityHits(ce, { where: '推送者身份' }).map(h => ({ ...h, commit: id })));
+  }
+  return hits;
+}
+
+/**
  * 提交身份检查：`user.email` 会被写进**每一个**新提交。
  * 用私人邮箱提交 ⇒ 每个 commit 的 `.patch` 里都能读到，且无法事后局部修改。
  */
@@ -529,6 +569,13 @@ async function main() {
     else if (has('all')) { label = '工作区全量'; hits = await allHits(); }
     else if (has('push')) { label = '待推送'; hits = await pushHits(); }
     else if (argOf('range')) { label = argOf('range'); hits = await rangeHits(argOf('range')); }
+    else if (argOf('push-event')) {
+      // CI 兜底：GitHub Actions 的事件 JSON。不需要 git 历史，纯文本审计。
+      const f = argOf('push-event');
+      label = '推送事件（CI 兜底）';
+      if (!f || !fs.existsSync(f)) throw new Error('读不到事件文件：' + f);
+      hits = pushEventHits(f);
+    }
     else if (argOf('message')) {
       // commit-msg 钩子用：git 把待提交的信息写进一个临时文件，路径作为 $1 传进来。
       // 这是**唯一能在提交发生之前**看到完整 message 的时机。
@@ -560,7 +607,7 @@ async function main() {
 
   console.log(C.bold(`\n敏感信息扫描（${label}）`));
   const loc = h => (h.line ? `${h.file}:${h.line}` : h.file);
-  const KIND = { path: '本机路径', identity: '身份/邮箱', secret: '凭据' };
+  const KIND = { path: '本机路径', identity: '身份/邮箱', secret: '凭据', other: '其他' };
   for (const h of blocks) {
     console.log(C.red(`  🔴 [${h.rule}] ${loc(h)}${h.commit ? `（提交 ${h.commit}）` : ''}　${KIND[h.kind] || '凭据'}`));
     console.log(C.dim(`     ${h.why}　命中：${h.sample}`));
@@ -574,11 +621,12 @@ async function main() {
 
   if (failing) {
     const n = k => blocks.filter(h => h.kind === k).length;
-    const secretN = n('secret'), pathN = n('path'), identN = n('identity');
+    const secretN = n('secret'), pathN = n('path'), identN = n('identity'), otherN = n('other');
     const parts = [];
     if (secretN) parts.push(`${secretN} 项确定凭据`);
     if (pathN) parts.push(`${pathN} 项本机路径`);
     if (identN) parts.push(`${identN} 项身份/邮箱`);
+    if (otherN) parts.push(`${otherN} 项无法审计（截断/读不全）`);
     if (strict) parts.push(`${warns.length} 项可疑赋值`);
     console.log(C.red(`\n🔴 拦下：${parts.join('、') || blocks.length + ' 项'}`));
 
@@ -602,7 +650,7 @@ async function main() {
 }
 
 module.exports = {
-  scanText, scanDiff, scanFileName, scanMessage, identityHits,
+  scanText, scanDiff, scanFileName, scanMessage, identityHits, pushEventHits,
   RULES, PATH_RULES, MSG_RULES, BAD_FILES, looksLikePlaceholder, obviouslyFake,
 };
 

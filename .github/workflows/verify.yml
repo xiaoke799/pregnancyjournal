@@ -71,6 +71,15 @@ jobs:
       - name: 敏感信息扫描（密钥不上云）
         run: node tools/verify/scan_secrets.js --all
 
+      # 提交信息与提交身份 —— 只扫**当前快照**看不到这一层。
+      # 直接读事件 JSON（github.event.commits），不需要全量 checkout：
+      # push 事件里每个提交的 message / committer.email 都在里面。
+      # 为什么放 CI：commit-msg 钩子可以被 --no-verify 绕过，也可能根本没装；
+      # 这是唯一"绕不过去"的一层。（历史重写时也用它兜底核查。）
+      - name: 提交信息与身份（push 事件兜底）
+        if: github.event_name == 'push'
+        run: node tools/verify/scan_secrets.js --push-event="$GITHUB_EVENT_PATH"
+
       - name: 仓库卫生（不应出现调试产物）
         run: |
           # app/ui 里的多余 html 会随 fpk 一起发出去，也会让孤儿检查静默失效。
