@@ -36,6 +36,7 @@ const CODE_ANGLE = {
   'high-risk-path': 'security',
   'secret-leak': 'security',
   'secret-scan-skipped': 'security',
+  'pr-text-leak': 'security',
   'commit-message': 'consistency',
   'diff-size': 'hygiene',
   'many-files': 'hygiene',

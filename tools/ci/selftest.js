@@ -181,6 +181,32 @@ const AI_BLOCK = JSON.stringify({
     ok('未覆盖文件被列进「没有规则覆盖」', /没有规则覆盖的改动/.test(r.out));
   }
 
+    // ---- 审查器硬检查的方向 ----
+    // 以前这些只能靠"真跑一次审查"验证；而判错方向（该拦的没拦、该放行的拦了）
+    // 不会报错，只会安静放行。现在 pr-review 导出纯函数，可以逐条钉住。
+    {
+      const P = require('./pr-review');
+      const ctx = (o = {}) => ({
+        files: ['app/server/node/routes/x.js'], diff: '+++ b/app/server/node/routes/x.js\n+const a = 1;',
+        stats: [{ path: 'app/server/node/routes/x.js', added: 1, removed: 0 }],
+        commits: [{ message: 'fix: 正常' }], additions: 1, deletions: 0,
+        title: 'fix: 正常', body: '', discussion: undefined, ...o,
+      });
+      const codes = c => P.hardChecks(c).issues.filter(i => i.severity === 'blocking').map(i => i.code);
+
+      ok('硬检查：空 diff 必须阻断（不能当"没问题"放行）',
+        codes(ctx({ files: [], diff: '' })).includes('empty-diff'));
+      ok('硬检查：触碰高危路径必须阻断',
+        codes(ctx({ files: ['.github/workflows/verify.yml'] })).includes('high-risk-path'));
+      ok('硬检查：正常改动没有阻断项', codes(ctx()).length === 0,
+        codes(ctx()).join(','));
+      ok('硬检查：PR 标题里的本机路径给出警告（不是阻断）',
+        P.hardChecks(ctx({ title: 'fix: 从 D:/some-project 跑起来' })).issues
+          .some(i => i.code === 'pr-text-leak' && i.severity === 'warn'));
+      ok('硬检查：PR 标题干净时不报 pr-text-leak',
+        !P.hardChecks(ctx()).issues.some(i => i.code === 'pr-text-leak'));
+    }
+
   console.log('\n=== B. 模型层（含降级） ===');
 
   // B1 正常 JSON ⇒ 采纳

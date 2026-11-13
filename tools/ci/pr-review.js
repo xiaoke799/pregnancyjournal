@@ -31,6 +31,7 @@ const path = require('path');
 const RULES = require('../verify/rules');
 const { ANGLES, angleOf, groupByAngle, compareRounds, normalizeAiIssues } = require('./review-angles');
 const { scanHarm } = require('./harm-scan');
+const { scanMessage } = require('../verify/scan_secrets');
 
 // ---------------------------------------------------------------------------
 // 配置
@@ -327,6 +328,23 @@ function hardChecks(ctx) {
       `${badCommits.length} 条提交信息不符合 Conventional Commits`,
       badCommits.slice(0, 3).map(c => '`' + String(c.message || c.commit?.message || '').split('\n')[0].slice(0, 70) + '`').join('、'),
       '格式 `type(scope): 说明`，type ∈ feat/fix/docs/refactor/perf/test/build/ci/chore。合入时会被 squash 成一条，所以至少要让人看懂改了什么。');
+  }
+
+  // 2.5) PR 标题 / 描述里的本机路径与私人邮箱（CS-19 列的最后一个通道）
+  //      为什么是 warn 不是 blocking：PR 描述可以改，而且经常整段贴用户提供的日志 ——
+  //      里面出现别人的路径是正常的。这一条是提醒作者"你把自己机器暴露出去了"，
+  //      不是阻止合入。与 commit message 的区别在于：message 写进历史就改不掉了。
+  {
+    const textHits = [
+      ...scanMessage(String(ctx.title || ''), { file: 'PR 标题' }),
+      ...scanMessage(String(ctx.body || ''), { file: 'PR 描述' }),
+    ];
+    if (textHits.length) {
+      push('warn', 'pr-text-leak',
+        `PR 标题/描述里有 ${textHits.length} 处本机路径或私人邮箱`,
+        textHits.slice(0, 3).map(x => `${x.file}：\`${x.snippet.slice(0, 60)}\``).join('、'),
+        '这些内容公开展示并留在 PR 时间线里。路径改成环境变量或带省略号的形态；邮箱建议用 GitHub noreply。');
+    }
   }
 
   // 3) 规模
@@ -765,7 +783,7 @@ async function applyLabels(pr, verdict) {
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
-(async () => {
+async function main() {
   const ctx = await loadContext();
   const hard = hardChecks(ctx);
   const ai = await aiReview(ctx);
@@ -824,7 +842,15 @@ async function applyLabels(pr, verdict) {
   }
 
   process.exit({ pass: 0, changes: 1, 'needs-human': 2 }[decision.verdict]);
-})().catch(e => {
-  console.error(C.red('PR 审查器自身出错：' + e.stack));
-  process.exit(4);
-});
+}
+
+if (require.main === module) {
+  main().catch(e => {
+    console.error(C.red('PR 审查器自身出错：' + e.stack));
+    process.exit(4);
+  });
+}
+
+// 导出纯函数用于回归：硬检查此前只能靠"真跑一次审查"验证，
+// 而它判错方向（比如 empty-diff 没拦、高危路径漏判）不会报错，只会安静放行。
+module.exports = { hardChecks, decide, renderReport };
