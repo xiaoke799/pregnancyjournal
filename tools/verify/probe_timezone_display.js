@@ -15,10 +15,12 @@
  *   · 带时区标记（Z / ±HH:mm）  → 原样解析
  *   · 纯日期（YYYY-MM-DD）      → 原样解析（日期不参与时区换算）
  *   · 无标记的日期时间          → 补 Z 按 UTC 解析，format 时转浏览器本地时区
- *   ⚠️ 特例：`push_log.pushed_at` 是推送引擎 `localStamp()` 写的**本地**时间，
- *      不能用 parseServerTime；`created_at` 才是 UTC。两者必须分开解析。
+ *   ⚠️ 例外：`push_log` 的 `pushed_at` / `created_at` **都是**推送引擎 `localStamp()`
+ *      写的本地时间（INSERT 显式传 created_at，不落表的 UTC 默认值），
+ *      两个字段都必须用裸 `dayjs()`，不能用 parseServerTime。
+ *      0.0.35 曾误把 created_at 当 UTC ⇒ 「待推送/失败」记录快 8 小时（真机复验发现）。
  *
- * 【层次】A 静态断言 → B 真实函数运行时（TZ=Asia/Shanghai）→ C 反例自检（铁律 #11）
+ * 【层次】A 静态断言 → B 真实函数运行时（TZ=Asia/Shanghai）→ C 调用点 → D 反例自检（铁律 #11）
  *
  * 用法：node tools/verify/probe_timezone_display.js
  */
@@ -125,9 +127,11 @@ if (parseServerTime) {
     } catch (e) { check('AlbumView.formatDate 可执行', false, e.message); }
   }
 
-  // ⑨ SettingsView.formatLogTime —— 真实源码，两个字段口径必须分开
+  // ⑨ SettingsView.formatLogTime —— 真实源码；两个字段都是本地时间
   //    ⚠️ extractFn 按花括号配平，参数类型 `log: { ... }` 里的 `}` 会被当成函数结束 ⇒ 必须先剥类型再抽。
   //    若签名将来变了，下面的 replace 落空 ⇒ 抽出的源码被截断 ⇒ eval 抛错 ⇒ 红灯（不会假绿）。
+  //    ⚠️ 故意【不注入 parseServerTime】：0.0.35 的回归正是它。谁把 UTC 解析改回来，
+  //    函数体立刻抛 ReferenceError ⇒ 红灯，而不是悄悄混过去。
   const setViewSrc = read('frontend/src/views/SettingsView.vue');
   const setSrcForExtract = setViewSrc.replace(
     /log\s*:\s*\{\s*pushed_at\?:\s*string;\s*created_at\?:\s*string\s*\}/,
@@ -138,15 +142,22 @@ if (parseServerTime) {
   check('能从 SettingsView.vue 抽出 formatLogTime', !!logTimeRaw);
   if (logTimeRaw) {
     try {
-      const fn = new Function('dayjs', 'parseServerTime', stripTs(logTimeRaw) + '\nreturn formatLogTime;')(dayjs, parseServerTime);
-      // 待推送：只有 created_at（UTC 13:00 = 本地 21:00）
-      check('推送「待推送」按 UTC 解析 created_at → 21:00',
-        fn({ created_at: '2026-11-10 13:00:00', pushed_at: null }) === '11-10 21:00',
-        `实际 ${fn({ created_at: '2026-11-10 13:00:00', pushed_at: null })}`);
-      // 已推送：pushed_at 是本地时间，**不能**再按 UTC 转，否则会变成次日 05:00
-      check('推送「已推送」按本地解析 pushed_at → 21:00',
+      const fn = new Function('dayjs', stripTs(logTimeRaw) + '\nreturn formatLogTime;')(dayjs);
+      check('SettingsView.formatLogTime 可执行（只注入 dayjs）', typeof fn === 'function');
+      // 真机 push_log 的 created_at 就是本地时间字符串（recordPushLog 显式传 localStamp()）。
+      check('推送「待推送」：本地 created_at 10:44 → 显示 11-13 10:44',
+        fn({ created_at: '2026-11-13 10:44:24', pushed_at: null }) === '11-13 10:44',
+        `实际 ${fn({ created_at: '2026-11-13 10:44:24', pushed_at: null })}`);
+      check('推送「失败」：本地 created_at 08:00 → 显示 10-18 08:00',
+        fn({ created_at: '2026-10-18 08:00:13', pushed_at: null }) === '10-18 08:00',
+        `实际 ${fn({ created_at: '2026-10-18 08:00:13', pushed_at: null })}`);
+      check('推送「已推送」仍按 pushed_at 本地解析 → 21:00',
         fn({ created_at: '2026-11-10 13:00:00', pushed_at: '2026-11-10 21:00:30' }) === '11-10 21:00',
         `实际 ${fn({ created_at: '2026-11-10 13:00:00', pushed_at: '2026-11-10 21:00:30' })}`);
+      check('跨日边界：本地 00:30 不被搬成前一天',
+        fn({ created_at: '2026-11-11 00:30:00', pushed_at: null }) === '11-11 00:30',
+        `实际 ${fn({ created_at: '2026-11-11 00:30:00', pushed_at: null })}`);
+      check('空记录返回空串', fn({}) === '' && fn(null) === '');
     } catch (e) { check('SettingsView.formatLogTime 可执行', false, e.message); }
   }
 }
@@ -167,13 +178,16 @@ check('AlbumView 两处排序均走 parseServerTime', albumSorts === 2, `实际 
 check('AlbumView 不再有裸 dayjs(*.created_at)', !/dayjs\(\s*[a-zA-Z.]*created_at\s*\)/.test(albumSrc));
 
 const setSrc = stripComments(read('frontend/src/views/SettingsView.vue'));
-check('SettingsView.formatLogTime 分字段：created_at 走 parseServerTime',
-  /parseServerTime\(log\.created_at\)/.test(setSrc));
-check('SettingsView.formatLogTime 分字段：pushed_at 走本地 dayjs',
-  /dayjs\(log\.pushed_at\)/.test(setSrc));
-// 模板必须把整条 log 交给 formatLogTime，由函数内部按字段分别解析。
-// ⚠️ 不能广搜 `log.pushed_at || log.created_at`：函数内部对「无法解析」的兜底
-//    `String(log.pushed_at || log.created_at || '')` 是合法的，广搜会假红。
+// 🔴 push_log 两个字段都是本地时间；谁把 created_at 交给 parseServerTime，谁就复现 0.0.35 回归。
+check('SettingsView 不再把 push_log.created_at 当 UTC 解析',
+  !/parseServerTime\(\s*log\.created_at\s*\)/.test(setSrc));
+check('SettingsView 不再从 format 导入 parseServerTime',
+  !/import\s*\{[^}]*\bparseServerTime\b[^}]*\}\s*from\s*['"]@\/utils\/format['"]/.test(setSrc));
+check('SettingsView.formatLogTime 用裸 dayjs 解析单一取值',
+  /const\s+raw\s*=\s*log\.pushed_at\s*\|\|\s*log\.created_at/.test(setSrc) &&
+  /dayjs\(raw\)/.test(setSrc));
+// 模板必须把整条 log 交给 formatLogTime，由函数内部选字段。
+// ⚠️ 不能广搜 `log.pushed_at || log.created_at`：函数内部取值是合法的，广搜会假红。
 check('SettingsView 模板把整条 log 交给 formatLogTime',
   /formatLogTime\(log\)/.test(setSrc) && !/formatLogTime\(log\.pushed_at \|\| log\.created_at\)/.test(setSrc));
 
@@ -200,6 +214,7 @@ const detectors = [
   [/dayjs\(\s*[a-zA-Z.]*created_at\s*\)/, 'const date = dayjs(photo.created_at)'],
   [/ts:\s*new Date\(\)\.toISOString\(\)/, 'const entry = { ts: new Date().toISOString() };'],
   [/log\.pushed_at \|\| log\.created_at/, '{{ formatLogTime(log.pushed_at || log.created_at) }}'],
+  [/parseServerTime\(\s*log\.created_at\s*\)/, 'const d = log.pushed_at ? dayjs(log.pushed_at) : parseServerTime(log.created_at)'],
 ];
 for (const [re, bad] of detectors) {
   check(`[反例] 检测器能抓到坏样本：${bad.slice(0, 40)}`, re.test(bad));
@@ -209,6 +224,16 @@ if (parseServerTime) {
   const fakeParse = (s) => dayjs(String(s ?? ''));
   const fakeResult = fakeParse('2026-11-10 01:11:00').format('HH:mm');
   check('[反例] 裸 dayjs 假实现无法通过 09:11 断言（说明断言有牙）', fakeResult !== '09:11', `假实现得 ${fakeResult}`);
+
+  // D4 0.0.35 回归反例：把本地 created_at 当 UTC 解析 ⇒ 快 8 小时。
+  //    这一条必须成立，否则 B 段「待推送显示 10:44」可能只是碰巧没测到 UTC 分支。
+  const regressFormatLogTime = (log) => {
+    const d = log.pushed_at ? dayjs(log.pushed_at) : parseServerTime(log.created_at);
+    return d.isValid() ? d.format('MM-DD HH:mm') : String(log.pushed_at || log.created_at || '');
+  };
+  const bad = regressFormatLogTime({ created_at: '2026-11-13 10:44:24', pushed_at: null });
+  check('[反例] 0.0.35 旧写法把本地 10:44 显示成 18:44（错）',
+    bad === '11-13 18:44' && bad !== '11-13 10:44', `旧写法实际 ${bad}`);
 }
 
 // ==========================================================================

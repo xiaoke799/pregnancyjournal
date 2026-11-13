@@ -496,7 +496,6 @@ import { exportApi } from '@/api/export'
 import client from '@/api/client'
 import { pushApi } from '@/api/push'
 import { getApiBase } from '@/utils/api-base'
-import { parseServerTime } from '@/utils/format'
 
 const logText = ref('')
 const logInfo = ref<any>(null)
@@ -1235,12 +1234,17 @@ function typeLabel(type: string): string {
 
 function formatLogTime(log: { pushed_at?: string; created_at?: string }): string {
   if (!log) return ''
-  // ⚠️ push_log 表两个时间字段口径不同，必须分别解析：
-  //   pushed_at  —— 推送引擎 localStamp() 写【本地时间】（重启去重 LIKE '今天%' 依赖本地日期，
-  //                  见 push-engine.js，不能改存 UTC）
-  //   created_at —— DB 默认 datetime('now')，是【UTC】
-  const d = log.pushed_at ? dayjs(log.pushed_at) : parseServerTime(log.created_at)
-  if (!d.isValid()) return String(log.pushed_at || log.created_at || '')
+  // ⚠️ push_log 两个时间字段都是【本地时间】字符串，一律用裸 dayjs 解析：
+  //   · pushed_at  —— 推送成功后 localStamp() 写（重启去重 LIKE '今天%' 依赖本地日期）
+  //   · created_at —— recordPushLog() 显式传入 localStamp()，同样不是 UTC
+  //     （push-engine.js 的 INSERT 与两条降级 SQL 都带 created_at 列，从不落到表的
+  //      DEFAULT (datetime('now'))；后端筛选/清理也用 localStamp() 同格式比较）
+  //   0.0.35 曾把 created_at 误当 UTC 走 parseServerTime，导致「待推送 / 失败」
+  //   （pushed_at 为 NULL）的记录显示快 8 小时；0.0.34 的本地解析本来是对的。
+  const raw = log.pushed_at || log.created_at
+  if (!raw) return ''
+  const d = dayjs(raw)
+  if (!d.isValid()) return String(raw)
   return d.format('MM-DD HH:mm')
 }
 
